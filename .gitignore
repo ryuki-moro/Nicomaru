@@ -4,3 +4,25 @@ design-system/*.skill
 # OS / editor
 Thumbs.db
 .DS_Store
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+next-env.d.ts
+
+# 環境変数(秘密情報はコミットしない。.env.example のみ追跡する)
+.env
+.env.*
+!.env.example
+
+# テスト成果物
+coverage/
+playwright-report/
+test-results/
+.vitest/
+
+# Supabase ローカル
+supabase/.branches/
+supabase/.temp/
