@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * デザイン基準: design-system/bridalhub-design-system.skill の references/design_guide.md。
+ * 画面共通の横パディング 28px、カード間の余白 10〜14px。
+ * スマートフォン縦画面での操作性を最優先とする（4-3）。
+ */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-bg text-text-primary font-sans text-base antialiased;
+  }
+
+  /* キーボード操作時のフォーカスを必ず視認できるようにする（8-4 ユーザビリティ） */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+}
+
+@layer components {
+  /* ---- ボタン（design_guide 5.1） ---- */
+  .btn-primary {
+    @apply w-full rounded-button bg-primary px-4 py-[13px] text-body font-medium text-white
+           transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply w-full rounded-button border border-border-mid bg-surface px-4 py-[13px]
+           text-body text-text-primary transition-colors hover:bg-field-filled-bg
+           disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-ghost {
+    @apply text-body text-link underline underline-offset-2 hover:opacity-80;
+  }
+
+  /* ---- 入力欄（design_guide 5.3） ---- */
+  .field-label {
+    @apply mb-1 block text-caption text-text-muted;
+  }
+
+  .field {
+    @apply w-full rounded-field border border-border-light bg-surface px-3 py-[10px]
+           text-label text-text-primary placeholder:text-text-muted
+           focus:border-primary focus:outline-none;
+  }
+
+  .field-error {
+    @apply mt-1 text-caption text-danger;
+  }
+
+  /* ---- バッジ（design_guide 5.6） ---- */
+  .badge {
+    @apply inline-flex items-center rounded-badge px-[11px] py-1 text-caption;
+  }
+
+  .badge-neutral { @apply badge bg-bg text-text-secondary; }
+  .badge-success { @apply badge bg-success-bg text-success-text; }
+  .badge-warning { @apply badge bg-warning-bg text-warning-text; }
+  .badge-danger  { @apply badge bg-danger-bg text-danger; }
+
+  /* ---- カード（design_guide 5.7 / 5.9） ---- */
+  .card {
+    @apply rounded-card border border-border-light bg-surface px-4 py-[13px];
+  }
+
+  .card-hero {
+    @apply rounded-hero bg-hero-bg px-5 py-[18px];
+  }
+
+  /* ---- インフォバナー（design_guide 5.5） ---- */
+  .banner-info {
+    @apply flex gap-2 rounded-banner bg-info-bg px-[14px] py-3 text-label text-link;
+  }
+
+  .banner-error {
+    @apply flex gap-2 rounded-banner bg-danger-bg px-[14px] py-3 text-label text-danger;
+  }
+
+  /* ---- セクション見出し ---- */
+  .section-head {
+    @apply text-section font-bold text-text-primary;
+  }
+
+  /* ---- 画面共通の横パディング ---- */
+  .screen {
+    @apply mx-auto w-full max-w-phone px-screen;
+  }
+
+  /* ---- 一覧（planner 側は PC 表示が主） ---- */
+  .table-wrap {
+    @apply overflow-x-auto rounded-card border border-border-light bg-surface;
+  }
+
+  .table {
+    @apply w-full min-w-[640px] border-collapse text-label;
+  }
+
+  .table th {
+    @apply border-b border-border-light px-3 py-2 text-left text-caption font-normal text-text-muted;
+  }
+
+  .table td {
+    @apply border-b border-border-light px-3 py-3 align-middle;
+  }
+}

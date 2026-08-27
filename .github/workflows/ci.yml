@@ -1,0 +1,61 @@
+# 正本: 基本設計書 Version 1.2 12章「CI/CD」・12-2「テストゲート」。
+# lint・型チェック・テストの全通過をマージ条件とする。
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # RLS テストを含む。PGlite 上で本番と同じマイグレーションを流して
+      # 42P17・権限昇格・アーカイブ・停止利用者の退行を機械検出する（11章／12-2）
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # 12-2 依存脆弱性管理: high 以上を必須ゲートにする
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
+      # 12-2 秘密情報の保護: 実キーの混入を検出する
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

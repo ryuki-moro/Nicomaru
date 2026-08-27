@@ -1,0 +1,11 @@
+{
+  "name": "にこまる (BridalHub)",
+  "short_name": "にこまる",
+  "description": "結婚式の準備を、プランナーと新郎新婦がひとつの画面で進めるための進行管理アプリ。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F1EFE8",
+  "theme_color": "#D4537E",
+  "lang": "ja",
+  "icons": []
+}
