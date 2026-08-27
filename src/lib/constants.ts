@@ -243,5 +243,13 @@ export const COUPLE_PROFILE_COLUMNS =
   'id, case_id, user_profile_id, partner_role, full_name, kana, email, email_hash, ' +
   'phone, address, is_primary_contact, created_at, updated_at';
 
-/** 一覧の既定並び順（4-3 M01／M02、6-6-2）。同着は id でタイブレークする。 */
-export const TASK_ORDER = 'due_date, display_order, id';
+/**
+ * 一覧の既定並び順（4-3 M01／M02、6-6-2）。同着は id でタイブレークする。
+ * 文字列で持つと呼び出し側が .order() を3段書き直すことになり単一ソースにならないため、
+ * クエリへ適用する関数として公開する。
+ */
+export function applyTaskOrder<T extends {
+  order: (column: string, options?: { ascending?: boolean }) => T;
+}>(query: T): T {
+  return query.order('due_date').order('display_order').order('id');
+}

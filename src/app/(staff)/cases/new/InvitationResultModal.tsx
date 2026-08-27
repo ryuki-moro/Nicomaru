@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { ApiCallError, api } from '@/lib/api/client';
+import { formatDateTime } from '@/lib/format';
 import {
   CONTACT_CHANNELS,
   CONTACT_CHANNEL_LABEL,
@@ -47,7 +48,7 @@ interface Props {
   assignError: string | null;
 }
 
-const formatDateTime = (value: string) => value.slice(0, 10).replaceAll('-', '/');
+
 
 export function InvitationResultModal({
   caseId,

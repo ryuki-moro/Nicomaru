@@ -7,6 +7,10 @@
  *
  * 一覧と編集フォームを1画面に置き、編集対象は ?edit=<id>（新規は ?edit=new）で選ぶ。
  * 読み書きとも Supabase クライアント経由（RLS適用。plan_types_write は admin のみ）。
+ *
+ * 4-3 一覧画面共通：既定の表示件数は50件、以降はページング。
+ * 打ち切るだけでは51件目以降のプラン種別を編集・停止できなくなるため、
+ * K01／M02 と同じく1件多く取って前後リンクを出す（?page=）。
  */
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -25,6 +29,10 @@ import {
   type SavePlanTypeResult,
   type TemplateChoice,
 } from './PlanTypeForm';
+
+/** 一覧と「編集対象を id で引き直す」問い合わせで同じ列を使う。 */
+const PLAN_TYPE_COLUMNS =
+  'id, name, description, default_guest_count_min, default_guest_count_max, display_order, active' as const;
 
 interface PlanTypeRow {
   id: string;
@@ -170,12 +178,28 @@ async function savePlanType(planTypeId: string, values: unknown): Promise<SavePl
   return { ok: true, id: savedId };
 }
 
+/** ?page= を1始まりのページ番号にする。壊れた値は1ページ目へ寄せる（K01／M02 と同じ扱い）。 */
+function resolvePage(raw: string | undefined): number {
+  const parsed = Number(raw ?? '1');
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
+}
+
+/** 編集対象（?edit=）とページ（?page=）は互いに独立して保つ。 */
+function hrefFor(params: { edit?: string; page?: number }): string {
+  const query = new URLSearchParams();
+  if (params.edit) query.set('edit', params.edit);
+  if (params.page && params.page > 1) query.set('page', String(params.page));
+  const search = query.toString();
+  return search ? `/plan-types?${search}` : '/plan-types';
+}
+
 export default async function PlanTypesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ edit?: string }>;
+  searchParams: Promise<{ edit?: string; page?: string }>;
 }) {
-  const { edit } = await searchParams;
+  const { edit, page: pageParam } = await searchParams;
+  const page = resolvePage(pageParam);
 
   const user = await getAppUser();
   if (!user) redirect('/login');
@@ -183,15 +207,25 @@ export default async function PlanTypesPage({
 
   const supabase = await createSupabaseServerClient();
 
-  const [planTypesResult, templatesResult, assignmentsResult] = await Promise.all([
+  // 編集対象は一覧の結果から探さず id で直接引く。
+  // ページングを入れた以上、2ページ目を開いた状態で1ページ目の行を編集する場合に
+  // 一覧から探すと対象が見つからずフォームが黙って消えるため。
+  const editingQuery = edit && edit !== 'new'
+    ? supabase.from('plan_types').select(PLAN_TYPE_COLUMNS).eq('id', edit).maybeSingle()
+    : null;
+
+  // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する（K01／M02 と同じ形）。
+  const from = (page - 1) * LIST_PAGE_SIZE;
+  const [planTypesResult, templatesResult, assignmentsResult, editingResult] = await Promise.all([
     supabase
       .from('plan_types')
-      .select('id, name, description, default_guest_count_min, default_guest_count_max, display_order, active')
+      // count は新規登録時の表示順の既定値（末尾）に使う。ページ内の件数では代用できない
+      .select(PLAN_TYPE_COLUMNS, { count: 'exact' })
       .order('active', { ascending: false })
       .order('display_order')
       .order('name')
       .order('id')
-      .limit(LIST_PAGE_SIZE),
+      .range(from, from + LIST_PAGE_SIZE),
     supabase
       .from('task_templates')
       .select('id, name, due_offset_days, active')
@@ -201,9 +235,12 @@ export default async function PlanTypesPage({
     supabase
       .from('plan_task_templates')
       .select('plan_type_id, task_template_id, display_order, due_offset_days_override'),
+    editingQuery,
   ]);
 
-  const planTypes: PlanTypeRow[] = planTypesResult.data ?? [];
+  const fetched: PlanTypeRow[] = planTypesResult.data ?? [];
+  const hasNext = fetched.length > LIST_PAGE_SIZE;
+  const planTypes = fetched.slice(0, LIST_PAGE_SIZE);
   const templateRows: TemplateRow[] = templatesResult.data ?? [];
   const assignments: AssignmentRow[] = assignmentsResult.data ?? [];
 
@@ -212,12 +249,9 @@ export default async function PlanTypesPage({
     assignedCount.set(a.plan_type_id, (assignedCount.get(a.plan_type_id) ?? 0) + 1);
   }
 
-  const editing = edit === 'new'
-    ? 'new'
-    : planTypes.find((p) => p.id === edit)?.id ?? null;
-  const editingRow = editing && editing !== 'new'
-    ? planTypes.find((p) => p.id === editing) ?? null
-    : null;
+  // 権限外・不存在の id は RLS により 0 行になるので、フォームを出さないことで自然に弾かれる
+  const editingRow = (editingResult?.data ?? null) as PlanTypeRow | null;
+  const editing = edit === 'new' ? 'new' : editingRow?.id ?? null;
 
   const templates: TemplateChoice[] = templateRows.map((t) => ({
     id: t.id,
@@ -233,7 +267,10 @@ export default async function PlanTypesPage({
       ? '' : String(editingRow.default_guest_count_min),
     defaultGuestCountMax: editingRow?.default_guest_count_max == null
       ? '' : String(editingRow.default_guest_count_max),
-    displayOrder: editingRow ? String(editingRow.display_order) : String(planTypes.length),
+    // 新規は既存の総数＝末尾を既定値にする。ページ内の件数だと2ページ目以降で先頭に割り込む
+    displayOrder: editingRow
+      ? String(editingRow.display_order)
+      : String(planTypesResult.count ?? planTypes.length),
     active: editingRow?.active ?? true,
     assignments: editingRow
       ? assignments
@@ -273,7 +310,7 @@ export default async function PlanTypesPage({
           <Link href="/templates" className="btn-ghost">
             宿題テンプレート
           </Link>
-          <Link href="/plan-types?edit=new" className="btn-primary w-auto">
+          <Link href={hrefFor({ edit: 'new', page })} className="btn-primary w-auto">
             新規登録
           </Link>
         </div>
@@ -286,7 +323,13 @@ export default async function PlanTypesPage({
       )}
 
       {planTypes.length === 0 && !planTypesResult.error ? (
-        <EmptyState message="まだプラン種別がありません。「新規登録」から追加してください。" />
+        <EmptyState
+          message={
+            page > 1
+              ? 'これ以上のプラン種別はありません。'
+              : 'まだプラン種別がありません。「新規登録」から追加してください。'
+          }
+        />
       ) : (
         <div className="table-wrap">
           <table className="table">
@@ -304,7 +347,7 @@ export default async function PlanTypesPage({
                 <tr key={planType.id}>
                   <td>
                     <Link
-                      href={`/plan-types?edit=${planType.id}`}
+                      href={hrefFor({ edit: planType.id, page })}
                       className="text-link hover:underline"
                     >
                       {planType.name}
@@ -323,6 +366,23 @@ export default async function PlanTypesPage({
             </tbody>
           </table>
         </div>
+      )}
+
+      {(page > 1 || hasNext) && (
+        <nav aria-label="ページ送り" className="flex items-center justify-between">
+          {page > 1 ? (
+            <Link href={hrefFor({ edit, page: page - 1 })} className="btn-ghost">
+              前の{LIST_PAGE_SIZE}件
+            </Link>
+          ) : (
+            <span />
+          )}
+          {hasNext && (
+            <Link href={hrefFor({ edit, page: page + 1 })} className="btn-ghost">
+              次の{LIST_PAGE_SIZE}件
+            </Link>
+          )}
+        </nav>
       )}
 
       {editing && (

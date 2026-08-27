@@ -16,7 +16,8 @@ import { redirect } from 'next/navigation';
 
 import { getAppUser } from '@/lib/auth/session';
 import { COUPLE_PROFILE_COLUMNS, type PartnerRole } from '@/lib/constants';
-import { decryptPii } from '@/lib/crypto';
+import { readPii } from '@/lib/crypto';
+import { formatDate } from '@/lib/format';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -84,7 +85,8 @@ export default async function CaseArchivePage({
 
   const coupleName =
     row.couple_profiles
-      .map((profile) => decryptPii(profile.full_name) ?? '')
+      // 氏名は暗号化列（13-1）。読めない値はそのまま出し、確認画面を落とさない
+      .map((profile) => readPii(profile.full_name))
       .filter((name) => name.length > 0)
       .join('・') || '（氏名未登録）';
 
@@ -128,7 +130,7 @@ export default async function CaseArchivePage({
           </div>
           <div>
             <dt className="text-caption text-text-muted">挙式日</dt>
-            <dd>{row.wedding_date.replaceAll('-', '/')}</dd>
+            <dd>{formatDate(row.wedding_date)}</dd>
           </div>
         </dl>
 

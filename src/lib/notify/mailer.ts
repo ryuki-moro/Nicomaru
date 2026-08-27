@@ -14,9 +14,15 @@
  * 【RESEND_API_KEY が無い環境】
  * 13-1 の決定により、Phase 1 の開発段階は「開発者宛送信で検証できる段階」を設ける。
  * キー未設定のときは送信せず、宛先・件名・本文をサーバーログへ出して処理を続行する。
- * 送信できなかった事実は MailResult で呼び出し元へ返し、画面に注意文として表示させる。
+ * 送信できなかった事実は SendResult で呼び出し元へ返し、画面に注意文として表示させる。
  * 設定リンクを含む本文をログへ出すのはキー未設定のローカル開発時に限られる（本番では
  * キーが必ず設定されるため到達しない）。
+ *
+ * 【Resend への POST はこの1箇所だけ】
+ * 招待送信（notify/send.ts）にも同じ POST があったが、そちらは fetch の例外を握っておらず、
+ * DNS障害やタイムアウトで例外が上がると POST /api/cases/{caseId}/invitations が 500 になり、
+ * その応答でしか返らない平文の招待URLを失っていた（6-3-6）。
+ * 未構成・HTTPエラー・例外の3経路の扱いを1箇所に保つため、送信口を sendMail に統合する。
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -30,16 +36,35 @@ export interface MailMessage {
   text: string;
 }
 
-export type MailResult =
-  | { delivered: true; providerMessageId: string | null }
-  | { delivered: false; reason: 'not_configured' | 'provider_error'; detail?: string };
+/**
+ * 外部送信（メール・LINE）の結果。送信手段によらずこの1つを使う。
+ *
+ * かつては mailer.ts の MailResult と notify/send.ts の SendResult に分かれており、
+ * 同じ「送れたか・送れなかった理由は何か」を二重に定義していた。
+ * 直和型にすると呼び出し側が delivered で絞り込まないと理由を読めず、
+ * 「発行は成功・送信だけ未了」を1つの応答へ詰める招待APIで扱いにくいため、
+ * 平坦な形にして delivered=false のときだけ理由が付く約束にする。
+ */
+export interface SendResult {
+  /** 実際に外部サービスへ送信できたか。false なら未構成・宛先不明・送信失敗 */
+  delivered: boolean;
+  /** 失敗の種別。画面文言ではなく分岐・記録のための機械的な値 */
+  reason?: 'not_configured' | 'provider_error';
+  /** delivered=false のときに画面へ出す理由。利用者に見せる日本語 */
+  skippedReason?: string;
+  /** 送信できたときのプロバイダ側ID。障害時の突き合わせに使う */
+  providerMessageId?: string | null;
+}
+
+const NOT_CONFIGURED_MESSAGE = 'メール送信の設定が未構成のため、送信は行われていません';
+const PROVIDER_ERROR_MESSAGE = 'メールの送信に失敗しました。時間をおいてお試しください';
 
 /** 招待URL・通知URLの生成に使う（表12-2 APP_BASE_URL）。 */
 export function appBaseUrl(): string {
   return process.env.APP_BASE_URL ?? 'http://localhost:3000';
 }
 
-export async function sendMail(message: MailMessage): Promise<MailResult> {
+export async function sendMail(message: MailMessage): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM;
 
@@ -48,7 +73,7 @@ export async function sendMail(message: MailMessage): Promise<MailResult> {
       '[mail] RESEND_API_KEY／RESEND_FROM が未設定のため送信をスキップしました（13-1 開発者宛検証段階）\n'
       + `  to: ${message.to}\n  subject: ${message.subject}\n${message.text}`,
     );
-    return { delivered: false, reason: 'not_configured' };
+    return { delivered: false, reason: 'not_configured', skippedReason: NOT_CONFIGURED_MESSAGE };
   }
 
   try {
@@ -61,14 +86,17 @@ export async function sendMail(message: MailMessage): Promise<MailResult> {
     if (!response.ok) {
       // 本文には宛先が含まれるため、詳細はサーバーログにのみ残す（9章）
       console.error('[mail] 送信に失敗しました', response.status, await response.text());
-      return { delivered: false, reason: 'provider_error', detail: `HTTP ${response.status}` };
+      return { delivered: false, reason: 'provider_error', skippedReason: PROVIDER_ERROR_MESSAGE };
     }
 
-    const body = (await response.json()) as { id?: string };
+    // 送信自体は成功している。応答本文の解釈に失敗しても「送れなかった」と誤って伝えない。
+    const body = await response.json().catch(() => ({})) as { id?: string };
     return { delivered: true, providerMessageId: body.id ?? null };
   } catch (error) {
+    // fetch は DNS障害・タイムアウト・接続断で例外になる。ここで throw すると
+    // 呼び出し元（招待URLの発行応答など）ごと 500 になり、発行済みの平文URLを失う（6-3-6）。
     console.error('[mail] 送信要求が例外で終了しました', error);
-    return { delivered: false, reason: 'provider_error' };
+    return { delivered: false, reason: 'provider_error', skippedReason: PROVIDER_ERROR_MESSAGE };
   }
 }
 
@@ -128,7 +156,7 @@ export function sendPasswordSetupMail(params: {
   venueName?: string | null;
   actionLink: string;
   isResend?: boolean;
-}): Promise<MailResult> {
+}): Promise<SendResult> {
   const belongs = params.venueName ? `${params.venueName}の` : '';
   const subject = params.isResend
     ? '【にこまる】パスワード設定リンクの再送のご案内'

@@ -5,6 +5,10 @@
  * 一覧の読み取りは 6-5 の原則どおり Server Component から RLS 適用クライアントで直接 select し、
  * 登録だけを /api/cases/{caseId}/follow-logs（表6-6）へ投げる。
  * フォロー記録は D03 準備シートと 6-8 リスク算出（最終アクティビティ）の参考情報になる。
+ *
+ * 4-3 一覧画面共通：既定の表示件数は50件、以降はページング。
+ * 打ち切るだけでは51件目以降の記録を参照できなくなるため、
+ * K01／M02 と同じく1件多く取って前後リンクを出す（?page=）。
  */
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -17,8 +21,9 @@ import {
   LIST_PAGE_SIZE,
   type FollowMethod,
 } from '@/lib/constants';
-import { decryptPii } from '@/lib/crypto';
+import { readPii } from '@/lib/crypto';
 import { fromPostgresError } from '@/lib/errors';
+import { formatDate, formatDateTime } from '@/lib/format';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 interface CaseRow {
@@ -40,29 +45,21 @@ interface FollowLogRow {
   followed_at: string;
 }
 
-/** 暗号化列（13-1）。平文のまま入っている初期データは復号せずそのまま見せる。 */
-function readPii(value: string | null): string {
-  if (!value) return '';
-  try {
-    return decryptPii(value) ?? '';
-  } catch {
-    return value;
-  }
+/** ?page= を1始まりのページ番号にする。壊れた値は1ページ目へ寄せる（K01／M02 と同じ扱い）。 */
+function resolvePage(raw: string | undefined): number {
+  const parsed = Number(raw ?? '1');
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
 }
-
-const dateTimeFormat = new Intl.DateTimeFormat('ja-JP', {
-  dateStyle: 'short',
-  timeStyle: 'short',
-  timeZone: 'Asia/Tokyo',
-});
-const dateFormat = new Intl.DateTimeFormat('ja-JP', { dateStyle: 'long', timeZone: 'Asia/Tokyo' });
 
 export default async function FollowLogPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ caseId: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { caseId } = await params;
+  const page = resolvePage((await searchParams).page);
   const supabase = await createSupabaseServerClient();
 
   const { data: caseData, error: caseError } = await supabase
@@ -90,16 +87,22 @@ export default async function FollowLogPage({
     .filter((name) => name !== '')
     .join('・');
 
+  // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する。
+  const from = (page - 1) * LIST_PAGE_SIZE;
   const { data: logData, error: logError } = await supabase
     .from('follow_logs')
     .select('id, planner_id, method, note, followed_at')
     .eq('case_id', caseId)
     .order('followed_at', { ascending: false })
     .order('id', { ascending: false })
-    .limit(LIST_PAGE_SIZE);
+    .range(from, from + LIST_PAGE_SIZE);
   if (logError) throw fromPostgresError(logError);
 
-  const logs = (logData ?? []) as unknown as FollowLogRow[];
+  const fetched = (logData ?? []) as unknown as FollowLogRow[];
+  const hasNext = fetched.length > LIST_PAGE_SIZE;
+  const logs = fetched.slice(0, LIST_PAGE_SIZE);
+  const pageHref = (target: number) =>
+    (target > 1 ? `/cases/${caseId}/follow?page=${target}` : `/cases/${caseId}/follow`);
 
   // user_profiles の select ポリシーは「本人または同式場の admin」に限られるため、
   // planner が他プランナーの表示名を引くと 0 行になる。埋め込みではなく別クエリにして
@@ -146,8 +149,7 @@ export default async function FollowLogPage({
       <h1 className="section-head">フォロー記録</h1>
       <p className="mt-1 text-caption text-text-muted">
         {weddingCase.case_code}
-        {coupleName && ` / ${coupleName} さま`} ・ 挙式日{' '}
-        {dateFormat.format(new Date(`${weddingCase.wedding_date}T00:00:00+09:00`))}
+        {coupleName && ` / ${coupleName} さま`} ・ 挙式日 {formatDate(weddingCase.wedding_date)}
       </p>
 
       <section className="card mt-4">
@@ -162,7 +164,11 @@ export default async function FollowLogPage({
         <h2 className="section-head">これまでの記録</h2>
         {logs.length === 0 ? (
           <div className="mt-2">
-            <EmptyState message="まだフォロー記録はありません。" />
+            <EmptyState
+              message={
+                page > 1 ? 'これ以上の記録はありません。' : 'まだフォロー記録はありません。'
+              }
+            />
           </div>
         ) : (
           <div className="table-wrap mt-2">
@@ -178,9 +184,7 @@ export default async function FollowLogPage({
               <tbody>
                 {logs.map((log) => (
                   <tr key={log.id}>
-                    <td className="whitespace-nowrap">
-                      {dateTimeFormat.format(new Date(log.followed_at))}
-                    </td>
+                    <td className="whitespace-nowrap">{formatDateTime(log.followed_at)}</td>
                     <td className="whitespace-nowrap">{FOLLOW_METHOD_LABEL[log.method]}</td>
                     <td className="whitespace-nowrap">
                       {plannerNames.get(log.planner_id) ?? '担当プランナー'}
@@ -191,6 +195,23 @@ export default async function FollowLogPage({
               </tbody>
             </table>
           </div>
+        )}
+
+        {(page > 1 || hasNext) && (
+          <nav aria-label="ページ送り" className="mt-3 flex items-center justify-between">
+            {page > 1 ? (
+              <Link href={pageHref(page - 1)} className="btn-ghost">
+                前の{LIST_PAGE_SIZE}件
+              </Link>
+            ) : (
+              <span />
+            )}
+            {hasNext && (
+              <Link href={pageHref(page + 1)} className="btn-ghost">
+                次の{LIST_PAGE_SIZE}件
+              </Link>
+            )}
+          </nav>
         )}
       </section>
     </div>

@@ -16,7 +16,7 @@ import {
   type ContactChannel,
   type PartnerRole,
 } from '@/lib/constants';
-import { decryptPii } from '@/lib/crypto';
+import { readPii } from '@/lib/crypto';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -94,10 +94,12 @@ export default async function CaseEditPage({ params }: { params: Promise<{ caseI
   const initial: CaseEditInitial = {
     weddingDate: row.wedding_date,
     weddingTime: row.wedding_time ? row.wedding_time.slice(0, 5) : '',
-    // 氏名・メールは暗号化列。初期表示のために復号する（13-1）
-    groomName: decryptPii(groom?.full_name) ?? '',
-    brideName: decryptPii(bride?.full_name) ?? '',
-    contactEmail: decryptPii(primary?.email) ?? '',
+    // 氏名・メールは暗号化列。初期表示のために復号する（13-1）。
+    // 読めない値はそのまま表示する（readPii）。未変更の項目は PATCH の対象外なので、
+    // プランナーが触らない限り暗号文が再送信されることはない。
+    groomName: readPii(groom?.full_name),
+    brideName: readPii(bride?.full_name),
+    contactEmail: readPii(primary?.email),
     primaryContact: primary?.partner_role ?? 'bride',
     contactChannel: row.contact_channel,
     guestCount: row.guest_count === null ? '' : String(row.guest_count),

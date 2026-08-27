@@ -1,6 +1,8 @@
 /**
  * API のエラーレスポンス共通仕様。
  * 正本: 基本設計書 Version 1.2 6-5-1「エラーレスポンス共通仕様」表6-7。
+ * Route Handler を包むラッパーは src/lib/api/route.ts の route() に一本化してある
+ * （ここに同じものを置くと 6-5-1 の形式を変えるときに片方だけ直る）。
  *
  *   { "error": { "code": "VALIDATION_ERROR", "message": "...",
  *                "details": [ { "field": "wedding_date", "reason": "..." } ] } }
@@ -21,6 +23,18 @@ export const ERROR_CODES = {
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;
+
+/**
+ * security definer 関数が業務ルール違反を通知するための独自 SQLSTATE。
+ *
+ * SQLSTATE は [0-9A-Z] の5文字で、標準が使わない範囲は実装が自由に使える。
+ * 標準コードを転用すると（例: 外部キー違反の 23503 を 422 の代用にする）、
+ * 本物の制約違反と区別できなくなり、利用者にも実態と違う文言が出る。
+ * SQL 側は raise exception '文言' using errcode = 'BH422' のように使う。
+ */
+export const BUSINESS_RULE_SQLSTATE = 'BH422';
+/** 状態競合（他の操作が先に走った）を通知する独自 SQLSTATE。 */
+export const BUSINESS_RULE_CONFLICT_SQLSTATE = 'BH409';
 
 export interface ErrorDetail {
   field: string;
@@ -87,21 +101,15 @@ export function fromPostgresError(error: { code?: string; message?: string } | n
       return badRequest();
     case 'PGRST116':
       return notFound();
+    // security definer 関数が業務ルール違反を通知するための独自 SQLSTATE。
+    // 標準の SQLSTATE を転用すると（例: 外部キー違反の 23503）
+    // 利用者に「参照先のデータが存在しません」のような実態と違う文言が出る。
+    // 文言は関数側の raise message をそのまま使う（PostgREST が message を返す）。
+    case BUSINESS_RULE_SQLSTATE:
+      return unprocessable(error?.message || undefined);
+    case BUSINESS_RULE_CONFLICT_SQLSTATE:
+      return conflict(error?.message || undefined);
     default:
       return new ApiError('INTERNAL_ERROR');
-  }
-}
-
-/** ルートハンドラを包み、ApiError と想定外例外をレスポンスへ変換する。 */
-export async function handleRoute(fn: () => Promise<Response>): Promise<Response> {
-  try {
-    return await fn();
-  } catch (error) {
-    if (error instanceof ApiError) {
-      return error.toResponse();
-    }
-    // 想定外の例外は内容をクライアントへ返さない（9章）。サーバーログにのみ残す。
-    console.error('[api] unhandled error', error);
-    return new ApiError('INTERNAL_ERROR').toResponse();
   }
 }

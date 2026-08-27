@@ -7,6 +7,10 @@
  * 6-5 の原則により、一覧は API を経由せず Supabase クライアント（RLS適用）で読む。
  * 範囲（式場内／全体）は user_profiles_select が決めるので、ここでは条件を書かない。
  * 検索フォームは GET で自分自身に戻す素の form にし、クライアント JS を増やさない。
+ *
+ * 4-3 一覧画面共通：既定の表示件数は50件、以降はページング。
+ * 打ち切るだけでは51件目以降の利用者を編集・停止できなくなるため、
+ * K01／M02 と同じく1件多く取って前後リンクを出す（?page=）。
  */
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -37,12 +41,28 @@ function sanitizeKeyword(raw: string): string {
   return raw.replace(/[,()"\\*%]/g, ' ').trim().slice(0, 100);
 }
 
+/** ?page= を1始まりのページ番号にする。壊れた値は1ページ目へ寄せる（K01／M02 と同じ扱い）。 */
+function resolvePage(raw: string | undefined): number {
+  const parsed = Number(raw ?? '1');
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
+}
+
+/** 検索条件を保ったままページを送る。q は利用者が入力した文字列をそのまま持ち回す。 */
+function pageHref(q: string | undefined, page: number): string {
+  const query = new URLSearchParams();
+  if (q) query.set('q', q);
+  if (page > 1) query.set('page', String(page));
+  const search = query.toString();
+  return search ? `/users?${search}` : '/users';
+}
+
 export default async function UserListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, page: pageParam } = await searchParams;
+  const page = resolvePage(pageParam);
 
   const user = await getAppUser();
   if (!user) redirect('/login');
@@ -51,6 +71,8 @@ export default async function UserListPage({
   const keyword = sanitizeKeyword(q ?? '');
   const supabase = await createSupabaseServerClient();
 
+  // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する。
+  const from = (page - 1) * LIST_PAGE_SIZE;
   let query = supabase
     .from('user_profiles')
     .select('id, display_name, email, role, status, venue_id')
@@ -58,14 +80,16 @@ export default async function UserListPage({
     .order('role')
     .order('display_name')
     .order('id')
-    .limit(LIST_PAGE_SIZE);
+    .range(from, from + LIST_PAGE_SIZE);
 
   if (keyword) {
     query = query.or(`display_name.ilike.*${keyword}*,email.ilike.*${keyword}*`);
   }
 
   const { data, error } = await query;
-  const profiles: ProfileRow[] = data ?? [];
+  const fetched: ProfileRow[] = data ?? [];
+  const hasNext = fetched.length > LIST_PAGE_SIZE;
+  const profiles = fetched.slice(0, LIST_PAGE_SIZE);
 
   // 所属式場名は system_admin のときだけ必要。admin は自式場しか見えないため列を出さない
   const showVenue = user.role === 'system_admin';
@@ -146,9 +170,27 @@ export default async function UserListPage({
         <UserTable rows={rows} showVenue={showVenue} currentUserId={user.id} />
       )}
 
+      {!error && (page > 1 || hasNext) && (
+        <nav aria-label="ページ送り" className="flex items-center justify-between">
+          {page > 1 ? (
+            <Link href={pageHref(q, page - 1)} className="btn-ghost">
+              前の{LIST_PAGE_SIZE}件
+            </Link>
+          ) : (
+            <span />
+          )}
+          {hasNext && (
+            <Link href={pageHref(q, page + 1)} className="btn-ghost">
+              次の{LIST_PAGE_SIZE}件
+            </Link>
+          )}
+        </nav>
+      )}
+
       <p className="text-caption text-text-muted">
         新郎新婦のアカウントは案件の招待URLから作成されるため、この画面には表示されません。
-        表示は最大{LIST_PAGE_SIZE}件です。見つからないときは検索キーワードで絞り込んでください。
+        1ページの表示は{LIST_PAGE_SIZE}件です。続きは「次の{LIST_PAGE_SIZE}件」から、
+        目的の利用者が決まっているときは検索キーワードで絞り込んでください。
       </p>
     </div>
   );

@@ -16,13 +16,13 @@ import Link from 'next/link';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
   COUPLE_PROFILE_COLUMNS,
-  INCOMPLETE_TASK_STATUSES,
   PARTNER_ROLES,
   UNSUBMITTED_TASK_STATUSES,
   type PartnerRole,
   type TaskStatus,
 } from '@/lib/constants';
-import { decryptPii } from '@/lib/crypto';
+import { isEncrypted, readPii } from '@/lib/crypto';
+import { formatDateJp, todayInJst } from '@/lib/format';
 import { daysUntilWedding, nextActions, type IsoDate } from '@/lib/services/schedule';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -39,34 +39,6 @@ interface TaskRow {
 interface ProfileRow {
   partner_role: PartnerRole;
   full_name: string | null;
-}
-
-/**
- * 期限・挙式日は date 型（時刻を持たない）なので、比較の基準日も日本時間の暦日で取る。
- * UTC の today を使うと日本時間の朝9時までズレた残日数になる。
- */
-function todayInJst(): IsoDate {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
-}
-
-/** 'YYYY-MM-DD' → '2026年8月28日'。Date を経由しないのでタイムゾーンの影響を受けない。 */
-function formatJpDate(iso: IsoDate): string {
-  const [year, month, day] = iso.split('-');
-  return `${Number(year)}年${Number(month)}月${Number(day)}日`;
-}
-
-/**
- * couple_profiles.full_name はアプリ側 AES-256-GCM の暗号化対象（5-3／13-1）。
- * 開発用シードなど平文のまま入っている値も表示できるよう、接頭辞で判別する。
- */
-function decodeName(stored: string | null): string | null {
-  if (!stored) return null;
-  try {
-    return stored.startsWith('v1:') ? decryptPii(stored) : stored;
-  } catch {
-    // 鍵未設定・改ざんで復号できない場合でもカウントダウンは表示したいので名前だけ落とす
-    return null;
-  }
 }
 
 export default async function MyPage() {
@@ -97,22 +69,22 @@ export default async function MyPage() {
   const caseId = weddingCase.id as string;
   const weddingDate = weddingCase.wedding_date as IsoDate;
 
-  const [profileResult, taskResult, unsubmittedResult] = await Promise.all([
+  // 「次にやること」と「これから提出する宿題」は同じ母集合から作る。
+  // 6-8 の未提出判定（not_started／needs_fix。waived は対象外）に一本化することで、
+  // 「0件」と表示しながら提出済みの宿題が並ぶ矛盾を防ぐ。
+  // 提出済み（submitted）は新郎新婦の手を離れているので「次にやること」ではない。
+  // 件数用の別クエリを持たないのは、母集合が二重定義になると同じ矛盾が再発するため。
+  const [profileResult, taskResult] = await Promise.all([
     supabase.from('couple_profiles').select(COUPLE_PROFILE_COLUMNS).eq('case_id', caseId),
     supabase
       .from('case_tasks')
       .select('id, title, due_date, status, display_order')
       .eq('case_id', caseId)
-      .in('status', [...INCOMPLETE_TASK_STATUSES])
+      .in('status', [...UNSUBMITTED_TASK_STATUSES])
       // 並びの正本は 4-3／6-6-2 の ORDER BY due_date, display_order, id
       .order('due_date', { ascending: true })
       .order('display_order', { ascending: true })
       .order('id', { ascending: true }),
-    supabase
-      .from('case_tasks')
-      .select('id', { count: 'exact', head: true })
-      .eq('case_id', caseId)
-      .in('status', [...UNSUBMITTED_TASK_STATUSES]),
   ]);
 
   // COUPLE_PROFILE_COLUMNS は連結で組み立てた string のため supabase-js の
@@ -120,15 +92,19 @@ export default async function MyPage() {
   const profiles = (profileResult.data ?? []) as unknown as ProfileRow[];
   const names = [...profiles]
     .sort((a, b) => PARTNER_ROLES.indexOf(a.partner_role) - PARTNER_ROLES.indexOf(b.partner_role))
-    .map((p) => decodeName(p.full_name))
-    .filter((name): name is string => name !== null);
+    // couple_profiles.full_name はアプリ側 AES-256-GCM の暗号化対象（5-3／13-1）
+    .map((p) => readPii(p.full_name))
+    // 鍵未設定・改ざんで復号できなかった値は暗号文のまま返る。
+    // 新郎新婦に暗号文を見せる意味はないので名前だけ落とし、カウントダウンは表示する。
+    .filter((name) => name !== '' && !isEncrypted(name));
 
   const tasks = (taskResult.data ?? []) as TaskRow[];
-  // 「最大3件」の切り出しはサービス層の nextActions() に寄せる（11章の単体テスト対象）
+  // 「最大3件」の切り出しはサービス層の nextActions() に寄せる（11章の単体テスト対象）。
+  // nextActions は「未完了」で絞るが、渡す時点で未提出だけに揃えてあるので結果は変わらない。
   const actions = nextActions(
     tasks.map((t) => ({ ...t, dueDate: t.due_date, displayOrder: t.display_order })),
   );
-  const unsubmitted = unsubmittedResult.count ?? 0;
+  const unsubmitted = tasks.length;
 
   const today = todayInJst();
   const remaining = daysUntilWedding(weddingDate, today);
@@ -139,7 +115,7 @@ export default async function MyPage() {
       <section className="card-hero" aria-label="挙式までの残り日数">
         <p className="text-label text-primary-dark/70">
           {names.length > 0 && <>{names.join('・')}　</>}
-          {formatJpDate(weddingDate)}
+          {formatDateJp(weddingDate)}
         </p>
         {remaining > 0 ? (
           <p className="mt-1 flex items-baseline gap-1 text-primary-darker">
@@ -171,7 +147,7 @@ export default async function MyPage() {
                 >
                   <span className="flex-1">
                     <span className="block text-label text-text-muted">
-                      {formatJpDate(task.due_date)}まで
+                      {formatDateJp(task.due_date)}まで
                     </span>
                     <span className="block text-base text-text-primary">{task.title}</span>
                   </span>

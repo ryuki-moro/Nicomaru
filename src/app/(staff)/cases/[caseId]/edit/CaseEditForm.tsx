@@ -28,6 +28,7 @@ import {
   type ContactChannel,
   type PartnerRole,
 } from '@/lib/constants';
+import { formatDate } from '@/lib/format';
 
 export interface CaseEditInitial {
   weddingDate: string;
@@ -63,8 +64,6 @@ interface Props {
   /** 自式場の planner 一覧。admin 以外には渡さない（担当プランナーの変更は admin のみ） */
   planners: { id: string; displayName: string }[] | null;
 }
-
-const formatDate = (value: string) => value.replaceAll('-', '/');
 
 export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Props) {
   const router = useRouter();

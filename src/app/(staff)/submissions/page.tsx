@@ -5,15 +5,20 @@
  * couple の一時保存（draft）は RLS の restrictive ポリシーで元々見えないが、
  * 「確認待ち」という画面の意味を式で明示するために条件としても書く（6-7）。
  *
+ * さらに、宿題側が「対応不要」（case_tasks.status='waived'）になったものは除外する。
+ * 免除された宿題は 6-8 の未提出判定から外れており確認する必要がないうえ、
+ * ここで確認すると case_tasks.status が confirmed で上書きされ、免除が黙って外れるため。
+ *
  * 読み取りは 6-5 の原則どおり Server Component から RLS 適用クライアントで直接 select する。
  */
 import Link from 'next/link';
 
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ReviewStatusBadge } from '@/components/ui/StatusBadge';
-import { COUPLE_PROFILE_COLUMNS, LIST_PAGE_SIZE } from '@/lib/constants';
-import { decryptPii } from '@/lib/crypto';
+import { COUPLE_PROFILE_COLUMNS, LIST_PAGE_SIZE, type TaskStatus } from '@/lib/constants';
+import { readPii } from '@/lib/crypto';
 import { fromPostgresError } from '@/lib/errors';
+import { formatDate, formatDateTime } from '@/lib/format';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 interface SubmissionRow {
@@ -24,6 +29,7 @@ interface SubmissionRow {
     title: string;
     due_date: string;
     case_id: string;
+    status: TaskStatus;
     wedding_cases: { id: string; case_code: string; wedding_date: string };
   };
 }
@@ -34,24 +40,6 @@ interface CoupleProfileRow {
   full_name: string | null;
   is_primary_contact: boolean;
 }
-
-/** 暗号化列（13-1）。初期投入データなど平文のまま入っている値は復号せずそのまま見せる。 */
-function readPii(value: string | null): string {
-  if (!value) return '';
-  try {
-    return decryptPii(value) ?? '';
-  } catch {
-    return value;
-  }
-}
-
-const dateTimeFormat = new Intl.DateTimeFormat('ja-JP', {
-  dateStyle: 'short',
-  timeStyle: 'short',
-  timeZone: 'Asia/Tokyo',
-});
-/** due_date は date 型なので、JST の日付として解釈させてからフォーマットする。 */
-const dateFormat = new Intl.DateTimeFormat('ja-JP', { dateStyle: 'short', timeZone: 'Asia/Tokyo' });
 
 export default async function SubmissionsPage({
   searchParams,
@@ -69,12 +57,15 @@ export default async function SubmissionsPage({
     .from('task_submissions')
     .select(
       'id, submitted_at,'
-      + ' case_tasks!inner ( id, title, due_date, case_id,'
+      + ' case_tasks!inner ( id, title, due_date, case_id, status,'
       + ' wedding_cases!inner ( id, case_code, wedding_date ) )',
       { count: 'exact' },
     )
     .eq('review_status', 'submitted')
     .eq('is_latest', true)
+    // 「対応不要」にした宿題は確認対象から外す（表6-9／6-8）。
+    // 埋め込みが !inner なので、この条件は親行（task_submissions）ごと絞り込む。
+    .neq('case_tasks.status', 'waived')
     // 待たせている提出から順に確認する。同着は id をタイブレークにする（4-3 一覧画面共通）
     .order('submitted_at', { ascending: true })
     .order('id', { ascending: true })
@@ -156,12 +147,8 @@ export default async function SubmissionsPage({
                   </td>
                   <td>{coupleNames.get(row.case_tasks.case_id) ?? '—'}</td>
                   <td>{row.case_tasks.title}</td>
-                  <td className="whitespace-nowrap">
-                    {dateFormat.format(new Date(`${row.case_tasks.due_date}T00:00:00+09:00`))}
-                  </td>
-                  <td className="whitespace-nowrap">
-                    {dateTimeFormat.format(new Date(row.submitted_at))}
-                  </td>
+                  <td className="whitespace-nowrap">{formatDate(row.case_tasks.due_date)}</td>
+                  <td className="whitespace-nowrap">{formatDateTime(row.submitted_at)}</td>
                   <td>
                     <ReviewStatusBadge status="submitted" />
                   </td>

@@ -25,7 +25,8 @@ import {
   type PartnerRole,
   type TaskStatus,
 } from '@/lib/constants';
-import { decryptPii } from '@/lib/crypto';
+import { readPii } from '@/lib/crypto';
+import { formatDate } from '@/lib/format';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -52,9 +53,6 @@ interface CaseListRow {
   couple_profiles: { partner_role: PartnerRole; full_name: string }[];
   case_tasks: { status: TaskStatus }[];
 }
-
-/** 'YYYY-MM-DD' を表示用に整える。Date を経由しないのでタイムゾーンの影響を受けない。 */
-const formatDate = (value: string) => value.replaceAll('-', '/');
 
 /**
  * アーカイブ解除（機能2-6）。
@@ -120,8 +118,9 @@ export default async function CaseListPage({ searchParams }: Props) {
   const decorated = rows.map((row) => {
     const total = row.case_tasks.length;
     const incomplete = row.case_tasks.filter((t) => INCOMPLETE_TASK_STATUSES.includes(t.status)).length;
+    // 氏名は暗号化列（13-1）。鍵が合わない値で一覧全体を 500 にしないよう readPii を使う
     const names = row.couple_profiles
-      .map((profile) => decryptPii(profile.full_name) ?? '')
+      .map((profile) => readPii(profile.full_name))
       .filter((name) => name.length > 0);
     return {
       id: row.id,

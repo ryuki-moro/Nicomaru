@@ -18,7 +18,7 @@ import {
   type InvitationPurpose,
   type PartnerRole,
 } from '@/lib/constants';
-import { decryptPii } from '@/lib/crypto';
+import { readPii } from '@/lib/crypto';
 import { fromPostgresError, notFound } from '@/lib/errors';
 import { sendInvitation } from '@/lib/notify/send';
 import {
@@ -107,12 +107,17 @@ export const POST = route(
     const baseUrl = process.env.APP_BASE_URL ?? new URL(request.url).origin;
     const url = buildInvitationUrl(baseUrl, token);
 
+    // 宛名・宛先は暗号化列（13-1）。復号できない値で 500 になると再発行済みの
+    // 平文URLを失うため readPii で畳む（6-3-6）
     const result = await sendInvitation(
       channel,
-      { email: decryptPii(partner.email), lineUserId: partner.user_profiles?.line_user_id ?? null },
+      {
+        email: readPii(partner.email) || null,
+        lineUserId: partner.user_profiles?.line_user_id ?? null,
+      },
       {
         caseCode: target.case_code,
-        recipientName: decryptPii(partner.full_name) ?? '',
+        recipientName: readPii(partner.full_name),
         invitationUrl: url,
         expiresAt: issued.expires_at,
       },

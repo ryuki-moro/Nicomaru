@@ -12,8 +12,8 @@
  */
 import { requireStaff } from '@/lib/auth/session';
 import { ok, parseBody, route } from '@/lib/api/route';
-import { REVIEW_STATUS_LABEL, type ReviewStatus } from '@/lib/constants';
-import { conflict, fromPostgresError, notFound } from '@/lib/errors';
+import { REVIEW_STATUS_LABEL, type ReviewStatus, type TaskStatus } from '@/lib/constants';
+import { conflict, fromPostgresError, notFound, unprocessable } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { reviewSubmissionSchema } from '@/lib/validation';
 
@@ -24,7 +24,7 @@ interface SubmissionRow {
   id: string;
   case_task_id: string;
   review_status: ReviewStatus;
-  case_tasks: { id: string; title: string; case_id: string };
+  case_tasks: { id: string; title: string; case_id: string; status: TaskStatus };
 }
 
 export const POST = route(
@@ -39,7 +39,7 @@ export const POST = route(
     // 状態と案件IDを先に取る。RLS 外の提出は 0 行になるので存在有無を漏らさず 404 になる
     const { data, error } = await supabase
       .from('task_submissions')
-      .select('id, case_task_id, review_status, case_tasks!inner ( id, title, case_id )')
+      .select('id, case_task_id, review_status, case_tasks!inner ( id, title, case_id, status )')
       .eq('id', submissionId)
       .maybeSingle();
     if (error) throw fromPostgresError(error);
@@ -48,6 +48,14 @@ export const POST = route(
     const submission = data as unknown as SubmissionRow;
     // 一時保存（draft）は確認対象ではなく、確認済みの提出への再確認も認めない（6-7）
     if (submission.review_status !== 'submitted') throw conflict();
+
+    // 提出後にプランナーが宿題を「対応不要」にした場合、提出は submitted のまま残る。
+    // ここで確認すると下の case_tasks 更新が status を confirmed／needs_fix で上書きし、
+    // 免除（表6-9 waived）が黙って外れて 6-8 の未提出判定に戻ってしまう。
+    // 免除の解除は K02 の「対応不要を解除」で明示的に行う操作なので、確認側では受け付けない。
+    if (submission.case_tasks.status === 'waived') {
+      throw unprocessable('この宿題は「対応不要」になっているため、確認の必要はありません');
+    }
 
     const reviewedAt = new Date().toISOString();
 

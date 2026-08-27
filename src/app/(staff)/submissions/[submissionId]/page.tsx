@@ -18,8 +18,9 @@ import {
   type SubmissionFormat,
   type TaskStatus,
 } from '@/lib/constants';
-import { decryptPii } from '@/lib/crypto';
+import { readPii } from '@/lib/crypto';
 import { fromPostgresError } from '@/lib/errors';
+import { formatDate, formatDateTime } from '@/lib/format';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 interface SubmissionDetail {
@@ -55,23 +56,6 @@ interface CoupleProfileRow {
   full_name: string | null;
   is_primary_contact: boolean;
 }
-
-/** 暗号化列（13-1）。平文のまま入っている初期データは復号せずそのまま見せる。 */
-function readPii(value: string | null): string {
-  if (!value) return '';
-  try {
-    return decryptPii(value) ?? '';
-  } catch {
-    return value;
-  }
-}
-
-const dateTimeFormat = new Intl.DateTimeFormat('ja-JP', {
-  dateStyle: 'long',
-  timeStyle: 'short',
-  timeZone: 'Asia/Tokyo',
-});
-const dateFormat = new Intl.DateTimeFormat('ja-JP', { dateStyle: 'long', timeZone: 'Asia/Tokyo' });
 
 function formatFileSize(bytes: number | null): string {
   if (bytes === null) return '';
@@ -120,7 +104,11 @@ export default async function SubmissionReviewPage({
     .filter((name) => name !== '')
     .join('・');
 
-  const isPending = submission.review_status === 'submitted';
+  // 「対応不要」（waived）にした宿題は確認の対象外。
+  // API 側も 422 で弾くが（/api/submissions/{id}/review）、押せるボタンを出したまま
+  // エラーで返すのは導線として不親切なので、フォーム自体を出さない（表6-9）。
+  const isWaived = task.status === 'waived';
+  const isPending = submission.review_status === 'submitted' && !isWaived;
   const textValue = readPii(submission.text_value);
 
   return (
@@ -156,8 +144,8 @@ export default async function SubmissionReviewPage({
         <h2 className="text-label font-bold text-text-primary">提出内容</h2>
         <dl className="mt-2 grid gap-2 text-label text-text-secondary">
           <Row label="提出形式">{SUBMISSION_FORMAT_LABEL[submission.submission_type]}</Row>
-          <Row label="提出日時">{dateTimeFormat.format(new Date(submission.submitted_at))}</Row>
-          <Row label="宿題の期限">{dateFormat.format(new Date(`${task.due_date}T00:00:00+09:00`))}</Row>
+          <Row label="提出日時">{formatDateTime(submission.submitted_at)}</Row>
+          <Row label="宿題の期限">{formatDate(task.due_date)}</Row>
           <Row label="宿題の状態">
             <TaskStatusBadge status={task.status} />
           </Row>
@@ -223,11 +211,16 @@ export default async function SubmissionReviewPage({
         </section>
       ) : (
         <section className="card mt-4">
-          <h2 className="text-label font-bold text-text-primary">確認済みの内容</h2>
+          <h2 className="text-label font-bold text-text-primary">
+            {isWaived ? 'この宿題は「対応不要」です' : '確認済みの内容'}
+          </h2>
           <p className="mt-1 text-label text-text-secondary">
-            {submission.reviewed_at
-              ? `${dateTimeFormat.format(new Date(submission.reviewed_at))} に確認結果を登録しました。`
-              : 'この提出はすでに確認が終わっています。'}
+            {isWaived
+              ? '案件詳細（K02）で「対応不要」に設定されているため、確認の必要はありません。'
+                + '確認が必要な場合は、案件詳細で対応不要を解除してください。'
+              : submission.reviewed_at
+                ? `${formatDateTime(submission.reviewed_at)} に確認結果を登録しました。`
+                : 'この提出はすでに確認が終わっています。'}
           </p>
           {submission.planner_feedback && (
             <p className="mt-2 whitespace-pre-wrap text-label text-text-primary">

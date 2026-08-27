@@ -29,7 +29,8 @@ import {
   type SubmissionFormat,
   type TaskStatus,
 } from '@/lib/constants';
-import { decryptPii } from '@/lib/crypto';
+import { readPii } from '@/lib/crypto';
+import { formatDate } from '@/lib/format';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -72,8 +73,6 @@ interface CaseRow {
   }[];
 }
 
-const formatDate = (value: string) => value.replaceAll('-', '/');
-
 export default async function CaseDetailPage({
   params,
 }: {
@@ -98,9 +97,10 @@ export default async function CaseDetailPage({
   const partners = row.couple_profiles
     .map((profile) => ({
       partnerRole: profile.partner_role,
-      // 氏名・メールは暗号化列。表示時に復号する（13-1）
-      fullName: decryptPii(profile.full_name) ?? '',
-      email: decryptPii(profile.email),
+      // 氏名・メールは暗号化列。表示時に復号する（13-1）。
+      // 復号できない値で画面ごと 500 にしないよう readPii を使う（読めない値はそのまま出す）
+      fullName: readPii(profile.full_name),
+      email: readPii(profile.email),
       isPrimaryContact: profile.is_primary_contact,
     }))
     .sort((a, b) => a.partnerRole.localeCompare(b.partnerRole));

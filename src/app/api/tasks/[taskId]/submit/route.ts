@@ -6,9 +6,14 @@
  * 複数テーブル（task_submissions／case_tasks／storage_files／communication_logs）へ
  * 書き込むため、Supabase クライアント直アクセスではなく Route Handler に集約する（6-5）。
  *
+ * 提出の単位は「利用者」ではなく「案件」。新郎新婦は1つの案件・同じ case_tasks を共有し（2-3、6-6-1）、
+ * 宿題1件に対する最新提出も部分ユニークで1行に限られるため、どちらが操作しても同じ提出を指す。
+ * 相手の未レビュー提出（draft を含む）も上書きの対象になる（6-7）。
+ *
  * 冪等性（二重送信対策）の要点:
  *   - 同一 case_task_id に review_status が 'draft'／'submitted'（未レビュー）の提出があれば上書き。
  *     未レビュー提出は「訂正前の一時的な状態」なので 409 で弾かずサーバー側で上書きする。
+ *     提出者が誰かは条件にしない（6-7）。上書き時は submitted_by を実行者へ付け替える。
  *   - needs_fix／confirmed からの再提出は新規行とし、is_latest を付け替える。
  *     部分ユニークインデックス task_submissions_latest_uk（UNIQUE(case_task_id) WHERE is_latest）
  *     があるため、必ず「旧行を false → 新行を insert」の順で実行する。
@@ -17,6 +22,8 @@
  *   - submission_type は提出時点の case_tasks.submission_format をそのまま複写する。
  *   - case_tasks.status の更新は RPC submit_task() 経由（couple には case_tasks の
  *     update ポリシーが無い。付録A）。一時保存では status を変えない。
+ *     confirmed からの再提出では同 RPC が confirmed_by／confirmed_at も消す
+ *     （未確認の状態に戻った宿題に前回の確認者を残さない。3-3-4）。
  *
  * 【トランザクション境界について】本ハンドラは PostgREST 経由の複数リクエストで構成されるため、
  * 6-7 が求める「同一トランザクション」にはなっていない。ただし各ステップは
@@ -59,9 +66,14 @@ interface CaseTaskRow {
   status: string;
 }
 
+/**
+ * latest_submission_for_task() の戻り（20260828001000_submission_sharing.sql）。
+ * 状態判定に要るメタ情報だけで、本文（text_value 等）は含まない。
+ */
 interface LatestSubmissionRow {
   id: string;
   review_status: ReviewStatus;
+  submitted_by: string;
   file_id: string | null;
 }
 
@@ -213,16 +225,23 @@ export const POST = route(
     }
     if (details.length > 0) throw badRequest(details);
 
-    // 添付は「自分がこの案件へ上げたファイル」に限る。他案件の file_id を差し込まれないようにする。
+    // 添付は「この案件のファイル」に限る。他案件の file_id を差し込まれないようにする。
+    //
+    // 提出は案件を共有する新郎新婦で1つ（6-7）なので、相手が添付したファイルを引き継いだ
+    // 再提出も通常フローになる（M03 は「選び直さなければこのまま提出されます」と案内している）。
+    // uploaded_by = 実行者まで求めると、その案内どおりに操作しただけで必ず 400 になる。
+    // 「他人のファイルを勝手に登録できない」担保は storage_files_insert（uploaded_by は
+    // current_app_user 固定）と storage_files_hide_planner_only が既に行っており、
+    // ここで重ねる必要は無い（付録A）。
     if (fileId) {
       const fileResult = await supabase
         .from('storage_files')
-        .select('id, case_id, uploaded_by, bucket, object_path')
+        .select('id, case_id')
         .eq('id', fileId)
         .maybeSingle();
       if (fileResult.error) throw fromPostgresError(fileResult.error);
-      const file = fileResult.data as StorageFileRow | null;
-      if (!file || file.case_id !== task.case_id || file.uploaded_by !== user.id) {
+      const file = fileResult.data as Pick<StorageFileRow, 'id' | 'case_id'> | null;
+      if (!file || file.case_id !== task.case_id) {
         throw badRequest([
           { field: 'fileId', reason: '添付ファイルを確認できませんでした。選び直してください' },
         ]);
@@ -230,11 +249,12 @@ export const POST = route(
     }
 
     // ------------------------------------------------------------------ 冪等性（6-7）
+    // 最新提出は task_submissions を直接読まず RPC で取る。
+    // restrictive な task_submissions_hide_draft は draft 行を submitted_by 本人にしか見せないため、
+    // 直読みだと「相手が一時保存した状態」が 0 行に見え、上書きにも降格にも入らないまま
+    // insert して task_submissions_latest_uk（部分ユニーク）に衝突し 409 が恒久化する。
     const latestResult = await supabase
-      .from('task_submissions')
-      .select('id, review_status, file_id')
-      .eq('case_task_id', taskId)
-      .eq('is_latest', true)
+      .rpc('latest_submission_for_task', { p_case_task_id: taskId })
       .maybeSingle();
     if (latestResult.error) throw fromPostgresError(latestResult.error);
     const latest = latestResult.data as LatestSubmissionRow | null;
@@ -242,6 +262,7 @@ export const POST = route(
     // 提出済みを draft へ戻すと case_tasks.status='submitted' のまま提出がプランナーから
     // 見えなくなり（付録A task_submissions_hide_draft）、6-8 のリスク算出とも食い違う。
     // couple 側から status を戻す手段は無いので、この遷移は受け付けない。
+    // 提出が案件単位になっても同じで、相手が提出した内容も一時保存へは戻せない。
     if (draft && latest?.review_status === 'submitted') {
       throw unprocessable('提出済みの内容は一時保存に戻せません。修正して提出し直してください');
     }
@@ -266,6 +287,19 @@ export const POST = route(
     let replacedFileId: string | null = null;
 
     if (latest && UNREVIEWED_STATUSES.includes(latest.review_status)) {
+      // 相手の未レビュー提出を上書きするときは、先に所有権を実行者へ移す（6-7）。
+      // 「誰が最後に出したか」を正しく残すためであると同時に、UPDATE の WHERE／RETURNING には
+      // select ポリシーも効くため、hide_draft に隠された相手の draft 行は
+      // 所有権を移さないと 0 行更新になる（20260828001000_submission_sharing.sql）。
+      if (latest.submitted_by !== user.id) {
+        const claimed = await supabase.rpc('claim_latest_submission', { p_case_task_id: taskId });
+        if (claimed.error) throw fromPostgresError(claimed.error);
+        if (!claimed.data) {
+          // 取得してから所有権を移すまでの間にプランナーが確認した場合（未レビューでなくなった）。
+          throw conflict('提出の状態が変わりました。画面を開き直してからやり直してください');
+        }
+      }
+
       // 未レビュー提出は上書き更新する（409 で弾かない）
       const updated = await supabase
         .from('task_submissions')
@@ -275,9 +309,9 @@ export const POST = route(
       if (updated.error) throw fromPostgresError(updated.error);
       const rows = (updated.data ?? []) as { id: string }[];
       if (rows.length === 0) {
-        // 付録A task_submissions_update_couple は submitted_by 本人の行しか更新させない。
-        // 相手方（新郎／新婦）の未レビュー提出が最新のときここに来る。
-        throw conflict('お相手が入力中の提出があります。画面を開き直してからやり直してください');
+        // 上の所有権移転まで通った後に 0 行になるのは、状態が同時に書き換わった場合だけ
+        // （task_submissions_update_couple は未レビューの行しか掴まない）。
+        throw conflict('提出の状態が変わりました。画面を開き直してからやり直してください');
       }
       submissionId = rows[0].id;
       if (latest.file_id && latest.file_id !== fileId) replacedFileId = latest.file_id;

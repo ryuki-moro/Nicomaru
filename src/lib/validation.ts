@@ -19,6 +19,7 @@ import {
   SUBMISSION_FORMATS,
 } from '@/lib/constants';
 import { type ErrorDetail } from '@/lib/errors';
+import { todayInJst } from '@/lib/format';
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付の形式が正しくありません');
 const shortText = z.string().trim().min(1, '入力してください').max(INPUT_LIMITS.shortText);
@@ -27,8 +28,15 @@ const email = z.string().trim().toLowerCase().email('メールアドレスの形
   .max(255);
 const phone = z.string().trim().regex(/^[0-9-]*$/, '数字とハイフンのみで入力してください').max(30);
 
-/** 今日以降の日付か（K03「過去日付不可」）。比較は UTC 日付文字列で行う。 */
-const notPastDate = (value: string) => value >= new Date().toISOString().slice(0, 10);
+/**
+ * 今日以降の日付か（K03「過去日付不可」表4-14）。
+ *
+ * 基準日は日本時間の暦日で取る（format.ts）。サーバーが UTC で動く環境で
+ * new Date().toISOString() を基準にすると、JST の 0:00〜9:00 は前日を「今日」と見なし、
+ * 前日の挙式日が通ってしまう。挙式日は 6-6-2 の期限逆算の起点なので、
+ * 1日でも過去に倒れると割り当てた宿題の期限が全件過去日になる。
+ */
+const notPastDate = (value: string) => value >= todayInJst();
 
 // ------------------------------------------------------------------ 認証（P01〜P03）
 export const otpRequestSchema = z.object({
@@ -94,7 +102,7 @@ const optionsSchema = z.object({
 
 export const caseTaskCreateSchema = z
   .object({
-    title: z.string().trim().min(1).max(120),
+    title: z.string().trim().min(1).max(INPUT_LIMITS.shortText),
     description: z.string().trim().max(INPUT_LIMITS.templateDescription).optional().nullable(),
     submissionFormat: z.enum(SUBMISSION_FORMATS),
     allowedFileTypes: z.array(z.enum(ALLOWED_FILE_TYPES)).default([]),
@@ -115,7 +123,7 @@ export const caseTaskCreateSchema = z
   });
 
 export const caseTaskUpdateSchema = z.object({
-  title: z.string().trim().min(1).max(120).optional(),
+  title: z.string().trim().min(1).max(INPUT_LIMITS.shortText).optional(),
   description: z.string().trim().max(INPUT_LIMITS.templateDescription).optional().nullable(),
   dueDate: isoDate.optional(),
   /** 「対応不要にする」（機能5-5）。true で waived を付与する */
@@ -125,7 +133,7 @@ export const caseTaskUpdateSchema = z.object({
 /** T02 宿題テンプレート（表4-17）。逆算日数を持つ点が case_tasks と異なる。 */
 export const taskTemplateSchema = z
   .object({
-    name: z.string().trim().min(1).max(120),
+    name: z.string().trim().min(1).max(INPUT_LIMITS.shortText),
     description: z.string().trim().max(INPUT_LIMITS.templateDescription).optional().nullable(),
     submissionFormat: z.enum(SUBMISSION_FORMATS),
     allowedFileTypes: z.array(z.enum(ALLOWED_FILE_TYPES)).default([]),

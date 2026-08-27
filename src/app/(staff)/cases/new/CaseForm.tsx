@@ -24,6 +24,7 @@ import {
   type ContactChannel,
   type PartnerRole,
 } from '@/lib/constants';
+import { formatDate } from '@/lib/format';
 import { dueDateFrom } from '@/lib/services/schedule';
 
 export interface PlanOption {
@@ -40,12 +41,15 @@ interface CreateCaseResponse {
 
 interface Props {
   plans: PlanOption[];
-  /** 過去日付を選べないようにするための今日（サーバー時刻。ハイドレーション差異を避けるため props で渡す） */
+  /**
+   * 過去日付を選べないようにするための今日（日本時間の暦日）。
+   * ブラウザのタイムゾーンで求めるとサーバー側 notPastDate と食い違い、
+   * ハイドレーション差異も出るため props で受け取る。
+   */
   today: string;
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const formatDate = (value: string) => value.replaceAll('-', '/');
 
 export function CaseForm({ plans, today }: Props) {
   const [form, setForm] = useState({

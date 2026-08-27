@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { TaskStatusBadge } from '@/components/ui/StatusBadge';
 import { ApiCallError, api } from '@/lib/api/client';
+import { formatDate } from '@/lib/format';
 import {
   ALLOWED_FILE_TYPES,
   IMPORTANCE_LABEL,
@@ -48,7 +49,15 @@ interface Props {
   readOnly: boolean;
 }
 
-const formatDate = (value: string) => value.replaceAll('-', '/');
+/**
+ * 「対応不要にする／解除」を出してよい状態。
+ *
+ * 提出済み・不備あり・確認済みの宿題に waived を付けて解除すると not_started へ戻り、
+ * 確認実績（confirmed_by／confirmed_at）と噛み合わない行が残る。
+ * DB 側でも update_case_task が同じ条件で弾く（20260828001100_task_state_guards.sql）。
+ * 画面はその条件を先回りして、押せない操作をそもそも見せない（6-6-2 の一括経路と同条件）。
+ */
+const WAIVABLE_STATUSES: readonly TaskStatus[] = ['not_started', 'waived'];
 
 const emptyDraft = {
   title: '',
@@ -259,14 +268,16 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
                             期限を変更
                           </button>
                         )}
-                        <button
-                          type="button"
-                          className="btn-ghost"
-                          disabled={busy}
-                          onClick={() => setWaived(task.id, task.status !== 'waived')}
-                        >
-                          {task.status === 'waived' ? '対応不要を解除' : '対応不要にする'}
-                        </button>
+                        {WAIVABLE_STATUSES.includes(task.status) && (
+                          <button
+                            type="button"
+                            className="btn-ghost"
+                            disabled={busy}
+                            onClick={() => setWaived(task.id, task.status !== 'waived')}
+                          >
+                            {task.status === 'waived' ? '対応不要を解除' : '対応不要にする'}
+                          </button>
+                        )}
                       </div>
                     </td>
                   )}
@@ -288,7 +299,7 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
             <input
               id="task-title"
               className="field"
-              maxLength={120}
+              maxLength={INPUT_LIMITS.shortText}
               value={draft.title}
               onChange={(e) => setDraft({ ...draft, title: e.target.value })}
               required

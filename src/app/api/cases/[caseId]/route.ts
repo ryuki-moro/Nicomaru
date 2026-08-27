@@ -13,27 +13,19 @@
  */
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireStaff } from '@/lib/auth/session';
-import {
-  COUPLE_PROFILE_COLUMNS,
-  INCOMPLETE_TASK_STATUSES,
-  type Importance,
-  type SubmissionFormat,
-  type TaskStatus,
-} from '@/lib/constants';
-import { decryptPii, emailHash, encryptPii } from '@/lib/crypto';
+import { COUPLE_PROFILE_COLUMNS, INCOMPLETE_TASK_STATUSES, type TaskStatus } from '@/lib/constants';
+import { emailHash, encryptPii, readPii } from '@/lib/crypto';
 import { badRequest, forbidden, fromPostgresError, notFound } from '@/lib/errors';
+import { loadPlanTemplates } from '@/lib/services/planTemplates';
 import {
   phaseNameFor,
   planTasks,
   previewPlanChange,
   recalculateDueDates,
   type ExistingTask,
-  type TemplateForAssign,
 } from '@/lib/services/schedule';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { casePatchSchema } from '@/lib/validation';
-
-type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 interface CaseDetailRow {
   id: string;
@@ -109,9 +101,11 @@ export const GET = route(async (_request: Request, context: { params: Promise<{ 
     primaryPlanner: row.user_profiles,
     partners: row.couple_profiles.map((profile) => ({
       partnerRole: profile.partner_role,
-      // 暗号化列は参照時に復号する（13-1）
-      fullName: decryptPii(profile.full_name) ?? '',
-      email: decryptPii(profile.email),
+      // 暗号化列は参照時に復号する（13-1）。鍵が合わない値で応答全体を 500 にしないよう
+      // readPii を使う（復号できない値はそのまま返る）。
+      fullName: readPii(profile.full_name),
+      // 未登録は null のまま返す。空文字にすると「登録済みだが空」と区別できなくなる。
+      email: readPii(profile.email) || null,
       isPrimaryContact: profile.is_primary_contact,
     })),
     taskTotal: tasks.length,
@@ -127,66 +121,6 @@ interface ExistingTaskRow {
   status: TaskStatus;
   due_date: string;
   task_templates: { due_offset_days: number } | null;
-}
-
-/**
- * プラン種別に紐づく宿題テンプレートを TemplateForAssign へ写す。
- * assign-tasks の Route Handler にも同じ読み出しがあるが、Route Handler は
- * HTTPメソッド以外の値を export できないため共有できない（Next.js の型検査で落ちる）。
- * 変更するときは src/app/api/cases/[caseId]/assign-tasks/route.ts も併せて直すこと。
- */
-async function loadPlanTemplates(
-  supabase: SupabaseServerClient,
-  planTypeId: string,
-): Promise<TemplateForAssign[]> {
-  const { data, error } = await supabase
-    .from('plan_task_templates')
-    .select(
-      `display_order, is_required, due_offset_days_override,
-       task_templates ( id, name, description, submission_format, allowed_file_types,
-                        default_options, due_offset_days, importance, active )`,
-    )
-    .eq('plan_type_id', planTypeId)
-    .order('display_order', { ascending: true });
-  if (error) throw fromPostgresError(error);
-
-  const rows = (data ?? []) as unknown as {
-    display_order: number;
-    is_required: boolean;
-    due_offset_days_override: number | null;
-    task_templates: {
-      id: string;
-      name: string;
-      description: string | null;
-      submission_format: SubmissionFormat;
-      allowed_file_types: string[];
-      default_options: Record<string, unknown>;
-      due_offset_days: number;
-      importance: Importance;
-      active: boolean;
-    } | null;
-  }[];
-
-  return rows
-    // 無効化したテンプレートは新規割当に含めない（T02 の active）
-    .filter((row) => row.task_templates !== null && row.task_templates.active)
-    .map((row) => {
-      const template = row.task_templates as NonNullable<typeof row.task_templates>;
-      return {
-        taskTemplateId: template.id,
-        title: template.name,
-        description: template.description,
-        submissionFormat: template.submission_format,
-        allowedFileTypes: template.allowed_file_types ?? [],
-        options: template.default_options ?? {},
-        importance: template.importance,
-        dueOffsetDays: template.due_offset_days,
-        // プラン固有の上書きがあればそちらを使う（6-6-2）
-        dueOffsetDaysOverride: row.due_offset_days_override,
-        isRequired: row.is_required,
-        displayOrder: row.display_order,
-      };
-    });
 }
 
 export const PATCH = route(async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
@@ -244,6 +178,8 @@ export const PATCH = route(async (request: Request, context: { params: Promise<{
     if (taskError) throw fromPostgresError(taskError);
     const taskRows = (taskData ?? []) as unknown as ExistingTaskRow[];
 
+    // テンプレートの読み出しは lib/services/planTemplates.ts に一本化した。
+    // ここと assign-tasks が別々の集合を見ると、確認ダイアログの内容と実際の割当がずれる（6-6-2）。
     const templates = await loadPlanTemplates(supabase, planTypeId);
     const offsetByTemplate = new Map(
       templates.map((t) => [t.taskTemplateId, t.dueOffsetDaysOverride ?? t.dueOffsetDays]),

@@ -23,6 +23,7 @@ import {
   TASK_STATUSES_EXCLUDED_FROM_ALL,
   type TaskStatus,
 } from '@/lib/constants';
+import { formatDateJp, todayInJst } from '@/lib/format';
 import { daysBetween, type IsoDate } from '@/lib/services/schedule';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -36,15 +37,6 @@ interface TaskRow {
   title: string;
   due_date: IsoDate;
   status: TaskStatus;
-}
-
-function todayInJst(): IsoDate {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
-}
-
-function formatJpDate(iso: IsoDate): string {
-  const [year, month, day] = iso.split('-');
-  return `${Number(year)}年${Number(month)}月${Number(day)}日`;
 }
 
 /** ?tab= を TASK_FILTER_TABS のキーへ解決する。未知の値は既定タブへ寄せる。 */
@@ -126,7 +118,7 @@ export default async function TaskListPage({
                     <span
                       className={`block text-label ${dueSoon ? 'text-warning-text' : 'text-text-muted'}`}
                     >
-                      {formatJpDate(task.due_date)}まで
+                      {formatDateJp(task.due_date)}まで
                     </span>
                   </span>
                   <TaskStatusBadge status={task.status} />

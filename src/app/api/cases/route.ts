@@ -20,7 +20,7 @@ import {
   type PartnerRole,
   type TaskStatus,
 } from '@/lib/constants';
-import { decryptPii, emailHash, encryptPii } from '@/lib/crypto';
+import { emailHash, encryptPii, readPii } from '@/lib/crypto';
 import { forbidden, fromPostgresError } from '@/lib/errors';
 import {
   buildInvitationUrl,
@@ -84,10 +84,11 @@ export const GET = route(async (request: Request) => {
         weddingDate: row.wedding_date,
         status: row.status,
         planTypeName: row.plan_types?.name ?? null,
-        // full_name は暗号化列。参照時に復号する（13-1）
+        // full_name は暗号化列。参照時に復号する（13-1）。
+        // 鍵が合わない値が1件あるだけで一覧全体を 500 にしないよう readPii を使う
         partners: row.couple_profiles.map((profile) => ({
           partnerRole: profile.partner_role,
-          fullName: decryptPii(profile.full_name) ?? '',
+          fullName: readPii(profile.full_name),
         })),
         taskTotal: total,
         taskDone: total - incomplete,

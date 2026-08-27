@@ -21,7 +21,8 @@ import {
   type SubmissionFormat,
   type TaskStatus,
 } from '@/lib/constants';
-import { decryptPii } from '@/lib/crypto';
+import { isEncrypted, readPii } from '@/lib/crypto';
+import { formatDateJp } from '@/lib/format';
 import { type IsoDate } from '@/lib/services/schedule';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -48,23 +49,17 @@ interface SubmissionRow {
   planner_feedback: string | null;
 }
 
-function formatJpDate(iso: IsoDate): string {
-  const [year, month, day] = iso.split('-');
-  return `${Number(year)}年${Number(month)}月${Number(day)}日`;
-}
-
 /**
  * task_submissions.text_value はアプリ側 AES-256-GCM の暗号化対象（5-3／13-1）。
- * 開発用シードなど平文のまま入っている値も表示できるよう、接頭辞で判別する。
+ * 開発用シードなど平文のまま入っている値も表示できるよう readPii を使う。
+ *
+ * ただしここは「提出フォームの初期値」なので、読めなかった値をそのまま入れると
+ * 暗号文が本文として提出され直す。readPii は復号できない値を素通しするため、
+ * 暗号化形式のまま残っているものだけ空欄にする。
  */
-function decodeText(stored: string | null): string {
-  if (!stored) return '';
-  try {
-    return (stored.startsWith('v1:') ? decryptPii(stored) : stored) ?? '';
-  } catch {
-    // 復号できない値をそのまま画面へ出すと暗号文が本文として提出され直すため空にする
-    return '';
-  }
+function initialText(stored: string | null): string {
+  const value = readPii(stored);
+  return isEncrypted(value) ? '' : value;
 }
 
 function choicesOf(options: Record<string, unknown> | null): string[] {
@@ -126,7 +121,7 @@ export default async function TaskDetailPage({
         <div className="mt-2 flex items-center gap-2">
           <TaskStatusBadge status={task.status} />
           <span className="text-label text-text-muted">
-            {formatJpDate(task.due_date)}まで・{SUBMISSION_FORMAT_LABEL[format]}
+            {formatDateJp(task.due_date)}まで・{SUBMISSION_FORMAT_LABEL[format]}
           </span>
         </div>
       </header>
@@ -170,7 +165,7 @@ export default async function TaskDetailPage({
           submissionFormat={format}
           choices={choicesOf(task.options)}
           allowedFileTypes={allowedTypesOf(task.allowed_file_types)}
-          defaultText={decodeText(latest?.text_value ?? null)}
+          defaultText={initialText(latest?.text_value ?? null)}
           defaultSelected={latest?.selected_value ?? ''}
           defaultComment={latest?.comment ?? ''}
           defaultFileId={latest?.file_id ?? null}

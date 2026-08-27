@@ -17,7 +17,7 @@ import {
   type InvitationState,
   type PartnerRole,
 } from '@/lib/constants';
-import { decryptPii } from '@/lib/crypto';
+import { readPii } from '@/lib/crypto';
 import { fromPostgresError, notFound } from '@/lib/errors';
 import { sendInvitation } from '@/lib/notify/send';
 import {
@@ -171,12 +171,17 @@ export const POST = route(async (request: Request, context: { params: Promise<{ 
   let skippedReason: string | null = null;
 
   if (input.send) {
+    // 宛名・宛先は暗号化列（13-1）。復号できない値で発行応答ごと 500 にすると、
+    // ここでしか返らない平文の招待URLを失うため readPii で畳む（6-3-6）
     const result = await sendInvitation(
       input.send,
-      { email: decryptPii(partner.email), lineUserId: partner.user_profiles?.line_user_id ?? null },
+      {
+        email: readPii(partner.email) || null,
+        lineUserId: partner.user_profiles?.line_user_id ?? null,
+      },
       {
         caseCode: target.case_code,
-        recipientName: decryptPii(partner.full_name) ?? '',
+        recipientName: readPii(partner.full_name),
         invitationUrl: url,
         expiresAt: issued.expires_at,
       },

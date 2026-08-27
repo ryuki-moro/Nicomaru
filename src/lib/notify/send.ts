@@ -10,15 +10,21 @@
  * 例外を投げて画面を止めると、招待URLの発行（＝平文を1度だけ返す操作）まで巻き戻ってしまい、
  * URLを失うほうが業務上の損失が大きいため（6-3-6）。
  * 呼び出し側は delivered を見て「送信済み」と「未送信（発行のみ）」を画面で描き分ける。
+ *
+ * 【送信口は1つ】
+ * メールは mailer.ts の sendMail に委ねる。ここに Resend への POST を写して持っていた頃は
+ * fetch の例外を握っておらず、上の方針とは逆に「送信の失敗で発行応答ごと 500」になっていた。
+ * LINE も同じ形（未構成・HTTPエラー・例外の3経路を SendResult へ畳む）にそろえる。
  */
 import type { ContactChannel } from '@/lib/constants';
+import { sendMail, type SendResult } from '@/lib/notify/mailer';
 
-export interface SendResult {
-  /** 実際に外部サービスへ送信できたか。false なら未構成・宛先不明でスキップした */
-  delivered: boolean;
-  /** delivered=false のときに画面へ出す理由。利用者に見せる日本語 */
-  skippedReason?: string;
-}
+// 結果の型は mailer.ts に1つだけ置く。呼び出し側が送信手段を意識せず使えるよう再公開する。
+export type { SendResult };
+
+/** LINE 送信の失敗時に画面へ出す文言。メール側は sendMail が同等の文言を返す。 */
+const LINE_NOT_CONFIGURED = 'LINE連携が未構成のため、送信は行われていません';
+const LINE_ERROR = 'LINEの送信に失敗しました。時間をおいてお試しください';
 
 export interface InvitationMessage {
   caseCode: string;
@@ -47,54 +53,48 @@ function buildBody(message: InvitationMessage): string {
   ].join('\n');
 }
 
-/** Resend でメール送信する。API キーが無い環境ではスキップする。 */
-async function sendEmail(to: string, message: InvitationMessage): Promise<SendResult> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM;
-  if (!apiKey || !from) {
-    return { delivered: false, skippedReason: 'メール送信の設定が未構成のため、送信は行われていません' };
-  }
-
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      from,
-      to: [to],
-      subject: 'マイページのご案内（結婚式の準備）',
-      text: buildBody(message),
-    }),
+/**
+ * 招待URLをメールで送る。
+ * Resend への POST は mailer.ts の sendMail に一本化してあるので、ここは本文を組んで結果を写すだけ。
+ * 未構成・HTTPエラー・例外はすべて sendMail が SendResult へ畳んで返す。
+ */
+function sendEmail(to: string, message: InvitationMessage): Promise<SendResult> {
+  return sendMail({
+    to,
+    subject: 'マイページのご案内（結婚式の準備）',
+    text: buildBody(message),
   });
-
-  if (!response.ok) {
-    // 本文にはトークンが含まれるためログへ残さない（9章）。状態コードのみ記録する。
-    console.error('[notify] resend failed', response.status);
-    return { delivered: false, skippedReason: 'メールの送信に失敗しました。時間をおいてお試しください' };
-  }
-  return { delivered: true };
 }
 
 /** LINE Messaging API のプッシュ送信。Phase 2 で本格運用する（6-10）。 */
 async function sendLine(lineUserId: string, message: InvitationMessage): Promise<SendResult> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) {
-    return { delivered: false, skippedReason: 'LINE連携が未構成のため、送信は行われていません' };
+    return { delivered: false, reason: 'not_configured', skippedReason: LINE_NOT_CONFIGURED };
   }
 
-  const response = await fetch('https://api.line.me/v2/bot/message/push', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      to: lineUserId,
-      messages: [{ type: 'text', text: buildBody(message) }],
-    }),
-  });
+  try {
+    const response = await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        to: lineUserId,
+        messages: [{ type: 'text', text: buildBody(message) }],
+      }),
+    });
 
-  if (!response.ok) {
-    console.error('[notify] line push failed', response.status);
-    return { delivered: false, skippedReason: 'LINEの送信に失敗しました。時間をおいてお試しください' };
+    if (!response.ok) {
+      // 本文にはトークンが含まれるためログへ残さない（9章）。状態コードのみ記録する。
+      console.error('[notify] line push failed', response.status);
+      return { delivered: false, reason: 'provider_error', skippedReason: LINE_ERROR };
+    }
+    return { delivered: true };
+  } catch (error) {
+    // 例外を素通しすると、招待の発行は成功しているのに 500 になり、
+    // その応答でしか返らない平文の招待URLを失う（6-3-6）。送信失敗として畳む。
+    console.error('[notify] line push threw', error);
+    return { delivered: false, reason: 'provider_error', skippedReason: LINE_ERROR };
   }
-  return { delivered: true };
 }
 
 export interface InvitationTarget {
@@ -115,14 +115,22 @@ export async function sendInvitation(
 ): Promise<SendResult> {
   if (channel === 'email') {
     if (!target.email) {
-      return { delivered: false, skippedReason: '送信先のメールアドレスが登録されていません' };
+      return {
+        delivered: false,
+        reason: 'not_configured',
+        skippedReason: '送信先のメールアドレスが登録されていません',
+      };
     }
     return sendEmail(target.email, message);
   }
 
   if (!target.lineUserId) {
     // Phase 2 で M06 の紐付けが済むまでは常にこの経路になる（6-10）
-    return { delivered: false, skippedReason: 'LINEの友だち追加がまだ行われていません' };
+    return {
+      delivered: false,
+      reason: 'not_configured',
+      skippedReason: 'LINEの友だち追加がまだ行われていません',
+    };
   }
   return sendLine(target.lineUserId, message);
 }

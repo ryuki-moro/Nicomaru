@@ -131,7 +131,7 @@ export function TemplateForm({ mode, initial, save }: Props) {
           id="template-name"
           className="field"
           value={name}
-          maxLength={120}
+          maxLength={INPUT_LIMITS.shortText}
           onChange={(e) => setName(e.target.value)}
           aria-invalid={fieldErrors.name ? true : undefined}
         />

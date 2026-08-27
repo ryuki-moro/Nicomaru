@@ -16,7 +16,15 @@ import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { ApiCallError, api } from '@/lib/api/client';
 import { FOLLOW_METHODS, FOLLOW_METHOD_LABEL, INPUT_LIMITS, type FollowMethod } from '@/lib/constants';
 
-/** <input type="datetime-local"> が受け取る現地時刻の書式（YYYY-MM-DDTHH:mm）。 */
+/**
+ * <input type="datetime-local"> が受け取る現地時刻の書式（YYYY-MM-DDTHH:mm）。
+ *
+ * ここだけは format.ts の JST 固定ヘルパを使わない。datetime-local の値は
+ * ブラウザの現地時刻として解釈され、送信時も new Date(値).toISOString() で
+ * 現地時刻として UTC へ戻す。表示だけ JST に固定すると往復がずれるため、
+ * 入力欄の初期値はブラウザの現地時刻で揃える。
+ * （保存後の一覧表示は formatDateTime() が JST で描画する）
+ */
 function toLocalInputValue(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`

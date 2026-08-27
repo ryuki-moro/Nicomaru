@@ -12,6 +12,7 @@ import { redirect } from 'next/navigation';
 import { CaseForm, type PlanOption } from './CaseForm';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser } from '@/lib/auth/session';
+import { todayInJst } from '@/lib/format';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -61,8 +62,9 @@ export default async function CaseCreatePage() {
       }),
   }));
 
-  // 過去日付不可の判定（表4-14）はサーバー側 validation.ts と同じ UTC 基準の日付で揃える
-  const today = new Date().toISOString().slice(0, 10);
+  // 過去日付不可（表4-14）の基準日。サーバー側 validation.ts の notPastDate と同じ
+  // 日本時間の暦日を使う。片方が UTC だと JST の 0:00〜9:00 に入力欄と検証結果が食い違う。
+  const today = todayInJst();
 
   return (
     <div className="space-y-4">

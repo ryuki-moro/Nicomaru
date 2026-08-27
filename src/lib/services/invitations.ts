@@ -62,34 +62,21 @@ export function invitationState(row: InvitationRow, now: Date = new Date()): Inv
 /**
  * トークンの原子的な消費（6-6-1）。
  *
- * 単一の UPDATE ... RETURNING で「検証」と「消費」を同時に行うため、
+ * 実体は security definer 関数 consume_invitation(token_hash, purpose)
+ * （supabase/migrations/20260828000700_auth_functions.sql）。SQL の正本はそちらに1本だけ置く。
+ * 単一の UPDATE ... WHERE ... RETURNING で「検証」と「消費」を同時に行うため、
  * 同一URLへの同時2リクエストでも1つしか通らない。0行なら 422 を返す。
  *
- * purpose を WHERE 句に含めることで、max_uses>1 が許される mypage_access のトークンを
- * 初回登録へ流用できないようにする（表6-4 の検証項目と一致させる）。
+ * 関数が検証する条件:
+ *   - token_hash が一致する
+ *   - purpose が一致する（max_uses>1 の mypage_access を初回登録へ流用させない）
+ *   - used_at が NULL（未使用）
+ *   - revoked_at が NULL（再発行で失効していない）
+ *   - expires_at > now()（期限内）
+ *   - use_count < max_uses（回数上限内）
+ *
+ * 失敗時の補償は restore_invitation(id)。自動リトライは行わない。
  */
-export const CONSUME_INVITATION_SQL = `
-update case_invitations
-   set used_at   = case when use_count + 1 >= max_uses then now() else used_at end,
-       use_count = use_count + 1,
-       updated_at = now()
- where token_hash = $1
-   and purpose    = $2
-   and used_at    is null
-   and revoked_at is null
-   and expires_at > now()
-   and use_count  < max_uses
-returning id, case_id, target_partner_role, recipient_email_hash
-`;
-
-/** 補償処理（6-6-1）。Auth ユーザー作成に失敗したときにトークンの消費を戻す。 */
-export const RESTORE_INVITATION_SQL = `
-update case_invitations
-   set used_at   = null,
-       use_count = greatest(use_count - 1, 0),
-       updated_at = now()
- where id = $1
-`;
 
 /**
  * 招待先メールとの照合（6-6-1／13-1）。

@@ -14,27 +14,10 @@
  */
 import { ok, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
-import type { Importance, SubmissionFormat } from '@/lib/constants';
 import { fromPostgresError, notFound, unprocessable } from '@/lib/errors';
-import { phaseNameFor, planTasks, type TemplateForAssign } from '@/lib/services/schedule';
+import { loadPlanTemplates } from '@/lib/services/planTemplates';
+import { phaseNameFor, planTasks } from '@/lib/services/schedule';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-
-interface PlanTemplateRow {
-  display_order: number;
-  is_required: boolean;
-  due_offset_days_override: number | null;
-  task_templates: {
-    id: string;
-    name: string;
-    description: string | null;
-    submission_format: SubmissionFormat;
-    allowed_file_types: string[];
-    default_options: Record<string, unknown>;
-    due_offset_days: number;
-    importance: Importance;
-    active: boolean;
-  } | null;
-}
 
 export const POST = route(async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
   await requireRole('planner', 'admin', 'system_admin');
@@ -55,38 +38,9 @@ export const POST = route(async (_request: Request, context: { params: Promise<{
     throw unprocessable('プラン種別が設定されていないため、宿題を割り当てられません');
   }
 
-  // 同じ読み出しが src/app/api/cases/[caseId]/route.ts（K04 の差分計算）にもある。
-  // Route Handler は HTTPメソッド以外を export できず共有できないため、変更時は両方直すこと。
-  const { data: templateData, error: templateError } = await supabase
-    .from('plan_task_templates')
-    .select(
-      `display_order, is_required, due_offset_days_override,
-       task_templates ( id, name, description, submission_format, allowed_file_types,
-                        default_options, due_offset_days, importance, active )`,
-    )
-    .eq('plan_type_id', target.plan_type_id)
-    .order('display_order', { ascending: true });
-  if (templateError) throw fromPostgresError(templateError);
-
-  const templates: TemplateForAssign[] = ((templateData ?? []) as unknown as PlanTemplateRow[])
-    // 無効化したテンプレートは新規割当に含めない（T02 の active）
-    .filter((row) => row.task_templates !== null && row.task_templates.active)
-    .map((row) => {
-      const template = row.task_templates as NonNullable<PlanTemplateRow['task_templates']>;
-      return {
-        taskTemplateId: template.id,
-        title: template.name,
-        description: template.description,
-        submissionFormat: template.submission_format,
-        allowedFileTypes: template.allowed_file_types ?? [],
-        options: template.default_options ?? {},
-        importance: template.importance,
-        dueOffsetDays: template.due_offset_days,
-        dueOffsetDaysOverride: row.due_offset_days_override,
-        isRequired: row.is_required,
-        displayOrder: row.display_order,
-      };
-    });
+  // K04 の差分確認（PATCH /api/cases/{caseId}）と同じ読み出しを共有する。
+  // 写して持つと「ダイアログで見せた集合」と「実際に割り当てる集合」がずれる（6-6-2）。
+  const templates = await loadPlanTemplates(supabase, target.plan_type_id);
 
   // 既に割り当て済みのテンプレートを除くのはサービス層とDB側の二重判定。
   // 二重呼び出しが同時に届いた場合の取りこぼしはDB側（assign_case_tasks）が受け止める。

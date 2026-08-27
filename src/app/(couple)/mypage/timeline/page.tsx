@@ -14,6 +14,7 @@ import Link from 'next/link';
 
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
+import { formatDateJp } from '@/lib/format';
 import { type IsoDate } from '@/lib/services/schedule';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -31,11 +32,6 @@ interface TimelineRow {
 interface PhaseGroup {
   phase: string;
   items: TimelineRow[];
-}
-
-function formatJpDate(iso: IsoDate): string {
-  const [year, month, day] = iso.split('-');
-  return `${Number(year)}年${Number(month)}月${Number(day)}日`;
 }
 
 /**
@@ -112,7 +108,7 @@ export default async function TimelinePage({
               <ol className="flex flex-col gap-[10px] border-l-2 border-border-light pl-4">
                 {group.items.map((item) => (
                   <li key={item.id} className="card">
-                    <p className="text-label text-text-muted">{formatJpDate(item.due_date)}</p>
+                    <p className="text-label text-text-muted">{formatDateJp(item.due_date)}</p>
                     <p className="text-base text-text-primary">{item.title}</p>
                     {item.description && (
                       <p className="mt-1 whitespace-pre-wrap text-label text-text-secondary">

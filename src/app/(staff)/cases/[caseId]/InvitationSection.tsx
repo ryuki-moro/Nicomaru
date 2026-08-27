@@ -17,6 +17,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ErrorSummary } from '@/components/ui/ErrorSummary';
 import { InvitationStateBadge } from '@/components/ui/StatusBadge';
 import { ApiCallError, api } from '@/lib/api/client';
+import { formatDateTime } from '@/lib/format';
 import {
   CONTACT_CHANNELS,
   CONTACT_CHANNEL_LABEL,
@@ -46,8 +47,7 @@ interface IssueResponse {
   skippedReason: string | null;
 }
 
-const formatDateTime = (value: string | null) =>
-  value === null ? '—' : `${value.slice(0, 10).replaceAll('-', '/')} ${value.slice(11, 16)}`;
+
 
 export function InvitationSection({ caseId, readOnly }: { caseId: string; readOnly: boolean }) {
   const [invitations, setInvitations] = useState<InvitationSummary[] | null>(null);
