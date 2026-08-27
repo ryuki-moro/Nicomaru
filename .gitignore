@@ -1,0 +1,6 @@
+﻿# ローカル成果物・ツール束(アプリ本体ではないため追跡しない)
+design-system/*.skill
+
+# OS / editor
+Thumbs.db
+.DS_Store
