@@ -234,3 +234,66 @@ export function toErrorDetails(error: z.ZodError): ErrorDetail[] {
     reason: issue.message,
   }));
 }
+
+// ------------------------------------------------ T03 プラン種別の割当明細（表4-18）
+/**
+ * 割当テンプレート1件。表4-18 の「表示順とプラン固有の逆算日数上書きを設定できる」に対応する。
+ * planTypeSchema は taskTemplateIds（IDの配列）しか持たず明細の属性を表現できないため、
+ * 既存 export を壊さずに T03 用の保存スキーマを別途定義する。
+ */
+export const planTaskTemplateAssignmentSchema = z.object({
+  taskTemplateId: z.string().uuid(),
+  displayOrder: z.number().int().min(0, '0以上の整数で入力してください').default(0),
+  /** 未指定なら task_templates.due_offset_days をそのまま使う（6-6-2） */
+  dueOffsetDaysOverride: z.number().int().min(0, '0以上の整数で入力してください').nullable().optional(),
+});
+
+/** T03 プラン種別の保存（表4-18）。planTypeSchema の taskTemplateIds を割当明細へ拡張したもの。 */
+export const planTypeSaveSchema = z
+  .object({
+    name: z.string().trim().min(1, '入力してください').max(INPUT_LIMITS.shortText),
+    description: z.string().trim().max(INPUT_LIMITS.templateDescription).optional().nullable(),
+    defaultGuestCountMin: z.number().int().min(0, '0以上の整数で入力してください').optional().nullable(),
+    defaultGuestCountMax: z.number().int().min(0, '0以上の整数で入力してください').optional().nullable(),
+    assignments: z.array(planTaskTemplateAssignmentSchema)
+      .min(1, '宿題テンプレートを1件以上選択してください'),
+    displayOrder: z.number().int().min(0, '0以上の整数で入力してください').default(0),
+    active: z.boolean().default(true),
+  })
+  .refine(
+    (v) => v.defaultGuestCountMax == null || v.defaultGuestCountMin == null
+      || v.defaultGuestCountMax >= v.defaultGuestCountMin,
+    { message: '上限は下限以上で入力してください', path: ['defaultGuestCountMax'] },
+  )
+  .refine(
+    (v) => new Set(v.assignments.map((a) => a.taskTemplateId)).size === v.assignments.length,
+    { message: '同じ宿題テンプレートが重複しています', path: ['assignments'] },
+  );
+
+// ------------------------------------------------------- U03 初回設定リンクの再送
+/**
+ * U03 の変更に「初回パスワード設定リンクの再送」を足したもの（6-3-1: 期限切れは U03 から再送する）。
+ * userUpdateSchema は他画面からも使われるため、拡張版を別 export にする。
+ */
+export const userUpdateWithActionSchema = userUpdateSchema.extend({
+  resendInviteLink: z.boolean().optional(),
+});
+
+// ------------------------------------------------ 案件の更新（K04／K05／K01 復元）
+/**
+ * PATCH /api/cases/{caseId} の入力。
+ * 6-5 表6-6 で本APIは「案件更新（担当プランナー変更・アーカイブ解除を含む）」と定義されるため、
+ * K04 の項目（caseUpdateSchema）にアーカイブ状態の切り替えを加えた形を受け口とする。
+ * archived の付け外しは admin のみが行える（権限判定はDB側 apply_case_update でも二重に行う）。
+ */
+export const casePatchSchema = caseUpdateSchema.extend({
+  archived: z.boolean().optional(),
+});
+
+// ------------------------------------------------- 認証（追記。P03／/api/auth/**）
+/**
+ * /api/auth/complete-invite の本文。
+ * 対象行は呼び出し元JWTの auth.uid() から決まるため入力項目を持たない（6-3-1）。
+ * 利用者IDを本文で受け取らないこと自体が「他人の行を active にできない」担保になる。
+ */
+export const completeInviteSchema = z.object({});

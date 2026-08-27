@@ -99,7 +99,9 @@ export const ALLOWED_FILE_TYPES = ['csv', 'jpg', 'png'] as const;
 export type AllowedFileType = (typeof ALLOWED_FILE_TYPES)[number];
 
 export const FILE_TYPE_MIME: Record<AllowedFileType, readonly string[]> = {
-  csv: ['text/csv', 'application/csv', 'text/plain'],
+  // Windows の Chrome／Edge は .csv を application/vnd.ms-excel として送るため受け入れる。
+  // 拡張子と中身（UTF-8 として読めるか）は別途サーバー側で検証する。
+  csv: ['text/csv', 'application/csv', 'text/plain', 'application/vnd.ms-excel'],
   jpg: ['image/jpeg'],
   png: ['image/png'],
 };

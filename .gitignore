@@ -26,3 +26,6 @@ test-results/
 # Supabase ローカル
 supabase/.branches/
 supabase/.temp/
+
+# TypeScript incremental build info
+tsconfig.tsbuildinfo
