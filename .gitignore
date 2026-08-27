@@ -29,3 +29,6 @@ supabase/.temp/
 
 # TypeScript incremental build info
 tsconfig.tsbuildinfo
+
+# Claude Code のローカル設定(個人の権限設定は共有しない)
+.claude/settings.local.json
