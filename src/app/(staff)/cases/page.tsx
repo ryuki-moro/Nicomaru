@@ -4,7 +4,8 @@
  * 正本: 基本設計書 Version 1.2 4-3 K01。
  *   - planner は自身の担当のみ、admin は式場内全件（絞り込みは RLS の accessible_case_ids() が担う）
  *   - 表示範囲フィルタ（進行中／アーカイブ済み。アーカイブ済みは admin のみ選択可）
- *   - 並びは挙式日順、既定50件、同着は id を最終タイブレークに用いる
+ *   - 並びの既定は挙式日順。リスクが高い順にも切り替えられる（機能6-2、Phase 2）
+ *   - 既定50件、同着は id を最終タイブレークに用いる
  *   - アーカイブ済み案件の行には「復元する」（機能2-6、admin のみ）
  *
  * 読み取りは 6-5 の原則どおり Server Component から Supabase 直アクセス（RLS適用）で行い、
@@ -20,11 +21,14 @@ import {
   CASE_STATUS_LABEL,
   COUPLE_PROFILE_COLUMNS,
   INCOMPLETE_TASK_STATUSES,
+  RISK_LEVEL_RANK,
   LIST_PAGE_SIZE,
   type CaseStatus,
   type PartnerRole,
+  type RiskLevel,
   type TaskStatus,
 } from '@/lib/constants';
+import { RiskBadge, RiskNotCalculated, type RiskReasonView } from '@/components/ui/RiskBadge';
 import { readPii } from '@/lib/crypto';
 import { formatDate } from '@/lib/format';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -42,7 +46,8 @@ const CASE_LIST_SELECT =
   `id, case_code, wedding_date, status,
    plan_types ( name ),
    couple_profiles ( ${COUPLE_PROFILE_COLUMNS} ),
-   case_tasks ( status )`;
+   case_tasks ( status ),
+   risk_score_snapshots ( score_value, score_level, reasons, is_current )`;
 
 interface CaseListRow {
   id: string;
@@ -52,6 +57,13 @@ interface CaseListRow {
   plan_types: { name: string } | null;
   couple_profiles: { partner_role: PartnerRole; full_name: string }[];
   case_tasks: { status: TaskStatus }[];
+  /** 現在値は case_id ごと1件だが、埋め込みは配列で返るので is_current で絞る（6-8） */
+  risk_score_snapshots: {
+    score_value: number;
+    score_level: RiskLevel;
+    reasons: RiskReasonView[] | null;
+    is_current: boolean;
+  }[];
 }
 
 /**
@@ -85,7 +97,7 @@ async function restoreCase(formData: FormData) {
 }
 
 interface Props {
-  searchParams: Promise<{ q?: string; scope?: string; page?: string; error?: string }>;
+  searchParams: Promise<{ q?: string; scope?: string; page?: string; error?: string; sort?: string }>;
 }
 
 export default async function CaseListPage({ searchParams }: Props) {
@@ -95,6 +107,8 @@ export default async function CaseListPage({ searchParams }: Props) {
   const params = await searchParams;
   const canSeeArchived = user.role === 'admin' || user.role === 'system_admin';
   const scope = params.scope === 'archived' && canSeeArchived ? 'archived' : 'active';
+  // 4-3 K01: 並び順の既定は挙式日順。リスクスコア順は機能6-2（Phase 2）で追加する。
+  const sort = params.sort === 'risk' ? 'risk' : 'wedding_date';
   const keyword = (params.q ?? '').trim();
   const page = Math.max(Number(params.page) || 1, 1);
   const offset = (page - 1) * LIST_PAGE_SIZE;
@@ -131,22 +145,37 @@ export default async function CaseListPage({ searchParams }: Props) {
       coupleName: names.join('・'),
       total,
       done: total - incomplete,
+      // 現在値だけを採る。無ければ「未算出」と出す（空欄にすると「低い」と読まれる）
+      risk: row.risk_score_snapshots?.find((r) => r.is_current) ?? null,
     };
   });
 
+  // 4-3 K01: リスクが高い順。DB 側で order できない（現在値が埋め込みの配列のため）ので
+  // 復号・キーワード絞り込みと同じくサーバー上で並べ替える。未算出は末尾へ送る。
+  const sorted = sort === 'risk'
+    ? [...decorated].sort((a, b) =>
+        (b.risk ? RISK_LEVEL_RANK[b.risk.score_level] : -1)
+          - (a.risk ? RISK_LEVEL_RANK[a.risk.score_level] : -1)
+        || (b.risk?.score_value ?? -1) - (a.risk?.score_value ?? -1)
+        || a.weddingDate.localeCompare(b.weddingDate)
+        || a.id.localeCompare(b.id))
+    : decorated;
+
   const filtered = keyword
-    ? decorated.filter(
+    ? sorted.filter(
         (row) => row.caseCode.includes(keyword) || row.coupleName.includes(keyword),
       )
-    : decorated;
+    : sorted;
   const visible = keyword ? filtered.slice(offset, offset + LIST_PAGE_SIZE) : filtered;
   const hasNext = keyword ? filtered.length > offset + LIST_PAGE_SIZE : visible.length === LIST_PAGE_SIZE;
 
-  const linkTo = (next: { scope?: string; page?: number }) => {
+  const linkTo = (next: { scope?: string; page?: number; sort?: string }) => {
     const search = new URLSearchParams();
     if (keyword) search.set('q', keyword);
     const nextScope = next.scope ?? scope;
     if (nextScope === 'archived') search.set('scope', 'archived');
+    const nextSort = next.sort ?? sort;
+    if (nextSort === 'risk') search.set('sort', 'risk');
     const nextPage = next.page ?? page;
     if (nextPage > 1) search.set('page', String(nextPage));
     const qs = search.toString();
@@ -203,6 +232,16 @@ export default async function CaseListPage({ searchParams }: Props) {
           </div>
         )}
 
+        <div className="min-w-[160px]">
+          <label htmlFor="sort" className="field-label">
+            並び順
+          </label>
+          <select id="sort" name="sort" defaultValue={sort} className="field">
+            <option value="wedding_date">挙式日順</option>
+            <option value="risk">リスクが高い順</option>
+          </select>
+        </div>
+
         <button type="submit" className="btn-secondary w-auto px-6">
           絞り込む
         </button>
@@ -234,6 +273,7 @@ export default async function CaseListPage({ searchParams }: Props) {
                 <th scope="col">挙式日</th>
                 <th scope="col">プラン種別</th>
                 <th scope="col">宿題進捗</th>
+                <th scope="col">リスク</th>
                 <th scope="col">状態</th>
                 {scope === 'archived' && canSeeArchived && <th scope="col">操作</th>}
               </tr>
@@ -257,6 +297,13 @@ export default async function CaseListPage({ searchParams }: Props) {
                     {row.total === 0
                       ? '未割当'
                       : `${row.done} / ${row.total} 件（${Math.round((row.done / row.total) * 100)}%）`}
+                  </td>
+                  <td>
+                    {/* 6-8: 現在値を読むだけ。ここでは再計算しない。
+                        未算出を空欄にすると「リスクが低い」と読まれるため明示する */}
+                    {row.risk
+                      ? <RiskBadge level={row.risk.score_level} reasons={row.risk.reasons ?? []} />
+                      : <RiskNotCalculated />}
                   </td>
                   <td>{CASE_STATUS_LABEL[row.status]}</td>
                   {scope === 'archived' && canSeeArchived && (

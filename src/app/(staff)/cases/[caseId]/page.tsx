@@ -14,6 +14,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { InvitationSection } from './InvitationSection';
+import { RiskSection, type CaseRisk } from './RiskSection';
+import type { RiskReasonView } from '@/components/ui/RiskBadge';
 import { TaskSection, type CaseTaskRow } from './TaskSection';
 import { getAppUser } from '@/lib/auth/session';
 import {
@@ -26,6 +28,7 @@ import {
   type ContactChannel,
   type Importance,
   type PartnerRole,
+  type RiskLevel,
   type SubmissionFormat,
   type TaskStatus,
 } from '@/lib/constants';
@@ -41,7 +44,8 @@ const CASE_SELECT =
    plan_types ( name ),
    user_profiles ( display_name ),
    couple_profiles ( ${COUPLE_PROFILE_COLUMNS} ),
-   case_tasks ( id, title, due_date, status, importance, display_order, submission_format )`;
+   case_tasks ( id, title, due_date, status, importance, display_order, submission_format ),
+   risk_score_snapshots ( score_value, score_level, reasons, calculated_at, is_current )`;
 
 interface CaseRow {
   id: string;
@@ -71,6 +75,14 @@ interface CaseRow {
     display_order: number;
     submission_format: SubmissionFormat;
   }[];
+  /** 現在値は case_id ごと1件だが、埋め込みは配列で返るので is_current で絞る（6-8） */
+  risk_score_snapshots: {
+    score_value: number;
+    score_level: RiskLevel;
+    reasons: RiskReasonView[] | null;
+    calculated_at: string;
+    is_current: boolean;
+  }[];
 }
 
 export default async function CaseDetailPage({
@@ -93,6 +105,17 @@ export default async function CaseDetailPage({
   // RLS により権限外は 0 行として返るため、ここで区別しない（存在の有無を漏らさない）。
   if (!data) redirect('/error');
   const row = data as unknown as CaseRow;
+
+  // 6-8: 現在値を読むだけ。表示のたびに再計算はしない。
+  const snapshot = row.risk_score_snapshots?.find((r) => r.is_current) ?? null;
+  const currentRisk: CaseRisk | null = snapshot
+    ? {
+        scoreValue: snapshot.score_value,
+        scoreLevel: snapshot.score_level,
+        reasons: snapshot.reasons ?? [],
+        calculatedAt: snapshot.calculated_at,
+      }
+    : null;
 
   const partners = row.couple_profiles
     .map((profile) => ({
@@ -170,6 +193,9 @@ export default async function CaseDetailPage({
           <span>この案件はアーカイブ済みです。内容の変更はできません。</span>
         </div>
       )}
+
+      {/* 4-3 K02: リスクは planner／admin のみ。couple 向けの案件詳細では表示しない（6-3） */}
+      <RiskSection caseId={row.id} risk={currentRisk} />
 
       <section className="card space-y-2">
         <h2 className="section-head">基本情報</h2>
