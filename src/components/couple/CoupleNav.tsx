@@ -14,6 +14,7 @@ const ITEMS = [
   { href: '/mypage', label: 'ホーム' },
   { href: '/mypage/tasks', label: '宿題' },
   { href: '/mypage/timeline', label: '準備の流れ' },
+  { href: '/mypage/account', label: 'アカウント' },
   { href: '/mypage/case', label: '挙式情報' },
 ] as const;
 

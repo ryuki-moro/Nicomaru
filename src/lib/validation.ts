@@ -347,3 +347,8 @@ export const venueUpdateSchema = z.object({
   contactEmail: email.optional().nullable(),
   active: z.boolean().optional(),
 });
+
+/** POST /api/line/link（機能1-3、Phase 2）。linkToken は follow イベント経由で受け取った値。 */
+export const lineLinkSchema = z.object({
+  linkToken: z.string().trim().min(1).max(200),
+});
