@@ -31,7 +31,7 @@ export const POST = route(async (request: Request) => {
 
   // line_link_nonces は authenticated に開いていない（他人の nonce を狙う足がかりになる）。
   // 発行はサーバー側で行う。
-  const admin = createSupabaseAdminClient('cron.notifications-dispatch');
+  const admin = createSupabaseAdminClient('line.link');
   const { error } = await admin.from('line_link_nonces').insert({
     nonce_hash: hashLinkNonce(nonce),
     user_profile_id: user.id,

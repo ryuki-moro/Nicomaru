@@ -15,7 +15,10 @@
  * Vercel Hobby のバンドルサイズ・実行時間の制約（2-2-1）を増やさずに要件を満たせる。
  * サーバー側生成は、印刷では足りないと分かってから足す。
  *
- * AI補助（9-2 要点下書き）は Phase 3。ここでは呼ばない。
+ * AI補助（9-2 要点下書き）は、依頼をサーバーアクションで投入し、
+ * 生成の監視と採用・破棄を SheetDraftPanel（クライアント）が担う。
+ * LLM へ渡す内容はサーバー側で組み立てる（7-4 の入力最小化）。
+ * 採用されたものだけが印刷対象のシート本体へ載る（7-1 の確認前提）。
  *
  * 【なぜ生成のたびに meeting_sheets へ残すか】
  * 表5-21 の summary_json は「生成時点の集約内容」。
@@ -27,6 +30,8 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
 import { PrintButton } from './PrintButton';
+import { SheetDraftPanel } from './SheetDraftPanel';
+import { adoptedOutput, AI_JOB_COLUMNS, fetchAiAssistStatus, type AiJobRow } from '@/lib/ai/assist';
 import { getAppUser } from '@/lib/auth/session';
 import {
   COUPLE_PROFILE_COLUMNS,
@@ -94,6 +99,67 @@ async function recordSheet(formData: FormData) {
   revalidatePath(`/cases/${caseId}/sheet`);
 }
 
+/**
+ * 9-2 の下書きを依頼する（7-2／7-3）。
+ *
+ * LLM へ渡す文面をここで作るのがこの関数の要点。
+ * 画面から文字列を受け取らないので、7-4「LLMへの入力は処理に必要な最小限の項目に限定する」を
+ * クライアントの実装に依存せず守れる。
+ * 渡すのは未提出宿題の件名・期限と連絡の要約だけで、氏名・連絡先は含めない。
+ */
+async function requestSheetDraft(formData: FormData) {
+  'use server';
+
+  const caseId = String(formData.get('caseId') ?? '');
+  if (!caseId) return;
+
+  const actor = await getAppUser();
+  if (!actor) redirect('/login');
+
+  const supabase = await createSupabaseServerClient();
+  const today = todayInJst();
+
+  const [tasks, comms] = await Promise.all([
+    supabase.from('case_tasks')
+      .select('title, due_date, status')
+      .eq('case_id', caseId)
+      .in('status', INCOMPLETE_TASK_STATUSES as unknown as string[])
+      .order('due_date')
+      .limit(20),
+    supabase.from('communication_logs')
+      .select('summary, occurred_at')
+      .eq('case_id', caseId)
+      .order('occurred_at', { ascending: false })
+      .limit(10),
+  ]);
+
+  const pendingLines = ((tasks.data ?? []) as { title: string; due_date: string; status: TaskStatus }[])
+    .map((t) => `・${t.title}（期限 ${formatDate(t.due_date.slice(0, 10))}／`
+      + `${TASK_STATUS_LABEL[t.status]}）`);
+  const commLines = ((comms.data ?? []) as { summary: string; occurred_at: string }[])
+    .map((c) => `・${formatDate(c.occurred_at.slice(0, 10))} ${c.summary}`);
+
+  const text = [
+    `本日: ${formatDate(today)}`,
+    pendingLines.length > 0
+      ? `未提出の宿題:\n${pendingLines.join('\n')}`
+      : '未提出の宿題: なし',
+    commLines.length > 0
+      ? `直近の連絡:\n${commLines.join('\n')}`
+      : '直近の連絡: なし',
+  ].join('\n\n');
+
+  const { error } = await supabase.rpc('enqueue_ai_job', {
+    p_case_id: caseId,
+    p_job_type: 'draft',
+    p_input_ref: { text, params: { purpose: 'meeting_sheet_summary' } },
+    p_related_task_id: null,
+  });
+  if (error) console.warn('[sheet] 下書きを依頼できませんでした', error);
+
+  revalidatePath(`/cases/${caseId}/sheet`);
+}
+
 export default async function MeetingSheetPage({
   params,
 }: {
@@ -153,6 +219,23 @@ export default async function MeetingSheetPage({
     .filter(Boolean)
     .join('・');
 
+  // 9-2 の下書き。この案件で宿題に紐づかない draft ジョブが該当する
+  // （宿題ごとの下書きは 9-3 で、そちらは related_task_id を持つ）。
+  const [aiStatus, draftJobs] = await Promise.all([
+    fetchAiAssistStatus(supabase),
+    supabase.from('ai_jobs')
+      .select(AI_JOB_COLUMNS)
+      .eq('case_id', caseId)
+      .eq('job_type', 'draft')
+      .is('related_task_id', null)
+      .order('created_at', { ascending: false })
+      .limit(1),
+  ]);
+  const draftJob = ((draftJobs.data ?? []) as unknown as AiJobRow[])[0] ?? null;
+  const sheetDraft = draftJob?.status === 'confirmed'
+    ? adoptedOutput('draft', draftJob)
+    : null;
+
   const taskRows = (tasks.data ?? []) as unknown as TaskRow[];
   const done = taskRows.filter((t) => !INCOMPLETE_TASK_STATUSES.includes(t.status));
   const pending = taskRows.filter((t) => INCOMPLETE_TASK_STATUSES.includes(t.status));
@@ -206,6 +289,20 @@ export default async function MeetingSheetPage({
             前回の記録: {formatDateTime(lastSheet.generated_at)}
           </p>
         )}
+
+        <SheetDraftPanel
+          initialJob={draftJob}
+          aiAvailable={aiStatus.available}
+          lastSeenAt={aiStatus.lastSeenAt}
+          requestSlot={(
+            <form action={requestSheetDraft}>
+              <input type="hidden" name="caseId" value={caseId} />
+              <button type="submit" className="btn-secondary w-auto px-5">
+                AIに要点の下書きを頼む
+              </button>
+            </form>
+          )}
+        />
       </div>
 
       {/* ここから下が印刷対象 */}
@@ -307,6 +404,17 @@ export default async function MeetingSheetPage({
             </ul>
           )}
         </section>
+
+        {sheetDraft && (
+          <section>
+            <h3 className="section-head">要点（AIによる下書き・確認済み）</h3>
+            {/* 7-1「AIが生成した文面・分類であることを画面上に明示する」。
+                紙に出たあとも出所が分かるよう、見出しに残す */}
+            <p className="mt-1 whitespace-pre-wrap text-label text-text-secondary">
+              {sheetDraft.text}
+            </p>
+          </section>
+        )}
 
         <section>
           <h3 className="section-head">打ち合わせメモ</h3>

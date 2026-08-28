@@ -14,6 +14,7 @@
  * ここは staff 専用で、job_type にも 'faq_answer' を許さない。
  */
 import { ok, parseBody, route } from '@/lib/api/route';
+import { AI_JOB_COLUMNS } from '@/lib/ai/assist';
 import { requireStaff } from '@/lib/auth/session';
 import { AI_JOB_TYPES } from '@/lib/ai/schemas';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
@@ -50,7 +51,7 @@ export const GET = route(async (request: Request) => {
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from('ai_jobs')
-    .select('id, case_id, related_task_id, job_type, status, output, error_message, created_at, finished_at')
+    .select(AI_JOB_COLUMNS)
     .order('created_at', { ascending: false })
     .limit(LIST_PAGE_SIZE);
 

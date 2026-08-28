@@ -5,12 +5,23 @@
  * ステータス確定だけを Route Handler（/api/submissions/{id}/review）に投げる。
  * 複数テーブル（task_submissions／case_tasks／communication_logs）を跨ぐ更新のため、
  * ここは 6-5 の「サーバー側APIに集約する」条件に当たる。
+ *
+ * AI補助（Phase 3）はこの画面に3つ乗る（7-2）。
+ *   9-1 分類        … 提出時に自動投入されたジョブの結果を表示・修正（ClassificationPanel）
+ *   9-3 文面下書き  … 確認フォームの中（ReviewForm → DraftAssist）
+ *   9-4 不備チェック … ①ルールベースはここで毎回かけ、②LLM は画面から依頼（DefectPanel）
+ * いずれも失敗しても確認作業は続けられる（7-1「他機能の利用に影響を与えない」）。
  */
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { ClassificationPanel } from '@/app/(staff)/submissions/[submissionId]/ClassificationPanel';
+import { DefectPanel } from '@/app/(staff)/submissions/[submissionId]/DefectPanel';
 import { ReviewForm, SubmissionFileLink } from '@/app/(staff)/submissions/[submissionId]/ReviewForm';
 import { ReviewStatusBadge, TaskStatusBadge } from '@/components/ui/StatusBadge';
+import { fetchAiAssistStatus, latestJobForTask } from '@/lib/ai/assist';
+import type { DefectFinding } from '@/lib/ai/defectCheck';
+import { checkSubmittedCsv, csvSchemaOf } from '@/lib/ai/submissionCheck';
 import {
   COUPLE_PROFILE_COLUMNS,
   SUBMISSION_FORMAT_LABEL,
@@ -42,11 +53,16 @@ interface SubmissionDetail {
     due_date: string;
     status: TaskStatus;
     case_id: string;
+    /** 9-4 ①の期待列（task_templates.default_options から複写される。7-2） */
+    options: Record<string, unknown> | null;
     wedding_cases: { id: string; case_code: string; wedding_date: string };
   };
   storage_files: {
     id: string;
+    bucket: string;
+    object_path: string;
     original_filename: string | null;
+    mime_type: string | null;
     file_size_bytes: number | null;
   } | null;
 }
@@ -76,9 +92,9 @@ export default async function SubmissionReviewPage({
     .select(
       'id, submission_type, text_value, selected_value, content_json, file_id, comment,'
       + ' review_status, planner_feedback, submitted_at, reviewed_at,'
-      + ' case_tasks!inner ( id, title, description, due_date, status, case_id,'
+      + ' case_tasks!inner ( id, title, description, due_date, status, case_id, options,'
       + ' wedding_cases!inner ( id, case_code, wedding_date ) ),'
-      + ' storage_files ( id, original_filename, file_size_bytes )',
+      + ' storage_files ( id, bucket, object_path, original_filename, mime_type, file_size_bytes )',
     )
     .eq('id', submissionId)
     .maybeSingle();
@@ -110,6 +126,29 @@ export default async function SubmissionReviewPage({
   const isWaived = task.status === 'waived';
   const isPending = submission.review_status === 'submitted' && !isWaived;
   const textValue = readPii(submission.text_value);
+
+  // ---------------------------------------------------------------- AI補助（7-2）
+  // ワーカーの死活と、この宿題に紐づく最新ジョブ。
+  // どれも取得に失敗したら null（＝出さない）に倒れるので、ここで例外にはならない。
+  const [aiStatus, classificationJob, defectJob] = await Promise.all([
+    fetchAiAssistStatus(supabase),
+    latestJobForTask(supabase, task.id, 'classification'),
+    latestJobForTask(supabase, task.id, 'defect_check'),
+  ]);
+
+  // 9-4 ①ルールベースは描画のたびにかけ直す（保存しない。submissionCheck.ts の冒頭を参照）。
+  // 検査できない宿題（csvSchema 未設定・CSV以外）は null のままにして、欄ごと出さない。
+  let ruleFindings: DefectFinding[] | null = null;
+  const csvSchema = csvSchemaOf(task.options);
+  if (csvSchema && submission.submission_type === 'file' && submission.storage_files) {
+    const checked = await checkSubmittedCsv(supabase, {
+      bucket: submission.storage_files.bucket,
+      objectPath: submission.storage_files.object_path,
+      fileName: submission.storage_files.original_filename,
+      mimeType: submission.storage_files.mime_type,
+    }, csvSchema);
+    if (checked) ruleFindings = checked.findings;
+  }
 
   return (
     <div>
@@ -201,13 +240,30 @@ export default async function SubmissionReviewPage({
         )}
       </section>
 
+      <ClassificationPanel initialJob={classificationJob} />
+
+      <DefectPanel
+        submissionId={submission.id}
+        ruleFindings={ruleFindings}
+        initialJob={defectJob}
+        aiAvailable={aiStatus.available}
+        lastSeenAt={aiStatus.lastSeenAt}
+      />
+
       {isPending ? (
         <section className="card mt-4">
           <h2 className="text-label font-bold text-text-primary">確認結果を登録する</h2>
           <p className="mb-3 mt-1 text-caption text-text-muted">
             「不備あり」を選んだ場合は、どこを直していただきたいかをコメントに書いてください。
           </p>
-          <ReviewForm submissionId={submission.id} caseId={task.case_id} />
+          <ReviewForm
+            submissionId={submission.id}
+            caseId={task.case_id}
+            taskId={task.id}
+            taskTitle={task.title}
+            aiAvailable={aiStatus.available}
+            lastSeenAt={aiStatus.lastSeenAt}
+          />
         </section>
       ) : (
         <section className="card mt-4">

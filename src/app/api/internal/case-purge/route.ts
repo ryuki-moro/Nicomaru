@@ -13,6 +13,11 @@
  * 監査ログ（audit_logs）と通知送信ログ（notification_logs）は
  * 「別途の保持期間ポリシーに従い自動削除の対象外」（6-11）なので触らない。
  *
+ * AIジョブ（ai_jobs）はこれとは別の保持期間を持つ（7-4／13-1）。
+ * 入出力は完了から30日、行は作成から90日。案件の終了を待たない。
+ * 個人情報を含みうる入出力を、案件が終わるまで持ち続ける理由が無いため
+ * （20260828001900_ai_job_retention.sql）。日次の処理はここに相乗りする。
+ *
  * 【匿名化ではなく削除にしている範囲】
  * 6-11 は「個人情報・ゲスト情報・提出ファイルを自動削除対象とする」と定める。
  * 案件そのものの行は残す（案件番号・挙式日は式場の実績として意味があり、
@@ -27,14 +32,20 @@ export const runtime = 'nodejs';
 /** 13-1「案件終了（archived_at）から180日」。差し戻しはこの定数の変更で完結する。 */
 const RETENTION_DAYS = 180;
 
+/** 13-1「AIジョブの入出力は完了から30日、行は作成から90日」（7-4）。 */
+const AI_PAYLOAD_RETENTION_DAYS = 30;
+const AI_ROW_RETENTION_DAYS = 90;
+
 export const POST = route(async (request: Request) => {
   requireInternalCall(request);
 
-  const admin = createSupabaseAdminClient('cron.risk-recalculate');
+  const admin = createSupabaseAdminClient('cron.case-purge');
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
   let purged = 0;
   let filesRemoved = 0;
+  let aiPayloadsCleared = 0;
+  let aiRowsDeleted = 0;
 
   const outcome = await runBatch(admin, 'case_purge', async () => {
     const targets = await admin
@@ -67,6 +78,8 @@ export const POST = route(async (request: Request) => {
       await admin.from('case_guests').delete().eq('case_id', target.id);
       await admin.from('communication_logs').delete().eq('case_id', target.id);
       await admin.from('meeting_notes').delete().eq('case_id', target.id);
+      // AIジョブは案件の記録から起こしたもの。案件を匿名化するなら道連れに消す（7-4）
+      await admin.from('ai_jobs').delete().eq('case_id', target.id);
       await admin.from('meeting_sheets').delete().eq('case_id', target.id);
       await admin.from('follow_logs').delete().eq('case_id', target.id);
 
@@ -90,8 +103,35 @@ export const POST = route(async (request: Request) => {
       purged += 1;
     }
 
-    return { targetCount: purged, detail: { filesRemoved, retentionDays: RETENTION_DAYS } };
+    // AIジョブの保持期間は案件と独立（7-4／13-1）。案件が残っていても本文だけ落とす。
+    const ai = await admin.rpc('purge_ai_job_payloads', {
+      p_payload_days: AI_PAYLOAD_RETENTION_DAYS,
+      p_row_days: AI_ROW_RETENTION_DAYS,
+    });
+    if (ai.error) {
+      // AI 側の失敗で案件の自動削除まで失敗扱いにしない（7-1 の切り離し）
+      console.warn('[case-purge] AIジョブの整理に失敗しました', ai.error);
+    } else {
+      const row = (ai.data as { payloads_cleared: number; rows_deleted: number }[] | null)?.[0];
+      aiPayloadsCleared = row?.payloads_cleared ?? 0;
+      aiRowsDeleted = row?.rows_deleted ?? 0;
+    }
+
+    return {
+      targetCount: purged,
+      detail: {
+        filesRemoved,
+        retentionDays: RETENTION_DAYS,
+        aiPayloadsCleared,
+        aiRowsDeleted,
+      },
+    };
   });
 
-  return ok({ purged: outcome.targetCount, filesRemoved });
+  return ok({
+    purged: outcome.targetCount,
+    filesRemoved,
+    aiPayloadsCleared,
+    aiRowsDeleted,
+  });
 });

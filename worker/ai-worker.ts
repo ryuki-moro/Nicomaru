@@ -33,8 +33,16 @@ const POLL_INTERVAL_MS = 30_000;
 /** ジョブが無いときに待つ時間。空振りでログを埋めないよう間隔は同じにする。 */
 const IDLE_INTERVAL_MS = POLL_INTERVAL_MS;
 
-/** 7-6「job_type ごとに使用モデルを設定で切り替え可能とする」の既定値。 */
-const DEFAULT_MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:7b';
+/**
+ * 7-6「job_type ごとに使用モデルを設定で切り替え可能とする」の既定値。
+ *
+ * 13-1 の開発チーム決定により既定は gemma3:12b。
+ * ローカル環境で 9-1 分類と 9-5 起票案を実際に流し、
+ * 7-2 のJSONスキーマに適合する出力が返ることを確認して選んだ。
+ * VRAM が足りない環境では OLLAMA_MODEL=qwen2.5:7b を渡す。
+ * job_type ごとの切り替えは ai_prompt_templates.model_name（DB管理）が優先される。
+ */
+const DEFAULT_MODEL = process.env.OLLAMA_MODEL ?? 'gemma3:12b';
 
 interface ClaimedJob {
   id: string;
@@ -182,6 +190,11 @@ async function main(): Promise<void> {
 
   while (!stopping) {
     try {
+      // 心拍。7-3 (4)「『利用不可』表示は、最終ポーリングから10分以上経過したことを
+      // 判定条件とする」。ジョブの有無に関わらず毎回打つ。
+      // ジョブが無い間は locked_at が動かないので、それでは「暇」と「停止」を区別できない。
+      await client.query('select ai_worker_ping($1, $2)', [workerId, DEFAULT_MODEL]);
+
       const claimed = await client.query<ClaimedJob>(
         'select * from claim_ai_job($1, $2)',
         [workerId, AI_JOB_TYPES as unknown as string[]],

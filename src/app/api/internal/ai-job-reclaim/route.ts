@@ -25,7 +25,7 @@ const MAX_ATTEMPTS = 3;
 export const POST = route(async (request: Request) => {
   requireInternalCall(request);
 
-  const admin = createSupabaseAdminClient('cron.risk-recalculate');
+  const admin = createSupabaseAdminClient('cron.ai-job-reclaim');
 
   const outcome = await runBatch(admin, 'ai_job_reclaim', async () => {
     const { data, error } = await admin.rpc('reclaim_stalled_ai_jobs', {

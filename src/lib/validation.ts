@@ -371,7 +371,15 @@ export const aiJobCreateSchema = z.object({
   input: aiJobInputSchema,
 });
 
-/** PATCH /api/ai/jobs/{jobId}（7-3）。 */
+/**
+ * PATCH /api/ai/jobs/{jobId}（7-3）。
+ *
+ * output は「プランナーが修正して採用する」場合にだけ付く（7-2 の 9-1）。
+ * 中身の形は job_type ごとに違うため、ここでは受け取るだけにして、
+ * ハンドラ側が対象ジョブの job_type を引いてから AI_OUTPUT_SCHEMAS で検証する。
+ * ここで unknown を通しても、DB へ入る前に必ずスキーマを通る。
+ */
 export const aiJobReviewSchema = z.object({
   decision: z.enum(['confirmed', 'discarded']),
+  output: z.unknown().optional(),
 });

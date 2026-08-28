@@ -236,3 +236,222 @@ describe('reclaim_stalled_ai_jobs（7-3／6-12 滞留回収）', () => {
     expect(result.rows[0].failed).toBe(0);
   });
 });
+
+describe('ai_assist_status（7-1 の「利用不可」表示／7-3 (4) の10分）', () => {
+  it('心拍が無いうちは利用不可', async () => {
+    const r = await db.asUser(fx.planner.authUserId, () =>
+      db.query<{ available: boolean; last_seen_at: string | null }>(
+        'select * from ai_assist_status()'));
+    expect(r.rows[0].available).toBe(false);
+    expect(r.rows[0].last_seen_at).toBeNull();
+  });
+
+  it('心拍が10分以内なら利用可', async () => {
+    await db.asOwner(() => db.query(`select ai_worker_ping('w1', 'gemma3:12b')`));
+
+    const r = await db.asUser(fx.planner.authUserId, () =>
+      db.query<{ available: boolean }>('select * from ai_assist_status()'));
+    expect(r.rows[0].available).toBe(true);
+  });
+
+  it('10分を超えたら利用不可へ倒れる', async () => {
+    await db.asOwner(() =>
+      db.query(`update ai_worker_heartbeats set last_seen_at = now() - interval '11 minutes'`));
+
+    const r = await db.asUser(fx.planner.authUserId, () =>
+      db.query<{ available: boolean }>('select * from ai_assist_status()'));
+    expect(r.rows[0].available).toBe(false);
+
+    // 後続のテストへ影響させない
+    await db.asOwner(() => db.query('delete from ai_worker_heartbeats'));
+  });
+
+  it('心拍表そのものは authenticated から読めない（関数だけを通す）', async () => {
+    await db.asUser(fx.planner.authUserId, async () => {
+      const code = await errcodeOf(() => db.query('select * from ai_worker_heartbeats'));
+      expect(code).toBe('42501');
+    });
+  });
+
+  it('心拍の書き込みはワーカー専用ロールにだけ許す', async () => {
+    const rows = await db.asOwner(() =>
+      db.query<{ worker: boolean; auth: boolean }>(
+        `select has_function_privilege('ai_worker', 'ai_worker_ping(text, text)', 'execute') as worker,
+                has_function_privilege('authenticated', 'ai_worker_ping(text, text)', 'execute') as auth`));
+    expect(rows.rows[0].worker).toBe(true);
+    expect(rows.rows[0].auth).toBe(false);
+  });
+});
+
+describe('enqueue_submission_ai_job（7-3 提出を契機とする投入）', () => {
+  const call = 'select enqueue_submission_ai_job($1, $2, $3::jsonb)';
+  const input = JSON.stringify({ text: 'BGMの希望があります', params: {} });
+
+  it('couple も自案件の宿題からは投入できる（提出処理から呼ぶため）', async () => {
+    const id = await db.asUser(fx.couple.authUserId, async () => {
+      const r = await db.query<{ enqueue_submission_ai_job: string }>(
+        call, [fx.taskId, 'classification', input]);
+      return r.rows[0].enqueue_submission_ai_job;
+    });
+    expect(id).toBeTruthy();
+
+    const row = await db.asOwner(() =>
+      db.query<{ venue_id: string; case_id: string; status: string }>(
+        'select venue_id, case_id, status from ai_jobs where id = $1', [id]));
+    // venue_id・case_id は宿題から引く（引数で詐称できない）
+    expect(row.rows[0].venue_id).toBe(fx.venueId);
+    expect(row.rows[0].case_id).toBe(fx.caseId);
+    expect(row.rows[0].status).toBe('queued');
+  });
+
+  it('未処理の同種ジョブがあれば積み増さない（一時保存の往復で溜めない）', async () => {
+    const again = await db.asUser(fx.couple.authUserId, async () => {
+      const r = await db.query<{ enqueue_submission_ai_job: string }>(
+        call, [fx.taskId, 'classification', input]);
+      return r.rows[0].enqueue_submission_ai_job;
+    });
+
+    const count = await db.asOwner(() =>
+      db.query<{ n: string }>(
+        `select count(*) as n from ai_jobs
+          where related_task_id = $1 and job_type = 'classification'`, [fx.taskId]));
+    expect(Number(count.rows[0].n)).toBe(1);
+    expect(again).toBeTruthy();
+  });
+
+  it('提出から発生しない種別は投入できない', async () => {
+    await db.asUser(fx.couple.authUserId, async () => {
+      const code = await errcodeOf(() => db.query(call, [fx.taskId, 'draft', input]));
+      expect(code).toBe('BH422');
+    });
+  });
+
+  it('触れない案件の宿題には投入できない', async () => {
+    await db.asUser(fx.otherPlanner.authUserId, async () => {
+      const code = await errcodeOf(() =>
+        db.query(call, [fx.taskId, 'classification', input]));
+      expect(code).toBe('42501');
+    });
+  });
+});
+
+describe('review_ai_job の修正採用（7-2 の 9-1「プランナーが修正できる」）', () => {
+  let jobId: string;
+
+  beforeAll(async () => {
+    const r = await db.asOwner(() =>
+      db.query<{ id: string }>(
+        `insert into ai_jobs (venue_id, case_id, job_type, input_ref, status, output)
+         values ($1, $2, 'classification', '{}'::jsonb, 'done',
+                 '{"labels":["その他"],"confidence":0.4}'::jsonb)
+         returning id`, [fx.venueId, fx.caseId]));
+    jobId = r.rows[0].id;
+  });
+
+  it('修正した内容は reviewed_output に入り、AIの生出力は残る', async () => {
+    const r = await db.asUser(fx.planner.authUserId, () =>
+      db.query<{ review_ai_job: boolean }>(
+        'select review_ai_job($1, $2, $3::jsonb)',
+        [jobId, 'confirmed', JSON.stringify({ labels: ['料理・飲物'], confidence: 0.4 })]));
+    expect(r.rows[0].review_ai_job).toBe(true);
+
+    const after = await db.asOwner(() =>
+      db.query<{ output: { labels: string[] }; reviewed_output: { labels: string[] } }>(
+        'select output, reviewed_output from ai_jobs where id = $1', [jobId]));
+    expect(after.rows[0].output.labels).toEqual(['その他']);
+    expect(after.rows[0].reviewed_output.labels).toEqual(['料理・飲物']);
+  });
+
+  it('破棄では修正内容を残さない', async () => {
+    const id = await db.asOwner(async () => {
+      const r = await db.query<{ id: string }>(
+        `insert into ai_jobs (venue_id, case_id, job_type, input_ref, status, output)
+         values ($1, $2, 'classification', '{}'::jsonb, 'done',
+                 '{"labels":["その他"],"confidence":0.4}'::jsonb)
+         returning id`, [fx.venueId, fx.caseId]);
+      return r.rows[0].id;
+    });
+
+    await db.asUser(fx.planner.authUserId, () =>
+      db.query('select review_ai_job($1, $2, $3::jsonb)',
+        [id, 'discarded', JSON.stringify({ labels: ['費用'], confidence: 1 })]));
+
+    const after = await db.asOwner(() =>
+      db.query<{ status: string; reviewed_output: unknown }>(
+        'select status, reviewed_output from ai_jobs where id = $1', [id]));
+    expect(after.rows[0].status).toBe('discarded');
+    expect(after.rows[0].reviewed_output).toBeNull();
+  });
+});
+
+describe('purge_ai_job_payloads（7-4／13-1 の保持期間）', () => {
+  it('完了から30日を過ぎた入出力だけを消し、メタ情報は残す', async () => {
+    const id = await db.asOwner(async () => {
+      const r = await db.query<{ id: string }>(
+        `insert into ai_jobs (venue_id, case_id, job_type, input_ref, output, status,
+                              model_name, attempts, finished_at, created_at)
+         values ($1, $2, 'classification', '{"text":"個人情報を含みうる本文"}'::jsonb,
+                 '{"labels":["費用"],"confidence":0.9}'::jsonb, 'confirmed',
+                 'gemma3:12b', 1, now() - interval '31 days', now() - interval '31 days')
+         returning id`, [fx.venueId, fx.caseId]);
+      return r.rows[0].id;
+    });
+
+    const result = await db.asOwner(() =>
+      db.query<{ payloads_cleared: number; rows_deleted: number }>(
+        'select * from purge_ai_job_payloads(30, 90)'));
+    expect(result.rows[0].payloads_cleared).toBeGreaterThanOrEqual(1);
+
+    const after = await db.asOwner(() =>
+      db.query<{ input_ref: unknown; output: unknown; model_name: string; attempts: number }>(
+        'select input_ref, output, model_name, attempts from ai_jobs where id = $1', [id]));
+    expect(after.rows[0].input_ref).toEqual({});
+    expect(after.rows[0].output).toBeNull();
+    // プロンプト改善の効果検証に要るメタ情報は残る（7-6）
+    expect(after.rows[0].model_name).toBe('gemma3:12b');
+    expect(after.rows[0].attempts).toBe(1);
+  });
+
+  it('未完了のジョブの入力は消さない（消すと必ず失敗する）', async () => {
+    const id = await db.asOwner(async () => {
+      const r = await db.query<{ id: string }>(
+        `insert into ai_jobs (venue_id, case_id, job_type, input_ref, status, created_at)
+         values ($1, $2, 'draft', '{"text":"未処理"}'::jsonb, 'queued',
+                 now() - interval '31 days')
+         returning id`, [fx.venueId, fx.caseId]);
+      return r.rows[0].id;
+    });
+
+    await db.asOwner(() => db.query('select * from purge_ai_job_payloads(30, 90)'));
+
+    const after = await db.asOwner(() =>
+      db.query<{ input_ref: { text?: string } }>(
+        'select input_ref from ai_jobs where id = $1', [id]));
+    expect(after.rows[0].input_ref.text).toBe('未処理');
+  });
+
+  it('作成から90日を過ぎた行は削除する', async () => {
+    const id = await db.asOwner(async () => {
+      const r = await db.query<{ id: string }>(
+        `insert into ai_jobs (venue_id, case_id, job_type, input_ref, status, created_at)
+         values ($1, $2, 'draft', '{}'::jsonb, 'done', now() - interval '91 days')
+         returning id`, [fx.venueId, fx.caseId]);
+      return r.rows[0].id;
+    });
+
+    const result = await db.asOwner(() =>
+      db.query<{ rows_deleted: number }>('select * from purge_ai_job_payloads(30, 90)'));
+    expect(result.rows[0].rows_deleted).toBeGreaterThanOrEqual(1);
+
+    const after = await db.asOwner(() =>
+      db.query('select id from ai_jobs where id = $1', [id]));
+    expect(after.rows).toHaveLength(0);
+  });
+
+  it('利用者からは呼べない（定期処理からのみ）', async () => {
+    await db.asUser(fx.planner.authUserId, async () => {
+      const code = await errcodeOf(() => db.query('select * from purge_ai_job_payloads(30, 90)'));
+      expect(code).toBe('42501');
+    });
+  });
+});

@@ -28,6 +28,18 @@ export const SERVICE_ROLE_USE_CASES = {
     '内部呼び出し認証（INTERNAL_CRON_SECRET）で起動元を検証。venue_id／case_id 単位でループする',
   'cron.notifications-dispatch':
     '内部呼び出し認証（INTERNAL_CRON_SECRET）で起動元を検証。venue_id／case_id 単位でループする',
+  'cron.case-purge':
+    '内部呼び出し認証（INTERNAL_CRON_SECRET）で起動元を検証。'
+    + 'archived_at が保持期間を超えた案件のみを対象とし、対象外の案件には触れない（6-11）',
+  'cron.ai-job-reclaim':
+    '内部呼び出し認証（INTERNAL_CRON_SECRET）で起動元を検証。'
+    + '滞留ジョブの回収と、保持期間を過ぎたAIジョブ入出力の削除にのみ用いる（7-3／7-4）',
+  'line.link':
+    'LINE連携の nonce 発行。呼び出し元JWTの role が couple であることを検証し、'
+    + '自案件に限る。平文の nonce は応答でのみ返し保存しない（6-10）',
+  'line.webhook':
+    'LINE からの Webhook。署名検証（raw body）を通過したリクエストのみ。'
+    + '受信イベントIDの重複排除と、連携完了の書き込みに限る（6-10）',
 } as const;
 
 export type ServiceRoleUseCase = keyof typeof SERVICE_ROLE_USE_CASES;

@@ -38,6 +38,12 @@ export interface CaseTaskRow {
   status: TaskStatus;
   importance: Importance;
   submissionFormat: SubmissionFormat;
+  /**
+   * 9-1 の分類ラベル（7-2「画面: D02, K02」）。
+   * 一覧では「どの話題の宿題か」を掴むための補助なので、
+   * 修正・採用の操作は D02 側に置き、ここは表示だけにする。
+   */
+  aiLabels: string[];
 }
 
 interface Props {
@@ -216,7 +222,20 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
             <tbody>
               {tasks.map((task) => (
                 <tr key={task.id}>
-                  <td>{task.title}</td>
+                  <td>
+                    {task.title}
+                    {task.aiLabels.length > 0 && (
+                      // 7-1「AIが生成した文面・分類であることを画面上に明示する」。
+                      // 一覧では行が詰まるため、見出しの代わりに「AI」を頭に付ける。
+                      <span className="mt-1 flex flex-wrap gap-1">
+                        {task.aiLabels.map((label) => (
+                          <span key={label} className="badge-neutral" title="AIによる分類（要確認）">
+                            AI: {label}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </td>
                   <td>{SUBMISSION_FORMAT_LABEL[task.submissionFormat]}</td>
                   <td>{IMPORTANCE_LABEL[task.importance]}</td>
                   <td>

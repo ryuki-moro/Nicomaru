@@ -4,7 +4,9 @@
  *   確認ステータス: ラジオ（確認済／不備あり）必須
  *   コメント      : 不備あり時必須・1000字上限
  *
- * AI補助（9-3 コメント下書き／9-4 不備一次チェック）は Phase 3 のため参考表示欄を作らない。
+ * AI補助のうち 9-3（コメント下書き）はこのフォームの中に置く（DraftAssist）。
+ * 下書きは「コメント欄に入れる」までで、送信も確定もしない（7-1）。
+ * 9-4（不備一次チェック）は確認結果の入力とは独立した参考情報なので、別セクションに置く。
  * 添付ファイルの署名付きURL取得も同じ画面の対話操作なので本ファイルにまとめている。
  */
 'use client';
@@ -12,6 +14,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { DraftAssist } from '@/app/(staff)/submissions/[submissionId]/DraftAssist';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { ApiCallError, api } from '@/lib/api/client';
 import { INPUT_LIMITS, REVIEW_DECISIONS, REVIEW_STATUS_LABEL, type ReviewDecision } from '@/lib/constants';
@@ -20,9 +23,16 @@ interface Props {
   submissionId: string;
   /** 「確定する」「キャンセル」いずれも K02 案件詳細へ戻る（4-3 D02） */
   caseId: string;
+  /** 9-3 の下書き依頼に使う（ジョブを宿題に紐づける） */
+  taskId: string;
+  taskTitle: string;
+  aiAvailable: boolean;
+  lastSeenAt: string | null;
 }
 
-export function ReviewForm({ submissionId, caseId }: Props) {
+export function ReviewForm({
+  submissionId, caseId, taskId, taskTitle, aiAvailable, lastSeenAt,
+}: Props) {
   const router = useRouter();
   const [decision, setDecision] = useState<ReviewDecision | null>(null);
   const [comment, setComment] = useState('');
@@ -88,6 +98,17 @@ export function ReviewForm({ submissionId, caseId }: Props) {
         </div>
         <FieldError message={fieldErrors.decision} />
       </fieldset>
+
+      <DraftAssist
+        caseId={caseId}
+        taskId={taskId}
+        taskTitle={taskTitle}
+        decision={decision}
+        memo={comment}
+        aiAvailable={aiAvailable}
+        lastSeenAt={lastSeenAt}
+        onAdopt={setComment}
+      />
 
       <div className="mb-4">
         <label htmlFor="review-comment" className="field-label">

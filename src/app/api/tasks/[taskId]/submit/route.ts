@@ -34,6 +34,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { ok, parseBody, route } from '@/lib/api/route';
+import { enqueueSubmissionAiJob, trimForAi } from '@/lib/ai/assist';
 import { requireRole } from '@/lib/auth/session';
 import {
   UNREVIEWED_STATUSES,
@@ -349,6 +350,27 @@ export const POST = route(
 
     if (replacedFileId) await removeOrphanFile(supabase, replacedFileId);
     if (!draft) await logSubmission(supabase, task.case_id, task.title);
+
+    // 自由記述の分類（機能9-1）。7-3「提出…を契機とするジョブは
+    // couple／planner の操作APIのサーバー側処理から内部呼び出しで投入し、
+    // クライアントから /api/ai/jobs を直接呼ばせない」。
+    //
+    // 一時保存では投入しない。書きかけを分類しても意味が無く、
+    // 提出まで往復するたびにジョブが積み上がる。
+    //
+    // 提出物の不備一次チェック（機能9-4）はここでは投入しない。
+    // ①ルールベースは D02 の描画時に毎回かけ（LLM の状態に依存させない）、
+    // ②LLM は CSV の該当列だけを抜いて渡す必要があるため、
+    // プランナー操作の /api/submissions/{id}/defect-check から投入する（7-4 の入力最小化）。
+    if (!draft && format === 'text') {
+      const forAi = trimForAi(textValue);
+      if (forAi) {
+        await enqueueSubmissionAiJob(supabase, taskId, 'classification', {
+          ref: { table: 'task_submissions', id: submissionId },
+          text: forAi,
+        });
+      }
+    }
 
     return ok({ id: submissionId, reviewStatus });
   },

@@ -17,6 +17,7 @@ import { InvitationSection } from './InvitationSection';
 import { RiskSection, type CaseRisk } from './RiskSection';
 import type { RiskReasonView } from '@/components/ui/RiskBadge';
 import { TaskSection, type CaseTaskRow } from './TaskSection';
+import { adoptedOutput, AI_JOB_COLUMNS, type AiJobRow } from '@/lib/ai/assist';
 import { getAppUser } from '@/lib/auth/session';
 import {
   CASE_STATUS_LABEL,
@@ -128,6 +129,27 @@ export default async function CaseDetailPage({
     }))
     .sort((a, b) => a.partnerRole.localeCompare(b.partnerRole));
 
+  // 9-1 の分類（7-2「画面: D02, K02」）。
+  // 一覧の補助表示なので、取得に失敗しても案件詳細は出す。
+  const classifications = new Map<string, string[]>();
+  const { data: aiJobs, error: aiError } = await supabase
+    .from('ai_jobs')
+    .select(AI_JOB_COLUMNS)
+    .eq('case_id', caseId)
+    .eq('job_type', 'classification')
+    .in('status', ['done', 'confirmed'])
+    .order('created_at', { ascending: true });
+  if (aiError) {
+    console.warn('[case] 分類を取得できませんでした', aiError);
+  } else {
+    // created_at 昇順で回して上書きするので、宿題ごとに最新のジョブが残る
+    for (const job of (aiJobs ?? []) as unknown as AiJobRow[]) {
+      if (!job.related_task_id) continue;
+      const labels = adoptedOutput('classification', job)?.labels;
+      if (labels && labels.length > 0) classifications.set(job.related_task_id, [...labels]);
+    }
+  }
+
   const tasks: CaseTaskRow[] = [...row.case_tasks]
     // 一覧の既定並び順は ORDER BY due_date, display_order, id（4-3）
     .sort(
@@ -143,6 +165,7 @@ export default async function CaseDetailPage({
       status: task.status,
       importance: task.importance,
       submissionFormat: task.submission_format,
+      aiLabels: classifications.get(task.id) ?? [],
     }));
 
   const incomplete = tasks.filter((task) => INCOMPLETE_TASK_STATUSES.includes(task.status)).length;
@@ -189,6 +212,16 @@ export default async function CaseDetailPage({
           {!archived && (
             <Link href={`/cases/${row.id}/follow`} className="btn-secondary w-auto px-5 text-center">
               フォロー記録
+            </Link>
+          )}
+          {/* 4-3 D05 打ち合わせ記録・宿題起票（Phase 3）。
+              D04 フォロー記録が「連絡したこと」、こちらが「決まったこと」 */}
+          {!archived && (
+            <Link
+              href={`/cases/${row.id}/meeting-notes`}
+              className="btn-secondary w-auto px-5 text-center"
+            >
+              打ち合わせ記録
             </Link>
           )}
           {isAdmin && !archived && (

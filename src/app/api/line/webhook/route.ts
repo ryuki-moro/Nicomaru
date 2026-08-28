@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const admin = createSupabaseAdminClient('cron.notifications-dispatch');
+  const admin = createSupabaseAdminClient('line.webhook');
 
   for (const event of events) {
     try {
