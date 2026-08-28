@@ -54,7 +54,15 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
 
-  if (!data.user && !isPublic) {
+  // API はログイン画面へ流さない。
+  // 302／307 を返すとクライアントはそれを追ってログイン画面のHTMLを受け取り、
+  // JSON として読めずに「通信に失敗しました」になる。何が起きたか画面に出ない。
+  // 6-5-1 は未認証を 401 UNAUTHENTICATED の JSON で返すと定めており、
+  // /api 配下は全ハンドラが requireAppUser 系または内部呼び出し認証を通しているので、
+  // ここで遮断しなくても未認証のまま処理が進むことはない。
+  const isApi = path === '/api' || path.startsWith('/api/');
+
+  if (!data.user && !isPublic && !isApi) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = '/login';
     loginUrl.search = path === '/' ? '' : `?next=${encodeURIComponent(path)}`;

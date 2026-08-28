@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-import { getAppUser } from '@/lib/auth/session';
+import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { COUPLE_PROFILE_COLUMNS, type PartnerRole } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { formatDate } from '@/lib/format';
@@ -58,10 +58,8 @@ export default async function CaseArchivePage({
   params: Promise<{ caseId: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  const user = await getAppUser();
-  if (!user) redirect('/login');
   // K05 は admin のみ（4-1 表4-10）
-  if (user.role !== 'admin' && user.role !== 'system_admin') redirect('/error');
+  await requirePageUser('admin', 'system_admin');
 
   const { caseId } = await params;
   const { error: errorFlag } = await searchParams;

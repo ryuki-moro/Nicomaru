@@ -18,7 +18,7 @@ import { RiskSection, type CaseRisk } from './RiskSection';
 import type { RiskReasonView } from '@/components/ui/RiskBadge';
 import { TaskSection, type CaseTaskRow } from './TaskSection';
 import { adoptedOutput, AI_JOB_COLUMNS, type AiJobRow } from '@/lib/ai/assist';
-import { getAppUser } from '@/lib/auth/session';
+import { requirePageUser } from '@/lib/auth/session';
 import {
   CASE_STATUS_LABEL,
   CONTACT_CHANNEL_LABEL,
@@ -91,8 +91,7 @@ export default async function CaseDetailPage({
 }: {
   params: Promise<{ caseId: string }>;
 }) {
-  const user = await getAppUser();
-  if (!user) redirect('/login');
+  const user = await requirePageUser();
 
   const { caseId } = await params;
   const supabase = await createSupabaseServerClient();

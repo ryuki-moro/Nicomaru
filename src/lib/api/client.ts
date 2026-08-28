@@ -73,6 +73,10 @@ export const api = {
  * 例: admin が K05 で案件をアーカイブした直後、K02 を開いたままのプランナーが
  * 「対応不要にする」を押すと 404 が返るが、サマリが出るだけで P04 へ行かない。
  *
+ * 401（セッション切れ）は /login へ戻す。
+ * middleware が /api を遮断しない（6-5-1 の 401 を返すため）ので、
+ * 操作の途中でセッションが切れたことに気づけるのはこの経路だけになる。
+ *
  * 遷移したときは true を返す。呼び出し側はそこで処理を打ち切る。
  */
 export function handleApiError(
@@ -86,6 +90,13 @@ export function handleApiError(
   },
 ): boolean {
   if (error instanceof ApiCallError) {
+    // セッション切れ。middleware は /api を遮断しないので（6-5-1 の 401 を返すため）、
+    // 操作の途中で切れたことに気づけるのはこの経路だけ。ログイン後は元の画面へ戻す（4-2）。
+    if (error.status === 401) {
+      const next = typeof window === 'undefined' ? '' : window.location.pathname;
+      router.push(next ? `/login?next=${encodeURIComponent(next)}` : '/login');
+      return true;
+    }
     if (error.status === 403 || error.status === 404) {
       router.push(`/error?code=${error.status}`);
       return true;

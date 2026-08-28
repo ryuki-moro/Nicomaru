@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { CaseEditForm, type CaseEditInitial } from './CaseEditForm';
-import { getAppUser } from '@/lib/auth/session';
+import { requirePageUser } from '@/lib/auth/session';
 import {
   COUPLE_PROFILE_COLUMNS,
   type ContactChannel,
@@ -40,8 +40,7 @@ interface CaseRow {
 }
 
 export default async function CaseEditPage({ params }: { params: Promise<{ caseId: string }> }) {
-  const user = await getAppUser();
-  if (!user) redirect('/login');
+  const user = await requirePageUser();
 
   const { caseId } = await params;
   const supabase = await createSupabaseServerClient();

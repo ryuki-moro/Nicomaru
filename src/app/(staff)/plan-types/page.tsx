@@ -13,11 +13,10 @@
  * K01／M02 と同じく1件多く取って前後リンクを出す（?page=）。
  */
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
 import { EmptyState } from '@/components/ui/EmptyState';
-import { getAppUser, landingPathFor } from '@/lib/auth/session';
+import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { fromPostgresError } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -201,9 +200,7 @@ export default async function PlanTypesPage({
   const { edit, page: pageParam } = await searchParams;
   const page = resolvePage(pageParam);
 
-  const user = await getAppUser();
-  if (!user) redirect('/login');
-  if (user.role !== 'admin') redirect(landingPathFor(user.role));
+  await requirePageUser('admin');
 
   const supabase = await createSupabaseServerClient();
 

@@ -11,10 +11,9 @@
  * その linkToken を持って開かれたときだけ「連携する」を出す。
  * linkToken が無い状態で開かれた場合は、先に友だち追加してもらう案内を出す。
  */
-import { redirect } from 'next/navigation';
 
 import { LineLinkButton } from './LineLinkButton';
-import { getAppUser } from '@/lib/auth/session';
+import { requirePageUser } from '@/lib/auth/session';
 import { COUPLE_PROFILE_COLUMNS, PARTNER_ROLE_LABEL, type PartnerRole } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -26,8 +25,7 @@ interface Props {
 }
 
 export default async function AccountPage({ searchParams }: Props) {
-  const user = await getAppUser();
-  if (!user) redirect('/login');
+  const user = await requirePageUser();
 
   const params = await searchParams;
   const linkToken = (params.linkToken ?? '').trim();

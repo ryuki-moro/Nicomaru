@@ -16,7 +16,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { EmptyState } from '@/components/ui/EmptyState';
-import { getAppUser } from '@/lib/auth/session';
+import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { CASE_STATUS_LABEL, LIST_PAGE_SIZE } from '@/lib/constants';
 import { RiskBadge, RiskNotCalculated } from '@/components/ui/RiskBadge';
 import { formatDate } from '@/lib/format';
@@ -61,8 +61,7 @@ interface Props {
 }
 
 export default async function CaseListPage({ searchParams }: Props) {
-  const user = await getAppUser();
-  if (!user) redirect('/login');
+  const user = await requirePageUser();
 
   const params = await searchParams;
   const canSeeArchived = user.role === 'admin' || user.role === 'system_admin';

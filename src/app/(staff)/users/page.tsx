@@ -13,9 +13,8 @@
  * K01／M02 と同じく1件多く取って前後リンクを出す（?page=）。
  */
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 
-import { getAppUser, landingPathFor } from '@/lib/auth/session';
+import { requirePageUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { loadUserList, sanitizeKeyword, type UserProfileRow } from '@/lib/services/users';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -45,9 +44,7 @@ export default async function UserListPage({
   const { q, page: pageParam } = await searchParams;
   const page = resolvePage(pageParam);
 
-  const user = await getAppUser();
-  if (!user) redirect('/login');
-  if (user.role !== 'admin' && user.role !== 'system_admin') redirect(landingPathFor(user.role));
+  const user = await requirePageUser('admin', 'system_admin');
 
   const keyword = sanitizeKeyword(q);
   const supabase = await createSupabaseServerClient();

@@ -26,7 +26,7 @@ import {
   trimForAi,
   type AiJobRow,
 } from '@/lib/ai/assist';
-import { getAppUser } from '@/lib/auth/session';
+import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { INPUT_LIMITS, isStaff } from '@/lib/constants';
 import { formatDate, formatDateTime, todayInJst } from '@/lib/format';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -106,10 +106,8 @@ export default async function MeetingNotesPage({
 }: {
   params: Promise<{ caseId: string }>;
 }) {
-  const user = await getAppUser();
-  if (!user) redirect('/login');
   // couple には打ち合わせ記録そのものを見せない（付録A meeting_notes_all は staff 限定）
-  if (!isStaff(user.role)) redirect('/error?code=403');
+  await requirePageUser('planner', 'admin', 'system_admin');
 
   const { caseId } = await params;
   const supabase = await createSupabaseServerClient();

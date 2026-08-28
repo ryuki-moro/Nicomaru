@@ -7,11 +7,10 @@
  * Server Component で読み込み（6-5 の直アクセス原則）、入力と送信だけをクライアントへ渡す。
  */
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 
 import { CaseForm, type PlanOption } from './CaseForm';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { getAppUser } from '@/lib/auth/session';
+import { requirePageUser } from '@/lib/auth/session';
 import { todayInJst } from '@/lib/format';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -29,10 +28,8 @@ interface PlanTypeRow {
 }
 
 export default async function CaseCreatePage() {
-  const user = await getAppUser();
-  if (!user) redirect('/login');
   // K03 は planner の画面（4-1 表4-10）。API は admin も許可するため admin の直接遷移は通す。
-  if (user.role !== 'planner' && user.role !== 'admin') redirect('/cases');
+  await requirePageUser('planner', 'admin');
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase

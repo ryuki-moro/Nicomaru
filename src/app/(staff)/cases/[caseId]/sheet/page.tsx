@@ -32,7 +32,7 @@ import { revalidatePath } from 'next/cache';
 import { PrintButton } from './PrintButton';
 import { SheetDraftPanel } from './SheetDraftPanel';
 import { adoptedOutput, AI_JOB_COLUMNS, fetchAiAssistStatus, type AiJobRow } from '@/lib/ai/assist';
-import { getAppUser } from '@/lib/auth/session';
+import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import {
   COUPLE_PROFILE_COLUMNS,
   FOLLOW_METHOD_LABEL,
@@ -165,8 +165,7 @@ export default async function MeetingSheetPage({
 }: {
   params: Promise<{ caseId: string }>;
 }) {
-  const user = await getAppUser();
-  if (!user) redirect('/login');
+  await requirePageUser();
 
   const { caseId } = await params;
   const supabase = await createSupabaseServerClient();
