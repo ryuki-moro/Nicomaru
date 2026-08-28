@@ -20,7 +20,17 @@ import {
 } from '@/lib/constants';
 import { type ErrorDetail } from '@/lib/errors';
 import { todayInJst } from '@/lib/format';
+import { aiJobInputSchema } from '@/lib/ai/schemas';
 import { NOTIFICATION_TYPES } from '@/lib/notify/templates';
+
+/**
+ * staff が /api/ai/jobs から投入できる job_type。
+ * faq_answer は couple 向けで専用API（/api/ai/faq）からしか投入させない（7-3）。
+ */
+const AI_CORE_JOB_TYPES_FOR_STAFF = [
+  'classification', 'draft', 'defect_check', 'task_extraction',
+  'reschedule_plan', 'handover_summary', 'template_draft', 'translation',
+] as const;
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付の形式が正しくありません');
 const shortText = z.string().trim().min(1, '入力してください').max(INPUT_LIMITS.shortText);
@@ -351,4 +361,17 @@ export const venueUpdateSchema = z.object({
 /** POST /api/line/link（機能1-3、Phase 2）。linkToken は follow イベント経由で受け取った値。 */
 export const lineLinkSchema = z.object({
   linkToken: z.string().trim().min(1).max(200),
+});
+
+/** POST /api/ai/jobs（機能9-6、Phase 3）。faq_answer は専用APIから投入する（7-3）。 */
+export const aiJobCreateSchema = z.object({
+  caseId: z.string().uuid(),
+  jobType: z.enum(AI_CORE_JOB_TYPES_FOR_STAFF),
+  relatedTaskId: z.string().uuid().optional().nullable(),
+  input: aiJobInputSchema,
+});
+
+/** PATCH /api/ai/jobs/{jobId}（7-3）。 */
+export const aiJobReviewSchema = z.object({
+  decision: z.enum(['confirmed', 'discarded']),
 });

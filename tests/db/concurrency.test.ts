@@ -276,3 +276,48 @@ d('LINE送信上限の競合（6-9）', () => {
     expect(counter.rows[0].sent_count).toBe(3);
   }, 60_000);
 });
+
+d('AIジョブの二重取得防止（7-3 for update skip locked）', () => {
+  it('10ワーカーが同時に取りにきても、同じジョブを2度掴まない', async () => {
+    // 5件のジョブを積み、10本の接続から同時に取得を試みる
+    await db.asOwner(async (q) => {
+      for (let i = 0; i < 5; i += 1) {
+        await q(
+          `insert into ai_jobs (venue_id, case_id, job_type, input_ref, status)
+           values ($1, $2, 'classification', $3::jsonb, 'queued')`,
+          [venueId, caseId, JSON.stringify({ params: {}, text: `sample ${i}` })]);
+      }
+    });
+
+    const claimed = await Promise.all(
+      Array.from({ length: 10 }, (_, i) =>
+        db.asOwner((q) =>
+          q('select id from claim_ai_job($1, null)', [`worker-${i}`])
+            .then((r) => (r.rows[0]?.id as string | undefined) ?? null))),
+    );
+
+    const got = claimed.filter((id): id is string => id !== null);
+    // 5件しか無いので、掴めるのは5本まで
+    expect(got.length).toBe(5);
+    // 同じジョブを2人が掴んでいない
+    expect(new Set(got).size).toBe(5);
+
+    const processing = await db.asOwner((q) =>
+      q(`select count(*)::int as n from ai_jobs where status = 'processing'`));
+    expect(processing.rows[0].n).toBe(5);
+  }, 60_000);
+
+  it('掴んだワーカー以外は結果を書き込めない（滞留回収後の遅れた書き込みを防ぐ）', async () => {
+    const job = await db.asOwner((q) =>
+      q(`insert into ai_jobs (venue_id, case_id, job_type, input_ref, status)
+         values ($1, $2, 'draft', '{}'::jsonb, 'queued') returning id`, [venueId, caseId]));
+    const jobId = job.rows[0].id as string;
+
+    await db.asOwner((q) => q('select id from claim_ai_job($1, null)', ['worker-A']));
+
+    const byOther = await db.asOwner((q) =>
+      q('select complete_ai_job($1, $2, $3::jsonb, null, null) as ok',
+        [jobId, 'worker-B', JSON.stringify({ text: 'x', cautions: [] })]));
+    expect(byOther.rows[0].ok).toBe(false);
+  }, 60_000);
+});

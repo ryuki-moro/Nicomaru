@@ -45,7 +45,8 @@ begin
     where jobname in ('bridalhub_risk_recalculate',
                       'bridalhub_notifications_dispatch',
                       'bridalhub_case_purge',
-                      'bridalhub_rate_limit_cleanup');
+                      'bridalhub_rate_limit_cleanup',
+                      'bridalhub_ai_job_reclaim');
 
   -- 時刻はすべて UTC。JST では +9 時間になる。
   -- リスク再計算は「日次（深夜）」（6-12）なので JST 03:00 = UTC 18:00。
@@ -90,6 +91,18 @@ begin
                                       'x-internal-cron-secret', %L),
         body    := '{}'::jsonb)
     $cmd$, v_base || '/api/internal/rate-limit-cleanup', v_secret));
+
+  -- AIジョブの滞留回収は10分ごと（6-12）。ワーカーは常時起動とは限らないため、
+  -- 掴まれたまま止まったジョブを戻さないと永久に processing で残る（7-3）。
+  perform cron.schedule(
+    'bridalhub_ai_job_reclaim', '*/10 * * * *',
+    format($cmd$
+      select net.http_post(
+        url     := %L,
+        headers := jsonb_build_object('content-type','application/json',
+                                      'x-internal-cron-secret', %L),
+        body    := '{}'::jsonb)
+    $cmd$, v_base || '/api/internal/ai-job-reclaim', v_secret));
 
   raise notice 'BridalHub の定期処理を登録しました（6-12）';
 end
