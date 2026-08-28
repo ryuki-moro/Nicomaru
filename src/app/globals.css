@@ -110,3 +110,60 @@
     @apply border-b border-border-light px-3 py-3 align-middle;
   }
 }
+
+/*
+ * 印刷用（6-11「第一手段をブラウザ印刷（印刷用CSS）とする」）。
+ * D03 打ち合わせ前準備シートを紙・PDF に出すときに、
+ * 画面の操作要素と余白を落として本文だけを残す。
+ */
+@media print {
+  /*
+   * 操作・ナビゲーションは紙に要らない。
+   * ただし要素名（header / nav）で一律に隠すと、シート本体の見出し
+   * （<article class="sheet"> の中の <header>）まで消える。
+   * 隠す対象は .no-print を付けたものだけに限る。
+   */
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  main {
+    max-width: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* 枠線はインクを食うので細く、影は落とす */
+  .card,
+  .table-wrap {
+    border-color: #ccc;
+    box-shadow: none;
+  }
+
+  /* 表が用紙の途中で割れると読みにくい */
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  /* 見出しだけが用紙末尾に残らないようにする */
+  h2,
+  h3 {
+    page-break-after: avoid;
+  }
+
+  .sheet section {
+    page-break-inside: avoid;
+  }
+}

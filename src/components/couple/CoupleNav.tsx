@@ -23,7 +23,7 @@ export function CoupleNav() {
   return (
     <nav
       aria-label="主要メニュー"
-      className="fixed inset-x-0 bottom-0 border-t border-border-light bg-surface"
+      className="no-print fixed inset-x-0 bottom-0 border-t border-border-light bg-surface"
     >
       <ul className="mx-auto flex max-w-phone">
         {ITEMS.map((item) => {

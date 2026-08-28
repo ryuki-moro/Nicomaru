@@ -24,7 +24,7 @@ interface Props {
 
 export function AppHeader({ role, displayName, breadcrumbs, minimal = false }: Props) {
   return (
-    <header className="border-b border-border-light bg-surface">
+    <header className="no-print border-b border-border-light bg-surface">
       <div
         className={
           minimal

@@ -180,6 +180,17 @@ export default async function CaseDetailPage({
               編集
             </Link>
           )}
+          {/* 4-3 K02 のボタン「打ち合わせ前準備シート（D03、Phase 2）」 */}
+          {!archived && (
+            <Link href={`/cases/${row.id}/sheet`} className="btn-secondary w-auto px-5 text-center">
+              打ち合わせ前準備シート
+            </Link>
+          )}
+          {!archived && (
+            <Link href={`/cases/${row.id}/follow`} className="btn-secondary w-auto px-5 text-center">
+              フォロー記録
+            </Link>
+          )}
           {isAdmin && !archived && (
             <Link href={`/cases/${row.id}/archive`} className="btn-secondary w-auto px-5 text-center">
               アーカイブ
