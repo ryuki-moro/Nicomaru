@@ -14,7 +14,7 @@
 | 設計レビュー | ✅ **完了** — 7観点並列レビューで55件指摘、全件を設計書へ反映 |
 | 着手ブロッカー (rank 1〜10) | ✅ **解消** — v1.1 を原文照合で検証し、残っていた5件を v1.2 で修正 |
 | 第13章 合意必須事項 (Phase 1 分) | ✅ **決定済み** — 13-1「開発チーム決定」として確定 (差し戻し影響範囲つき) |
-| 実装 | ✅ **Phase 1 完了** — 全34ルート、テスト175件。実環境での通し確認は未実施 |
+| 実装 | ✅ **Phase 1 完了** — 全34ルート、テスト181件(PGlite 175 + 実PG並行性 6)。Supabase 実環境での通し確認は未実施 |
 
 ## セットアップ
 
@@ -56,6 +56,25 @@ npm test
 npm run lint       # ESLint (Service Role Key の範囲外使用を機械検出)
 npm run typecheck  # tsc --noEmit (strict)
 npm run build      # 本番ビルド
+```
+
+#### 並行性テスト (実 PostgreSQL が必要)
+
+PGlite は単一接続なので、設計が明示する「同時リクエストでも壊れない」性質だけは検証できない。
+実サーバーへ同時接続して確かめる分は `tests/db/concurrency.test.ts` に分けてある
+(招待トークンの原子的消費 6-6-1、レート制限 5-3、case_code の採番競合 5-7、最新提出の一意性 6-7)。
+
+`TEST_PG_URL` が無ければ skip されるので、通常の `npm test` は接続情報なしで完結する。
+CI では Postgres サービスコンテナを使って毎回実行している。
+
+ローカルで動かす場合 (管理者権限もサービス登録も不要。フォルダを消せば元に戻る):
+
+```bash
+C:	ools\pgsqlin\pg_ctl -D C:	ools\pgdata-nicomaru -o "-p 5433 -c listen_addresses=127.0.0.1" -l server.log start
+```
+
+```bash
+TEST_PG_URL=postgres://postgres:<password>@127.0.0.1:5433/postgres npm run test:pg
 ```
 
 ## リポジトリ構成

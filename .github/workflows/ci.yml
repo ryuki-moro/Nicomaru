@@ -35,6 +35,39 @@ jobs:
       - name: Build
         run: npm run build
 
+  # PGlite は単一接続のため並行性を検証できない。
+  # 設計が明示する原子性（招待トークンの消費・レート制限・採番競合）は
+  # 実サーバーへ同時接続して確かめる（6-6-1／5-3／5-7／6-7）。
+  concurrency-db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Concurrency tests
+        run: npm run test:pg
+        env:
+          TEST_PG_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+
   security:
     runs-on: ubuntu-latest
     steps:
