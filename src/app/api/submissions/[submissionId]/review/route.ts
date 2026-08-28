@@ -24,11 +24,11 @@ import { requireStaff } from '@/lib/auth/session';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { REVIEW_STATUS_LABEL } from '@/lib/constants';
 import { fromPostgresError, notFound } from '@/lib/errors';
+import { logCommunication } from '@/lib/services/communication';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { reviewSubmissionSchema } from '@/lib/validation';
+import { isUuid } from '@/lib/uuid';
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** review_submission() の戻り。 */
 interface ReviewResult {
@@ -42,7 +42,7 @@ export const POST = route(
   async (request: Request, context: { params: Promise<{ submissionId: string }> }) => {
     const { submissionId } = await context.params;
     await requireStaff();
-    if (!UUID_PATTERN.test(submissionId)) throw notFound();
+    if (!isUuid(submissionId)) throw notFound();
 
     const input = await parseBody(request, reviewSubmissionSchema);
     const supabase = await createSupabaseServerClient();
@@ -61,9 +61,12 @@ export const POST = route(
     if (rows.length === 0) throw notFound();
     const result = rows[0];
 
-    await recordCommunicationLog({
-      supabase,
+    await logCommunication(supabase, {
       caseId: result.case_id,
+      // 通知先はマイページ内（LINE／メール送信は notifications 側の担当。7-1／7-2）
+      channel: 'in_app',
+      direction: 'outbound',
+      source: 'review',
       summary:
         `宿題「${result.task_title}」を${REVIEW_STATUS_LABEL[input.decision]}にしました`
         + (input.decision === 'needs_fix' && input.comment ? `：${input.comment}` : ''),
@@ -77,34 +80,3 @@ export const POST = route(
     });
   },
 );
-
-/**
- * 6-7 の自動記録。
- *
- * communication_logs は直接 insert させず log_communication() 経由にする。
- * created_by を引数で受け取らず関数内で auth.uid() から解決するため実行者を偽装できない
- * （log_audit() と同じ考え方。20260828000900_submission_functions.sql）。
- * 連絡履歴は D03（Phase 2）の参考情報であって確認結果そのものではないため、
- * ここで失敗しても確定済みのレビューを巻き戻さず、サーバーログにだけ残す。
- */
-async function recordCommunicationLog({
-  supabase,
-  caseId,
-  summary,
-}: {
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
-  caseId: string;
-  summary: string;
-}): Promise<void> {
-  const { error } = await supabase.rpc('log_communication', {
-    p_case_id: caseId,
-    // Phase 1 の通知先はマイページ内のみ（LINE／メール送信は Phase 2 の 7-1／7-2）
-    p_channel: 'in_app',
-    p_direction: 'outbound',
-    p_source: 'review',
-    p_summary: summary,
-  });
-  if (error) {
-    console.warn('[review] communication_logs への記録に失敗しました', error);
-  }
-}

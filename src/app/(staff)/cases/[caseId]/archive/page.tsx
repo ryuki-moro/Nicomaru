@@ -18,6 +18,7 @@ import { getAppUser } from '@/lib/auth/session';
 import { COUPLE_PROFILE_COLUMNS, type PartnerRole } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { formatDate } from '@/lib/format';
+import { setCaseArchived } from '@/lib/services/cases';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -40,15 +41,11 @@ async function archiveCase(formData: FormData) {
   if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin')) redirect('/error');
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc('apply_case_update', {
-    p_case_id: caseId,
-    p_patch: { archived: true },
-    p_profiles: {},
-    p_due_changes: [],
-    p_waived_task_ids: null,
-    p_new_tasks: [],
-  });
-  if (error) redirect(`/cases/${caseId}/archive?error=1`);
+  try {
+    await setCaseArchived(supabase, caseId, true);
+  } catch {
+    redirect(`/cases/${caseId}/archive?error=1`);
+  }
 
   revalidatePath('/cases');
   redirect('/cases');

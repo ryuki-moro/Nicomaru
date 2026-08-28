@@ -59,3 +59,42 @@ export const api = {
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body ?? {}),
   del: <T>(path: string, body?: unknown) => request<T>('DELETE', path, body),
 };
+
+/**
+ * 4-3 エラー表示規約の共通処理。
+ *
+ *   「権限エラー（403）・不存在（404）は P04 エラーページへ遷移する。
+ *     入力エラーは項目直下、それ以外はフォーム上部のサマリに出す」
+ *
+ * 12コンポーネント中4つにしか入っておらず、しかも判定基準が
+ * 「error.status を見る」「result.code を見る」の2方式に割れていた。
+ * その結果、同じ 404 でも画面によって P04 へ行ったり赤いサマリで終わったりしていた。
+ *
+ * 例: admin が K05 で案件をアーカイブした直後、K02 を開いたままのプランナーが
+ * 「対応不要にする」を押すと 404 が返るが、サマリが出るだけで P04 へ行かない。
+ *
+ * 遷移したときは true を返す。呼び出し側はそこで処理を打ち切る。
+ */
+export function handleApiError(
+  error: unknown,
+  router: { push: (href: string) => void },
+  handlers: {
+    /** 項目直下に出すエラー（400／422 の details） */
+    onFieldErrors?: (fieldErrors: Record<string, string>) => void;
+    /** フォーム上部のサマリに出す文言 */
+    onSummary: (message: string) => void;
+  },
+): boolean {
+  if (error instanceof ApiCallError) {
+    if (error.status === 403 || error.status === 404) {
+      router.push(`/error?code=${error.status}`);
+      return true;
+    }
+    handlers.onSummary(error.message);
+    handlers.onFieldErrors?.(error.fieldErrors);
+    return false;
+  }
+  handlers.onSummary('通信に失敗しました。時間をおいてお試しください');
+  handlers.onFieldErrors?.({});
+  return false;
+}

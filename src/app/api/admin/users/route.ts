@@ -16,59 +16,27 @@
  */
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
-import { LIST_PAGE_SIZE, ROLE_LABEL, type Role, type UserStatus } from '@/lib/constants';
+import { ROLE_LABEL, type Role, type UserStatus } from '@/lib/constants';
 import { ApiError, conflict, fromPostgresError, unprocessable } from '@/lib/errors';
 import { issuePasswordSetupLink, sendPasswordSetupMail } from '@/lib/notify/mailer';
+import { loadUserList } from '@/lib/services/users';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { userCreateSchema } from '@/lib/validation';
 
-/** U01／U02 が扱う利用者種別。couple は招待経由で作られるため本APIの対象外（表4-19）。 */
-const MANAGED_ROLES: readonly Role[] = ['planner', 'admin'];
-
-interface UserRow {
-  id: string;
-  display_name: string;
-  email: string;
-  phone: string | null;
-  role: Role;
-  venue_id: string | null;
-  status: UserStatus;
-  created_at: string;
-}
-
-/**
- * PostgREST の or() はカンマ・括弧で条件を区切るため、検索語をそのまま埋めると
- * 条件式を差し替えられる。値として意味を持つ記号を落としてから埋め込む。
- */
-function sanitizeKeyword(raw: string): string {
-  return raw.replace(/[,()"\\*%]/g, ' ').trim().slice(0, 100);
-}
-
 export const GET = route(async (request) => {
   const actor = await requireRole('admin', 'system_admin');
   const params = new URL(request.url).searchParams;
-  const keyword = sanitizeKeyword(params.get('q') ?? '');
 
   const supabase = await createSupabaseServerClient();
-  // 範囲（admin は自式場、system_admin は全体）は user_profiles_select が決める
-  let query = supabase
-    .from('user_profiles')
-    .select('id, display_name, email, phone, role, venue_id, status, created_at')
-    .in('role', MANAGED_ROLES)
-    .order('role')
-    .order('display_name')
-    .order('id')
-    .limit(LIST_PAGE_SIZE);
+  // 一覧の組み立ては U01 画面と同じサービス層を使う。
+  // 検索語のエスケープが両方にあり、走らない側だけを直す事故が起こりうる形だった（#18）。
+  const result = await loadUserList(supabase, {
+    keyword: params.get('q'),
+    page: Math.max(Number(params.get('page')) || 1, 1),
+  });
 
-  if (keyword) {
-    query = query.or(`display_name.ilike.*${keyword}*,email.ilike.*${keyword}*`);
-  }
-
-  const { data, error } = await query;
-  if (error) throw fromPostgresError(error);
-
-  return ok({ users: (data ?? []) as UserRow[], scope: actor.role });
+  return ok({ users: result.rows, hasNext: result.hasNext, scope: actor.role });
 });
 
 export const POST = route(async (request) => {

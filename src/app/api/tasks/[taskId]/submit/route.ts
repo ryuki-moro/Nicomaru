@@ -40,6 +40,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { ok, parseBody, route } from '@/lib/api/route';
 import { enqueueSubmissionAiJob, trimForAi } from '@/lib/ai/assist';
+import { logCommunication } from '@/lib/services/communication';
 import { requireRole } from '@/lib/auth/session';
 import { type SubmissionFormat } from '@/lib/constants';
 import { encryptPii } from '@/lib/crypto';
@@ -53,11 +54,11 @@ import {
 } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { submitTaskSchema } from '@/lib/validation';
+import { isUuid } from '@/lib/uuid';
 
 // node:crypto と暗号化（13-1）を使うため Edge ではなく Node ランタイムで動かす
 export const runtime = 'nodejs';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface CaseTaskRow {
   id: string;
@@ -118,38 +119,13 @@ async function removeOrphanFile(supabase: SupabaseClient, fileId: string): Promi
   }
 }
 
-/**
- * 提出を communication_logs に自動記録する（6-7 の「3・4・5 の各時点で自動記録」）。
- *
- * communication_logs は直接 insert させず log_communication() 経由にする。
- * created_by を引数で受け取らず関数内で auth.uid() から解決するため、実行者を偽装できない
- * （log_audit() と同じ考え方。20260828000900_submission_functions.sql）。
- * 連絡履歴は提出の副次記録なので、これを理由に提出自体を失敗させない。
- */
-async function logSubmission(
-  supabase: SupabaseClient,
-  caseId: string,
-  title: string,
-): Promise<void> {
-  const { error } = await supabase.rpc('log_communication', {
-    p_case_id: caseId,
-    p_channel: 'in_app',
-    p_direction: 'inbound',
-    p_source: 'submit',
-    p_summary: `「${title}」が提出されました`,
-  });
-  if (error) {
-    console.warn('[submit] communication_logs に記録できませんでした', error);
-  }
-}
-
 export const POST = route(
   async (request: Request, context: { params: Promise<{ taskId: string }> }) => {
     // 表6-6: 認証必須（couple、自身の案件のみ）。案件の範囲は RLS が担保する。
     await requireRole('couple');
 
     const { taskId } = await context.params;
-    if (!UUID_RE.test(taskId)) throw notFound();
+    if (!isUuid(taskId)) throw notFound();
 
     const body = await parseBody(request, submitTaskSchema);
     const supabase = await createSupabaseServerClient();
@@ -262,7 +238,15 @@ export const POST = route(
     const replacedFileId = rows[0].replaced_file_id;
 
     if (replacedFileId) await removeOrphanFile(supabase, replacedFileId);
-    if (!draft) await logSubmission(supabase, task.case_id, task.title);
+    if (!draft) {
+      await logCommunication(supabase, {
+        caseId: task.case_id,
+        channel: 'in_app',
+        direction: 'inbound',
+        source: 'submit',
+        summary: `「${task.title}」が提出されました`,
+      });
+    }
 
     // 自由記述の分類（機能9-1）。7-3「提出…を契機とするジョブは
     // couple／planner の操作APIのサーバー側処理から内部呼び出しで投入し、

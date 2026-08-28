@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
-import { api, ApiCallError, type ApiErrorBody } from '@/lib/api/client';
+import { api, ApiCallError, handleApiError, type ApiErrorBody } from '@/lib/api/client';
 import {
   FILE_TYPE_MIME,
   INPUT_LIMITS,
@@ -155,12 +155,12 @@ export function SubmitForm({
         router.refresh();
       }
     } catch (caught) {
-      if (caught instanceof ApiCallError) {
-        setError(caught.message);
-        setFieldErrors(caught.fieldErrors);
-      } else {
-        setError('通信に失敗しました。時間をおいてお試しください');
-      }
+      // 4-3 エラー表示規約: 権限エラー・不存在は P04 へ遷移する。
+      // プランナーが宿題を「対応不要」にした直後の提出などがここに来る。
+      handleApiError(caught, router, {
+        onSummary: setError,
+        onFieldErrors: setFieldErrors,
+      });
     } finally {
       setBusy(false);
     }

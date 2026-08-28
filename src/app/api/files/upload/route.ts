@@ -27,11 +27,11 @@ import {
 } from '@/lib/constants';
 import { badRequest, fromPostgresError, notFound, unprocessable } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { isUuid } from '@/lib/uuid';
 
 // node:crypto を使うため Edge ではなく Node ランタイムで動かす
 export const runtime = 'nodejs';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** 表5-16／6-11。bucket 名は storage_files.bucket の DEFAULT と一致させる。 */
 const BUCKET = 'case-files';
@@ -80,7 +80,7 @@ export const POST = route(async (request: Request) => {
 
   const taskId = form.get('taskId');
   const file = form.get('file');
-  if (typeof taskId !== 'string' || !UUID_RE.test(taskId)) {
+  if (typeof taskId !== 'string' || !isUuid(taskId)) {
     throw badRequest([{ field: 'taskId', reason: '宿題を特定できませんでした' }]);
   }
   if (!(file instanceof File) || file.size === 0) {

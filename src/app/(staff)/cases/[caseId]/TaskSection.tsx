@@ -16,7 +16,7 @@ import { useRouter } from 'next/navigation';
 
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { TaskStatusBadge } from '@/components/ui/StatusBadge';
-import { ApiCallError, api } from '@/lib/api/client';
+import { ApiCallError, api, handleApiError } from '@/lib/api/client';
 import { formatDate } from '@/lib/format';
 import {
   ALLOWED_FILE_TYPES,
@@ -88,12 +88,12 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
   const [draft, setDraft] = useState(emptyDraft);
 
   function fail(error: unknown, fallback: string) {
-    if (error instanceof ApiCallError) {
-      setSummary(error.message);
-      setFieldErrors(error.fieldErrors);
-    } else {
-      setSummary(fallback);
-    }
+    // 4-3 エラー表示規約: 権限エラー・不存在は P04 へ遷移する。
+    // 例えば admin が K05 で案件をアーカイブした直後にこの画面から操作すると 404 になる。
+    if (handleApiError(error, router, {
+      onSummary: (message: string) => setSummary(error instanceof ApiCallError ? message : fallback),
+      onFieldErrors: setFieldErrors,
+    })) return;
   }
 
   async function run(action: () => Promise<string>) {

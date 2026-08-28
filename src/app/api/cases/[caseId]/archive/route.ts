@@ -9,7 +9,7 @@
  */
 import { ok, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
-import { fromPostgresError } from '@/lib/errors';
+import { setCaseArchived } from '@/lib/services/cases';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const POST = route(async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
@@ -18,15 +18,7 @@ export const POST = route(async (_request: Request, context: { params: Promise<{
   const { caseId } = await context.params;
   const supabase = await createSupabaseServerClient();
 
-  const { error } = await supabase.rpc('apply_case_update', {
-    p_case_id: caseId,
-    p_patch: { archived: true },
-    p_profiles: {},
-    p_due_changes: [],
-    p_waived_task_ids: null,
-    p_new_tasks: [],
-  });
-  if (error) throw fromPostgresError(error);
+  await setCaseArchived(supabase, caseId, true);
 
   return ok({ archived: true });
 });

@@ -14,9 +14,8 @@ import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { badRequest, fromPostgresError, notFound } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { followLogSchema } from '@/lib/validation';
+import { isUuid } from '@/lib/uuid';
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const SELECT_COLUMNS = 'id, case_id, planner_id, method, note, followed_at, created_at';
 
@@ -63,7 +62,7 @@ export const GET = route(
   async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
     const { caseId } = await context.params;
     await requireStaff();
-    if (!UUID_PATTERN.test(caseId)) throw notFound();
+    if (!isUuid(caseId)) throw notFound();
 
     const { offset, limit } = readPaging(request);
 
@@ -93,7 +92,7 @@ export const POST = route(
   async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
     const { caseId } = await context.params;
     const user = await requireStaff();
-    if (!UUID_PATTERN.test(caseId)) throw notFound();
+    if (!isUuid(caseId)) throw notFound();
 
     const input = await parseBody(request, followLogSchema);
     const supabase = await requireVisibleCase(caseId);

@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
-import { ApiCallError, api } from '@/lib/api/client';
+import { api, handleApiError } from '@/lib/api/client';
 import {
   CONTACT_CHANNELS,
   CONTACT_CHANNEL_LABEL,
@@ -114,12 +114,11 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
       router.refresh();
     } catch (error) {
       setPreview(null);
-      if (error instanceof ApiCallError) {
-        setSummary(error.message);
-        setFieldErrors(error.fieldErrors);
-      } else {
-        setSummary('通信に失敗しました。時間をおいてもう一度お試しください。');
-      }
+      // 4-3 エラー表示規約: 権限エラー・不存在は P04 へ遷移する
+      handleApiError(error, router, {
+        onSummary: setSummary,
+        onFieldErrors: setFieldErrors,
+      });
     } finally {
       setSubmitting(false);
     }

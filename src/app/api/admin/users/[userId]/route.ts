@@ -19,11 +19,10 @@ import { ROLE_LABEL, type Role, type UserStatus } from '@/lib/constants';
 import { ApiError, conflict, forbidden, fromPostgresError, notFound, unprocessable } from '@/lib/errors';
 import { issuePasswordSetupLink, sendPasswordSetupMail } from '@/lib/notify/mailer';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient, type SupabaseServerClient } from '@/lib/supabase/server';
 import { userDeleteSchema, userUpdateWithActionSchema } from '@/lib/validation';
 
 type RouteContext = { params: Promise<{ userId: string }> };
-type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 /** 実質的な無期限。Supabase の ban_duration は期間指定しか受け付けない。 */
 const BAN_DURATION = '876000h';
@@ -45,7 +44,7 @@ interface ManagedUser {
  * admin が別式場や admin を触れないようにする。RLS も同じ境界を持つ二重化（6-3-5）。
  */
 async function loadManagedUser(
-  supabase: ServerClient,
+  supabase: SupabaseServerClient,
   actor: AppUser,
   userId: string,
 ): Promise<ManagedUser> {
@@ -74,7 +73,7 @@ async function loadManagedUser(
  * 失敗しても業務操作は巻き戻さず、記録だけを残す。
  */
 async function writeAudit(
-  supabase: ServerClient,
+  supabase: SupabaseServerClient,
   action: string,
   targetId: string,
   detail: Record<string, unknown>,
@@ -89,7 +88,7 @@ async function writeAudit(
 }
 
 /** 式場名はメール本文の宛名にだけ使う。system_admin は venue_id を持たない（5-3）。 */
-async function venueNameOf(supabase: ServerClient, venueId: string | null): Promise<string | null> {
+async function venueNameOf(supabase: SupabaseServerClient, venueId: string | null): Promise<string | null> {
   if (!venueId) return null;
   const { data } = await supabase.from('venues').select('name').eq('id', venueId).maybeSingle();
   return (data as { name: string } | null)?.name ?? null;

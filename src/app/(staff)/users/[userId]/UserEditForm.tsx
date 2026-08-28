@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
-import { api, ApiCallError } from '@/lib/api/client';
+import { api, handleApiError } from '@/lib/api/client';
 import { INPUT_LIMITS, USER_STATUS_LABEL } from '@/lib/constants';
 
 /** 表4-20 の「状態」。deleted は U04 の削除でのみ付き、選択肢には出さない。 */
@@ -74,18 +74,12 @@ export function UserEditForm({
     setFieldErrors({});
   };
 
-  const handleApiError = (error: unknown) => {
-    if (error instanceof ApiCallError) {
-      // 4-3 エラー表示規約: 権限エラー・不存在は P04 へ遷移する
-      if (error.status === 403 || error.status === 404) {
-        router.push(`/error?code=${error.status}`);
-        return;
-      }
-      setSummary(error.message);
-      setFieldErrors(error.fieldErrors);
-    } else {
-      setSummary('通信に失敗しました。時間をおいてお試しください');
-    }
+  /** 4-3 エラー表示規約の適用。共通処理（api/client.ts）と名前が衝突しないよう別名にする。 */
+  const showApiError = (error: unknown) => {
+    handleApiError(error, router, {
+      onSummary: setSummary,
+      onFieldErrors: setFieldErrors,
+    });
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -102,7 +96,7 @@ export function UserEditForm({
       setNotice('変更を保存しました。');
       router.refresh();
     } catch (error) {
-      handleApiError(error);
+      showApiError(error);
     } finally {
       setSaving(false);
     }
@@ -122,7 +116,7 @@ export function UserEditForm({
           : 'リンクは発行しましたが、メールを送信できませんでした。メール設定を確認してください。',
       );
     } catch (error) {
-      handleApiError(error);
+      showApiError(error);
     } finally {
       setSaving(false);
     }
@@ -138,7 +132,7 @@ export function UserEditForm({
       router.push('/users');
       router.refresh();
     } catch (error) {
-      handleApiError(error);
+      showApiError(error);
       setSaving(false);
     }
   };

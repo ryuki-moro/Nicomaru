@@ -14,10 +14,7 @@
 import type { Importance, SubmissionFormat } from '@/lib/constants';
 import { fromPostgresError } from '@/lib/errors';
 import type { TemplateForAssign } from '@/lib/services/schedule';
-import type { createSupabaseServerClient } from '@/lib/supabase/server';
-
-/** RLS 適用クライアント（6-5）。型だけを借りるので実体の import はしない。 */
-type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+import type { SupabaseServerClient } from '@/lib/supabase/server';
 
 interface PlanTemplateRow {
   display_order: number;

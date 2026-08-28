@@ -11,10 +11,10 @@ import { ok, route } from '@/lib/api/route';
 import { requireStaff } from '@/lib/auth/session';
 import { persistViaRpc, recalculateCaseRisk } from '@/lib/services/riskStore';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { isUuid } from '@/lib/uuid';
 
 export const runtime = 'nodejs';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const POST = route(
   async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
@@ -22,7 +22,7 @@ export const POST = route(
     await requireStaff();
 
     const { caseId } = await context.params;
-    if (!UUID_RE.test(caseId)) {
+    if (!isUuid(caseId)) {
       // 形式が違う時点で案件は存在しない。RLS の判定へ渡す前に落とす。
       return ok({ error: null }, 404);
     }

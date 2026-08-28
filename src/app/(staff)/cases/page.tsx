@@ -17,54 +17,18 @@ import { redirect } from 'next/navigation';
 
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser } from '@/lib/auth/session';
-import {
-  CASE_STATUS_LABEL,
-  COUPLE_PROFILE_COLUMNS,
-  INCOMPLETE_TASK_STATUSES,
-  RISK_LEVEL_RANK,
-  LIST_PAGE_SIZE,
-  type CaseStatus,
-  type PartnerRole,
-  type RiskLevel,
-  type TaskStatus,
-} from '@/lib/constants';
-import { RiskBadge, RiskNotCalculated, type RiskReasonView } from '@/components/ui/RiskBadge';
-import { readPii } from '@/lib/crypto';
+import { CASE_STATUS_LABEL, LIST_PAGE_SIZE } from '@/lib/constants';
+import { RiskBadge, RiskNotCalculated } from '@/components/ui/RiskBadge';
 import { formatDate } from '@/lib/format';
+import {
+  loadCaseList,
+  setCaseArchived,
+  SEARCH_SCAN_LIMIT,
+  type CaseListItem,
+} from '@/lib/services/cases';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
-
-/**
- * 氏名は暗号化列のため、DB側では部分一致検索ができない（13-1）。
- * キーワード検索は「案件番号はDB側で前方後方一致、カップル名は復号後にサーバー上で一致判定」とし、
- * 走査対象を想定規模（8-3 登録案件数300件）に対する余裕をみた上限で打ち切る。
- */
-const SEARCH_SCAN_LIMIT = 500;
-
-const CASE_LIST_SELECT =
-  `id, case_code, wedding_date, status,
-   plan_types ( name ),
-   couple_profiles ( ${COUPLE_PROFILE_COLUMNS} ),
-   case_tasks ( status ),
-   risk_score_snapshots ( score_value, score_level, reasons, is_current )`;
-
-interface CaseListRow {
-  id: string;
-  case_code: string;
-  wedding_date: string;
-  status: CaseStatus;
-  plan_types: { name: string } | null;
-  couple_profiles: { partner_role: PartnerRole; full_name: string }[];
-  case_tasks: { status: TaskStatus }[];
-  /** 現在値は case_id ごと1件だが、埋め込みは配列で返るので is_current で絞る（6-8） */
-  risk_score_snapshots: {
-    score_value: number;
-    score_level: RiskLevel;
-    reasons: RiskReasonView[] | null;
-    is_current: boolean;
-  }[];
-}
 
 /**
  * アーカイブ解除（機能2-6）。
@@ -82,15 +46,11 @@ async function restoreCase(formData: FormData) {
   if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin')) redirect('/error');
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc('apply_case_update', {
-    p_case_id: caseId,
-    p_patch: { archived: false },
-    p_profiles: {},
-    p_due_changes: [],
-    p_waived_task_ids: null,
-    p_new_tasks: [],
-  });
-  if (error) redirect('/cases?scope=archived&error=restore');
+  try {
+    await setCaseArchived(supabase, caseId, false);
+  } catch {
+    redirect('/cases?scope=archived&error=restore');
+  }
 
   revalidatePath('/cases');
   redirect('/cases');
@@ -114,60 +74,23 @@ export default async function CaseListPage({ searchParams }: Props) {
   const offset = (page - 1) * LIST_PAGE_SIZE;
 
   const supabase = await createSupabaseServerClient();
-  let query = supabase
-    .from('wedding_cases')
-    .select(CASE_LIST_SELECT)
-    .order('wedding_date', { ascending: true })
-    .order('id', { ascending: true });
 
-  query = scope === 'archived' ? query.eq('status', 'archived') : query.neq('status', 'archived');
-  // キーワードがあるときは復号後に絞り込むため、ページングもサーバー上で行う
-  query = keyword
-    ? query.limit(SEARCH_SCAN_LIMIT)
-    : query.range(offset, offset + LIST_PAGE_SIZE - 1);
-
-  const { data, error } = await query;
-  const rows = (data ?? []) as unknown as CaseListRow[];
-
-  const decorated = rows.map((row) => {
-    const total = row.case_tasks.length;
-    const incomplete = row.case_tasks.filter((t) => INCOMPLETE_TASK_STATUSES.includes(t.status)).length;
-    // 氏名は暗号化列（13-1）。鍵が合わない値で一覧全体を 500 にしないよう readPii を使う
-    const names = row.couple_profiles
-      .map((profile) => readPii(profile.full_name))
-      .filter((name) => name.length > 0);
-    return {
-      id: row.id,
-      caseCode: row.case_code,
-      weddingDate: row.wedding_date,
-      status: row.status,
-      planTypeName: row.plan_types?.name ?? '未設定',
-      coupleName: names.join('・'),
-      total,
-      done: total - incomplete,
-      // 現在値だけを採る。無ければ「未算出」と出す（空欄にすると「低い」と読まれる）
-      risk: row.risk_score_snapshots?.find((r) => r.is_current) ?? null,
-    };
-  });
-
-  // 4-3 K01: リスクが高い順。DB 側で order できない（現在値が埋め込みの配列のため）ので
-  // 復号・キーワード絞り込みと同じくサーバー上で並べ替える。未算出は末尾へ送る。
-  const sorted = sort === 'risk'
-    ? [...decorated].sort((a, b) =>
-        (b.risk ? RISK_LEVEL_RANK[b.risk.score_level] : -1)
-          - (a.risk ? RISK_LEVEL_RANK[a.risk.score_level] : -1)
-        || (b.risk?.score_value ?? -1) - (a.risk?.score_value ?? -1)
-        || a.weddingDate.localeCompare(b.weddingDate)
-        || a.id.localeCompare(b.id))
-    : decorated;
-
-  const filtered = keyword
-    ? sorted.filter(
-        (row) => row.caseCode.includes(keyword) || row.coupleName.includes(keyword),
-      )
-    : sorted;
-  const visible = keyword ? filtered.slice(offset, offset + LIST_PAGE_SIZE) : filtered;
-  const hasNext = keyword ? filtered.length > offset + LIST_PAGE_SIZE : visible.length === LIST_PAGE_SIZE;
+  // 取得・復号・並べ替え・キーワード絞り込みはサービス層に置く。
+  // 画面と GET /api/cases に同じ処理が二重にあり、挙動が食い違っていた（#18）。
+  let visible: CaseListItem[] = [];
+  let hasNext = false;
+  let truncated = false;
+  let loadError = false;
+  try {
+    const result = await loadCaseList(supabase, {
+      scope, sort, keyword, offset, limit: LIST_PAGE_SIZE,
+    });
+    visible = result.items;
+    hasNext = result.hasNext;
+    truncated = result.truncated;
+  } catch {
+    loadError = true;
+  }
 
   const linkTo = (next: { scope?: string; page?: number; sort?: string }) => {
     const search = new URLSearchParams();
@@ -247,13 +170,13 @@ export default async function CaseListPage({ searchParams }: Props) {
         </button>
       </form>
 
-      {error && (
+      {loadError && (
         <div role="alert" className="banner-error">
           <span>案件一覧を取得できませんでした。時間をおいてもう一度お試しください。</span>
         </div>
       )}
 
-      {!error && visible.length === 0 && (
+      {!loadError && visible.length === 0 && (
         <EmptyState
           message={
             keyword
@@ -342,7 +265,7 @@ export default async function CaseListPage({ searchParams }: Props) {
         </div>
       )}
 
-      {keyword && filtered.length >= SEARCH_SCAN_LIMIT && (
+      {keyword && truncated && (
         <p className="text-caption text-text-muted">
           該当が多いため先頭{SEARCH_SCAN_LIMIT}件までを対象に検索しています。
           キーワードを追加すると絞り込めます。

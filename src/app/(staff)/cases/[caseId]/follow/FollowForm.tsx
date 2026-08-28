@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
-import { ApiCallError, api } from '@/lib/api/client';
+import { api, handleApiError } from '@/lib/api/client';
 import { FOLLOW_METHODS, FOLLOW_METHOD_LABEL, INPUT_LIMITS, type FollowMethod } from '@/lib/constants';
 
 /**
@@ -64,12 +64,11 @@ export function FollowForm({ caseId }: { caseId: string }) {
       setFollowedAt(toLocalInputValue(new Date()));
       router.refresh();
     } catch (error) {
-      if (error instanceof ApiCallError) {
-        setSummaryError(error.message);
-        setFieldErrors(error.fieldErrors);
-      } else {
-        setSummaryError('通信に失敗しました。時間をおいてお試しください');
-      }
+      // 4-3 エラー表示規約: 権限エラー・不存在は P04 へ遷移する
+      handleApiError(error, router, {
+        onSummary: setSummaryError,
+        onFieldErrors: setFieldErrors,
+      });
     } finally {
       setPending(false);
     }

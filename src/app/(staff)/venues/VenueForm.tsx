@@ -14,7 +14,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
-import { ApiCallError, api } from '@/lib/api/client';
+import { api, handleApiError } from '@/lib/api/client';
 import { INPUT_LIMITS } from '@/lib/constants';
 
 interface CreateResponse {
@@ -55,16 +55,11 @@ export function VenueForm() {
       setResult(response);
       router.refresh();
     } catch (error) {
-      if (error instanceof ApiCallError) {
-        if (error.status === 403 || error.status === 404) {
-          router.push(`/error?code=${error.status}`);
-          return;
-        }
-        setSummaryError(error.message);
-        setFieldErrors(error.fieldErrors);
-      } else {
-        setSummaryError('通信に失敗しました。時間をおいてお試しください');
-      }
+      // 4-3 エラー表示規約: 権限エラー・不存在は P04 へ遷移する
+      handleApiError(error, router, {
+        onSummary: setSummaryError,
+        onFieldErrors: setFieldErrors,
+      });
     } finally {
       setPending(false);
     }

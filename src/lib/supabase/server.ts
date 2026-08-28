@@ -41,3 +41,12 @@ export async function createSupabaseServerClient() {
     },
   );
 }
+
+/**
+ * RLS 適用クライアントの型。
+ *
+ * 各所で `Awaited<ReturnType<typeof createSupabaseServerClient>>` を書き直していたため、
+ * 名前が3つ（ServerClient／UserClient／SupabaseServerClient）に割れていた。
+ * 型の出どころはここ1箇所にする。
+ */
+export type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;

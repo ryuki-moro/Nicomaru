@@ -20,13 +20,12 @@ import { emailHash, encryptPii, normalizeEmail } from '@/lib/crypto';
 import { conflict, fromPostgresError, notFound, unprocessable } from '@/lib/errors';
 import { hashInvitationToken, matchRecipientEmail } from '@/lib/services/invitations';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient, type SupabaseServerClient } from '@/lib/supabase/server';
 import { initialRegisterSchema } from '@/lib/validation';
 
 import { enforceAuthRateLimit } from '../shared';
 
 type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
-type UserClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 /** consume_invitation() の戻り（20260828000700_auth_functions.sql）。 */
 interface ConsumedInvitation {
@@ -63,7 +62,7 @@ interface CoupleProfileRow {
  */
 async function establishSession(
   admin: AdminClient,
-  userClient: UserClient,
+  userClient: SupabaseServerClient,
   email: string,
 ): Promise<boolean> {
   try {

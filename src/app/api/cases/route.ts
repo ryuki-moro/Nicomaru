@@ -12,16 +12,10 @@
  */
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole, requireStaff } from '@/lib/auth/session';
-import {
-  COUPLE_PROFILE_COLUMNS,
-  INCOMPLETE_TASK_STATUSES,
-  LIST_PAGE_SIZE,
-  PARTNER_ROLES,
-  type PartnerRole,
-  type TaskStatus,
-} from '@/lib/constants';
-import { emailHash, encryptPii, readPii } from '@/lib/crypto';
+import { LIST_PAGE_SIZE, PARTNER_ROLES, type PartnerRole } from '@/lib/constants';
+import { emailHash, encryptPii } from '@/lib/crypto';
 import { forbidden, fromPostgresError } from '@/lib/errors';
+import { loadCaseList } from '@/lib/services/cases';
 import {
   buildInvitationUrl,
   generateInvitationToken,
@@ -32,68 +26,37 @@ import {
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { caseCreateSchema } from '@/lib/validation';
 
-/** couple_profiles は memo を列レベル権限で剥奪しているため select * が 42501 になる（付録A）。 */
-const CASE_LIST_SELECT =
-  `id, case_code, wedding_date, status, archived_at,
-   plan_types ( name ),
-   couple_profiles ( ${COUPLE_PROFILE_COLUMNS} ),
-   case_tasks ( status )`;
-
-interface CaseListRow {
-  id: string;
-  case_code: string;
-  wedding_date: string;
-  status: string;
-  archived_at: string | null;
-  plan_types: { name: string } | null;
-  couple_profiles: { partner_role: string; full_name: string }[];
-  case_tasks: { status: TaskStatus }[];
-}
-
 export const GET = route(async (request: Request) => {
   await requireStaff();
   const supabase = await createSupabaseServerClient();
 
   const params = new URL(request.url).searchParams;
-  const archived = params.get('scope') === 'archived';
   const limit = Math.min(Number(params.get('limit')) || LIST_PAGE_SIZE, LIST_PAGE_SIZE);
   const offset = Math.max(Number(params.get('offset')) || 0, 0);
 
-  let query = supabase
-    .from('wedding_cases')
-    .select(CASE_LIST_SELECT)
-    // 並びは挙式日順、同着は id を最終タイブレークに用いる（4-3 一覧画面共通）
-    .order('wedding_date', { ascending: true })
-    .order('id', { ascending: true })
-    .range(offset, offset + limit - 1);
+  // 一覧の組み立ては K01 画面と同じサービス層を使う。
+  // 以前はここに別の実装があり、q（キーワード）を無視してリスクも返していなかった（#18）。
+  const result = await loadCaseList(supabase, {
+    scope: params.get('scope') === 'archived' ? 'archived' : 'active',
+    sort: params.get('sort') === 'risk' ? 'risk' : 'wedding_date',
+    keyword: params.get('q'),
+    offset,
+    limit,
+  });
 
-  // アーカイブ済みの参照可否は RLS（cases_exclude_archived）が最終防衛線。ここは導線の絞り込み。
-  query = archived ? query.eq('status', 'archived') : query.neq('status', 'archived');
-
-  const { data, error } = await query;
-  if (error) throw fromPostgresError(error);
-
-  const rows = (data ?? []) as unknown as CaseListRow[];
   return ok({
-    cases: rows.map((row) => {
-      const total = row.case_tasks.length;
-      const incomplete = row.case_tasks.filter((t) => INCOMPLETE_TASK_STATUSES.includes(t.status)).length;
-      return {
-        id: row.id,
-        caseCode: row.case_code,
-        weddingDate: row.wedding_date,
-        status: row.status,
-        planTypeName: row.plan_types?.name ?? null,
-        // full_name は暗号化列。参照時に復号する（13-1）。
-        // 鍵が合わない値が1件あるだけで一覧全体を 500 にしないよう readPii を使う
-        partners: row.couple_profiles.map((profile) => ({
-          partnerRole: profile.partner_role,
-          fullName: readPii(profile.full_name),
-        })),
-        taskTotal: total,
-        taskDone: total - incomplete,
-      };
-    }),
+    cases: result.items.map((row) => ({
+      id: row.id,
+      caseCode: row.caseCode,
+      weddingDate: row.weddingDate,
+      status: row.status,
+      planTypeName: row.planTypeName,
+      partners: row.partners,
+      taskTotal: row.total,
+      taskDone: row.done,
+      risk: row.risk,
+    })),
+    hasNext: result.hasNext,
   });
 });
 

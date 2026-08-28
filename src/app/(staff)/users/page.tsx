@@ -16,30 +16,11 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { getAppUser, landingPathFor } from '@/lib/auth/session';
-import { LIST_PAGE_SIZE, type Role, type UserStatus } from '@/lib/constants';
+import { LIST_PAGE_SIZE } from '@/lib/constants';
+import { loadUserList, sanitizeKeyword, type UserProfileRow } from '@/lib/services/users';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 import { UserTable, type UserListRow } from './UserTable';
-
-/** 本画面が管理するのは U02 の自動設定規則で作られる種別のみ。couple は招待経由（6-6-1）。 */
-const MANAGED_ROLES: readonly Role[] = ['planner', 'admin'];
-
-interface ProfileRow {
-  id: string;
-  display_name: string;
-  email: string;
-  role: Role;
-  status: UserStatus;
-  venue_id: string | null;
-}
-
-/**
- * PostgREST の or() はカンマ・括弧で条件を区切るため、検索語をそのまま埋めると
- * 条件式を差し替えられる。値として意味を持つ記号を落としてから埋め込む。
- */
-function sanitizeKeyword(raw: string): string {
-  return raw.replace(/[,()"\\*%]/g, ' ').trim().slice(0, 100);
-}
 
 /** ?page= を1始まりのページ番号にする。壊れた値は1ページ目へ寄せる（K01／M02 と同じ扱い）。 */
 function resolvePage(raw: string | undefined): number {
@@ -68,28 +49,21 @@ export default async function UserListPage({
   if (!user) redirect('/login');
   if (user.role !== 'admin' && user.role !== 'system_admin') redirect(landingPathFor(user.role));
 
-  const keyword = sanitizeKeyword(q ?? '');
+  const keyword = sanitizeKeyword(q);
   const supabase = await createSupabaseServerClient();
 
-  // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する。
-  const from = (page - 1) * LIST_PAGE_SIZE;
-  let query = supabase
-    .from('user_profiles')
-    .select('id, display_name, email, role, status, venue_id')
-    .in('role', MANAGED_ROLES)
-    .order('role')
-    .order('display_name')
-    .order('id')
-    .range(from, from + LIST_PAGE_SIZE);
-
-  if (keyword) {
-    query = query.or(`display_name.ilike.*${keyword}*,email.ilike.*${keyword}*`);
+  // 取得・検索語のエスケープ・次ページ判定はサービス層に置く。
+  // 同じ処理が GET /api/admin/users にもあり、片方だけ直す事故が起こりうる形だった（#18）。
+  let profiles: UserProfileRow[] = [];
+  let hasNext = false;
+  let loadError = false;
+  try {
+    const result = await loadUserList(supabase, { keyword: q, page });
+    profiles = result.rows;
+    hasNext = result.hasNext;
+  } catch {
+    loadError = true;
   }
-
-  const { data, error } = await query;
-  const fetched: ProfileRow[] = data ?? [];
-  const hasNext = fetched.length > LIST_PAGE_SIZE;
-  const profiles = fetched.slice(0, LIST_PAGE_SIZE);
 
   // 所属式場名は system_admin のときだけ必要。admin は自式場しか見えないため列を出さない
   const showVenue = user.role === 'system_admin';
@@ -162,7 +136,7 @@ export default async function UserListPage({
         )}
       </form>
 
-      {error ? (
+      {loadError ? (
         <p role="alert" className="banner-error">
           利用者を読み込めませんでした。画面を更新してからもう一度お試しください。
         </p>
@@ -170,7 +144,7 @@ export default async function UserListPage({
         <UserTable rows={rows} showVenue={showVenue} currentUserId={user.id} />
       )}
 
-      {!error && (page > 1 || hasNext) && (
+      {!loadError && (page > 1 || hasNext) && (
         <nav aria-label="ページ送り" className="flex items-center justify-between">
           {page > 1 ? (
             <Link href={pageHref(q, page - 1)} className="btn-ghost">

@@ -12,9 +12,8 @@ import { ok, route } from '@/lib/api/route';
 import { isStaff } from '@/lib/constants';
 import { ApiError, forbidden, fromPostgresError, notFound } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { isUuid } from '@/lib/uuid';
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** 表6-6:「TTL 60秒、都度発行」。URL を画面に焼き込まないための短さなので延ばさない。 */
 const SIGNED_URL_TTL_SECONDS = 60;
@@ -31,7 +30,7 @@ export const GET = route(
   async (_request: Request, context: { params: Promise<{ fileId: string }> }) => {
     const { fileId } = await context.params;
     const user = await requireAppUser();
-    if (!UUID_PATTERN.test(fileId)) throw notFound();
+    if (!isUuid(fileId)) throw notFound();
 
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase

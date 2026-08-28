@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
-import { api, ApiCallError } from '@/lib/api/client';
+import { api, handleApiError } from '@/lib/api/client';
 import { INPUT_LIMITS } from '@/lib/constants';
 
 interface VenueOption {
@@ -89,17 +89,11 @@ export function UserForm({ roleLabel, fixedVenueName, venueOptions }: Props) {
       setEmail('');
       setPhone('');
     } catch (error) {
-      if (error instanceof ApiCallError) {
-        // 4-3 エラー表示規約: 権限エラー・不存在は P04 へ遷移する
-        if (error.status === 403 || error.status === 404) {
-          router.push(`/error?code=${error.status}`);
-          return;
-        }
-        setSummary(error.message);
-        setFieldErrors(error.fieldErrors);
-      } else {
-        setSummary('通信に失敗しました。時間をおいてお試しください');
-      }
+      // 4-3 エラー表示規約: 権限エラー・不存在は P04 へ遷移する
+      handleApiError(error, router, {
+        onSummary: setSummary,
+        onFieldErrors: setFieldErrors,
+      });
     } finally {
       setSaving(false);
     }
