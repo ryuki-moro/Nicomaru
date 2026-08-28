@@ -3,18 +3,18 @@
 ブライダル業界向けの業務支援アプリ。ウェディングプランナーと新郎新婦(couple)をつなぎ、
 **案件管理・招待・宿題(提出物)管理・準備シート・AI補助**を提供する。卒業制作プロジェクト。
 
-> 基本設計 **Version 1.2** 完了・**Phase 1 実装完了**。
+> 基本設計 **Version 1.3**・**Phase 1／Phase 2 実装完了**・**Phase 3 基盤完了**。
 > 設計書 (`docs/`) と残タスク (`TASKS.md` / Issues) が正本。
 
 ## 現状サマリ
 
 | 区分 | 状態 |
 | --- | --- |
-| 基本設計書 | ✅ **完了 (Version 1.2)** — 全13章＋付録A〜D、26テーブル |
+| 基本設計書 | ✅ **Version 1.3** — 全13章＋付録A〜D、31テーブル |
 | 設計レビュー | ✅ **完了** — 7観点並列レビューで55件指摘、全件を設計書へ反映 |
 | 着手ブロッカー (rank 1〜10) | ✅ **解消** — v1.1 を原文照合で検証し、残っていた5件を v1.2 で修正 |
 | 第13章 合意必須事項 (Phase 1 分) | ✅ **決定済み** — 13-1「開発チーム決定」として確定 (差し戻し影響範囲つき) |
-| 実装 | ✅ **Phase 1 完了** — 全34ルート、テスト181件(PGlite 175 + 実PG並行性 6)。Supabase 実環境での通し確認は未実施 |
+| 実装 | ✅ **Phase 1・Phase 2 完了／Phase 3 基盤完了** — テスト312件。Supabase 実環境での通し確認は未実施 |
 
 ## セットアップ
 
@@ -90,7 +90,8 @@ TEST_PG_URL=postgres://postgres:<password>@127.0.0.1:5433/postgres npm run test:
 | `supabase/seed.sql` | 式場1件・プラン種別4種・宿題テンプレート・リスクルール |
 | `src/lib/` | 定数(表6-9 の単一ソース)・エラー体系・暗号化・招待・スケジュール・リスク |
 | `src/app/` | 画面(App Router)と Route Handler |
-| `tests/` | RLSテストとユニットテスト |
+| `tests/` | RLSテスト・ユニットテスト・並行性テスト |
+| `worker/` | AIジョブワーカー(ローカルLLMサーバー上で動かす。Phase 3) |
 | `TASKS.md` | 残タスク一覧・フェーズ計画・レビュー指摘の全件表 |
 
 ## 設計上の技術構成 (設計書 v1.2 より)
@@ -102,7 +103,7 @@ TEST_PG_URL=postgres://postgres:<password>@127.0.0.1:5433/postgres npm run test:
 | 認証 | couple=マジックリンク＋6桁ワンタイムコード / staff=メール＋パスワード(12文字以上) | LINE内ブラウザのブラウザ跨ぎ対応 |
 | 個人情報 | アプリ側 AES-256-GCM ＋ 検索用 HMAC-SHA256 列 | 等値一致検索のみ(13-1) |
 | 定期処理 | pg_cron (死活監視のみ GitHub Actions) | 一覧は 6-12 |
-| AI補助 | ローカルLLM (Ollama) をプル型ジョブで内製、RAG は pgvector | Phase 3。生成エンジンは校内サーバー非公開 |
+| AI補助 | ローカルLLM (Ollama) をプル型ジョブで内製、RAG は pgvector | Phase 3。生成エンジンは校内サーバー非公開。ワーカーには Service Role Key を配らず2関数だけを専用ロールへ付与 |
 | 通知 | LINE Messaging API / メール(Resend) | Auth メールも Resend を Custom SMTP として使用 |
 
 ## 設計上の要点(実装で踏み外しやすいところ)
@@ -121,12 +122,20 @@ TEST_PG_URL=postgres://postgres:<password>@127.0.0.1:5433/postgres npm run test:
   送信・URL再表示は必ず再発行(既存を `revoked_at` で失効 → 新規行)を伴う(6-3-6 / K02)。
 - **Service Role Key は使用範囲表(6-3-5 表6-4)にある用途のみ**。
   `createSupabaseAdminClient(useCase)` で用途を明示し、範囲外の参照は ESLint が落とす。
+- **後から作った表は grant を個別に付ける**。`grant ... on all tables` は実行時点で存在した表にしか
+  効かないので、RLSポリシーを書いても permission denied で止まる。
+- **`/api/internal/**` と `/api/health` は middleware の除外対象**。
+  除外しないと pg_cron からの定期処理が 307 で全滅する。認証は共有シークレットが担う(6-5-2)。
 
 ## フェーズ計画
 
-- **Phase 1**: コア導線(案件登録 → 招待 → 初回登録 → 提出 → 確認)。実装完了。
-  残るのは実環境(Supabase プロジェクト)での通し確認と、メール送信ドメインの準備。
-- **Phase 2**: 運用機能の拡充(LINE起点導線・リスク可視化・通知・準備シート・system_admin画面)。
-- **Phase 3**: AI補助(9-1〜9-6)／Phase 3拡張(9-7〜9-11)。Phase 1〜2 と疎結合で、AI不調でもコア機能は維持。
+- **Phase 1**: コア導線(案件登録 → 招待 → 初回登録 → 提出 → 確認)。✅ 実装完了。
+- **Phase 2**: LINE起点導線・リスク可視化・通知・打ち合わせ前準備シート・system_admin画面。✅ 実装完了。
+- **Phase 3**: AI補助。基盤(9-6 ジョブキュー)と 9-4 のルールベース検査は完了。
+  9-1〜9-5 の画面が残り。Phase 1〜2 と疎結合で、AI不調でもコア機能は維持する。
+- **Phase 3拡張**(9-7〜9-11): 条件付きスコープ。基盤とコア機能が動作し実証運用を開始できている場合に限り着手。
+
+残るのは実環境(Supabase プロジェクト・LINEチャネル・メール送信ドメイン)の準備と、
+Phase 3 の画面。詳細は `TASKS.md` と Issues。
 
 詳細は `TASKS.md` と各 Issue を参照。
