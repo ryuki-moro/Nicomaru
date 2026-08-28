@@ -208,6 +208,21 @@ export default async function PlannerDashboardPage() {
             title="通知履歴"
             description="送信した通知と送信結果を確認します（N01）"
           />
+          {/* S01〜S03 は system_admin 専用（4-3）。他のロールには導線を出さない */}
+          {user.role === 'system_admin' && (
+            <>
+              <NavCard
+                href="/venues"
+                title="式場管理"
+                description="式場と式場管理者を登録・確認します（S01／S02）"
+              />
+              <NavCard
+                href="/system"
+                title="利用状況・通知ログ"
+                description="定期処理の実行結果と通知ログを確認します（S03）"
+              />
+            </>
+          )}
         </div>
       </section>
     </div>

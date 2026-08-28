@@ -329,3 +329,21 @@ export const notificationSendSchema = z
       ctx.addIssue({ code: 'custom', path: ['message'], message: '本文を入力してください' });
     }
   });
+
+/** S02 式場登録・編集（表4-21、機能8-2／8-3、Phase 2）。 */
+export const venueCreateSchema = z.object({
+  name: shortText,
+  /** 5-7: 英大文字＋数字、4〜10字。全式場で一意 */
+  code: z.string().trim().regex(/^[A-Z0-9]{4,10}$/, '英大文字と数字で4〜10字で入力してください'),
+  contactEmail: email.optional().nullable(),
+  /** 新規登録時のみ必須。式場管理者アカウントを同時に作る */
+  adminName: shortText.optional(),
+  adminEmail: email.optional(),
+  active: z.boolean().default(true),
+});
+
+export const venueUpdateSchema = z.object({
+  name: shortText.optional(),
+  contactEmail: email.optional().nullable(),
+  active: z.boolean().optional(),
+});

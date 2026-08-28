@@ -71,7 +71,7 @@ export async function requireRole(...roles: Role[]): Promise<AppUser> {
   return user;
 }
 
-/** ログイン後の遷移先（4-2）。Phase 1 では S01〜S03 が未実装のため system_admin は U01 へ。 */
+/** ログイン後の遷移先（4-2）。 */
 export function landingPathFor(role: Role): string {
   switch (role) {
     case 'couple':
@@ -80,6 +80,8 @@ export function landingPathFor(role: Role): string {
     case 'admin':
       return '/dashboard';
     case 'system_admin':
-      return '/users';
+      // 4-2: system_admin の初期遷移先は S03。
+      // Phase 1 では S01〜S03 が未実装だったため U01 へ寄せていた（4-2 の但し書き）。
+      return '/system';
   }
 }
