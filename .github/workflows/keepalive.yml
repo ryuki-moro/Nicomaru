@@ -1,0 +1,32 @@
+# 死活監視（6-12）。
+#
+# 「Supabase Free はアクセスが無いとプロジェクトが一時停止され、停止すると pg_cron 自体も
+#   動かず自分を起こせない。そのため死活監視（定期アクセス）だけは pg_cron 一本化の例外とし、
+#   GitHub Actions の schedule から Supabase 外部より API を叩く構成とする」（6-5-2／6-12）
+#
+#   契機・頻度   : 6時間ごと
+#   対象範囲     : プロジェクト全体（軽量な GET 1本）
+#   失敗時の扱い : 連続失敗で開発チームへ通知
+#   失敗の検知先 : GitHub Actions の失敗通知
+name: Keepalive
+
+on:
+  schedule:
+    # 6時間ごと（UTC）。pg_cron を止めないことが目的なので時刻に意味は無い
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      # APP_BASE_URL が未設定のリポジトリでは何もしない（fork や検証用クローン向け）
+      - name: Ping
+        if: ${{ vars.APP_BASE_URL != '' }}
+        run: |
+          set -euo pipefail
+          status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
+            "${{ vars.APP_BASE_URL }}/api/health")
+          echo "status=$status"
+          # 認証が要らない軽量エンドポイントなので 200 以外は異常とみなす
+          test "$status" = "200"

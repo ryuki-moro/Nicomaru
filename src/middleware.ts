@@ -11,8 +11,20 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { createServerClient } from '@supabase/ssr';
 
-/** 未ログインでもアクセスできるパス（4-2）。 */
-const PUBLIC_PREFIXES = ['/login', '/register', '/password', '/error', '/api/auth'];
+/**
+ * 未ログインでもアクセスできるパス（4-2）。
+ *
+ * /api/internal/** と /api/health は**利用者のセッションを持たない**経路。
+ * 前者は pg_cron から pg_net 経由で叩かれ、共有シークレット（INTERNAL_CRON_SECRET）で
+ * 認証する（6-5-2「ユーザー向けJWT検証とは別経路に分離する」）。
+ * 後者は Supabase Free の一時停止対策として GitHub Actions から叩く（6-12）。
+ * ここでログイン画面へ流すと、定期処理も死活監視も 307 を受け取って全滅する。
+ * 実際の認証は各ハンドラの requireInternalCall() が行う。
+ */
+const PUBLIC_PREFIXES = [
+  '/login', '/register', '/password', '/error',
+  '/api/auth', '/api/internal', '/api/health',
+];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
