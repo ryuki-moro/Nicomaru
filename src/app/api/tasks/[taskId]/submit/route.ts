@@ -20,27 +20,28 @@
  *   - 上書きで置き換えられた添付ファイルは孤児になるため、旧 file_id の storage_files と
  *     Storage 上の実体を同じ処理内で削除する。
  *   - submission_type は提出時点の case_tasks.submission_format をそのまま複写する。
- *   - case_tasks.status の更新は RPC submit_task() 経由（couple には case_tasks の
- *     update ポリシーが無い。付録A）。一時保存では status を変えない。
- *     confirmed からの再提出では同 RPC が confirmed_by／confirmed_at も消す
+ *   - 一時保存では case_tasks.status を変えない。
+ *     confirmed からの再提出では confirmed_by／confirmed_at も消す
  *     （未確認の状態に戻った宿題に前回の確認者を残さない。3-3-4）。
  *
- * 【トランザクション境界について】本ハンドラは PostgREST 経由の複数リクエストで構成されるため、
- * 6-7 が求める「同一トランザクション」にはなっていない。ただし各ステップは
- * 「旧行の降格 → 新行の insert → status 更新 → 副次記録」の順で、途中で失敗しても
- * 提出そのものが二重に成立しない並びにしてある。
- * 完全な単一トランザクション化は Phase 2 の課題として 6-7 に残す。
+ * 【トランザクション境界】6-7 が求める単一トランザクションは
+ * submit_task_atomic()（20260828002100_submission_transactions.sql）が担う。
+ * 上の一連のDB更新は関数1本の中で行われ、途中で失敗すれば全部戻る。
+ * 関数は security definer にしていないので、中の各文にはこれまでと同じ RLS が効く。
+ *
+ * このハンドラに残るのは、トランザクションに入れられない・入れるべきでないものだけ。
+ *   - 入力の業務チェック（提出形式との整合、添付が同じ案件のものか）
+ *   - Storage 上の実体の削除。外部ストレージなのでロールバックできない。
+ *     提出が確定してから消す
+ *   - 連絡履歴の記録とAIジョブの投入。どちらも副次的な記録で、
+ *     失敗を理由に提出そのものを取り消すべきではない（7-1）
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { ok, parseBody, route } from '@/lib/api/route';
 import { enqueueSubmissionAiJob, trimForAi } from '@/lib/ai/assist';
 import { requireRole } from '@/lib/auth/session';
-import {
-  UNREVIEWED_STATUSES,
-  type ReviewStatus,
-  type SubmissionFormat,
-} from '@/lib/constants';
+import { type SubmissionFormat } from '@/lib/constants';
 import { encryptPii } from '@/lib/crypto';
 import {
   badRequest,
@@ -65,17 +66,6 @@ interface CaseTaskRow {
   submission_format: SubmissionFormat;
   options: Record<string, unknown> | null;
   status: string;
-}
-
-/**
- * latest_submission_for_task() の戻り（20260828001000_submission_sharing.sql）。
- * 状態判定に要るメタ情報だけで、本文（text_value 等）は含まない。
- */
-interface LatestSubmissionRow {
-  id: string;
-  review_status: ReviewStatus;
-  submitted_by: string;
-  file_id: string | null;
 }
 
 interface StorageFileRow {
@@ -156,7 +146,7 @@ async function logSubmission(
 export const POST = route(
   async (request: Request, context: { params: Promise<{ taskId: string }> }) => {
     // 表6-6: 認証必須（couple、自身の案件のみ）。案件の範囲は RLS が担保する。
-    const user = await requireRole('couple');
+    await requireRole('couple');
 
     const { taskId } = await context.params;
     if (!UUID_RE.test(taskId)) throw notFound();
@@ -250,103 +240,26 @@ export const POST = route(
     }
 
     // ------------------------------------------------------------------ 冪等性（6-7）
-    // 最新提出は task_submissions を直接読まず RPC で取る。
-    // restrictive な task_submissions_hide_draft は draft 行を submitted_by 本人にしか見せないため、
-    // 直読みだと「相手が一時保存した状態」が 0 行に見え、上書きにも降格にも入らないまま
-    // insert して task_submissions_latest_uk（部分ユニーク）に衝突し 409 が恒久化する。
-    const latestResult = await supabase
-      .rpc('latest_submission_for_task', { p_case_task_id: taskId })
-      .maybeSingle();
-    if (latestResult.error) throw fromPostgresError(latestResult.error);
-    const latest = latestResult.data as LatestSubmissionRow | null;
-
-    // 提出済みを draft へ戻すと case_tasks.status='submitted' のまま提出がプランナーから
-    // 見えなくなり（付録A task_submissions_hide_draft）、6-8 のリスク算出とも食い違う。
-    // couple 側から status を戻す手段は無いので、この遷移は受け付けない。
-    // 提出が案件単位になっても同じで、相手が提出した内容も一時保存へは戻せない。
-    if (draft && latest?.review_status === 'submitted') {
-      throw unprocessable('提出済みの内容は一時保存に戻せません。修正して提出し直してください');
-    }
-
-    const reviewStatus: ReviewStatus = draft ? 'draft' : 'submitted';
-    const payload = {
-      case_task_id: taskId,
-      submitted_by: user.id,
-      submission_type: format,
+    // 最新提出の判定・上書き／降格・新規行・case_tasks の更新をひとまとめにする。
+    // 個々の理由は submit_task_atomic() 側のコメントに書いてある。
+    const { data: result, error: rpcError } = await supabase.rpc('submit_task_atomic', {
+      p_case_task_id: taskId,
+      p_submission_type: format,
       // text_value は暗号化対象（5-3／13-1）。表示側で復号する。
-      text_value: encryptPii(textValue),
-      selected_value: selectedValue,
-      file_id: fileId,
-      comment: body.comment?.trim() || null,
-      review_status: reviewStatus,
-      submitted_at: new Date().toISOString(),
-      is_latest: true,
-    };
+      p_text_value: encryptPii(textValue),
+      p_selected_value: selectedValue,
+      p_file_id: fileId,
+      p_comment: body.comment?.trim() || null,
+      p_draft: draft,
+    });
+    if (rpcError) throw fromPostgresError(rpcError);
 
-    let submissionId: string;
-    /** 上書きで参照されなくなった旧添付。提出確定後にまとめて消す。 */
-    let replacedFileId: string | null = null;
-
-    if (latest && UNREVIEWED_STATUSES.includes(latest.review_status)) {
-      // 相手の未レビュー提出を上書きするときは、先に所有権を実行者へ移す（6-7）。
-      // 「誰が最後に出したか」を正しく残すためであると同時に、UPDATE の WHERE／RETURNING には
-      // select ポリシーも効くため、hide_draft に隠された相手の draft 行は
-      // 所有権を移さないと 0 行更新になる（20260828001000_submission_sharing.sql）。
-      if (latest.submitted_by !== user.id) {
-        const claimed = await supabase.rpc('claim_latest_submission', { p_case_task_id: taskId });
-        if (claimed.error) throw fromPostgresError(claimed.error);
-        if (!claimed.data) {
-          // 取得してから所有権を移すまでの間にプランナーが確認した場合（未レビューでなくなった）。
-          throw conflict('提出の状態が変わりました。画面を開き直してからやり直してください');
-        }
-      }
-
-      // 未レビュー提出は上書き更新する（409 で弾かない）
-      const updated = await supabase
-        .from('task_submissions')
-        .update(payload)
-        .eq('id', latest.id)
-        .select('id');
-      if (updated.error) throw fromPostgresError(updated.error);
-      const rows = (updated.data ?? []) as { id: string }[];
-      if (rows.length === 0) {
-        // 上の所有権移転まで通った後に 0 行になるのは、状態が同時に書き換わった場合だけ
-        // （task_submissions_update_couple は未レビューの行しか掴まない）。
-        throw conflict('提出の状態が変わりました。画面を開き直してからやり直してください');
-      }
-      submissionId = rows[0].id;
-      if (latest.file_id && latest.file_id !== fileId) replacedFileId = latest.file_id;
-    } else {
-      if (latest) {
-        // needs_fix／confirmed からの再提出。先に旧行の is_latest を落とす（順序が重要）。
-        // 部分ユニーク task_submissions_latest_uk があるため、降格より先に insert すると 23505 になる。
-        //
-        // couple には needs_fix／confirmed の行への update ポリシーが無い（付録A）。
-        // 広い update を開く代わりに、この1操作だけを許す security definer 関数を通す。
-        const demoted = await supabase.rpc('demote_latest_submission', {
-          p_case_task_id: taskId,
-        });
-        if (demoted.error) throw fromPostgresError(demoted.error);
-        if (!demoted.data) {
-          // 関数は needs_fix／confirmed の行しか降格しない。ここに来るのは
-          // 取得してから降格するまでの間に他の経路で状態が変わった場合。
-          throw conflict('提出の状態が変わりました。画面を開き直してからやり直してください');
-        }
-      }
-
-      const inserted = await supabase.from('task_submissions').insert(payload).select('id').single();
-      if (inserted.error) throw fromPostgresError(inserted.error);
-      submissionId = (inserted.data as { id: string }).id;
-    }
-
-    // 一時保存では case_tasks.status を変えない（4-3 M03／6-7）
-    if (!draft) {
-      const rpc = await supabase.rpc('submit_task', {
-        p_case_task_id: taskId,
-        p_status: 'submitted',
-      });
-      if (rpc.error) throw fromPostgresError(rpc.error);
-    }
+    // 0 行 = RLS の範囲外。存在有無を漏らさないため 404 に寄せる（6-5-1）
+    const rows = (result ?? []) as { submission_id: string; replaced_file_id: string | null }[];
+    if (rows.length === 0) throw notFound();
+    const submissionId = rows[0].submission_id;
+    /** 上書きで参照されなくなった旧添付。Storage は戻せないので確定後に消す。 */
+    const replacedFileId = rows[0].replaced_file_id;
 
     if (replacedFileId) await removeOrphanFile(supabase, replacedFileId);
     if (!draft) await logSubmission(supabase, task.case_id, task.title);
@@ -372,6 +285,6 @@ export const POST = route(
       }
     }
 
-    return ok({ id: submissionId, reviewStatus });
+    return ok({ id: submissionId, reviewStatus: draft ? 'draft' : 'submitted' });
   },
 );

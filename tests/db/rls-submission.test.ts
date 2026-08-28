@@ -452,3 +452,250 @@ describe('提出の案件共有（6-7 新郎新婦は同じ宿題に1つの提�
     expect(after.rows[0].confirmed_at).toBeNull();
   });
 });
+
+/**
+ * 提出・確認の単一トランザクション化（6-7、20260828002100）。
+ *
+ * これまで Route Handler が並べていた「最新提出の判定 → 上書き／降格 → case_tasks の更新」を
+ * 関数1本に寄せた。security definer にしていないので、
+ * 権限の見え方はこれまでと変わらないことを確認する。
+ */
+describe('submit_task_atomic（6-7 提出）', () => {
+  let taskId: string;
+  /**
+   * 案件に紐づいた相手側の couple。
+   * fixture の bride は user_profile_id が NULL（未招待）なので、
+   * 上の「提出の案件共有」が紐づけた利用者をそのまま引く。
+   * ここで別の利用者を作って割り当て直すと、案件あたり2人という前提が崩れる。
+   */
+  let bride: { authUserId: string; profileId: string };
+
+  beforeAll(async () => {
+    const setup = await db.asOwner(async () => {
+      const t = await db.query<{ id: string }>(
+        `insert into case_tasks (case_id, title, submission_format, due_date)
+         values ($1, '席次のご希望', 'text', current_date + 30) returning id`,
+        [fx.caseId]);
+      const linked = await db.query<{ auth_user_id: string; id: string }>(
+        `select u.auth_user_id, u.id
+           from couple_profiles c join user_profiles u on u.id = c.user_profile_id
+          where c.case_id = $1 and c.partner_role = 'bride'`, [fx.caseId]);
+      return { taskId: t.rows[0].id, linked: linked.rows[0] };
+    });
+    taskId = setup.taskId;
+    bride = { authUserId: setup.linked.auth_user_id, profileId: setup.linked.id };
+  });
+
+  const call = 'select * from submit_task_atomic($1, $2, $3, null, null, null, $4)';
+
+  it('couple は提出でき、宿題の状態も同じ処理で変わる', async () => {
+    const id = await db.asUser(fx.couple.authUserId, async () => {
+      const r = await db.query<{ submission_id: string; replaced_file_id: string | null }>(
+        call, [taskId, 'text', '窓側の席が良いです', false]);
+      return r.rows[0].submission_id;
+    });
+    expect(id).toBeTruthy();
+
+    const after = await db.asOwner(() =>
+      db.query<{ status: string }>('select status from case_tasks where id = $1', [taskId]));
+    expect(after.rows[0].status).toBe('submitted');
+  });
+
+  it('提出済みを一時保存へは戻せない', async () => {
+    await db.asUser(fx.couple.authUserId, async () => {
+      const code = await errcodeOf(() => db.query(call, [taskId, 'text', 'あとで', true]));
+      expect(code).toBe('BH422');
+    });
+  });
+
+  it('相手が提出した内容も上書きできる（提出は案件単位。6-7）', async () => {
+    const id = await db.asUser(bride.authUserId, async () => {
+      const r = await db.query<{ submission_id: string }>(
+        call, [taskId, 'text', '通路側に変更します', false]);
+      return r.rows[0].submission_id;
+    });
+
+    const rows = await db.asOwner(() =>
+      db.query<{ n: string }>(
+        'select count(*) as n from task_submissions where case_task_id = $1 and is_latest',
+        [taskId]));
+    // 上書きなので最新行は1つのまま（部分ユニークに衝突しない）
+    expect(Number(rows.rows[0].n)).toBe(1);
+
+    const owner = await db.asOwner(() =>
+      db.query<{ submitted_by: string }>(
+        'select submitted_by from task_submissions where id = $1', [id]));
+    expect(owner.rows[0].submitted_by).toBe(bride.profileId);
+  });
+
+  it('不備ありからの再提出は新しい行になり、旧行は最新でなくなる', async () => {
+    await db.asOwner(() =>
+      db.query(
+        `update task_submissions set review_status = 'needs_fix'
+          where case_task_id = $1 and is_latest`, [taskId]));
+
+    const id = await db.asUser(fx.couple.authUserId, async () => {
+      const r = await db.query<{ submission_id: string }>(
+        call, [taskId, 'text', '直しました', false]);
+      return r.rows[0].submission_id;
+    });
+
+    const rows = await db.asOwner(() =>
+      db.query<{ id: string; is_latest: boolean }>(
+        'select id, is_latest from task_submissions where case_task_id = $1', [taskId]));
+    expect(rows.rows.length).toBe(2);
+    expect(rows.rows.filter((r) => r.is_latest).map((r) => r.id)).toEqual([id]);
+  });
+
+  it('対応不要の宿題には提出できない', async () => {
+    const waivedId = await db.asOwner(async () => {
+      const r = await db.query<{ id: string }>(
+        `insert into case_tasks (case_id, title, submission_format, due_date, status)
+         values ($1, '不要な宿題', 'text', current_date + 30, 'waived') returning id`,
+        [fx.caseId]);
+      return r.rows[0].id;
+    });
+
+    await db.asUser(fx.couple.authUserId, async () => {
+      const code = await errcodeOf(() => db.query(call, [waivedId, 'text', 'x', false]));
+      expect(code).toBe('BH422');
+    });
+  });
+
+  it('触れない案件の宿題は 0 行（存在有無を漏らさない）', async () => {
+    const other = await db.asOwner(async () => {
+      const r = await db.query<{ id: string }>(
+        `insert into case_tasks (case_id, title, submission_format, due_date)
+         values ($1, '他案件の宿題', 'text', current_date + 30) returning id`,
+        [fx.otherCaseId]);
+      return r.rows[0].id;
+    });
+
+    const rows = await db.asUser(fx.couple.authUserId, () =>
+      db.query(call, [other, 'text', 'x', false]));
+    expect(rows.rows).toHaveLength(0);
+  });
+
+  it('staff は呼べない（提出は couple の操作）', async () => {
+    await db.asUser(fx.planner.authUserId, async () => {
+      const code = await errcodeOf(() => db.query(call, [taskId, 'text', 'x', false]));
+      expect(code).toBe('42501');
+    });
+  });
+});
+
+describe('review_submission（6-7 確認）', () => {
+  let taskId: string;
+  let submissionId: string;
+
+  beforeAll(async () => {
+    const t = await db.asOwner(() =>
+      db.query<{ id: string }>(
+        `insert into case_tasks (case_id, title, submission_format, due_date, status)
+         values ($1, 'BGMのご希望', 'text', current_date + 30, 'submitted') returning id`,
+        [fx.caseId]));
+    taskId = t.rows[0].id;
+
+    const inserted = await db.asOwner(() =>
+      db.query<{ id: string }>(
+        `insert into task_submissions
+           (case_task_id, submitted_by, submission_type, text_value, review_status, is_latest)
+         values ($1, $2, 'text', 'クラシックで', 'submitted', true) returning id`,
+        [taskId, fx.couple.profileId]));
+    submissionId = inserted.rows[0].id;
+  });
+
+  const call = 'select * from review_submission($1, $2, $3)';
+
+  it('couple は確認できない（権限の理由が分かる形で弾く）', async () => {
+    await db.asUser(fx.couple.authUserId, async () => {
+      const code = await errcodeOf(() => db.query(call, [submissionId, 'confirmed', null]));
+      expect(code).toBe('42501');
+    });
+  });
+
+  it('planner の確認で提出と宿題が同時に確定する', async () => {
+    const row = await db.asUser(fx.planner.authUserId, async () => {
+      const r = await db.query<{ case_id: string; task_title: string }>(
+        call, [submissionId, 'confirmed', null]);
+      return r.rows[0];
+    });
+    expect(row.case_id).toBe(fx.caseId);
+    expect(row.task_title).toBe('BGMのご希望');
+
+    const after = await db.asOwner(() =>
+      db.query<{ review_status: string; task_status: string; confirmed_by: string }>(
+        `select s.review_status, t.status as task_status, t.confirmed_by
+           from task_submissions s join case_tasks t on t.id = s.case_task_id
+          where s.id = $1`, [submissionId]));
+    expect(after.rows[0].review_status).toBe('confirmed');
+    expect(after.rows[0].task_status).toBe('confirmed');
+    expect(after.rows[0].confirmed_by).toBe(fx.planner.profileId);
+  });
+
+  it('二重確認は 409（同時確認の検出）', async () => {
+    await db.asUser(fx.planner.authUserId, async () => {
+      const code = await errcodeOf(() => db.query(call, [submissionId, 'confirmed', null]));
+      expect(code).toBe('BH409');
+    });
+  });
+
+  it('対応不要の宿題は確認しない（免除が黙って外れないように）', async () => {
+    const waived = await db.asOwner(async () => {
+      const t = await db.query<{ id: string }>(
+        `insert into case_tasks (case_id, title, submission_format, due_date, status)
+         values ($1, '不要', 'text', current_date + 30, 'waived') returning id`, [fx.caseId]);
+      const inserted = await db.query<{ id: string }>(
+        `insert into task_submissions
+           (case_task_id, submitted_by, submission_type, review_status, is_latest)
+         values ($1, $2, 'text', 'submitted', true) returning id`,
+        [t.rows[0].id, fx.couple.profileId]);
+      return inserted.rows[0].id;
+    });
+
+    await db.asUser(fx.planner.authUserId, async () => {
+      const code = await errcodeOf(() => db.query(call, [waived, 'needs_fix', '直してください']));
+      expect(code).toBe('BH422');
+    });
+  });
+
+  it('確認結果の値域は confirmed / needs_fix に限る', async () => {
+    await db.asUser(fx.planner.authUserId, async () => {
+      const code = await errcodeOf(() => db.query(call, [submissionId, 'draft', null]));
+      expect(code).toBe('BH422');
+    });
+  });
+
+  it('触れない案件の提出は 0 行', async () => {
+    const rows = await db.asUser(fx.otherPlanner.authUserId, () =>
+      db.query(call, [submissionId, 'confirmed', null]));
+    expect(rows.rows).toHaveLength(0);
+  });
+
+  it('不備ありでは確認者を消す（3-3-4）', async () => {
+    const target = await db.asOwner(async () => {
+      const t = await db.query<{ id: string }>(
+        `insert into case_tasks (case_id, title, submission_format, due_date, status,
+                                 confirmed_by, confirmed_at)
+         values ($1, '再確認', 'text', current_date + 30, 'submitted', $2, now())
+         returning id`, [fx.caseId, fx.planner.profileId]);
+      const inserted = await db.query<{ id: string }>(
+        `insert into task_submissions
+           (case_task_id, submitted_by, submission_type, review_status, is_latest)
+         values ($1, $2, 'text', 'submitted', true) returning id`,
+        [t.rows[0].id, fx.couple.profileId]);
+      return { taskId: t.rows[0].id, submissionId: inserted.rows[0].id };
+    });
+
+    await db.asUser(fx.planner.authUserId, () =>
+      db.query(call, [target.submissionId, 'needs_fix', '郵便番号が抜けています']));
+
+    const after = await db.asOwner(() =>
+      db.query<{ status: string; confirmed_by: string | null; confirmed_at: string | null }>(
+        'select status, confirmed_by, confirmed_at from case_tasks where id = $1',
+        [target.taskId]));
+    expect(after.rows[0].status).toBe('needs_fix');
+    expect(after.rows[0].confirmed_by).toBeNull();
+    expect(after.rows[0].confirmed_at).toBeNull();
+  });
+});

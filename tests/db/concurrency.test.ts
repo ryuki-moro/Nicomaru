@@ -9,6 +9,7 @@
  *   - 5-7  : case_code は UNIQUE 違反時に採番をやり直して再試行する
  *   - 5-3  : レート制限は insert ... on conflict do update returning で原子的に数える
  *   - 6-7  : 最新提出は case_task ごとに1件（部分ユニーク）
+ *   - 6-7  : 提出・確認は単一トランザクション（同時確認で確定するのは1人だけ）
  *
  * 接続情報が無ければ skip する。CI と通常の開発は PGlite 側だけで完結する。
  *   set TEST_PG_URL=postgres://postgres:<pw>@127.0.0.1:5433/postgres
@@ -319,5 +320,68 @@ d('AIジョブの二重取得防止（7-3 for update skip locked）', () => {
       q('select complete_ai_job($1, $2, $3::jsonb, null, null) as ok',
         [jobId, 'worker-B', JSON.stringify({ text: 'x', cautions: [] })]));
     expect(byOther.rows[0].ok).toBe(false);
+  }, 60_000);
+});
+
+d('提出・確認の単一トランザクション（6-7、20260828002100）', () => {
+  it('同時に提出しても最新は1件で、宿題の状態もずれない', async () => {
+    const task = await db.asOwner((q) =>
+      q(`insert into case_tasks (case_id, title, submission_format, due_date)
+         values ($1, '同時提出（関数経由）', 'text', current_date + 30) returning id`, [caseId]));
+    const taskId = task.rows[0].id as string;
+
+    // 素の insert（上の「最新提出の一意性」）は 23505 になるのが正しい挙動だが、
+    // 関数経由では未レビュー提出を上書きするため、全部が成功しても構わない。
+    // 壊れてはいけないのは「最新が1件」「case_tasks が submitted」の2点。
+    const results = await Promise.all(
+      Array.from({ length: 8 }, (_, i) =>
+        db.asUser(coupleAuthId, (q) =>
+          q('select * from submit_task_atomic($1, $2, $3, null, null, null, false)',
+            [taskId, 'text', `v${i}`])
+            .then(() => 'ok')
+            .catch((e: { code?: string }) => e.code ?? 'err'))),
+    );
+    // 同時実行でぶつかったものは 409／23505 になりうる。1つも通らないのは異常。
+    expect(results.filter((r) => r === 'ok').length).toBeGreaterThanOrEqual(1);
+
+    const state = await db.asOwner((q) =>
+      q(`select (select count(*)::int from task_submissions
+                  where case_task_id = $1 and is_latest) as latest,
+                (select status from case_tasks where id = $1) as status`, [taskId]));
+    expect(state.rows[0].latest).toBe(1);
+    expect(state.rows[0].status).toBe('submitted');
+  }, 60_000);
+
+  it('2人が同時に確認しても、確定するのは1人だけ', async () => {
+    const setup = await db.asOwner(async (q) => {
+      const t = await q(
+        `insert into case_tasks (case_id, title, submission_format, due_date, status)
+         values ($1, '同時確認', 'text', current_date + 30, 'submitted') returning id`, [caseId]);
+      const s = await q(
+        `insert into task_submissions
+           (case_task_id, submitted_by, submission_type, text_value, review_status, is_latest)
+         values ($1, $2, 'text', '内容', 'submitted', true) returning id`,
+        [t.rows[0].id, coupleProfileId]);
+      return { taskId: t.rows[0].id as string, submissionId: s.rows[0].id as string };
+    });
+
+    const results = await Promise.all(
+      Array.from({ length: 6 }, (_, i) =>
+        db.asUser(plannerAuthId, (q) =>
+          q('select * from review_submission($1, $2, $3)',
+            [setup.submissionId, i % 2 === 0 ? 'confirmed' : 'needs_fix', null])
+            .then(() => 'ok')
+            .catch((e: { code?: string }) => e.code ?? 'err'))),
+    );
+
+    // review_status='submitted' を更新条件に含めているので、勝つのは1つだけ
+    expect(results.filter((r) => r === 'ok').length).toBe(1);
+
+    // 提出と宿題が同じ結論になっていること（分けていたときに壊れうった不変条件）
+    const after = await db.asOwner((q) =>
+      q(`select s.review_status, t.status
+           from task_submissions s join case_tasks t on t.id = s.case_task_id
+          where s.id = $1`, [setup.submissionId]));
+    expect(after.rows[0].status).toBe(after.rows[0].review_status);
   }, 60_000);
 });

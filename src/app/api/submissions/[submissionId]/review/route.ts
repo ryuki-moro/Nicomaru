@@ -5,110 +5,74 @@
  * 「複数テーブル更新はサーバー側APIに集約する」という 6-5 の原則に従い Route Handler にする。
  * 権限は requireStaff() で入口を絞り、実際の範囲制御は RLS に委譲する（6-5）。
  *
- * Phase の切り分け:
- *   - needs_fix 時の通知（7-1／7-2）は Phase 2。ここでは notifications を作らない。
- *   - 代わりに 6-7 の「3・4・5 の各時点で communication_logs に自動記録」に従い
- *     source='review' の連絡履歴だけを残す。
+ * 【トランザクション境界】2つの更新は review_submission()
+ * （20260828002100_submission_transactions.sql）の中で1トランザクションになる。
+ *
+ * 分けていたときは補償できない穴があった。
+ * task_submissions を confirmed にしたあと case_tasks の更新が落ちると、
+ * 提出だけが確認済みで宿題は submitted のまま残る。
+ * RLS（task_submissions_review_planner の WITH CHECK）が submitted への差し戻しを
+ * 禁じているため、アプリ側から巻き戻せない。
+ *
+ * 通知（7-1／7-2）は notifications 側の仕組みに任せ、ここでは作らない。
+ * 6-7 の「3・4・5 の各時点で communication_logs に自動記録」に従い、
+ * source='review' の連絡履歴だけをトランザクションの外で残す。
+ * 連絡履歴は参考情報であって確認結果そのものではないため、
+ * その失敗で確定済みのレビューを巻き戻さない。
  */
 import { requireStaff } from '@/lib/auth/session';
 import { ok, parseBody, route } from '@/lib/api/route';
-import { REVIEW_STATUS_LABEL, type ReviewStatus, type TaskStatus } from '@/lib/constants';
-import { conflict, fromPostgresError, notFound, unprocessable } from '@/lib/errors';
+import { REVIEW_STATUS_LABEL } from '@/lib/constants';
+import { fromPostgresError, notFound } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { reviewSubmissionSchema } from '@/lib/validation';
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-interface SubmissionRow {
-  id: string;
+/** review_submission() の戻り。 */
+interface ReviewResult {
+  submission_id: string;
+  case_id: string;
   case_task_id: string;
-  review_status: ReviewStatus;
-  case_tasks: { id: string; title: string; case_id: string; status: TaskStatus };
+  task_title: string;
 }
 
 export const POST = route(
   async (request: Request, context: { params: Promise<{ submissionId: string }> }) => {
     const { submissionId } = await context.params;
-    const user = await requireStaff();
+    await requireStaff();
     if (!UUID_PATTERN.test(submissionId)) throw notFound();
 
     const input = await parseBody(request, reviewSubmissionSchema);
     const supabase = await createSupabaseServerClient();
 
-    // 状態と案件IDを先に取る。RLS 外の提出は 0 行になるので存在有無を漏らさず 404 になる
-    const { data, error } = await supabase
-      .from('task_submissions')
-      .select('id, case_task_id, review_status, case_tasks!inner ( id, title, case_id, status )')
-      .eq('id', submissionId)
-      .maybeSingle();
+    // 状態チェック（draft・確認済み・対応不要）も関数の中で行う。
+    // チェックと更新を別トランザクションにすると、その間に状態が変わりうる。
+    const { data, error } = await supabase.rpc('review_submission', {
+      p_submission_id: submissionId,
+      p_decision: input.decision,
+      p_comment: input.comment ?? null,
+    });
     if (error) throw fromPostgresError(error);
-    if (!data) throw notFound();
 
-    const submission = data as unknown as SubmissionRow;
-    // 一時保存（draft）は確認対象ではなく、確認済みの提出への再確認も認めない（6-7）
-    if (submission.review_status !== 'submitted') throw conflict();
-
-    // 提出後にプランナーが宿題を「対応不要」にした場合、提出は submitted のまま残る。
-    // ここで確認すると下の case_tasks 更新が status を confirmed／needs_fix で上書きし、
-    // 免除（表6-9 waived）が黙って外れて 6-8 の未提出判定に戻ってしまう。
-    // 免除の解除は K02 の「対応不要を解除」で明示的に行う操作なので、確認側では受け付けない。
-    if (submission.case_tasks.status === 'waived') {
-      throw unprocessable('この宿題は「対応不要」になっているため、確認の必要はありません');
-    }
-
-    const reviewedAt = new Date().toISOString();
-
-    // review_status='submitted' を条件に含めることで、同時確認を 0 行更新＝409 として検出する
-    const { data: updated, error: updateError } = await supabase
-      .from('task_submissions')
-      .update({
-        review_status: input.decision,
-        planner_feedback: input.comment ?? null,
-        reviewed_by: user.id,
-        reviewed_at: reviewedAt,
-      })
-      .eq('id', submissionId)
-      .eq('review_status', 'submitted')
-      .select('id')
-      .maybeSingle();
-    if (updateError) throw fromPostgresError(updateError);
-    if (!updated) throw conflict();
-
-    // 【Phase 1 の割り切り】PostgREST 経由の2回の UPDATE は同一トランザクションにならない。
-    // 先に提出側を確定させることで、2人のプランナーが同時に確認しても
-    // 勝った1人だけが case_tasks を書き換える（負けた側は上の 0 行更新で 409 になる）。
-    // 逆に case_tasks の更新が落ちた場合は提出だけが確定して残るが、
-    // RLS（task_submissions_review_planner の WITH CHECK）が 'submitted' への差し戻しを
-    // 禁じているため補償更新は書けない。単一トランザクション化は 6-7 の security definer 関数
-    // （submit_task と同じ形）を追加する Phase 2 の課題として残す。
-
-    // case_tasks.status は提出の確認状態と同じ値に揃える（3-3-4）。
-    // needs_fix では confirmed_by／confirmed_at を消す。列の意味は「確認した」であり、
-    // 再提出で不備ありに戻った案件に前回の確認者が残ると D03・監査で誤読されるため。
-    const { error: taskError } = await supabase
-      .from('case_tasks')
-      .update({
-        status: input.decision,
-        confirmed_by: input.decision === 'confirmed' ? user.id : null,
-        confirmed_at: input.decision === 'confirmed' ? reviewedAt : null,
-        updated_at: reviewedAt,
-      })
-      .eq('id', submission.case_task_id);
-    if (taskError) throw fromPostgresError(taskError);
+    // 0 行 = RLS の範囲外。存在有無を漏らさないため 404 に寄せる（6-5-1）
+    const rows = (data ?? []) as ReviewResult[];
+    if (rows.length === 0) throw notFound();
+    const result = rows[0];
 
     await recordCommunicationLog({
       supabase,
-      caseId: submission.case_tasks.case_id,
+      caseId: result.case_id,
       summary:
-        `宿題「${submission.case_tasks.title}」を${REVIEW_STATUS_LABEL[input.decision]}にしました`
+        `宿題「${result.task_title}」を${REVIEW_STATUS_LABEL[input.decision]}にしました`
         + (input.decision === 'needs_fix' && input.comment ? `：${input.comment}` : ''),
     });
 
     return ok({
-      id: submission.id,
-      caseId: submission.case_tasks.case_id,
-      caseTaskId: submission.case_task_id,
+      id: result.submission_id,
+      caseId: result.case_id,
+      caseTaskId: result.case_task_id,
       reviewStatus: input.decision,
     });
   },
