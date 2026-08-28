@@ -203,6 +203,11 @@ export default async function PlannerDashboardPage() {
             title="提出物確認"
             description="新郎新婦から届いた提出物を確認します（D02）"
           />
+          <NavCard
+            href="/notifications"
+            title="通知履歴"
+            description="送信した通知と送信結果を確認します（N01）"
+          />
         </div>
       </section>
     </div>

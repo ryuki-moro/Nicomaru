@@ -172,6 +172,10 @@ export default async function MyPage() {
         <Link href="/mypage/timeline" className="btn-secondary block text-center">
           準備タイムラインを見る
         </Link>
+        {/* 4-3 M01「通知一覧（M05）は Phase 2 で追加する」 */}
+        <Link href="/mypage/notifications" className="btn-secondary block text-center">
+          お知らせを見る
+        </Link>
       </div>
     </div>
   );

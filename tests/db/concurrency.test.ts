@@ -213,3 +213,66 @@ d('RLS が同時接続でも効く', () => {
     expect(asAnon).toBe(0);
   }, 60_000);
 });
+
+d('LINE送信上限の競合（6-9）', () => {
+  it('同時に10通ぶん確保しても、案件×週の上限を超えて true を返さない', async () => {
+    const c = await db.asOwner((q) =>
+      q(`insert into wedding_cases
+           (venue_id, plan_type_id, primary_planner_id, case_code, wedding_date)
+         values ($1, null, $2, 'BRIDAL01-2026-9101', current_date + 150) returning id`,
+        [venueId, plannerProfileId]));
+    const quotaCaseId = c.rows[0].id as string;
+
+    // 既定は案件あたり週1通（6-9）。同時に叩いても1つだけが true になる。
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () =>
+        db.asOwner((q) =>
+          q('select claim_line_quota($1, $2) as allowed', [quotaCaseId, venueId])
+            .then((r) => r.rows[0].allowed as boolean))),
+    );
+
+    expect(results.filter(Boolean).length).toBe(1);
+
+    const counter = await db.asOwner((q) =>
+      q(`select sent_count from notification_quota_counters
+          where scope = 'case_week' and scope_id = $1`, [quotaCaseId]));
+    // 上限超過ぶんはサブトランザクションで巻き戻るので、カウンタは上限のまま
+    expect(counter.rows[0].sent_count).toBe(1);
+  }, 60_000);
+
+  it('式場の月枠も、同時実行で上限を超えて配られない', async () => {
+    const v = await db.asOwner((q) =>
+      q(`insert into venues (name, code) values ('並行テスト式場', 'CONC01') returning id`));
+    const quotaVenueId = v.rows[0].id as string;
+
+    await db.asOwner((q) =>
+      q(`insert into notification_settings
+           (venue_id, line_per_case_per_week, line_per_venue_per_month)
+         values ($1, 99, 3)`, [quotaVenueId]));
+
+    // 案件側の枠は 99 なので、律速は式場の月3通
+    const cases: string[] = [];
+    for (let i = 0; i < 10; i += 1) {
+      const c = await db.asOwner((q) =>
+        q(`insert into wedding_cases
+             (venue_id, plan_type_id, primary_planner_id, case_code, wedding_date)
+           values ($1, null, $2, $3, current_date + 150) returning id`,
+          [quotaVenueId, plannerProfileId, `CONC01-2026-${String(i).padStart(4, '0')}`]));
+      cases.push(c.rows[0].id as string);
+    }
+
+    const results = await Promise.all(
+      cases.map((id) =>
+        db.asOwner((q) =>
+          q('select claim_line_quota($1, $2) as allowed', [id, quotaVenueId])
+            .then((r) => r.rows[0].allowed as boolean))),
+    );
+
+    expect(results.filter(Boolean).length).toBe(3);
+
+    const counter = await db.asOwner((q) =>
+      q(`select sent_count from notification_quota_counters
+          where scope = 'venue_month' and scope_id = $1`, [quotaVenueId]));
+    expect(counter.rows[0].sent_count).toBe(3);
+  }, 60_000);
+});

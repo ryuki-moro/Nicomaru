@@ -58,16 +58,17 @@ function buildBody(message: InvitationMessage): string {
  * Resend への POST は mailer.ts の sendMail に一本化してあるので、ここは本文を組んで結果を写すだけ。
  * 未構成・HTTPエラー・例外はすべて sendMail が SendResult へ畳んで返す。
  */
-function sendEmail(to: string, message: InvitationMessage): Promise<SendResult> {
-  return sendMail({
-    to,
-    subject: 'マイページのご案内（結婚式の準備）',
-    text: buildBody(message),
-  });
+export function sendEmail(to: string, subject: string, text: string): Promise<SendResult> {
+  return sendMail({ to, subject, text });
 }
 
-/** LINE Messaging API のプッシュ送信。Phase 2 で本格運用する（6-10）。 */
-async function sendLine(lineUserId: string, message: InvitationMessage): Promise<SendResult> {
+/**
+ * LINE Messaging API のプッシュ送信（6-10）。
+ *
+ * 招待URLの送付（Phase 1）と通知（Phase 2、7-1）の両方がここを通る。
+ * 用途ごとに fetch を写して持つと、例外の扱いが片方だけ直る事故が起きる。
+ */
+export async function sendLine(lineUserId: string, text: string): Promise<SendResult> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) {
     return { delivered: false, reason: 'not_configured', skippedReason: LINE_NOT_CONFIGURED };
@@ -77,10 +78,7 @@ async function sendLine(lineUserId: string, message: InvitationMessage): Promise
     const response = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        to: lineUserId,
-        messages: [{ type: 'text', text: buildBody(message) }],
-      }),
+      body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text }] }),
     });
 
     if (!response.ok) {
@@ -121,7 +119,7 @@ export async function sendInvitation(
         skippedReason: '送信先のメールアドレスが登録されていません',
       };
     }
-    return sendEmail(target.email, message);
+    return sendEmail(target.email, 'マイページのご案内（結婚式の準備）', buildBody(message));
   }
 
   if (!target.lineUserId) {
@@ -132,5 +130,5 @@ export async function sendInvitation(
       skippedReason: 'LINEの友だち追加がまだ行われていません',
     };
   }
-  return sendLine(target.lineUserId, message);
+  return sendLine(target.lineUserId, buildBody(message));
 }

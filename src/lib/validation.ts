@@ -20,6 +20,7 @@ import {
 } from '@/lib/constants';
 import { type ErrorDetail } from '@/lib/errors';
 import { todayInJst } from '@/lib/format';
+import { NOTIFICATION_TYPES } from '@/lib/notify/templates';
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付の形式が正しくありません');
 const shortText = z.string().trim().min(1, '入力してください').max(INPUT_LIMITS.shortText);
@@ -305,3 +306,26 @@ export const casePatchSchema = caseUpdateSchema.extend({
  * 利用者IDを本文で受け取らないこと自体が「他人の行を active にできない」担保になる。
  */
 export const completeInviteSchema = z.object({});
+
+/** POST /api/notifications/send（機能7-1、Phase 2）。文面は付録D のテンプレートから組む。 */
+export const notificationSendSchema = z
+  .object({
+    caseId: z.string().uuid(),
+    recipientUserId: z.string().uuid(),
+    channel: z.enum(['line', 'email', 'in_app']),
+    notificationType: z.enum(NOTIFICATION_TYPES),
+    taskName: z.string().trim().max(120).optional().nullable(),
+    dueDate: z.string().trim().max(40).optional().nullable(),
+    comment: z.string().trim().max(INPUT_LIMITS.textArea).optional().nullable(),
+    subject: z.string().trim().max(INPUT_LIMITS.shortText).optional().nullable(),
+    message: z.string().trim().max(INPUT_LIMITS.textArea).optional().nullable(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.notificationType === 'needs_fix' && !v.comment) {
+      ctx.addIssue({ code: 'custom', path: ['comment'],
+        message: 'ご確認いただきたい内容を入力してください' });
+    }
+    if (v.notificationType === 'info' && !v.message) {
+      ctx.addIssue({ code: 'custom', path: ['message'], message: '本文を入力してください' });
+    }
+  });
