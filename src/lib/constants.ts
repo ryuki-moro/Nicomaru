@@ -228,6 +228,13 @@ export const OTP = {
 export const RATE_LIMITS = {
   otp_request: { windowSeconds: 3600, max: OTP.requestsPerHour },
   otp_verify: { windowSeconds: 3600, max: 20 },
+  /**
+   * 5-3「検証失敗5回で当該コードを失効」。
+   * 窓はコードの有効期限に合わせる。これより長いと、
+   * 期限切れで無効になった古いコードの失敗回数が次のコードを巻き添えにする。
+   * 鍵は宛先メールのみで作る（接続元を変えても失効を回避できないように。shared.ts）。
+   */
+  otp_verify_failure: { windowSeconds: OTP.ttlSeconds, max: OTP.verifyFailuresBeforeInvalidation },
   initial_register: { windowSeconds: 3600, max: 10 },
   password_reset: { windowSeconds: 3600, max: 10 },
 } as const;

@@ -506,6 +506,56 @@ describe('マスタ・レート制限', () => {
       expect(results).toEqual([true, true, true, false]);
     });
   });
+
+  // 5-3「検証失敗5回で当該コードを失効」（20260828002000_otp_failure_lockout.sql）
+  it('peek_rate_limit() は数を増やさずに現在値を見る', async () => {
+    await db.asOwner(async () => {
+      const before = await db.query<{ peek_rate_limit: boolean }>(
+        `select peek_rate_limit('otp_verify_failure', 'hash-peek', 600, 2)`);
+      expect(before.rows[0].peek_rate_limit).toBe(true);
+
+      // 何度見ても増えない
+      await db.query(`select peek_rate_limit('otp_verify_failure', 'hash-peek', 600, 2)`);
+      await db.query(`select peek_rate_limit('otp_verify_failure', 'hash-peek', 600, 2)`);
+
+      const rows = await db.query<{ n: string }>(
+        `select coalesce(sum(attempt_count), 0) as n from auth_rate_limits
+          where key_type = 'otp_verify_failure' and key_hash = 'hash-peek'`);
+      expect(Number(rows.rows[0].n)).toBe(0);
+    });
+  });
+
+  it('失敗が上限に達すると peek が false になる（コードの失効）', async () => {
+    await db.asOwner(async () => {
+      for (let i = 0; i < 2; i += 1) {
+        await db.query(`select check_rate_limit('otp_verify_failure', 'hash-lock', 600, 2)`);
+      }
+      const after = await db.query<{ peek_rate_limit: boolean }>(
+        `select peek_rate_limit('otp_verify_failure', 'hash-lock', 600, 2)`);
+      expect(after.rows[0].peek_rate_limit).toBe(false);
+    });
+  });
+
+  it('clear_rate_limit() で失効を解く（認証成功時）', async () => {
+    await db.asOwner(async () => {
+      const deleted = await db.query<{ clear_rate_limit: number }>(
+        `select clear_rate_limit('otp_verify_failure', 'hash-lock')`);
+      expect(deleted.rows[0].clear_rate_limit).toBeGreaterThan(0);
+
+      const after = await db.query<{ peek_rate_limit: boolean }>(
+        `select peek_rate_limit('otp_verify_failure', 'hash-lock', 600, 2)`);
+      expect(after.rows[0].peek_rate_limit).toBe(true);
+    });
+  });
+
+  it('失効の判定関数は利用者から呼べない', async () => {
+    await db.asUser(fx.planner.authUserId, async () => {
+      expect(await errcodeOf(() =>
+        db.query(`select peek_rate_limit('otp_verify_failure', 'x', 600, 5)`))).toBe('42501');
+      expect(await errcodeOf(() =>
+        db.query(`select clear_rate_limit('otp_verify_failure', 'x')`))).toBe('42501');
+    });
+  });
 });
 
 describe('案件番号の採番（5-7）', () => {
