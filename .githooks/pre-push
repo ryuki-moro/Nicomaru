@@ -1,0 +1,62 @@
+#!/bin/sh
+#
+# main への直接 push を止める。
+#
+# GitHub のブランチ保護は private リポジトリだと有料プラン（Pro）が要る。
+# 無料のまま「うっかり main に push」を防ぐため、各自のPC側で止める。
+#
+# 有効になるのは `git config core.hooksPath .githooks` が効いているとき。
+# package.json の prepare スクリプトが npm install のたびに設定するので、
+# 通常はセットアップ不要。
+#
+# 【限界】これはローカルの仕組みなので、次の経路は止められない。
+#   - git push --no-verify（意図的な迂回）
+#   - GitHub の画面から直接ファイルを編集してコミット
+# うっかりを防ぐためのもので、悪意を止めるものではない。
+
+PROTECTED_BRANCH="main"
+BLOCKED=0
+
+while read -r local_ref local_sha remote_ref remote_sha
+do
+  if [ "$remote_ref" = "refs/heads/$PROTECTED_BRANCH" ]; then
+    BLOCKED=1
+  fi
+done
+
+if [ "$BLOCKED" -eq 0 ]; then
+  exit 0
+fi
+
+CURRENT=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+
+echo ""
+echo "  ============================================================"
+echo "   main には直接 push できません"
+echo "  ============================================================"
+echo ""
+echo "  5人で同時に作業するため、main は Pull Request からだけ"
+echo "  変更を入れる運用にしています。"
+echo ""
+echo "  いまいるブランチ: $CURRENT"
+echo ""
+echo "  ---- どうすればいい？ ----"
+echo ""
+echo "  【まだコミットしていない場合】"
+echo "    GitHub Desktop で Current Branch → New Branch を押して"
+echo "    ブランチを作ってください。編集内容はそのまま付いてきます。"
+echo ""
+echo "      ターミナルの場合:  git switch -c 19-e2e-core-flow"
+echo ""
+echo "  【もう main にコミットしてしまった場合】"
+echo "    まだ push していなければ直せます。"
+echo "    次の2行で、コミットごと新しいブランチへ移せます。"
+echo ""
+echo "      git switch -c 作業内容のブランチ名"
+echo "      git switch main && git reset --keep origin/main"
+echo ""
+echo "    自信がないときは自分で操作せず、チームに声をかけてください。"
+echo ""
+echo "  ブランチ名の付け方は docs/開発のはじめかた.md にあります。"
+echo ""
+exit 1
