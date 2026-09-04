@@ -92,7 +92,7 @@ jobs:
         shell: bash
         run: |
           for attempt in 1 2 3; do
-            if npm audit --audit-level=high; then
+            if npm audit --audit-level=high --fetch-retries=0 --fetch-timeout=30000; then
               exit 0
             fi
 
