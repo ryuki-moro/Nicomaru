@@ -19,7 +19,7 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: npm ci --no-audit
 
       - name: Lint
         run: npm run lint
@@ -61,7 +61,7 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: npm ci --no-audit
 
       - name: Concurrency tests
         run: npm run test:pg
@@ -81,7 +81,7 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: npm ci --no-audit
 
       # npm 10 は監査API失敗時に廃止予定の Quick Audit API へフォールバックする。
       - name: Use current npm audit client
