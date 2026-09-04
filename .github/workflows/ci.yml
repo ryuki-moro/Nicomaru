@@ -19,7 +19,7 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: npm ci --no-audit
 
       - name: Lint
         run: npm run lint
@@ -61,7 +61,7 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: npm ci --no-audit
 
       - name: Concurrency tests
         run: npm run test:pg
@@ -81,11 +81,27 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: npm ci --no-audit
+
+      # npm 10 は監査API失敗時に廃止予定の Quick Audit API へフォールバックする。
+      - name: Use current npm audit client
+        run: npm install --global npm@11
 
       # 12-2 依存脆弱性管理: high 以上を必須ゲートにする
       - name: Dependency audit
-        run: npm audit --audit-level=high
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if npm audit --audit-level=high --fetch-retries=0 --fetch-timeout=30000; then
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 15))
+            fi
+          done
+
+          exit 1
 
       # 12-2 秘密情報の保護: 実キーの混入を検出する
       - name: Secret scan
