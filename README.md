@@ -6,6 +6,20 @@
 > 基本設計 **Version 1.6**・**Phase 1〜Phase 3 実装完了**。
 > 設計書 (`docs/`) と残タスク (`TASKS.md` / Issues) が正本。
 
+## 画面
+
+模擬データ（山田太郎さん・山田花子さん）で撮影したスクリーンショット。全画面は
+[docs/screenshots/](docs/screenshots/) を参照（PC版・スマートフォン版とも収録）。
+
+| プランナー（PC） | 新郎新婦（スマートフォン） |
+| --- | --- |
+| ![ダッシュボード](docs/screenshots/02-planner-dashboard.png) | ![マイページ](docs/screenshots/12-mobile-couple-mypage.png) |
+| ![案件詳細](docs/screenshots/04-case-detail.png) | ![宿題一覧](docs/screenshots/13-mobile-couple-tasks.png) |
+
+| 提出物確認（AI補助あり） | 打ち合わせ前準備シート（AI補助あり） |
+| --- | --- |
+| ![提出物確認](docs/screenshots/06-submission-review.png) | ![打ち合わせ前準備シート](docs/screenshots/07-prep-sheet.png) |
+
 ## 現状サマリ
 
 | 区分 | 状態 |
