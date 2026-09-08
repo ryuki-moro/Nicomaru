@@ -56,6 +56,11 @@ begin
   if not exists (select 1 from pg_roles where rolname = 'authenticated') then
     create role authenticated nologin noinherit;
   end if;
+  -- Supabase の service_role と同じく RLS をバイパスする。
+  -- 20260828002200 の service_role への grant をテストでも実際に流すために要る。
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then
+    create role service_role nologin noinherit bypassrls;
+  end if;
 end
 $$;
 grant usage on schema auth to anon, authenticated;
