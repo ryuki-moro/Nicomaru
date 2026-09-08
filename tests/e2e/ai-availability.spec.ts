@@ -41,7 +41,8 @@ test.describe('AI補助の利用可否', () => {
 
   test('心拍が無いときは「利用できません」と出て、依頼ボタンが無い', async () => {
     await planner.goto(sheetPath);
-    await expect(planner.getByRole('heading', { name: 'AIによる要点の下書き（要確認）' })).toBeVisible();
+    // 見出しは <p>（AiNotice の AI_HEADINGS）なので文字で探す
+    await expect(planner.getByText('AIによる要点の下書き（要確認）')).toBeVisible();
     await expect(planner.getByText(UNAVAILABLE)).toBeVisible();
     await expect(planner.getByRole('button', { name: REQUEST_BUTTON })).toHaveCount(0);
   });

@@ -35,8 +35,8 @@ test('案件登録から確認までを通しで行える', async ({ page, brows
     primaryContact: 'groom',
     contactEmail: groomEmail,
   });
-  // 少人数婚のテンプレートは6件（seed.sql plan_task_templates）
-  expect(kase.assignedCount).toBe(6);
+  // 少人数婚・家族婚・一般挙式は共通セット8件（seed.sql plan_task_templates）
+  expect(kase.assignedCount).toBe(8);
 
   // 新郎新婦は別ブラウザ（別セッション）
   const coupleContext = await browser.newContext();
