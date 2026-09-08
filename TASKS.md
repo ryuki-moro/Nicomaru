@@ -88,7 +88,7 @@ T01〜T03／U01〜U04。26テーブル・RLS・業務RPC。
 - ⬜ **実環境での通し確認**（#14） — Supabase プロジェクトの作成、Auth メールテンプレートへの
   `{{ .Token }}` 追加、Custom SMTP、Leaked Password Protection、Storage bucket
 - ⬜ 認証メール用の独自ドメイン取得と SPF／DKIM（#17）
-- ⬜ pg_cron の `app.base_url` / `app.internal_cron_secret` 設定
+- ⬜ 定期処理の登録: SQL Editor で `select register_scheduled_jobs('https://<アプリのURL>', '<INTERNAL_CRON_SECRET>');`（2026-09-08 に本番で実施済み。URLを変えたら再実行）
 - ⬜ LINE Messaging API のチャネル作成と Webhook URL 登録
 - ⬜ ワーカー用 `ai_worker` ロールのログイン権限付与（Supabase 側）
 - ⬜ ワーカー稼働機での `gemma3:12b` の取得（`ollama pull gemma3:12b`）
