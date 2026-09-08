@@ -37,6 +37,10 @@ export const SERVICE_ROLE_USE_CASES = {
   'line.link':
     'LINE連携の nonce 発行。呼び出し元JWTの role が couple であることを検証し、'
     + '自案件に限る。平文の nonce は応答でのみ返し保存しない（6-10）',
+  'setup.bootstrap-system-admin':
+    'system_admin 初期アカウントの作成（12章 (b)）。CLI から手で1回だけ実行する。'
+    + '呼び出し元のJWTが無いため、既に system_admin が存在する場合は作成せず中止することで'
+    + '二重作成を防ぐ。パスワードは扱わず、初回設定リンクの発行に留める（6-3-1）',
   'line.webhook':
     'LINE からの Webhook。署名検証（raw body）を通過したリクエストのみ。'
     + '受信イベントIDの重複排除と、連携完了の書き込みに限る（6-10）',
