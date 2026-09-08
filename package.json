@@ -18,7 +18,8 @@
     "test:e2e": "playwright test",
     "db:types": "supabase gen types typescript --local > src/lib/db/database.types.ts",
     "test:pg": "vitest run tests/db/concurrency.test.ts",
-    "worker:ai": "tsx worker/ai-worker.ts"
+    "worker:ai": "tsx worker/ai-worker.ts",
+    "bootstrap:admin": "tsx scripts/bootstrap-system-admin.mts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

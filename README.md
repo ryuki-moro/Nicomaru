@@ -6,11 +6,25 @@
 > 基本設計 **Version 1.6**・**Phase 1〜Phase 3 実装完了**。
 > 設計書 (`docs/`) と残タスク (`TASKS.md` / Issues) が正本。
 
+## 画面
+
+模擬データ（山田太郎さん・山田花子さん）で撮影したスクリーンショット。全画面は
+[docs/screenshots/](docs/screenshots/) を参照（PC版・スマートフォン版とも収録）。
+
+| プランナー（PC） | 新郎新婦（スマートフォン） |
+| --- | --- |
+| ![ダッシュボード](docs/screenshots/02-planner-dashboard.png) | ![マイページ](docs/screenshots/12-mobile-couple-mypage.png) |
+| ![案件詳細](docs/screenshots/04-case-detail.png) | ![宿題一覧](docs/screenshots/13-mobile-couple-tasks.png) |
+
+| 提出物確認（AI補助あり） | 打ち合わせ前準備シート（AI補助あり） |
+| --- | --- |
+| ![提出物確認](docs/screenshots/06-submission-review.png) | ![打ち合わせ前準備シート](docs/screenshots/07-prep-sheet.png) |
+
 ## 現状サマリ
 
 | 区分 | 状態 |
 | --- | --- |
-| 基本設計書 | ✅ **Version 1.6** — 全13章＋付録A〜D、32テーブル |
+| 基本設計書 | ✅ **Version 1.6** — 全13章＋付録A〜D、32テーブル（うち実装済み31。`venue_knowledge` は Phase 3拡張） |
 | 設計レビュー | ✅ **完了** — 7観点並列レビューで55件指摘、全件を設計書へ反映 |
 | 着手ブロッカー (rank 1〜10) | ✅ **解消** — v1.1 を原文照合で検証し、残っていた5件を v1.2 で修正 |
 | 第13章 合意必須事項 (Phase 1 分) | ✅ **決定済み** — 13-1「開発チーム決定」として確定 (差し戻し影響範囲つき) |
