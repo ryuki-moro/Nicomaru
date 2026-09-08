@@ -67,7 +67,7 @@ export async function fetchAiAssistStatus(supabase: SupabaseClient): Promise<AiA
     return { available: false, lastSeenAt: null };
   }
   const row = data as { available: boolean; last_seen_at: string | null };
-  return { available: row.available === true, lastSeenAt: row.last_seen_at };
+  return { available: true, lastSeenAt: row.last_seen_at };
 }
 
 /**

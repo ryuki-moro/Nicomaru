@@ -39,7 +39,7 @@ export type TaskStatus = (typeof TASK_STATUSES)[number];
 export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
   not_started: '未着手',
   submitted: '提出済',
-  needs_fix: '不備あり',
+  needs_fix: '要修正',
   confirmed: '確認済',
   // 表6-9: DB上は waived（提出免除）、マイページ上の表示は「対応不要」
   waived: '対応不要',
