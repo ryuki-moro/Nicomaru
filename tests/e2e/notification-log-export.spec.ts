@@ -250,7 +250,8 @@ test.describe('通知ログCSV出力', () => {
     const responded = page.waitForResponse((response) => response.url().includes(EXPORT_PATH));
     await page.getByRole('button', { name: 'ログをCSV出力', exact: true }).click();
     expect((await responded).status()).toBe(400);
-    await expect(page.getByRole('alert')).toContainText('入力内容に誤りがあります');
+    await expect(page.getByRole('form', { name: '通知ログCSV出力' }).getByRole('alert'))
+      .toContainText('入力内容に誤りがあります');
     await expect(page.getByLabel('終了日（任意）')).toHaveAttribute('aria-invalid', 'true');
     await expect(page.getByText('終了日は開始日以降の日付を指定してください', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'ログをCSV出力', exact: true })).toBeEnabled();
@@ -287,7 +288,8 @@ test.describe('通知ログCSV出力', () => {
     await page.getByLabel('開始日（任意）').fill(EXPORT_DAY);
     await page.route(EXPORT_ROUTE, (route) => route.abort('failed'));
     await page.getByRole('button', { name: 'ログをCSV出力', exact: true }).click();
-    await expect(page.getByRole('alert')).toHaveText(COMMUNICATION_ERROR_MESSAGE);
+    await expect(page.getByRole('form', { name: '通知ログCSV出力' }).getByRole('alert'))
+      .toHaveText(COMMUNICATION_ERROR_MESSAGE);
     await expect(page.getByLabel('開始日（任意）')).toHaveValue(EXPORT_DAY);
     await expect(page.getByRole('button', { name: 'ログをCSV出力', exact: true })).toBeEnabled();
   });
@@ -299,7 +301,8 @@ test.describe('通知ログCSV出力', () => {
       status: 200, contentType: 'text/html', body: '<html><body>Unexpected page</body></html>',
     }));
     await page.getByRole('button', { name: 'ログをCSV出力', exact: true }).click();
-    await expect(page.getByRole('alert')).toHaveText(COMMUNICATION_ERROR_MESSAGE);
+    await expect(page.getByRole('form', { name: '通知ログCSV出力' }).getByRole('alert'))
+      .toHaveText(COMMUNICATION_ERROR_MESSAGE);
     await expect(page.getByRole('button', { name: 'ログをCSV出力', exact: true })).toBeEnabled();
     expect(downloads).toBe(0);
   });

@@ -140,7 +140,7 @@ export async function registerPartnerWithOtp(
   const code = await waitForOtpCode(who.email, { after: requestedAt });
   await page.getByLabel('ワンタイムコード 1桁目').click();
   await page.keyboard.type(code);
-  await page.getByRole('button', { name: '確認してマイページへ' }).click();
+  // 6桁入力時のonCompleteが本人確認を送信する。ボタンの再クリックと競合させない（#49）。
   await page.waitForURL(/\/mypage$/, { timeout: 20_000 });
   return page;
 }

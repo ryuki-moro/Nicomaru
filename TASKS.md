@@ -106,6 +106,7 @@ main と既存Issue・PRを照合して確認した改善。詳細と完了条�
 | [#44](https://github.com/ryuki-moro/Nicomaru/issues/44) 通知ログCSVの期間入力・日本時間の終了日・入力検証 | 実装・ローカル検証済み（マージ待ち） |
 | [#45](https://github.com/ryuki-moro/Nicomaru/issues/45) 通知ログCSVの1,000件上限による欠落と超過表示 | 実装・ローカル検証済み（マージ待ち） |
 | [#47](https://github.com/ryuki-moro/Nicomaru/issues/47) CIを止める開発依存の脆弱性修正 | 依存監査0件、実装・ローカル検証済み（マージ待ち） |
+| [#49](https://github.com/ryuki-moro/Nicomaru/issues/49) OTP自動送信とE2Eの確認クリックの競合 | テストヘルパー修正済み（マージ待ち） |
 
 
 ## 4. 実装で踏みやすい罠
