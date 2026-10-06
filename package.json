@@ -31,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.0",
+    "@next/eslint-plugin-next": "14.2.35",
     "@electric-sql/pglite": "^0.5.8",
     "@playwright/test": "^1.56.0",
     "@types/node": "^22.15.0",
@@ -51,7 +52,7 @@
   "overrides": {
     "postcss": "$postcss",
     "@next/eslint-plugin-next": {
-      ".": "14.2.35",
+      ".": "$@next/eslint-plugin-next",
       "glob": "10.5.0"
     }
   }
