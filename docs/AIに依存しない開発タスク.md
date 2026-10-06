@@ -3,11 +3,13 @@
 2026-10-06時点のmain（`cc575f9`）と既存Issue・PRを照合して整理した、AIサーバーを動かさずに実装できる改善です。
 既存の環境準備は #14、メールドメインは #17、バックアップは #20、ステージングは #24 を参照してください。
 
-GitHubへの登録が完了したら、各見出しにIssue番号を追記します。
+学校アカウント `ryuki-moro` から4件をGitHub Issueへ登録済みです。
 タスク1・2は作業ブランチ `codex/non-ai-core-reliability` で実装・ローカル検証済みです。
 タスク3・4は今後の開発対象です。
 
 ## 1. APIがHTML・不正JSONを返しても、ログイン・権限エラーの画面遷移を維持する
+
+[Issue #42](https://github.com/ryuki-moro/Nicomaru/issues/42)
 
 ### これは何をするIssue？
 
@@ -38,6 +40,8 @@ main `cc575f9` の `src/lib/api/client.ts` はHTTPステータスを確認する
 対象: `src/lib/api/client.ts` と `tests/unit/api-client.test.ts`。#18の共通エラー処理導入は実装済みであり、このIssueはHTTP応答の解析失敗でその処理を通れなくなる不具合を扱います。
 
 ## 2. 一覧画面のページ番号を共通検証し、小数・無限大・巨大値による取得エラーを防ぐ
+
+[Issue #43](https://github.com/ryuki-moro/Nicomaru/issues/43)
 
 ### これは何をするIssue？
 
@@ -70,6 +74,8 @@ main `cc575f9` では `Math.max(Number(params.page) || 1, 1)`、`parseInt`、各
 
 ## 3. 通知ログCSVの期間を画面で指定し、終了日の全件を日本時間で出力する
 
+[Issue #44](https://github.com/ryuki-moro/Nicomaru/issues/44)
+
 ### これは何をするIssue？
 
 システム管理者が通知ログCSVの開始日・終了日を指定できるようにします。AI機能を使わずに開発できます。
@@ -100,6 +106,8 @@ main `cc575f9` の `src/app/(staff)/system/page.tsx` は期間なしのCSVリン
 対象: `src/app/api/system/notification-logs.csv/route.ts`、`src/app/(staff)/system/page.tsx`、期間検証とテスト。CSVの取得件数上限は別Issueとして扱います。
 
 ## 4. 通知ログCSVがSupabaseの1,000件上限で欠落しないように分割取得する
+
+[Issue #45](https://github.com/ryuki-moro/Nicomaru/issues/45)
 
 ### これは何をするIssue？
 
