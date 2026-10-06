@@ -13,7 +13,7 @@
 | Phase 3拡張（9-7〜9-11） | ⬜ 未着手（条件付きスコープ。着手条件は実証運用の開始。1-3／7-5） |
 | Phase 4（検証） | ⬜ 設計対象外 |
 
-2026-10-06 のローカル検証では、テスト **422件中410件成功**（PGlite 上のRLS/DBテスト＋ユニットテスト）。
+2026-10-06 のローカル検証では、テスト **478件中466件成功**（PGlite 上のRLS/DBテスト＋ユニットテスト）。
 実PostgreSQL の並行性テスト12件は `TEST_PG_URL` 未設定のためスキップ。E2Eは今回未実行。
 lint・型チェック・本番ビルドは通過。
 
@@ -103,8 +103,9 @@ main と既存Issue・PRを照合して確認した改善。詳細と完了条�
 | --- | --- |
 | [#42](https://github.com/ryuki-moro/Nicomaru/issues/42) APIがHTML・不正JSONを返した際のHTTPステータス保持と項目エラーの保護 | 実装・ローカル検証済み（マージ待ち） |
 | [#43](https://github.com/ryuki-moro/Nicomaru/issues/43) 一覧11画面と利用者APIのページ番号共通検証 | 実装・ローカル検証済み（マージ待ち） |
-| [#44](https://github.com/ryuki-moro/Nicomaru/issues/44) 通知ログCSVの期間入力・日本時間の終了日・入力検証 | 未着手 |
-| [#45](https://github.com/ryuki-moro/Nicomaru/issues/45) 通知ログCSVの1,000件上限による欠落と超過表示 | 未着手 |
+| [#44](https://github.com/ryuki-moro/Nicomaru/issues/44) 通知ログCSVの期間入力・日本時間の終了日・入力検証 | 実装・ローカル検証済み（マージ待ち） |
+| [#45](https://github.com/ryuki-moro/Nicomaru/issues/45) 通知ログCSVの1,000件上限による欠落と超過表示 | 実装・ローカル検証済み（マージ待ち） |
+| [#47](https://github.com/ryuki-moro/Nicomaru/issues/47) CIを止める開発依存の脆弱性修正 | 依存監査0件、実装・ローカル検証済み（マージ待ち） |
 
 
 ## 4. 実装で踏みやすい罠

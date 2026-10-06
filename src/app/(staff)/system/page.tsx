@@ -12,9 +12,9 @@
  * 取れないものを 0 と表示すると「使っていない」と誤読されるため、
  * 取得元（Supabase ダッシュボード）を明示して数値は出さない。
  */
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import { NotificationLogExportForm } from './NotificationLogExportForm';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser } from '@/lib/auth/session';
 import { formatDateTime } from '@/lib/format';
@@ -152,13 +152,8 @@ export default async function SystemStatusPage() {
       </section>
 
       <section>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="section-head">通知ログ</h2>
-          {/* 4-3 S03「ログをCSV出力」。個人情報を含む列は出力対象外（9章） */}
-          <Link href="/api/system/notification-logs.csv" className="btn-ghost">
-            ログをCSV出力
-          </Link>
-        </div>
+        <h2 className="section-head">通知ログ</h2>
+        <NotificationLogExportForm />
         {logRows.length === 0 ? (
           <div className="mt-2"><EmptyState message="通知ログはまだありません。" /></div>
         ) : (
