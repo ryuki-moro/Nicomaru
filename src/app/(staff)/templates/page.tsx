@@ -23,6 +23,7 @@ import {
   type Importance,
   type SubmissionFormat,
 } from '@/lib/constants';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 interface TemplateRow {
@@ -54,12 +55,6 @@ function formatDueOffset(days: number): string {
   return days === 0 ? '挙式日当日' : `挙式日の${days}日前`;
 }
 
-/** ?page= を1始まりのページ番号にする。壊れた値は1ページ目へ寄せる（K01／M02 と同じ扱い）。 */
-function resolvePage(raw: string | undefined): number {
-  const parsed = Number(raw ?? '1');
-  return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
-}
-
 function pageHref(page: number): string {
   return page > 1 ? `/templates?page=${page}` : '/templates';
 }
@@ -67,7 +62,7 @@ function pageHref(page: number): string {
 export default async function TemplateListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }) {
   const page = resolvePage((await searchParams).page);
   const user = await getAppUser();

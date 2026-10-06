@@ -25,6 +25,7 @@ import {
 } from '@/lib/constants';
 import { formatDateJp, todayInJst } from '@/lib/format';
 import { daysBetween, type IsoDate } from '@/lib/services/schedule';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const metadata = { title: '宿題・提出物' };
@@ -44,12 +45,6 @@ function resolveTab(raw: string | undefined) {
   return TASK_FILTER_TABS.find((tab) => tab.key === raw) ?? TASK_FILTER_TABS[0];
 }
 
-/** ?page= を1始まりのページ番号にする。壊れた値は1ページ目へ寄せる。 */
-function resolvePage(raw: string | undefined): number {
-  const parsed = Number(raw ?? '1');
-  return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
-}
-
 function pageHref(tabKey: string, page: number): string {
   const query = new URLSearchParams();
   if (tabKey !== 'all') query.set('tab', tabKey);
@@ -61,7 +56,7 @@ function pageHref(tabKey: string, page: number): string {
 export default async function TaskListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; page?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string | string[] }>;
 }) {
   const query = await searchParams;
   const tab = resolveTab(query.tab);

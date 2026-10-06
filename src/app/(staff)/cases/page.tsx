@@ -26,6 +26,7 @@ import {
   SEARCH_SCAN_LIMIT,
   type CaseListItem,
 } from '@/lib/services/cases';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -57,7 +58,7 @@ async function restoreCase(formData: FormData) {
 }
 
 interface Props {
-  searchParams: Promise<{ q?: string; scope?: string; page?: string; error?: string; sort?: string }>;
+  searchParams: Promise<{ q?: string; scope?: string; page?: string | string[]; error?: string; sort?: string }>;
 }
 
 export default async function CaseListPage({ searchParams }: Props) {
@@ -69,7 +70,7 @@ export default async function CaseListPage({ searchParams }: Props) {
   // 4-3 K01: 並び順の既定は挙式日順。リスクスコア順は機能6-2（Phase 2）で追加する。
   const sort = params.sort === 'risk' ? 'risk' : 'wedding_date';
   const keyword = (params.q ?? '').trim();
-  const page = Math.max(Number(params.page) || 1, 1);
+  const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
 
   const supabase = await createSupabaseServerClient();

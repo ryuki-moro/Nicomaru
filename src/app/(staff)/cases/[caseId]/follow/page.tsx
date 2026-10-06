@@ -24,6 +24,7 @@ import {
 import { readPii } from '@/lib/crypto';
 import { fromPostgresError } from '@/lib/errors';
 import { formatDate, formatDateTime } from '@/lib/format';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 interface CaseRow {
@@ -45,18 +46,12 @@ interface FollowLogRow {
   followed_at: string;
 }
 
-/** ?page= を1始まりのページ番号にする。壊れた値は1ページ目へ寄せる（K01／M02 と同じ扱い）。 */
-function resolvePage(raw: string | undefined): number {
-  const parsed = Number(raw ?? '1');
-  return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
-}
-
 export default async function FollowLogPage({
   params,
   searchParams,
 }: {
   params: Promise<{ caseId: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }) {
   const { caseId } = await params;
   const page = resolvePage((await searchParams).page);

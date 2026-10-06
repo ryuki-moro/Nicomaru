@@ -14,6 +14,7 @@
  * 表4-19 のとおり自動設定であり、任意指定を受け付けると権限昇格の入口になる。
  * role は admin→planner／system_admin→admin に固定し、venue_id は呼び出し元に固定する。
  */
+import { resolvePage } from '@/lib/pagination';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
 import { ROLE_LABEL, type Role, type UserStatus } from '@/lib/constants';
@@ -27,13 +28,14 @@ import { userCreateSchema } from '@/lib/validation';
 export const GET = route(async (request) => {
   const actor = await requireRole('admin', 'system_admin');
   const params = new URL(request.url).searchParams;
+  const pages = params.getAll('page');
 
   const supabase = await createSupabaseServerClient();
   // 一覧の組み立ては U01 画面と同じサービス層を使う。
   // 検索語のエスケープが両方にあり、走らない側だけを直す事故が起こりうる形だった（#18）。
   const result = await loadUserList(supabase, {
     keyword: params.get('q'),
-    page: Math.max(Number(params.get('page')) || 1, 1),
+    page: resolvePage(pages.length > 1 ? pages : pages[0]),
   });
 
   return ok({ users: result.rows, hasNext: result.hasNext, scope: actor.role });

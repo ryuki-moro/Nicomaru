@@ -19,6 +19,7 @@ import { requireStaff } from '@/lib/auth/session';
 import { CONTACT_CHANNEL_LABEL, LIST_PAGE_SIZE } from '@/lib/constants';
 import { formatDateTime } from '@/lib/format';
 import { NOTIFICATION_TYPE_LABEL, type NotificationType } from '@/lib/notify/templates';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -52,13 +53,13 @@ interface NotificationRow {
 }
 
 interface Props {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }
 
 export default async function NotificationHistoryPage({ searchParams }: Props) {
   await requireStaff();
   const params = await searchParams;
-  const page = Math.max(Number(params.page) || 1, 1);
+  const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
 
   const supabase = await createSupabaseServerClient();

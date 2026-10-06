@@ -17,15 +17,10 @@ import Link from 'next/link';
 import { requirePageUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { loadUserList, sanitizeKeyword, type UserProfileRow } from '@/lib/services/users';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 import { UserTable, type UserListRow } from './UserTable';
-
-/** ?page= を1始まりのページ番号にする。壊れた値は1ページ目へ寄せる（K01／M02 と同じ扱い）。 */
-function resolvePage(raw: string | undefined): number {
-  const parsed = Number(raw ?? '1');
-  return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
-}
 
 /** 検索条件を保ったままページを送る。q は利用者が入力した文字列をそのまま持ち回す。 */
 function pageHref(q: string | undefined, page: number): string {
@@ -39,7 +34,7 @@ function pageHref(q: string | undefined, page: number): string {
 export default async function UserListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string | string[] }>;
 }) {
   const { q, page: pageParam } = await searchParams;
   const page = resolvePage(pageParam);

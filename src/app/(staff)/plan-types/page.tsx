@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { fromPostgresError } from '@/lib/errors';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { planTypeSaveSchema, toErrorDetails } from '@/lib/validation';
 
@@ -177,12 +178,6 @@ async function savePlanType(planTypeId: string, values: unknown): Promise<SavePl
   return { ok: true, id: savedId };
 }
 
-/** ?page= を1始まりのページ番号にする。壊れた値は1ページ目へ寄せる（K01／M02 と同じ扱い）。 */
-function resolvePage(raw: string | undefined): number {
-  const parsed = Number(raw ?? '1');
-  return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
-}
-
 /** 編集対象（?edit=）とページ（?page=）は互いに独立して保つ。 */
 function hrefFor(params: { edit?: string; page?: number }): string {
   const query = new URLSearchParams();
@@ -195,7 +190,7 @@ function hrefFor(params: { edit?: string; page?: number }): string {
 export default async function PlanTypesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ edit?: string; page?: string }>;
+  searchParams: Promise<{ edit?: string; page?: string | string[] }>;
 }) {
   const { edit, page: pageParam } = await searchParams;
   const page = resolvePage(pageParam);
