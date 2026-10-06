@@ -58,7 +58,7 @@ export function OtpInput({
           aria-invalid={invalid || undefined}
           className={[
             'h-11 w-9 rounded-field bg-surface text-center text-base text-text-primary',
-            'focus:border-2 focus:border-primary focus:outline-none',
+            'focus:border-2 focus:border-primary focus:outline-hidden',
             'disabled:cursor-not-allowed disabled:opacity-50',
             invalid ? 'border border-danger' : 'border border-border-mid',
           ].join(' ')}

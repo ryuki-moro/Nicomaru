@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
 
 /*
  * デザイン基準: design-system/bridalhub-design-system.skill の references/design_guide.md。
@@ -48,7 +47,7 @@
   .field {
     @apply w-full rounded-field border border-border-light bg-surface px-3 py-[10px]
            text-label text-text-primary placeholder:text-text-muted
-           focus:border-primary focus:outline-none;
+           focus:border-primary focus:outline-hidden;
   }
 
   .field-error {
@@ -56,14 +55,18 @@
   }
 
   /* ---- バッジ（design_guide 5.6） ---- */
-  .badge {
+  .badge,
+  .badge-neutral,
+  .badge-success,
+  .badge-warning,
+  .badge-danger {
     @apply inline-flex items-center rounded-badge px-[11px] py-1 text-caption;
   }
 
-  .badge-neutral { @apply badge bg-bg text-text-secondary; }
-  .badge-success { @apply badge bg-success-bg text-success-text; }
-  .badge-warning { @apply badge bg-warning-bg text-warning-text; }
-  .badge-danger  { @apply badge bg-danger-bg text-danger; }
+  .badge-neutral { @apply bg-bg text-text-secondary; }
+  .badge-success { @apply bg-success-bg text-success-text; }
+  .badge-warning { @apply bg-warning-bg text-warning-text; }
+  .badge-danger  { @apply bg-danger-bg text-danger; }
 
   /* ---- カード（design_guide 5.7 / 5.9） ---- */
   .card {
