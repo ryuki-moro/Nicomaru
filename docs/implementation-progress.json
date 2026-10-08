@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-08T01:06:17.086Z",
+  "updatedAt": "2026-10-08T01:58:00.828Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "cc575f9a567fd2efbb785c032069ec689bcb5812",
-  "implementationCommit": "1cfb7d9c338bd99a4a7c213389f3ee3001b6d611",
+  "implementationCommit": "04d9e26ec209b6c19d792c90ff9249bafebbc23e",
   "statusLabels": {
     "main": "mainに実装",
     "review": "マージ待ち",
@@ -58,6 +58,16 @@
       "base": "codex/non-ai-core-reliability",
       "head": "1cfb7d9c338bd99a4a7c213389f3ee3001b6d611",
       "url": "https://github.com/ryuki-moro/Nicomaru/pull/48"
+    },
+    {
+      "number": 66,
+      "title": "式場の詳細・編集を実装し、手動で動作確認できる状態にする",
+      "state": "open",
+      "draft": true,
+      "base": "codex/implementation-progress",
+      "head": "04d9e26ec209b6c19d792c90ff9249bafebbc23e",
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/66",
+      "checkSummary": "ローカルの単体/SQL・RLS 520件成功、実PostgreSQL用12件skip。式場編集E2E 14件成功（PC Chrome 7・スマートフォン寸法Chrome 7）。lint・型・build成功、ビルド済みサーバーで保存200を確認。実装commit 04d9e26のCI run 37715092140はverify/concurrency-db成功、securityのDependency audit失敗（Next.js moderate・sharp high、Issue47へ記録）・Secret scanはskip、E2E進行中。台帳更新後headのCIは確認待ち。ユーザーの手動確認待ち。実WebKit未実施。"
     }
   ],
   "issues": [
@@ -595,9 +605,9 @@
     {
       "id": "S02",
       "title": "式場登録/編集",
-      "file": "src/app/(staff)/venues/new/page.tsx",
-      "status": "partial",
-      "note": "登録は実装、編集リンクの到達先なし"
+      "file": "src/app/(staff)/venues/[venueId]/page.tsx",
+      "status": "review",
+      "note": "登録はmainに実装済み。編集はPR #66で追加し、ユーザーの動作確認・CI確認・マージ待ち"
     },
     {
       "id": "S03",
@@ -1420,7 +1430,7 @@
       "title": "利用者・式場の変更",
       "category": "機能",
       "phase": "1/2",
-      "status": "partial",
+      "status": "review",
       "design": "基本設計3-2 / 8-3",
       "screens": [
         "U03",
@@ -1429,12 +1439,21 @@
       "evidence": [
         "src/app/api/admin/users/[userId]/route.ts",
         "src/app/api/venues/route.ts",
-        "src/app/(staff)/venues/page.tsx"
+        "src/app/(staff)/venues/page.tsx",
+        "src/app/(staff)/venues/[venueId]/page.tsx",
+        "src/app/(staff)/venues/[venueId]/VenueEditForm.tsx",
+        "src/app/api/venues/[venueId]/route.ts",
+        "tests/e2e/venue-edit.spec.ts",
+        "docs/動作確認_式場編集.md"
       ],
-      "note": "利用者変更は実装済み。式場一覧がリンクする/venues/[id]と式場PATCH経路がない。",
-      "next": "GAP-01で式場編集と認可を完成させる。",
-      "issues": [],
-      "prs": [],
+      "note": "利用者変更はmainに実装済み。PR #66で式場詳細・編集フォーム・PATCH API・一覧への導線を実装。system_adminとRLSで認可し、名称・代表メール・利用状態を更新する。ローカル自動検証とビルド済みサーバーの保存を確認済み。ユーザーの動作確認待ちで停止中。",
+      "next": "動作確認_式場編集.mdの手順でユーザーが専用模擬式場を確認し、結果を反映する。PR #66のCI監査失敗の確認・残る検査・レビュー・main反映は未完了。",
+      "issues": [
+        54
+      ],
+      "prs": [
+        66
+      ],
       "dependsOn": [],
       "requiresAi": false,
       "scope": "active",
@@ -2180,17 +2199,26 @@
       "title": "式場詳細・編集UIとPATCH API",
       "category": "実装不足",
       "phase": "2",
-      "status": "partial",
+      "status": "review",
       "design": "基本設計4-3 S02/6-5",
       "screens": [],
       "evidence": [
         "src/app/(staff)/venues/page.tsx",
-        "src/app/api/venues/route.ts"
+        "src/app/api/venues/route.ts",
+        "src/app/(staff)/venues/[venueId]/page.tsx",
+        "src/app/(staff)/venues/[venueId]/VenueEditForm.tsx",
+        "src/app/api/venues/[venueId]/route.ts",
+        "tests/e2e/venue-edit.spec.ts",
+        "docs/動作確認_式場編集.md"
       ],
-      "note": "/venues/[id]へのリンクはあるがページなし。APIはGET/POSTのみ。",
-      "next": "編集画面/更新API、system_admin認可、入力・409検証、導線E2Eを追加。",
-      "issues": [],
-      "prs": [],
+      "note": "PR #66で式場詳細・編集フォーム・PATCH API・一覧への導線を実装。system_adminとRLSで認可し、名称・代表メール・利用状態を更新する。ローカル自動検証とビルド済みサーバーの保存を確認済み。ユーザーの動作確認待ちで停止中。",
+      "next": "動作確認_式場編集.mdの手順でユーザーが専用模擬式場を確認し、結果を反映する。PR #66のCI監査失敗の確認・残る検査・レビュー・main反映は未完了。",
+      "issues": [
+        54
+      ],
+      "prs": [
+        66
+      ],
       "dependsOn": [],
       "requiresAi": false,
       "scope": "active",
@@ -2293,12 +2321,19 @@
       "screens": [],
       "evidence": [
         "src/lib/api/route.ts",
-        "src/middleware.ts"
+        "src/middleware.ts",
+        "src/lib/api/origin.ts",
+        "src/app/api/venues/[venueId]/route.ts",
+        "tests/unit/venue-update.test.ts"
       ],
-      "note": "Server Actions標準保護は利用。Cookie認証の更新APIに共通Origin検証が見つからない。",
-      "next": "更新APIへ同一Origin検証を追加。Webhook/内部/公開認証の例外を明示しクロスサイト拒否を検証。",
-      "issues": [],
-      "prs": [],
+      "note": "Server Actions標準保護を利用。PR #66では新設の式場PATCHに同一Origin検証を追加し、APP_BASE_URLを基準に別Origin・Originなしを拒否する。他の更新APIへの展開は未実施。",
+      "next": "式場編集の動作確認後、残るCookie認証の更新APIへ適用する。Webhook/内部/公開認証の例外を明示しクロスサイト拒否を検証する。",
+      "issues": [
+        54
+      ],
+      "prs": [
+        66
+      ],
       "dependsOn": [],
       "requiresAi": false,
       "scope": "active",
@@ -2466,7 +2501,7 @@
       "title": "開発依存の脆弱性を解消",
       "category": "改善",
       "phase": "改善",
-      "status": "review",
+      "status": "partial",
       "design": "Issue#47",
       "screens": [],
       "evidence": [
@@ -2474,8 +2509,8 @@
         "package-lock.json",
         "docs/依存関係の脆弱性対応.md"
       ],
-      "note": "Vitest4/Tailwind4、lint互換性。監査0件・CI成功。",
-      "next": "PR #46をレビューしmainへ反映。",
+      "note": "PR46でVitest4/Tailwind4・lint互換性を修正し、2026-10-06時点は監査0件/CI成功。2026-10-08のPR66 CIで既存Next.jsのmoderate・sharpのhighを追加検出。依存監査失敗、Secret scanはskip。Issue47へ追記し、未解消。",
+      "next": "式場編集のユーザー動作確認後、追加検出された依存を更新・退行検証し、依存監査とSecret scanを成功させる。PR46を含むmain反映は未完了。",
       "issues": [
         47
       ],
@@ -3957,18 +3992,21 @@
       "title": "優先修正を反映し月次ソースコードを確定する",
       "category": "学校成果物",
       "phase": "2026-10",
-      "status": "todo",
+      "status": "partial",
       "design": "ユーザー指定の学校スケジュール（2026-10-08）",
       "screens": [],
       "evidence": [
-        "docs/学校制作スケジュール.md"
+        "docs/学校制作スケジュール.md",
+        "docs/動作確認_式場編集.md"
       ],
-      "note": "中間発表資料に載せられるコア導線と10月のソースコードを揃える。 Issue登録済み。成果物の完了証拠は未共有。",
-      "next": "10月の対象コードがレビュー済みでCIを通り、提出/資料参照用の版と制限一覧がある。未完了を翌月の完了として偽装しない。",
+      "note": "PR #66で優先修正のうち式場編集を実装し、ユーザーの動作確認待ち。既存PRのmain反映、更新API全体へのOrigin検証、削除バッチ修正、10月版の確定は残る。",
+      "next": "式場編集の動作確認結果を反映し、残る優先修正を実装する。CI・レビュー済みの10月版コードと提出/資料参照用の版・制限一覧を確定する。",
       "issues": [
         54
       ],
-      "prs": [],
+      "prs": [
+        66
+      ],
       "dependsOn": [],
       "requiresAi": false,
       "scope": "active",

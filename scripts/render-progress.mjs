@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -74,6 +74,8 @@ const counts = (tasks) => Object.keys(labels).map(s => tasks.filter(t => t.statu
 const groups = [...new Set(data.tasks.map(t => t.category))];
 const core = data.tasks.filter(t => t.kind === 'feature' && t.scope === 'active');
 const workItems = data.tasks.filter(t => t.kind === 'work_item');
+const pageFileCount = readdirSync(resolve(root, 'src/app'), { recursive: true })
+  .filter(path => /(^|[\\/])page\.tsx$/.test(path)).length;
 const cell = s => String(s ?? '').replace(/\|/g, '\\|').replace(/\n/g, '<br>');
 const anchor = id => `task-${id.toLowerCase()}`;
 const taskLink = id => `[${id}](#${anchor(id)})`;
@@ -87,7 +89,7 @@ const lines = [
   '# にこまる — 実装・学校成果物の進捗一覧', '',
   `確認日: **${new Date(data.updatedAt).toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })}**（日本時間）。main: \`${data.mainCommit.slice(0, 7)}\`、改善実装: \`${data.implementationCommit.slice(0, 7)}\`。`, '',
   '要件定義v1.2・基本設計v1.6の全49機能/31画面ID、コード、全Issue/PR、Issue14の実環境作業記録、CIを照合した台帳。運用の実測は今回実施していない。過去の作業記録には日付を残し、現在の稼働確認と分ける。', '',
-  `**コア44機能: mainに実装${core.filter(t => t.status === 'main').length}、一部実装${core.filter(t => t.status === 'partial').length}。条件付き拡張5機能。共通基盤・具体的な残作業・運用・検証・制作の確認項目${workItems.length}件。**`, '',
+  `**コア44機能: mainに実装${core.filter(t => t.status === 'main').length}、マージ待ち${core.filter(t => t.status === 'review').length}、一部実装${core.filter(t => t.status === 'partial').length}。条件付き拡張5機能。共通基盤・具体的な残作業・運用・検証・制作の確認項目${workItems.length}件。**`, '',
   '機能とその下位の作業・月別成果物が含まれるため、合計項目数を工数や完了率に換算しない。コードの存在、mainへの反映、学校デモ環境での検証、資料の完成は別の判定。アプリの本番運用は現在予定なし。mainに実装は静的照合と既存テストの確認であり、全仕様の合格宣言ではない。', '',
   '## 状態の読み方', '',
   '| 状態 | 判定 |', '| --- | --- |',
@@ -106,7 +108,7 @@ const lines = [
   `| 合計（機能と下位項目を含む） | ${data.tasks.length} | ${counts(data.tasks).join(' | ')} |`, '',
   '## 先に進める順序', '',
   '1. PR41を確認し、定期処理の登録方法と本番作業記録を揃える。PR46 → PR48の順でレビューする（PR48はPR46のブランチをbaseにしている）。',
-  '2. 式場編集、更新APIのOrigin検証、削除バッチの失敗処理を実装する。PWA・容量集計・アラート・監査/整形/依存更新を続ける。',
+  '2. 式場編集はPR66に実装し、[動作確認手順](動作確認_式場編集.md)を用意済み。ユーザーの動作確認待ちで実装をいったん停止する。確認結果を反映した後、残る更新APIのOrigin検証、削除バッチの失敗処理、PWA・容量集計・アラート・監査/整形/依存更新を進める。',
   '3. 詳細設計図 #50、中間発表資料 #51を準備する。学校の最新日程・指定時間を確認し、発表では本台帳の状態を使う。',
   '4. 手動で使えるデモ/テスト環境・手順・模擬データを渡し、11月のテスト技法/AWS/中間発表、12月の仕様書/試験、1月の最終版、2月の発表/WBSを前倒しで進める。実績記録は10月から。', '',
   ...data.nextOrder.map(id => `- ${taskLink(id)} ${byId.get(id).title} — ${labels[byId.get(id).status]}`), '',
@@ -120,8 +122,8 @@ const lines = [
   ] : []),
   '## マージ待ち・CI', '',
   '| PR | base → head | 状態 |', '| --- | --- | --- |',
-  ...data.pullRequests.map(p => `| ${prLink(p.number)} ${p.title} | ${p.base} → \`${p.head.slice(0, 7)}\` | open、未マージ。確認時点のverify/concurrency-db/e2e/security全成功 |`), '',
-  `最新改善ブランチの[CI run ${data.ci.run}](${data.ci.url})（${data.ci.date}）: ユニット/RLS **${data.ci.unitRlsPassed}成功**、同じ集計の実PG用${data.ci.pgSkippedInUnit}件はskip。別ジョブで**実PostgreSQL ${data.ci.realPgPassed}成功**。**E2E ${data.ci.e2ePassed}成功**、lint/型/ビルド/security成功、依存監査0件。mainの検証件数として扱わない。`, '',
+  ...data.pullRequests.map(p => `| ${prLink(p.number)} ${p.title} | ${p.base} → \`${p.head.slice(0, 7)}\` | ${p.state}${p.draft ? '（draft）' : ''}、未マージ。${p.checkSummary ?? '確認時点のverify/concurrency-db/e2e/security全成功'} |`), '',
+  `既存改善PR48の[CI run ${data.ci.run}](${data.ci.url})（${data.ci.date}）: ユニット/RLS **${data.ci.unitRlsPassed}成功**、同じ集計の実PG用${data.ci.pgSkippedInUnit}件はskip。別ジョブで**実PostgreSQL ${data.ci.realPgPassed}成功**。**E2E ${data.ci.e2ePassed}成功**、lint/型/ビルド/security成功、依存監査0件。mainやPR66の検証件数として扱わない。`, '',
   '## 全項目', '',
 ];
 for (const group of groups) {
@@ -139,7 +141,7 @@ for (const group of groups) {
 }
 lines.push('## 画面IDの対応（31件）', '', '| 画面 | 実装 | 状態・補足 |', '| --- | --- | --- |');
 for (const screen of data.screens) lines.push(`| ${screen.id} ${screen.title} | ${evidenceLink(screen.file)} | ${labels[screen.status]}。${screen.note} |`);
-lines.push('', '画面ファイル33本と設計の31画面IDは同じ数ではない。U04は一覧内の確認UI、K02はcouple用画面もあり、補助一覧/ルートも含まれる。', '',
+lines.push('', `画面ファイル${pageFileCount}本と設計の31画面IDは同じ数ではない。式場詳細・編集ページをPR66で1本追加。U04は一覧内の確認UI、K02はcouple用画面もあり、補助一覧/ルートも含まれる。`, '',
   '## 設計と実装の読み替え', '',
   '- 準備シート/打ち合わせ記録はServer Component/Server Actionsで実装。設計表のmeeting-notes/meeting-sheetの専用APIが無いだけで、機能全体を未着手にしない。',
   '- PDFは設計6-11の第一手段である印刷CSS/ブラウザPDF保存を実装。サーバーPDF生成・Storage保存は印刷で足りない場合の追加候補。',
