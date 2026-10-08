@@ -131,7 +131,7 @@ lines.push('', '画面ファイル33本と設計の31画面IDは同じ数では�
   '担当候補は既存Epic23の提案（開発/環境/評価/資料）を参照する。正式な担当者・期限が未確定の項目に架空の割当/予定日を入れない。', '');
 const markdown = lines.join('\n');
 if (process.argv.includes('--check')) {
-  if (!existsSync(output) || readFileSync(output, 'utf8') !== markdown) fail('Markdownが正本と不一致。node scripts/render-progress.mjsで再生成してください。');
+  if (!existsSync(output) || readFileSync(output, 'utf8').replaceAll('\r\n', '\n') !== markdown) fail('Markdownが正本と不一致。node scripts/render-progress.mjsで再生成してください。');
 } else writeFileSync(output, markdown, 'utf8');
 console.log(JSON.stringify({ tasks: data.tasks.length, core: core.length, screens: data.screens.length,
   counts: Object.fromEntries(Object.keys(labels).map((s, i) => [s, counts(data.tasks)[i]])), mode: process.argv.includes('--check') ? 'check' : 'render' }));
