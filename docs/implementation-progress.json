@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-08T00:41:03.619Z",
+  "updatedAt": "2026-10-08T01:06:17.086Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "cc575f9a567fd2efbb785c032069ec689bcb5812",
   "implementationCommit": "1cfb7d9c338bd99a4a7c213389f3ee3001b6d611",
@@ -18,7 +18,8 @@
     "docs/にこまる_要件定義書_完成版.docx Version1.2",
     "docs/BridalHub_基本設計書.docx Version1.6",
     "mainのコード・現作業ブランチ",
-    "2026-10-08 GitHub Issue/PR/コメント/CI読み取り"
+    "2026-10-08 GitHub Issue/PR/コメント/CI読み取り",
+    "2026-10-08 ユーザー指定の学校スケジュール・Agent AI利用条件・本番運用予定なし"
   ],
   "ci": {
     "run": 37406449671,
@@ -128,37 +129,37 @@
     },
     {
       "number": 25,
-      "title": "Vercel の利用規約を確認して、必要なら有料プランに移る",
+      "title": "[将来候補] 商用・協力式場運用時のホスティング条件と費用を判断する",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/25"
     },
     {
       "number": 24,
-      "title": "練習用の環境（ステージング）を用意する",
+      "title": "デモ・テスト用環境を分離し、模擬データで再現する",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/24"
     },
     {
       "number": 23,
-      "title": "[Epic] 実証運用の開始まで — 5人の割当",
+      "title": "[Epic] 学校の制作・発表・検証 — 担当区分と進捗",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/23"
     },
     {
       "number": 22,
-      "title": "AI機能を毎日動く状態にする",
+      "title": "発表デモでAI補助を動かし、停止時の手動操作を確認する",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/22"
     },
     {
       "number": 21,
-      "title": "「役に立ったか」の測り方を決める",
+      "title": "学校内の模擬評価の方法・アンケート・利用手順を整える",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/21"
     },
     {
       "number": 20,
-      "title": "データのバックアップと復元の仕組みを作る",
+      "title": "[将来候補] 実データ運用時の定期バックアップ・Storage同期・復元を整える",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/20"
     },
@@ -176,7 +177,7 @@
     },
     {
       "number": 17,
-      "title": "メール送信用のドメインを取得する",
+      "title": "[将来候補] 外部送信が必要になった場合のメールドメインを整える",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/17"
     },
@@ -194,7 +195,7 @@
     },
     {
       "number": 14,
-      "title": "[1番目にやる] 実環境を立ち上げる（Supabase・メール・LINE）",
+      "title": "発表・検証用環境を整える（Supabase・メール・LINE）",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/14"
     },
@@ -287,6 +288,84 @@
       "title": "[TASK] 中間発表用PowerPoint・発表原稿を作成する",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/51"
+    },
+    {
+      "number": 53,
+      "title": "[Epic] 学校の月別成果物を前倒しで揃える（2026年10月〜2027年2月）",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/53"
+    },
+    {
+      "number": 55,
+      "title": "[11月・製造] 継続製造と中間発表時点のコードを確定する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/55"
+    },
+    {
+      "number": 58,
+      "title": "[11月・Agent AI不要] 中間発表・デモを実施し質疑と改善点を記録する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/58"
+    },
+    {
+      "number": 63,
+      "title": "[1月・製造] 最終ソースコードと再現手順を確定する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/63"
+    },
+    {
+      "number": 59,
+      "title": "[12月・Agent AI不要] テスト仕様書を作成し機能・ケース・期待結果を対応付ける",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/59"
+    },
+    {
+      "number": 60,
+      "title": "[12月・Agent AI不要] テストを実施しエビデンスと不具合票を残す",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/60"
+    },
+    {
+      "number": 65,
+      "title": "[2月・Agent AI不要] 作業実績が書かれたWBSを完成する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/65"
+    },
+    {
+      "number": 57,
+      "title": "[11月・Agent AI不要] AWSの学校要件を確認し演習・構成検証を記録する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/57"
+    },
+    {
+      "number": 64,
+      "title": "[2月・Agent AI不要] 学校の最終発表・デモを実施し結果を記録する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/64"
+    },
+    {
+      "number": 61,
+      "title": "[1月・Agent AI不要] 最終回帰テストとエビデンスを確定する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/61"
+    },
+    {
+      "number": 54,
+      "title": "[10月・製造] 優先修正を反映し月次ソースコードを確定する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/54"
+    },
+    {
+      "number": 56,
+      "title": "[11月・Agent AI不要] テスト技法を選定し主要機能のケースを設計する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/56"
+    },
+    {
+      "number": 62,
+      "title": "[1月・Agent AI不要] 最終発表・デモ用の資料と原稿を作成する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/62"
     }
   ],
   "nextOrder": [
@@ -300,15 +379,14 @@
     "GAP-01",
     "GAP-06",
     "GAP-11",
+    "SCHOOL-CODE-OCT",
     "DOC-50",
     "DOC-51",
-    "OPS-02",
-    "OPS-03",
-    "OPS-05",
-    "OPS-19",
-    "OPS-20",
-    "OPS-11",
-    "EVAL-01"
+    "SCHOOL-WBS",
+    "SCHOOL-TEST-TECH",
+    "SCHOOL-AWS",
+    "SCHOOL-CODE-NOV",
+    "SCHOOL-MID-EVENT"
   ],
   "screens": [
     {
@@ -1561,13 +1639,11 @@
         "src/lib/validation.ts",
         "supabase/migrations/20260828000300_phase2_tables.sql"
       ],
-      "note": "専用FAQ API、venue_knowledge/pgvector、根拠・無回答・引継ぎUIはない。",
-      "next": "実証開始後に採用を決め、入力・プロンプト・UI・テストを完成する。",
+      "note": "専用FAQ API、venue_knowledge/pgvector、根拠・無回答・引継ぎUIはない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
+      "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
       "issues": [],
       "prs": [],
-      "dependsOn": [
-        "EVAL-07"
-      ],
+      "dependsOn": [],
       "requiresAi": true,
       "scope": "conditional",
       "kind": "feature"
@@ -1587,13 +1663,11 @@
         "src/lib/validation.ts",
         "supabase/migrations/20260828000300_phase2_tables.sql"
       ],
-      "note": "schema/DB job_typeはある。調整案の生成・確認・適用UIはない。",
-      "next": "実証開始後に採用を決め、入力・プロンプト・UI・テストを完成する。",
+      "note": "schema/DB job_typeはある。調整案の生成・確認・適用UIはない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
+      "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
       "issues": [],
       "prs": [],
-      "dependsOn": [
-        "EVAL-07"
-      ],
+      "dependsOn": [],
       "requiresAi": true,
       "scope": "conditional",
       "kind": "feature"
@@ -1613,13 +1687,11 @@
         "src/lib/validation.ts",
         "supabase/migrations/20260828000300_phase2_tables.sql"
       ],
-      "note": "schema/DB job_typeはある。専用入力・承認表示・業務導線はない。",
-      "next": "実証開始後に採用を決め、入力・プロンプト・UI・テストを完成する。",
+      "note": "schema/DB job_typeはある。専用入力・承認表示・業務導線はない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
+      "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
       "issues": [],
       "prs": [],
-      "dependsOn": [
-        "EVAL-07"
-      ],
+      "dependsOn": [],
       "requiresAi": true,
       "scope": "conditional",
       "kind": "feature"
@@ -1639,13 +1711,11 @@
         "src/lib/validation.ts",
         "supabase/migrations/20260828000300_phase2_tables.sql"
       ],
-      "note": "schema/DB job_typeはある。案の編集・確定登録UIはない。",
-      "next": "実証開始後に採用を決め、入力・プロンプト・UI・テストを完成する。",
+      "note": "schema/DB job_typeはある。案の編集・確定登録UIはない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
+      "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
       "issues": [],
       "prs": [],
-      "dependsOn": [
-        "EVAL-07"
-      ],
+      "dependsOn": [],
       "requiresAi": true,
       "scope": "conditional",
       "kind": "feature"
@@ -1665,13 +1735,11 @@
         "src/lib/validation.ts",
         "supabase/migrations/20260828000300_phase2_tables.sql"
       ],
-      "note": "schema/DB job_typeはある。翻訳依頼・確認・送信前の業務導線はない。",
-      "next": "実証開始後に採用を決め、入力・プロンプト・UI・テストを完成する。",
+      "note": "schema/DB job_typeはある。翻訳依頼・確認・送信前の業務導線はない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
+      "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
       "issues": [],
       "prs": [],
-      "dependsOn": [
-        "EVAL-07"
-      ],
+      "dependsOn": [],
       "requiresAi": true,
       "scope": "conditional",
       "kind": "feature"
@@ -2528,7 +2596,7 @@
     },
     {
       "id": "OPS-01",
-      "title": "Supabase実証プロジェクト・DB・seed",
+      "title": "発表・検証用Supabase/DB/seed",
       "category": "運用",
       "phase": "運用",
       "status": "recorded",
@@ -2552,27 +2620,27 @@
       "id": "OPS-02",
       "title": "認証/通知メール用ドメイン・SPF/DKIM",
       "category": "運用",
-      "phase": "運用",
-      "status": "setup",
+      "phase": "将来運用",
+      "status": "conditional",
       "design": "基本設計8章/12章 / Issue17",
       "screens": [],
       "evidence": [
         ".env.example"
       ],
-      "note": "Issue17 open、完了コメントなし。ドメイン購入/検証済みと判断できない。",
-      "next": "担当がドメイン/Resend検証記録と外部宛の到達証拠を残す。",
+      "note": "Issue17 open、完了コメントなし。ドメイン購入/検証済みと判断できない。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。担当がドメイン/Resend検証記録と外部宛の到達証拠を残す。",
       "issues": [
         17
       ],
       "prs": [],
       "dependsOn": [],
       "requiresAi": false,
-      "scope": "active",
+      "scope": "future",
       "kind": "work_item"
     },
     {
       "id": "OPS-03",
-      "title": "Custom SMTP・通知メール接続",
+      "title": "デモ用認証・通知メールの接続",
       "category": "運用",
       "phase": "運用",
       "status": "setup",
@@ -2582,14 +2650,12 @@
         "src/lib/notify/mailer.ts"
       ],
       "note": "9/8記録はIssue17待ち。未設定時のスキップ経路がある。",
-      "next": "Resend/SMTPを設定し、外部宛のOTP/招待/通知を実送信検証。",
+      "next": "ローカルMailpitまたは許可された外部送信の方式を選び、OTP/招待/通知の到達を模擬データで確認。外部送信に必要なら#17を別途判断。",
       "issues": [
         14
       ],
       "prs": [],
-      "dependsOn": [
-        "OPS-02"
-      ],
+      "dependsOn": [],
       "requiresAi": false,
       "scope": "active",
       "kind": "work_item"
@@ -2607,7 +2673,7 @@
         "supabase/config.toml"
       ],
       "note": "ローカルテンプレートあり。9/8本番記録はSMTP完了後の設定待ち。site_urlは当時変更済み。",
-      "next": "SMTP後にTokenを反映しLINE内ブラウザ/既定ブラウザ跨ぎも検証。",
+      "next": "選んだデモ環境のToken/Redirect URLを反映し、対象ブラウザの認証導線を検証。",
       "issues": [
         14
       ],
@@ -2621,7 +2687,7 @@
     },
     {
       "id": "OPS-05",
-      "title": "本番公開・Deployment Protection",
+      "title": "デモURL・接続範囲・公開設定の確認",
       "category": "運用",
       "phase": "運用",
       "status": "verify",
@@ -2631,7 +2697,7 @@
         "README.md"
       ],
       "note": "9/8にVercelデプロイ済みだが全ページがSSO転送と記録。10/8のWeb取得は到達せず、現状は未確認。",
-      "next": "未ログインで公開URL/health/Webhookに到達するか確認し、必要な公開設定を適用。",
+      "next": "学校で使うローカル/ホスト環境を決め、必要なURL/healthへ到達するか確認。公開保護の変更はデモの利用範囲に合わせる。",
       "issues": [
         14
       ],
@@ -2643,7 +2709,7 @@
     },
     {
       "id": "OPS-06",
-      "title": "pg_cron/pg_netの本番登録",
+      "title": "デモ環境の定期処理登録・動作記録",
       "category": "運用",
       "phase": "運用",
       "status": "recorded",
@@ -2653,7 +2719,7 @@
         "supabase/migrations/20260828001400_scheduled_jobs.sql"
       ],
       "note": "Issue14コメント/PR41に9/8の5件登録済み記録あり。翌日成功の証拠は取得できていない。",
-      "next": "PR41方式へ揃え、cron.jobとbatch_runsで現在URLへの実行を確認。",
+      "next": "PR41方式とSQL適用履歴を揃え、デモ環境のジョブ登録/手動実行を確認。常時稼働の翌日成功は将来運用として区別。",
       "issues": [
         14
       ],
@@ -2679,7 +2745,7 @@
         "src/lib/notify/line.ts"
       ],
       "note": "9/8記録は公開URLの保護解除待ち。実チャネル設定完了の記録なし。",
-      "next": "チャネル/署名キー/Webhookを設定し、連携・重要通知・メール代替を実端末確認。",
+      "next": "学校デモでLINEを実接続する範囲を決める。実接続なら許可された端末/チャネルで検証し、模擬結果や録画を使う部分は実送信と区別して記録。",
       "issues": [
         14
       ],
@@ -2693,7 +2759,7 @@
     },
     {
       "id": "OPS-08",
-      "title": "Vercel環境変数・URL・cron secretの一致",
+      "title": "デモ環境の変数・URL・内部認証の一致",
       "category": "運用",
       "phase": "運用",
       "status": "verify",
@@ -2719,27 +2785,27 @@
       "id": "OPS-09",
       "title": "漏洩パスワード保護とプラン判断",
       "category": "運用",
-      "phase": "運用",
-      "status": "setup",
+      "phase": "将来運用",
+      "status": "conditional",
       "design": "基本設計8章/12章 / Issue14",
       "screens": [],
       "evidence": [
         "src/lib/validation.ts"
       ],
-      "note": "9/8コメントではSupabase Freeが402、設定不可と報告。12文字規約はコードにある。",
-      "next": "Supabaseの実契約で利用可否を再確認し、導入または代替方針を記録。",
+      "note": "9/8コメントではSupabase Freeが402、設定不可と報告。12文字規約はコードにある。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。Supabaseの実契約で利用可否を再確認し、導入または代替方針を記録。",
       "issues": [
         14
       ],
       "prs": [],
       "dependsOn": [],
       "requiresAi": false,
-      "scope": "active",
+      "scope": "future",
       "kind": "work_item"
     },
     {
       "id": "OPS-10",
-      "title": "private Storage bucketの本番設定",
+      "title": "検証用private Storageの権限確認",
       "category": "運用",
       "phase": "運用",
       "status": "recorded",
@@ -2763,7 +2829,7 @@
     },
     {
       "id": "OPS-11",
-      "title": "本番から分離したステージング",
+      "title": "デモ・テスト環境の識別と再現",
       "category": "運用",
       "phase": "運用",
       "status": "setup",
@@ -2773,7 +2839,7 @@
         ".env.example"
       ],
       "note": "Issue24 open。CIの一時ローカルSupabaseは恒常的ステージングではない。",
-      "next": "別SupabaseとPreview接続、環境識別、模擬データの通し検証。",
+      "next": "開発/テスト/デモの接続先を識別し、模擬データと再初期化手順を確認。現在本番運用はないため別の本番用クラウド契約を必須にしない。",
       "issues": [
         24
       ],
@@ -2789,16 +2855,16 @@
       "id": "OPS-12",
       "title": "Keepaliveの公開URL設定・到達確認",
       "category": "運用",
-      "phase": "運用",
-      "status": "setup",
+      "phase": "将来運用",
+      "status": "conditional",
       "design": "基本設計8章/12章 / Issue14",
       "screens": [],
       "evidence": [
         ".github/workflows/keepalive.yml",
         "src/app/api/health/route.ts"
       ],
-      "note": "コードあり。APP_BASE_URL空なら実行スキップ。実際にpingしているかの証拠なし。",
-      "next": "Actions変数と実行ログを確認し、空設定/SSO転送を成功扱いしない。",
+      "note": "コードあり。APP_BASE_URL空なら実行スキップ。実際にpingしているかの証拠なし。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。Actions変数と実行ログを確認し、空設定/SSO転送を成功扱いしない。",
       "issues": [
         14
       ],
@@ -2807,7 +2873,7 @@
         "OPS-05"
       ],
       "requiresAi": false,
-      "scope": "active",
+      "scope": "future",
       "kind": "work_item"
     },
     {
@@ -2822,7 +2888,7 @@
         "scripts/bootstrap-system-admin.mts"
       ],
       "note": "PR31マージ済み。9/8の本番コメントにsystem_admin1名作成済み。",
-      "next": "本番で初回設定/ログイン/S03への到達を確認。",
+      "next": "選んだデモ環境の初回設定/ログイン/S03到達を確認。",
       "issues": [
         14
       ],
@@ -2847,7 +2913,7 @@
         "worker/ai-worker.ts"
       ],
       "note": "NOLOGINと最小RPC権限のコードあり。Supabase LOGIN設定完了の記録なし。",
-      "next": "ログイン/接続・最小権限・保管/失効手順を設定。",
+      "next": "デモの接続先で最小権限・資格情報の保管/失効を確認。秘密値を資料へ載せない。",
       "issues": [
         22
       ],
@@ -2863,15 +2929,40 @@
       "id": "OPS-15",
       "title": "ワーカー/Ollamaの起動・自動再起動",
       "category": "運用",
-      "phase": "運用",
-      "status": "todo",
+      "phase": "将来運用",
+      "status": "conditional",
       "design": "基本設計8章/12章 / Issue22",
       "screens": [],
       "evidence": [
         "worker/ai-worker.ts"
       ],
-      "note": "手動実行スクリプトあり。サービス/タスクスケジューラ設定・再起動復帰記録なし。",
-      "next": "稼働機で自動起動/終了後の再起動を設定し、PC再起動でも復帰を確認。",
+      "note": "手動実行スクリプトあり。サービス/タスクスケジューラ設定・再起動復帰記録なし。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。稼働機で自動起動/終了後の再起動を設定し、PC再起動でも復帰を確認。",
+      "issues": [
+        22
+      ],
+      "prs": [],
+      "dependsOn": [
+        "OPS-14",
+        "OPS-17"
+      ],
+      "requiresAi": false,
+      "scope": "future",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-16",
+      "title": "AIデモの起動・停止・手動操作手順",
+      "category": "運用",
+      "phase": "運用",
+      "status": "todo",
+      "design": "基本設計8章/12章 / Issue22",
+      "screens": [],
+      "evidence": [
+        "TASKS.md"
+      ],
+      "note": "心拍による画面縮退は実装。誰が検知しどこへ連絡するかの専用手順なし。",
+      "next": "手動起動/終了、AI停止中のコア操作、復帰、発表用の代替画像/録画を手順化。常時サービス化は必須にしない。",
       "issues": [
         22
       ],
@@ -2885,32 +2976,8 @@
       "kind": "work_item"
     },
     {
-      "id": "OPS-16",
-      "title": "AI停止・復旧の運用手順",
-      "category": "運用",
-      "phase": "運用",
-      "status": "todo",
-      "design": "基本設計8章/12章 / Issue22",
-      "screens": [],
-      "evidence": [
-        "TASKS.md"
-      ],
-      "note": "心拍による画面縮退は実装。誰が検知しどこへ連絡するかの専用手順なし。",
-      "next": "電源/Ollama/worker切り分け、復旧担当と連絡先を文書化し訓練。",
-      "issues": [
-        22
-      ],
-      "prs": [],
-      "dependsOn": [
-        "OPS-15"
-      ],
-      "requiresAi": false,
-      "scope": "active",
-      "kind": "work_item"
-    },
-    {
       "id": "OPS-17",
-      "title": "稼働機・Ollamaモデル・接続経路",
+      "title": "AIデモ用機器・モデル・接続経路",
       "category": "運用",
       "phase": "運用",
       "status": "setup",
@@ -2921,7 +2988,7 @@
         ".env.example"
       ],
       "note": "過去ローカルgemma3:12b動作記録あり。常設稼働機、モデル取得、認証/通信経路の現在証拠なし。",
-      "next": "管理する稼働機とモデル/ライセンス/VRAM、認証付き接続を確認。",
+      "next": "デモ機器/モデル/接続先を選び、利用可能な構成を確認。アプリ内LLMと開発Agent AI契約を区別し、常設機器の購入は完了条件にしない。",
       "issues": [
         22
       ],
@@ -2933,7 +3000,7 @@
     },
     {
       "id": "OPS-18",
-      "title": "実環境でのAIキュー→推論→採用確認",
+      "title": "模擬データでAIキュー→採用・停止時操作を確認",
       "category": "運用",
       "phase": "運用",
       "status": "verify",
@@ -2944,14 +3011,14 @@
         "worker/ai-worker.ts"
       ],
       "note": "PostgreSQL17.6+Ollamaでの過去通し記録あり。今回AI推論は起動していない。",
-      "next": "匿名入力でclaim/推論/検証/採用、停止時コア継続・復帰を記録。",
+      "next": "デモ時の匿名入力で投入→検証→人の採用、停止中の手動継続・復帰を記録。常設ワーカーは前提にしない。",
       "issues": [
         22
       ],
       "prs": [],
       "dependsOn": [
         "OPS-14",
-        "OPS-15"
+        "OPS-17"
       ],
       "requiresAi": true,
       "scope": "active",
@@ -2961,37 +3028,37 @@
       "id": "OPS-19",
       "title": "DBバックアップの定期取得",
       "category": "運用",
-      "phase": "運用",
-      "status": "todo",
+      "phase": "将来運用",
+      "status": "conditional",
       "design": "基本設計8章/12章 / Issue20",
       "screens": [],
       "evidence": [
         "src/lib/api/internal.ts"
       ],
-      "note": "backupの実行種別枠のみ。pg_dump/スケジュール/実行記録の仕組みなし。",
-      "next": "週次/実証日次、暗号化校内保管、失敗通知、batch_runsを実装。",
+      "note": "backupの実行種別枠のみ。pg_dump/スケジュール/実行記録の仕組みなし。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。週次/実証日次、暗号化校内保管、失敗通知、batch_runsを実装。",
       "issues": [
         20
       ],
       "prs": [],
       "dependsOn": [],
       "requiresAi": false,
-      "scope": "active",
+      "scope": "future",
       "kind": "work_item"
     },
     {
       "id": "OPS-20",
       "title": "Storageバックアップの同期",
       "category": "運用",
-      "phase": "運用",
-      "status": "todo",
+      "phase": "将来運用",
+      "status": "conditional",
       "design": "基本設計8章/12章 / Issue20",
       "screens": [],
       "evidence": [
         "src/app/api/files/upload/route.ts"
       ],
-      "note": "提出ファイルはDB dumpに含まれず、同期処理なし。",
-      "next": "DBとの対応を維持したStorage同期と保管/整合性検査を実装。",
+      "note": "提出ファイルはDB dumpに含まれず、同期処理なし。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。DBとの対応を維持したStorage同期と保管/整合性検査を実装。",
       "issues": [
         20
       ],
@@ -3000,22 +3067,22 @@
         "OPS-19"
       ],
       "requiresAi": false,
-      "scope": "active",
+      "scope": "future",
       "kind": "work_item"
     },
     {
       "id": "OPS-21",
       "title": "空環境へのリストア訓練",
       "category": "運用",
-      "phase": "運用",
-      "status": "verify",
+      "phase": "将来運用",
+      "status": "conditional",
       "design": "基本設計8章/12章 / Issue20",
       "screens": [],
       "evidence": [
         "supabase/migrations/20260828000200_core_tables.sql"
       ],
-      "note": "復元手順/所要時間/DBとファイル照合の実施記録なし。",
-      "next": "模擬データを空環境へ復元、RLS/主要フローを検証し日時・担当・時間を記録。",
+      "note": "復元手順/所要時間/DBとファイル照合の実施記録なし。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。模擬データを空環境へ復元、RLS/主要フローを検証し日時・担当・時間を記録。",
       "issues": [
         20
       ],
@@ -3025,7 +3092,7 @@
         "OPS-20"
       ],
       "requiresAi": false,
-      "scope": "active",
+      "scope": "future",
       "kind": "work_item"
     },
     {
@@ -3054,15 +3121,15 @@
       "id": "OPS-23",
       "title": "障害対応・デプロイロールバック手順",
       "category": "運用",
-      "phase": "運用",
-      "status": "todo",
+      "phase": "将来運用",
+      "status": "conditional",
       "design": "基本設計8章/12章 / Issue14",
       "screens": [],
       "evidence": [
         "README.md"
       ],
-      "note": "設計の障害別方針はある。実環境の操作手順/訓練記録なし。",
-      "next": "Vercel/DB/Auth/メール停止の切り分けとロールバック/告知を整理。",
+      "note": "設計の障害別方針はある。実環境の操作手順/訓練記録なし。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。Vercel/DB/Auth/メール停止の切り分けとロールバック/告知を整理。",
       "issues": [
         14
       ],
@@ -3072,34 +3139,34 @@
         "OPS-21"
       ],
       "requiresAi": false,
-      "scope": "active",
+      "scope": "future",
       "kind": "work_item"
     },
     {
       "id": "OPS-24",
       "title": "実証時のVercel利用条件・費用判断",
       "category": "運用",
-      "phase": "運用",
-      "status": "setup",
+      "phase": "将来運用",
+      "status": "conditional",
       "design": "基本設計8章/12章 / Issue25",
       "screens": [],
       "evidence": [
         "TASKS.md"
       ],
-      "note": "Issue25 open、判断記録なし。過去Issue内の料金説明は最新価格の根拠にしない。",
-      "next": "今回の実証用途と最新条件を確認し、プラン/費用/担当/理由を記録。",
+      "note": "Issue25 open、判断記録なし。過去Issue内の料金説明は最新価格の根拠にしない。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。今回の実証用途と最新条件を確認し、プラン/費用/担当/理由を記録。",
       "issues": [
         25
       ],
       "prs": [],
       "dependsOn": [],
       "requiresAi": false,
-      "scope": "active",
+      "scope": "future",
       "kind": "work_item"
     },
     {
       "id": "OPS-25",
-      "title": "外部宛招待→登録→提出→確認の通し確認",
+      "title": "学校デモの招待→登録→提出→確認",
       "category": "運用",
       "phase": "運用",
       "status": "verify",
@@ -3109,7 +3176,7 @@
         "tests/e2e/core-flow.spec.ts"
       ],
       "note": "CIのローカルスタック導線は成功。本番の外部メール/LINEでの完了記録なし。",
-      "next": "模擬カップルで実送信・両者登録・提出・不備/再提出・確認の証拠を残す。",
+      "next": "模擬カップルで主要導線の証拠を残す。メール/LINEを実送信する範囲、ローカルで代替する範囲、既知の制約を明記。",
       "issues": [
         14
       ],
@@ -3129,15 +3196,15 @@
       "id": "OPS-26",
       "title": "定期処理の翌日成功・障害時検知",
       "category": "運用",
-      "phase": "運用",
-      "status": "verify",
+      "phase": "将来運用",
+      "status": "conditional",
       "design": "基本設計8章/12章 / Issue14",
       "screens": [],
       "evidence": [
         "src/app/(staff)/system/page.tsx"
       ],
-      "note": "登録済みの記録と実行成功は別。各ジョブの最新成功日時は未取得。",
-      "next": "5ジョブのbatch_runs/cron結果を確認し失敗時の検知も試す。",
+      "note": "登録済みの記録と実行成功は別。各ジョブの最新成功日時は未取得。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。5ジョブのbatch_runs/cron結果を確認し失敗時の検知も試す。",
       "issues": [
         14
       ],
@@ -3147,7 +3214,7 @@
         "GAP-04"
       ],
       "requiresAi": false,
-      "scope": "active",
+      "scope": "future",
       "kind": "work_item"
     },
     {
@@ -3357,8 +3424,8 @@
       "evidence": [
         "docs/にこまる_要件定義書_完成版.docx"
       ],
-      "note": "導入前後1〜2週間、月5〜8時間削減を測る方法の成果物なし。",
-      "next": "操作定義・収集表・比較方法を作る。",
+      "note": "導入前後1〜2週間、月5〜8時間削減を測る方法の成果物なし。 今回は学校内の模擬評価を対象にし、実式場での実運用効果として扱わない。",
+      "next": "模擬操作の作業定義・タイムログ・比較方法を作る。実運用の月当たり削減量は模擬測定から断定せず、将来検証として区別。",
       "issues": [
         21
       ],
@@ -3366,7 +3433,11 @@
       "dependsOn": [],
       "requiresAi": false,
       "scope": "active",
-      "kind": "work_item"
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
     },
     {
       "id": "EVAL-02",
@@ -3379,7 +3450,7 @@
       "evidence": [
         "tests/e2e/core-flow.spec.ts"
       ],
-      "note": "導線テストはあるが模擬複数案件の100%検知を測る集計なし。",
+      "note": "導線テストはあるが模擬複数案件の100%検知を測る集計なし。 今回は学校内の模擬評価を対象にし、実式場での実運用効果として扱わない。",
       "next": "既知の未提出/期限超過データとSQL集計・期待値を定義。",
       "issues": [
         21
@@ -3388,7 +3459,11 @@
       "dependsOn": [],
       "requiresAi": false,
       "scope": "active",
-      "kind": "work_item"
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
     },
     {
       "id": "EVAL-03",
@@ -3401,7 +3476,7 @@
       "evidence": [
         "src/lib/services/risk.ts"
       ],
-      "note": "ルール実装/単体はある。経験的判断との一致率の評価記録なし。",
+      "note": "ルール実装/単体はある。経験的判断との一致率の評価記録なし。 今回は学校内の模擬評価を対象にし、実式場での実運用効果として扱わない。",
       "next": "匿名シナリオ、人の判定、乖離の原因分析を用意。",
       "issues": [
         21
@@ -3410,7 +3485,11 @@
       "dependsOn": [],
       "requiresAi": false,
       "scope": "active",
-      "kind": "work_item"
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
     },
     {
       "id": "EVAL-04",
@@ -3423,7 +3502,7 @@
       "evidence": [
         "docs/screenshots/"
       ],
-      "note": "画面資料あり。SUS等の質問と実施/集計手順なし。",
+      "note": "画面資料あり。SUS等の質問と実施/集計手順なし。 今回は学校内の模擬評価を対象にし、実式場での実運用効果として扱わない。",
       "next": "次にやることが分かるかを含む質問・同意・集計方法を作る。",
       "issues": [
         21
@@ -3432,7 +3511,11 @@
       "dependsOn": [],
       "requiresAi": false,
       "scope": "active",
-      "kind": "work_item"
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
     },
     {
       "id": "EVAL-05",
@@ -3446,7 +3529,7 @@
         "src/lib/ai/schemas.ts",
         "supabase/migrations/20260828001800_ai_assist.sql"
       ],
-      "note": "人手正解、既知の不備、採用/修正量を測る継続評価セット/レポートなし。",
+      "note": "人手正解、既知の不備、採用/修正量を測る継続評価セット/レポートなし。 今回は学校内の模擬評価を対象にし、実式場での実運用効果として扱わない。",
       "next": "匿名評価セットと分類正解/採用/不備precision-recall/起票採用の算出方法を整備。",
       "issues": [
         21
@@ -3455,11 +3538,15 @@
       "dependsOn": [],
       "requiresAi": true,
       "scope": "active",
-      "kind": "work_item"
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
     },
     {
       "id": "EVAL-06",
-      "title": "協力式場向け利用手順と説明",
+      "title": "発表デモの利用手順・役割別説明",
       "category": "実証評価",
       "phase": "4",
       "status": "todo",
@@ -3468,8 +3555,8 @@
       "evidence": [
         "docs/開発のはじめかた.md"
       ],
-      "note": "開発者向けGit手順はある。式場・couple向けの運用マニュアルなし。",
-      "next": "招待/確認/フォロー/停止時対応の利用手順を作り試用してもらう。",
+      "note": "開発者向けGit手順はある。式場・couple向けの運用マニュアルなし。 今回は学校内の模擬評価を対象にし、実式場での実運用効果として扱わない。",
+      "next": "模擬のplanner/couple役へ招待/提出/確認/停止時操作を説明し、Agent AIなしで試用できる手順を作る。",
       "issues": [
         21
       ],
@@ -3477,11 +3564,15 @@
       "dependsOn": [],
       "requiresAi": false,
       "scope": "active",
-      "kind": "work_item"
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
     },
     {
       "id": "EVAL-07",
-      "title": "実証開始判定・測定責任者・模擬データ",
+      "title": "校内の模擬評価準備・担当・データ",
       "category": "実証評価",
       "phase": "4",
       "status": "verify",
@@ -3490,16 +3581,14 @@
       "evidence": [
         "TASKS.md"
       ],
-      "note": "開始日・協力先・全5評価の準備完了は未確認。基本設計の実装だけで実証開始済みにしない。",
-      "next": "環境/バックアップ/運用/評価の条件と責任者を記録し実証開始を判定。",
+      "note": "開始日・協力先・全5評価の準備完了は未確認。基本設計の実装だけで実証開始済みにしない。 今回は学校内の模擬評価を対象にし、実式場での実運用効果として扱わない。",
+      "next": "模擬評価の環境/対象commit/シナリオ/担当/測定項目を確認。実利用者の運用開始や商用プラン判断を前提にしない。",
       "issues": [
         21
       ],
       "prs": [],
       "dependsOn": [
         "OPS-25",
-        "OPS-21",
-        "OPS-24",
         "EVAL-01",
         "EVAL-02",
         "EVAL-03",
@@ -3509,11 +3598,15 @@
       ],
       "requiresAi": false,
       "scope": "active",
-      "kind": "work_item"
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
     },
     {
       "id": "EVAL-08",
-      "title": "Phase4の結果測定・改善・成果まとめ",
+      "title": "学校内評価の結果・改善・成果まとめ",
       "category": "実証評価",
       "phase": "4",
       "status": "todo",
@@ -3522,8 +3615,8 @@
       "evidence": [
         "docs/にこまる_要件定義書_完成版.docx"
       ],
-      "note": "Phase4は基本設計の対象外だが制作の検証対象。評価結果/改善/成果まとめは未完了。",
-      "next": "実証後に5指標、課題・改善・成果報告をまとめる。",
+      "note": "Phase4は基本設計の対象外だが制作の検証対象。評価結果/改善/成果まとめは未完了。 今回は学校内の模擬評価を対象にし、実式場での実運用効果として扱わない。",
+      "next": "模擬評価の測定方法/対象/結果/制約をまとめ、最終発表に渡す。実運用の成果と混同しない。",
       "issues": [
         21
       ],
@@ -3533,7 +3626,11 @@
       ],
       "requiresAi": false,
       "scope": "active",
-      "kind": "work_item"
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2027-01",
+      "latestBy": "2027-01-31"
     },
     {
       "id": "TEAM-01",
@@ -3683,15 +3780,13 @@
       "evidence": [
         "docs/BridalHub_基本設計書.docx"
       ],
-      "note": "未合意なら採用しない、実証開始まで判断保留。",
-      "next": "実証結果を踏まえてcoupleに直接出す範囲を決める。",
+      "note": "未合意なら採用しない、実証開始まで判断保留。 今回の学校成果物は対象外。校内模擬評価のみでは着手条件を満たさない。",
+      "next": "実式場での実証を別途計画した場合に、FAQの採用範囲と無回答条件を合意する。",
       "issues": [
         22
       ],
       "prs": [],
-      "dependsOn": [
-        "EVAL-07"
-      ],
+      "dependsOn": [],
       "requiresAi": true,
       "scope": "conditional",
       "kind": "work_item"
@@ -3731,13 +3826,11 @@
       "evidence": [
         "src/lib/ai/schemas.ts"
       ],
-      "note": "9-1流用オプションとして記載。専用UI/評価/集計の実装なし。",
-      "next": "実証後の必要性に応じて分類結果と人の確認導線を追加。",
+      "note": "9-1流用オプションとして記載。専用UI/評価/集計の実装なし。 今回の学校成果物は対象外。校内模擬評価のみでは着手条件を満たさない。",
+      "next": "実式場での実証を別途計画し必要性を確認した場合に、分類・人の確認・集計導線を追加。",
       "issues": [],
       "prs": [],
-      "dependsOn": [
-        "EVAL-07"
-      ],
+      "dependsOn": [],
       "requiresAi": true,
       "scope": "conditional",
       "kind": "work_item"
@@ -3763,7 +3856,11 @@
       "dependsOn": [],
       "requiresAi": false,
       "scope": "active",
-      "kind": "work_item"
+      "kind": "work_item",
+      "targetMonth": "2026-10",
+      "latestBy": "2026-10-31",
+      "ownerMode": "実装担当（雛形）＋メンバー（手動で図の確認・整形）",
+      "workMode": "Codex使用可・手動作業も可"
     },
     {
       "id": "DOC-51",
@@ -3778,23 +3875,22 @@
         "README.md"
       ],
       "note": "PPTX/ノート・原稿/PDF、模擬画面、設計・実装進捗・検証・評価計画。日程はEpic23記録を学校案内で確認する。",
-      "next": "指定時間/学校テンプレート/担当を確認し、10月15〜31日作成・11月23日リハ・11月25日発表の予定を確定。",
+      "next": "10月中に編集可能なPPTX/原稿/PDFを用意。具体的な学校期限が早ければ優先。評価は計画と実測結果を区別し、中間発表の実施記録は#58へ残す。",
       "issues": [
         51
       ],
       "prs": [],
       "dependsOn": [
         "DOC-50",
-        "TEAM-03",
-        "EVAL-01",
-        "EVAL-02",
-        "EVAL-03",
-        "EVAL-04",
-        "EVAL-05"
+        "TEAM-03"
       ],
       "requiresAi": false,
       "scope": "active",
-      "kind": "work_item"
+      "kind": "work_item",
+      "targetMonth": "2026-10",
+      "latestBy": "2026-10-31",
+      "ownerMode": "メンバー（PowerPoint・原稿を手作業で作成）",
+      "workMode": "Agent AI不要"
     },
     {
       "id": "OPT-01",
@@ -3855,6 +3951,409 @@
       "requiresAi": false,
       "scope": "active",
       "kind": "work_item"
+    },
+    {
+      "id": "SCHOOL-CODE-OCT",
+      "title": "優先修正を反映し月次ソースコードを確定する",
+      "category": "学校成果物",
+      "phase": "2026-10",
+      "status": "todo",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md"
+      ],
+      "note": "中間発表資料に載せられるコア導線と10月のソースコードを揃える。 Issue登録済み。成果物の完了証拠は未共有。",
+      "next": "10月の対象コードがレビュー済みでCIを通り、提出/資料参照用の版と制限一覧がある。未完了を翌月の完了として偽装しない。",
+      "issues": [
+        54
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-10",
+      "latestBy": "2026-10-31",
+      "ownerMode": "ユーザー（Codex使用可）／手動実装できるメンバー",
+      "workMode": "Codex使用可・手動実装も可"
+    },
+    {
+      "id": "SCHOOL-CODE-NOV",
+      "title": "継続製造と中間発表時点のコードを確定する",
+      "category": "学校成果物",
+      "phase": "2026-11",
+      "status": "todo",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md"
+      ],
+      "note": "11月の継続製造を進め、12月のテスト仕様書に対応する機能版を揃える。 Issue登録済み。成果物の完了証拠は未共有。",
+      "next": "11月の製造対象のコードと確認記録が揃い、テスト仕様書へ機能/仕様を引き渡せる。中間発表は #51 の具体日を優先する。",
+      "issues": [
+        55
+      ],
+      "prs": [],
+      "dependsOn": [
+        "SCHOOL-CODE-OCT",
+        "SCHOOL-TEST-TECH"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-11",
+      "latestBy": "2026-11-30",
+      "ownerMode": "ユーザー（Codex使用可）／手動実装できるメンバー",
+      "workMode": "Codex使用可・手動実装も可"
+    },
+    {
+      "id": "SCHOOL-TEST-TECH",
+      "title": "テスト技法を選定し主要機能のケースを設計する",
+      "category": "学校成果物",
+      "phase": "2026-11",
+      "status": "todo",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md"
+      ],
+      "note": "授業のテスト技法をアプリの仕様に当てはめ、12月の試験項目の材料を作る。 Issue登録済み。成果物の完了証拠は未共有。",
+      "next": "主要な境界・分岐・状態遷移・権限の設計ケースがあり、授業技法と機能/期待結果の対応を説明できる。",
+      "issues": [
+        56
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-11",
+      "latestBy": "2026-11-30",
+      "ownerMode": "メンバー（手作業で担当可能）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-AWS",
+      "title": "AWSの学校要件を確認し演習・構成検証を記録する",
+      "category": "学校成果物",
+      "phase": "2026-11",
+      "status": "todo",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md"
+      ],
+      "note": "11月のAWS項目を学校の到達目標に合わせて完了し、学習/検証結果を残す。 Issue登録済み。成果物の完了証拠は未共有。",
+      "next": "学校のAWS到達目標を満たす動作証拠と構成/手順/後片付けの記録がある。AWS採用の結論と既存アプリへの影響が説明できる。AWSへの移行・商用公開を自動的な完了条件にしない。",
+      "issues": [
+        57
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-11",
+      "latestBy": "2026-11-30",
+      "ownerMode": "メンバー（学校教材/演習手順で担当可能）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-MID-EVENT",
+      "title": "中間発表・デモを実施し質疑と改善点を記録する",
+      "category": "学校成果物",
+      "phase": "2026-11",
+      "status": "todo",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md"
+      ],
+      "note": "10月に作成した資料で11月の中間発表を行い、後半の製造/試験へ指摘を反映する。 Issue登録済み。成果物の完了証拠は未共有。",
+      "next": "学校の指定日に中間発表/デモを実施し、使用版と質疑/講評/改善の記録が保存される。",
+      "issues": [
+        58
+      ],
+      "prs": [],
+      "dependsOn": [
+        "DOC-51"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-11",
+      "latestBy": "2026-11-30",
+      "ownerMode": "メンバー/チーム共同（発表・デモ・記録を分担）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-TEST-SPEC",
+      "title": "テスト仕様書を作成し機能・ケース・期待結果を対応付ける",
+      "category": "学校成果物",
+      "phase": "2026-12",
+      "status": "todo",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md"
+      ],
+      "note": "既存コードと11月の技法/観点から、手順通りに他の人が試験できる仕様書を作る。 Issue登録済み。成果物の完了証拠は未共有。",
+      "next": "各対象仕様から試験IDと期待結果を追え、Agent AIなしで別の人が実施できる。対象版/環境/試験データと未実装条件が明確である。",
+      "issues": [
+        59
+      ],
+      "prs": [],
+      "dependsOn": [
+        "SCHOOL-CODE-NOV",
+        "SCHOOL-TEST-TECH"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31",
+      "ownerMode": "メンバー（手作業で担当可能）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-TESTS-DEC",
+      "title": "テストを実施しエビデンスと不具合票を残す",
+      "category": "学校成果物",
+      "phase": "2026-12",
+      "status": "todo",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md"
+      ],
+      "note": "12月のテスト仕様書を実施し、結果の証拠と修正が必要な点を揃える。 Issue登録済み。成果物の完了証拠は未共有。",
+      "next": "12月の対象試験に結果/証拠が付き、未実施/不具合/再テストの状態を追える。年内の製造・修正成果もcommit/PRとして記録する。",
+      "issues": [
+        60
+      ],
+      "prs": [],
+      "dependsOn": [
+        "SCHOOL-TEST-SPEC"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31",
+      "ownerMode": "メンバー（画面操作/既存コマンドで担当可能）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-TESTS-JAN",
+      "title": "最終回帰テストとエビデンスを確定する",
+      "category": "学校成果物",
+      "phase": "2027-01",
+      "status": "todo",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md"
+      ],
+      "note": "最終ソースコードに対して再試験し、学校提出と最終発表で説明できる品質判定を行う。 Issue登録済み。成果物の完了証拠は未共有。",
+      "next": "最終候補版の必須試験が合格し、最終仕様書/証拠/残る制限/判定根拠が揃う。修正後の結果に更新されている。",
+      "issues": [
+        61
+      ],
+      "prs": [],
+      "dependsOn": [
+        "SCHOOL-TESTS-DEC"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2027-01",
+      "latestBy": "2027-01-31",
+      "ownerMode": "メンバー（試験実施）＋ユーザー/実装担当（不具合修正）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-FINAL-MATERIAL",
+      "title": "最終発表・デモ用の資料と原稿を作成する",
+      "category": "学校成果物",
+      "phase": "2027-01",
+      "status": "todo",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md"
+      ],
+      "note": "『本番用資料』を2月の学校最終発表・デモの資料として準備する。 Issue登録済み。成果物の完了証拠は未共有。",
+      "next": "1月中に最終発表の資料/原稿/デモ手順がレビュー可能で、2月の発表に必要な素材と代替手段が揃う。",
+      "issues": [
+        62
+      ],
+      "prs": [],
+      "dependsOn": [
+        "SCHOOL-TESTS-DEC"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2027-01",
+      "latestBy": "2027-01-31",
+      "ownerMode": "メンバー（PowerPoint・原稿・画面記録を手作業で作成）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-FINAL-CODE",
+      "title": "最終ソースコードと再現手順を確定する",
+      "category": "学校成果物",
+      "phase": "2027-01",
+      "status": "todo",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md"
+      ],
+      "note": "学校提出用の最終ソースを固定し、他メンバーが同じ版で試験・デモを再現できるようにする。 Issue登録済み。成果物の完了証拠は未共有。",
+      "next": "最終ソース・再現手順・試験証拠が同じ版を示し、他メンバーが手順のみで起動/デモできる。タグを付ける場合も検証後の版を指す。",
+      "issues": [
+        63
+      ],
+      "prs": [],
+      "dependsOn": [
+        "SCHOOL-TESTS-JAN"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2027-01",
+      "latestBy": "2027-01-31",
+      "ownerMode": "ユーザー（Codex使用可）／手動実装できるメンバー",
+      "workMode": "Codex使用可・手動実装も可"
+    },
+    {
+      "id": "SCHOOL-FINAL-EVENT",
+      "title": "学校の最終発表・デモを実施し結果を記録する",
+      "category": "学校成果物",
+      "phase": "2027-02",
+      "status": "todo",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md"
+      ],
+      "note": "学校の最終発表・デモを実施し、成果・質問・課題をまとめる。 Issue登録済み。成果物の完了証拠は未共有。",
+      "next": "学校の指定日に発表/デモを完了し、提出物と結果/質疑/講評の記録がある。アプリの本番運用開始は含まない。",
+      "issues": [
+        64
+      ],
+      "prs": [],
+      "dependsOn": [
+        "SCHOOL-FINAL-MATERIAL",
+        "SCHOOL-FINAL-CODE"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2027-02",
+      "latestBy": "2027-02-28",
+      "ownerMode": "チーム共同（発表/デモ/記録を分担）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-WBS",
+      "title": "作業実績が書かれたWBSを完成する",
+      "category": "学校成果物",
+      "phase": "2027-02",
+      "status": "todo",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md"
+      ],
+      "note": "予定だけのWBSを、実際に誰が何をいつ完了し何を作ったか説明できる成果物にする。 Issue登録済み。成果物の完了証拠は未共有。",
+      "next": "各作業に確認済み実績と成果物の参照があり、学校の形式で提出できる。未実施/保留の仕事に架空の実績を付けない。",
+      "issues": [
+        65
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2027-02",
+      "latestBy": "2027-02-28",
+      "ownerMode": "メンバー（記録担当）＋全員（実績入力）",
+      "workMode": "Agent AI不要"
     }
-  ]
+  ],
+  "schoolSchedule": {
+    "epic": 53,
+    "period": "対象は2026年10月〜2027年2月。前倒し可、後ろ倒し不可。登録上の月末は各月成果物の最遅目安で、学校が別途示す具体的な提出日・発表日があれば、その早い期限を優先する。",
+    "scope": "2月の本番は学校の最終発表・デモ。アプリの本番運用開始・実利用者のデータを預かる運用・常時稼働・商用移行は今回の予定に含めない。デモ/検証は匿名化・模擬データで行う。",
+    "roles": "担当区分は作業開始時の目安。ユーザーはCodexで実装/自動化/雛形を準備できる。他メンバーの作業はAgent AIの契約を前提にせず、手順・入力素材・既存の例を使って手動で完了できる。手動実装できるメンバーがコードを担当することも可能。実担当者はチームで決める。",
+    "months": [
+      {
+        "month": "2026-10",
+        "latestBy": "2026-10-31",
+        "activities": "製造・発表資料作成",
+        "deliverables": "ソースコード・発表資料・詳細設計図",
+        "issues": [
+          54,
+          50,
+          51
+        ],
+        "milestone": 1,
+        "milestoneUrl": "https://github.com/ryuki-moro/Nicomaru/milestone/1"
+      },
+      {
+        "month": "2026-11",
+        "latestBy": "2026-11-30",
+        "activities": "製造・テスト技法・中間発表・AWS",
+        "deliverables": "ソースコード・技法/発表/AWSの記録",
+        "issues": [
+          55,
+          56,
+          57,
+          58
+        ],
+        "milestone": 2,
+        "milestoneUrl": "https://github.com/ryuki-moro/Nicomaru/milestone/2"
+      },
+      {
+        "month": "2026-12",
+        "latestBy": "2026-12-31",
+        "activities": "製造・テスト仕様書作成・テスト",
+        "deliverables": "修正コード・テスト仕様書・エビデンス",
+        "issues": [
+          59,
+          60
+        ],
+        "milestone": 3,
+        "milestoneUrl": "https://github.com/ryuki-moro/Nicomaru/milestone/3"
+      },
+      {
+        "month": "2027-01",
+        "latestBy": "2027-01-31",
+        "activities": "テスト・最終発表用資料作成",
+        "deliverables": "確定テスト仕様書・エビデンス・最終コード・発表資料",
+        "issues": [
+          61,
+          62,
+          63
+        ],
+        "milestone": 4,
+        "milestoneUrl": "https://github.com/ryuki-moro/Nicomaru/milestone/4"
+      },
+      {
+        "month": "2027-02",
+        "latestBy": "2027-02-28",
+        "activities": "学校の最終発表・デモ・まとめ",
+        "deliverables": "発表/デモの記録・作業実績付きWBS",
+        "issues": [
+          64,
+          65
+        ],
+        "milestone": 5,
+        "milestoneUrl": "https://github.com/ryuki-moro/Nicomaru/milestone/5"
+      }
+    ]
+  }
 }

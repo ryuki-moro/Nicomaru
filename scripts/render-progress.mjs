@@ -28,6 +28,26 @@ for (const task of data.tasks) {
 }
 for (const task of data.tasks) {
   for (const id of task.dependsOn) if (!ids.has(id)) fail(`不明な依存: ${task.id} ${id}`);
+  if (task.targetMonth) {
+    const month = data.schoolSchedule?.months.find(m => m.month === task.targetMonth);
+    if (!month || month.latestBy !== task.latestBy || !task.ownerMode || !task.workMode) fail(`学校日程・担当区分の不足: ${task.id}`);
+  }
+}
+const schedule = data.schoolSchedule;
+if (schedule) {
+  if (!data.issues.some(i => i.number === schedule.epic)) fail('学校Epicが未登録');
+  const expectedMonths = ['2026-10', '2026-11', '2026-12', '2027-01', '2027-02'];
+  if (schedule.months.map(m => m.month).join(',') !== expectedMonths.join(',')) fail('学校の対象月が不一致');
+  for (const month of schedule.months) {
+    const [year, number] = month.month.split('-').map(Number);
+    const lastDay = new Date(Date.UTC(year, number, 0)).toISOString().slice(0, 10);
+    if (month.latestBy !== lastDay) fail(`月末目安が不一致: ${month.month}`);
+    if (!month.milestone || !month.milestoneUrl || !month.activities || !month.deliverables) fail(`学校成果物の説明不足: ${month.month}`);
+    for (const issue of month.issues) {
+      if (!data.issues.some(i => i.number === issue)) fail(`月別Issueが未登録: #${issue}`);
+      if (!data.tasks.some(t => t.issues.includes(issue) && t.targetMonth === month.month)) fail(`月別Issueと台帳の対応不足: #${issue}`);
+    }
+  }
 }
 const visiting = new Set();
 const visited = new Set();
@@ -64,21 +84,21 @@ const evidenceLink = path => {
   return `[${path}](${target})`;
 };
 const lines = [
-  '# にこまる — 実装・運用・制作の進捗一覧', '',
-  `確認日: **${data.updatedAt.slice(0, 10)}**（日本時間）。main: \`${data.mainCommit.slice(0, 7)}\`、改善実装: \`${data.implementationCommit.slice(0, 7)}\`。`, '',
+  '# にこまる — 実装・学校成果物の進捗一覧', '',
+  `確認日: **${new Date(data.updatedAt).toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })}**（日本時間）。main: \`${data.mainCommit.slice(0, 7)}\`、改善実装: \`${data.implementationCommit.slice(0, 7)}\`。`, '',
   '要件定義v1.2・基本設計v1.6の全49機能/31画面ID、コード、全Issue/PR、Issue14の実環境作業記録、CIを照合した台帳。運用の実測は今回実施していない。過去の作業記録には日付を残し、現在の稼働確認と分ける。', '',
   `**コア44機能: mainに実装${core.filter(t => t.status === 'main').length}、一部実装${core.filter(t => t.status === 'partial').length}。条件付き拡張5機能。共通基盤・具体的な残作業・運用・検証・制作の確認項目${workItems.length}件。**`, '',
-  '機能とその下位の作業が含まれるため、合計項目数を工数や完了率に換算しない。コードがあること、本番へ適用したこと、本番の通し検証/実証評価が完了したことは別の判定。mainに実装は静的照合と既存テストの確認であり、全仕様/実運用の合格宣言ではない。', '',
+  '機能とその下位の作業・月別成果物が含まれるため、合計項目数を工数や完了率に換算しない。コードの存在、mainへの反映、学校デモ環境での検証、資料の完成は別の判定。アプリの本番運用は現在予定なし。mainに実装は静的照合と既存テストの確認であり、全仕様の合格宣言ではない。', '',
   '## 状態の読み方', '',
   '| 状態 | 判定 |', '| --- | --- |',
-  '| mainに実装 | mainに対応コードあり。個々の本番設定・品質評価は別項目 |',
+  '| mainに実装 | mainに対応コードあり。デモ環境の設定・品質評価は別項目 |',
   '| マージ待ち | 別ブランチ/PRに実装あり、mainは未反映 |',
   '| 一部実装 | 対応コードがあるが仕様・導線・運用の一部が不足 |',
   '| 未着手 | repoに成果物/実装が見つからない。外部の未共有成果物の存在までは判定しない |',
   '| 実施記録あり | 過去の本番作業記録あり。現在の再確認は未実施 |',
   '| 設定・準備待ち | 関連Issue/記録に残作業。最新の完了証拠が不足 |',
   '| 確認・整理待ち | 実装・記録はあるが検証/Issue整理/実証判定の証拠が不足 |',
-  '| 条件付き保留 | 実証開始などの着手条件/採用判断待ち。必須コアの未完了に加算しない |', '',
+  '| 条件付き保留 | 将来運用・拡張の着手条件/採用判断待ち。学校の月別必須成果物に加算しない |', '',
   '## 分野ごとの集計', '',
   `| 分野 | 項目 | ${Object.values(labels).join(' | ')} |`,
   '| --- | ---: | ' + Object.keys(labels).map(() => '---:').join(' | ') + ' |',
@@ -88,8 +108,16 @@ const lines = [
   '1. PR41を確認し、定期処理の登録方法と本番作業記録を揃える。PR46 → PR48の順でレビューする（PR48はPR46のブランチをbaseにしている）。',
   '2. 式場編集、更新APIのOrigin検証、削除バッチの失敗処理を実装する。PWA・容量集計・アラート・監査/整形/依存更新を続ける。',
   '3. 詳細設計図 #50、中間発表資料 #51を準備する。学校の最新日程・指定時間を確認し、発表では本台帳の状態を使う。',
-  '4. メール/公開URL/LINE、バックアップ/復元、ステージング、測定方法を整え、実証開始を判定する。AI常設化は別担当の運用項目。', '',
+  '4. 手動で使えるデモ/テスト環境・手順・模擬データを渡し、11月のテスト技法/AWS/中間発表、12月の仕様書/試験、1月の最終版、2月の発表/WBSを前倒しで進める。実績記録は10月から。', '',
   ...data.nextOrder.map(id => `- ${taskLink(id)} ${byId.get(id).title} — ${labels[byId.get(id).status]}`), '',
+  ...(schedule ? [
+    '## 学校の月別成果物・担当区分', '',
+    `${issueLink(schedule.epic)}で月別成果物を管理。[学校制作スケジュール](学校制作スケジュール.md)に入力素材・分担・記録方法をまとめた。`, '',
+    schedule.period, '', schedule.scope, '', schedule.roles, '',
+    '| 月 | 最遅の目安 | 作業・成果物 | Issue |', '| --- | --- | --- | --- |',
+    ...schedule.months.map(m => `| ${m.month} | [${m.latestBy}](${m.milestoneUrl}) | ${m.activities}<br>${m.deliverables} | ${m.issues.map(issueLink).join('、')} |`), '',
+    '正式な担当者はチームで決める。Agent AI不要の項目は、教材・手順・既存の例・利用可能なOffice等で完了できる。コード作業はCodex使用可だが手動実装も可能。月末より早い学校の提出日/発表日を優先する。WBSの実績記録は10月から開始する。', '',
+  ] : []),
   '## マージ待ち・CI', '',
   '| PR | base → head | 状態 |', '| --- | --- | --- |',
   ...data.pullRequests.map(p => `| ${prLink(p.number)} ${p.title} | ${p.base} → \`${p.head.slice(0, 7)}\` | open、未マージ。確認時点のverify/concurrency-db/e2e/security全成功 |`), '',
@@ -100,6 +128,8 @@ for (const group of groups) {
   lines.push(`### ${group}`, '', '| ID・項目 | Phase / 状態 | 設計・画面 | 根拠・現状 | 残作業・前提・Issue/PR |', '| --- | --- | --- | --- | --- |');
   for (const t of data.tasks.filter(t => t.category === group)) {
     const remaining = [t.next || '対応コードあり。運用/検証の関連項目は別判定。',
+      t.targetMonth ? `期限目安: ${t.latestBy}（学校の早い具体日を優先）<br>担当区分: ${cell(t.ownerMode)} / ${cell(t.workMode)}` : '',
+      t.scope === 'future' ? '将来運用。今回の学校Milestone対象外。' : '',
       t.dependsOn.length ? `前提: ${t.dependsOn.map(taskLink).join('、')}` : '',
       t.issues.map(issueLink).join('、'), t.prs.map(prLink).join('、')].filter(Boolean).join('<br>');
     const evidence = t.evidence.map(evidenceLink).join('<br>') + '<br>' + cell(t.note);
@@ -120,7 +150,9 @@ lines.push('', '画面ファイル33本と設計の31画面IDは同じ数では�
   '- #19: PR39でE2E実装済み。Issueはopen、意図的退行の負例実施記録は確認待ち。',
   '- #27: PR37でテンプレートはmain反映済み。Issueはopen、作成画面での実表示確認待ち。',
   '- #14: 本文の「未公開/21本」は古い。2026-09-08コメントにプロジェクト・22本・seed・private bucket・5cron・デプロイの実施記録あり。メール/LINE/公開保護/実行成功は別判定。',
-  '- #23: 最新の台帳・PR52・制作Issueを上部へ追記し、347テスト/E2E未着手等の従来計画は当時の記録として保存。元ガントはrepoにないため、ガント本体の更新は未実施。',
+  '- #23/#53: 全体進捗と学校の月別成果物を対応付け。347テスト/E2E未着手等の従来計画は当時の記録として保存。元ガントはrepoにないため、ガント本体の更新は未実施。',
+  '- #17/#20/#25: 将来運用へ変更し学校Milestoneから除外。#14/#22/#24は発表・検証用の範囲に整理。',
+  '- #50/#51: 10月に図/資料を準備。11月の中間発表実施は#58で管理。#53〜65はEpicと12作業Issueを新規登録。登録自体で成果物を完了扱いにしない。',
   '- #26/#28/#29/#33はclosedだが、完了条件の再確認が必要なものはTEAM項目に残す。',
   '- #42/#43/#47はPR46、#44/#45/#49はPR48。openでも実装は済んでおり、未着手にはしない。', '',
   '## 更新方法', '',
@@ -128,7 +160,7 @@ lines.push('', '画面ファイル33本と設計の31画面IDは同じ数では�
   '2. 実環境作業には日付と記録先、検証にはcommit/CI runを付ける。更新確認日をupdatedAtへ入れる。',
   '3. `node scripts/render-progress.mjs`を実行する。ID・全機能/画面・根拠ファイル・依存・Issue/PR対応を検査し、このMarkdownを再生成する。',
   '4. TASKS/READMEとGitHub Epicを同じ集計へ揃える。Issueを閉じただけで自動的に完了扱いにしない。', '',
-  '担当候補は既存Epic23の提案（開発/環境/評価/資料）を参照する。正式な担当者・期限が未確定の項目に架空の割当/予定日を入れない。', '');
+  '担当区分は学校制作スケジュールと各Issueを参照。月末目安はユーザー指定の月別計画に基づき、具体的な学校日程が早ければそちらを優先する。正式な担当者や実績時間は本人/チームの確認で記録し、推測で埋めない。', '');
 const markdown = lines.join('\n');
 if (process.argv.includes('--check')) {
   if (!existsSync(output) || readFileSync(output, 'utf8').replaceAll('\r\n', '\n') !== markdown) fail('Markdownが正本と不一致。node scripts/render-progress.mjsで再生成してください。');
