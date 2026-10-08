@@ -17,10 +17,14 @@ const original = {
 };
 
 beforeEach(() => {
+  vi.stubEnv('APP_BASE_URL', undefined);
   requireRole.mockReset().mockResolvedValue({ role: 'system_admin' });
   createServerClient.mockReset();
 });
-afterEach(() => { vi.restoreAllMocks(); });
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
 
 function request(body: unknown, origin: string | null = 'http://app.test') {
   const headers = new Headers({ 'content-type': 'application/json' });
@@ -128,6 +132,50 @@ describe('式場更新API', () => {
   ])('不正なOrigin(%s)は書き込み前に403', async (origin) => {
     const response = await PATCH(request({ name: '更新' }, origin), context());
     expect(response.status).toBe(403);
+    expect(createServerClient).not.toHaveBeenCalled();
+  });
+
+  it('request.urlがlocalhostへ正規化されても、設定済み127.0.0.1のOriginを許可する', async () => {
+    vi.stubEnv('APP_BASE_URL', 'http://127.0.0.1:3000');
+    databaseMock();
+    const req = new Request(`http://localhost:3000/api/venues/${VENUE_ID}`, {
+      method: 'PATCH', headers: { origin: 'http://127.0.0.1:3000' },
+      body: JSON.stringify({ active: false }),
+    });
+    expect((await PATCH(req, context())).status).toBe(200);
+  });
+
+  it.each([
+    'http://localhost:3000', 'https://127.0.0.1:3000',
+    'http://127.0.0.1:3001', 'http://foreign.test:3000',
+  ])('APP_BASE_URLとhost/scheme/portが異なるOrigin(%s)は拒否する', async (origin) => {
+    vi.stubEnv('APP_BASE_URL', 'http://127.0.0.1:3000');
+    // request.url自体が一致しても、設定した公開Originより優先させない。
+    const req = new Request(`${origin}/api/venues/${VENUE_ID}`, {
+      method: 'PATCH', headers: { origin }, body: JSON.stringify({ active: false }),
+    });
+    expect((await PATCH(req, context())).status).toBe(403);
+    expect(createServerClient).not.toHaveBeenCalled();
+  });
+
+  it('Hostや転送ヘッダーで許可Originを差し替えられない', async () => {
+    vi.stubEnv('APP_BASE_URL', 'https://trusted.test');
+    const req = new Request(`http://localhost:3000/api/venues/${VENUE_ID}`, {
+      method: 'PATCH', headers: {
+        origin: 'https://foreign.test', host: 'foreign.test',
+        'x-forwarded-host': 'foreign.test', 'x-forwarded-proto': 'https',
+      }, body: JSON.stringify({ active: false }),
+    });
+    expect((await PATCH(req, context())).status).toBe(403);
+    expect(createServerClient).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    '', 'invalid', 'null', '/relative', 'ftp://app.test', 'file://app.test',
+    'https://user:password@app.test', 'https://app.test:invalid',
+  ])('APP_BASE_URLの不正設定(%s)でrequest.urlへフォールバックしない', async (baseUrl) => {
+    vi.stubEnv('APP_BASE_URL', baseUrl);
+    expect((await PATCH(request({ active: false }), context())).status).toBe(403);
     expect(createServerClient).not.toHaveBeenCalled();
   });
 

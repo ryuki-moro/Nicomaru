@@ -12,6 +12,7 @@
  * 取れないものを 0 と表示すると「使っていない」と誤読されるため、
  * 取得元（Supabase ダッシュボード）を明示して数値は出さない。
  */
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { NotificationLogExportForm } from './NotificationLogExportForm';
@@ -95,7 +96,10 @@ export default async function SystemStatusPage() {
         </ol>
       </nav>
 
-      <h1 className="section-head">利用状況・通知ログ</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="section-head">利用状況・通知ログ</h1>
+        <Link href="/venues" className="btn-secondary w-auto px-5 text-center">式場一覧</Link>
+      </div>
 
       <section>
         <h2 className="section-head">利用状況</h2>
