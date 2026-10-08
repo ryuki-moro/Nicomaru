@@ -107,10 +107,11 @@ TEST_PG_URL=postgres://postgres:<password>@127.0.0.1:5433/postgres npm run test:
 | パス | 内容 |
 | --- | --- |
 | `docs/にこまる_要件定義書_完成版.docx` | 要件定義書(設計の照合元・正) |
-| `docs/BridalHub_基本設計書.docx` | 基本設計書 本体(**Version 1.2**。改訂履歴は文書情報を参照) |
+| `docs/BridalHub_基本設計書.docx` | 基本設計書 本体(**Version 1.6**。改訂履歴は文書情報を参照) |
 | `docs/BridalHub_基本設計書_レビュー結果.md` | 設計レビュー結果(55件の指摘詳細・承認判断) |
 | `docs/画面設計/` | サイトマップ・画面案(pptx) |
-| `design-system/` | 6画面のモックアップから抽出したデザインシステム(色・型・部品) |
+| `src/app/globals.css` / `src/components/ui/` | 現在の共通スタイル・UI部品 |
+| `docs/実装進捗一覧.md` / `docs/implementation-progress.json` | 全機能・画面・実装不足・運用・検証・制作の進捗台帳 |
 | `supabase/migrations/` | DDL・RLS共通関数・全ポリシー・インデックス |
 | `supabase/seed.sql` | 式場1件・プラン種別4種・宿題テンプレート・リスクルール |
 | `src/lib/` | 定数(表6-9 の単一ソース)・エラー体系・暗号化・招待・スケジュール・リスク |

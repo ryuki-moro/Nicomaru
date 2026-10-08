@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-08T09:28:57+09:00",
+  "updatedAt": "2026-10-08T00:41:03.619Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "cc575f9a567fd2efbb785c032069ec689bcb5812",
   "implementationCommit": "1cfb7d9c338bd99a4a7c213389f3ee3001b6d611",
@@ -3661,8 +3661,8 @@
         "TASKS.md",
         "docs/AIに依存しない開発タスク.md"
       ],
-      "note": "Epic23は347件/E2E未着手など古い表示。元ガントファイルはrepo内に見つからない。",
-      "next": "今回の台帳を正本としてEpicを更新。ガント本体との対応は所在/対象を確認して反映。",
+      "note": "2026-10-08に全項目の台帳とEpic23の最新進捗を更新。従来の割当案は保存。元ガントファイルはrepoにない。",
+      "next": "ガントの所在と対象（アプリ/紹介サイト）を確認し、正本の項目へ対応付けて反映。",
       "issues": [
         23
       ],
