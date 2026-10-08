@@ -9,6 +9,7 @@
  * AI がRLSエラー回避のために Service Role へ逃げる典型的な失敗をレビューで機械的に検出できる。
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createAuthRateLimitFetch } from './auth-rate-limit-fetch';
 
 /** 表6-4 に列挙された使用箇所と、そのときAPI層で担保すべき権限検証。 */
 export const SERVICE_ROLE_USE_CASES = {
@@ -49,6 +50,7 @@ export const SERVICE_ROLE_USE_CASES = {
 export type ServiceRoleUseCase = keyof typeof SERVICE_ROLE_USE_CASES;
 
 let cached: SupabaseClient | null = null;
+let cachedRateLimit: SupabaseClient | null = null;
 
 /**
  * @param useCase 表6-4 のどの行にあたる使用かを明示する。
@@ -65,6 +67,14 @@ export function createSupabaseAdminClient(useCase: ServiceRoleUseCase): Supabase
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY / NEXT_PUBLIC_SUPABASE_URL が設定されていません');
+  }
+
+  if (useCase === 'auth.rate-limit') {
+    cachedRateLimit ??= createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: { fetch: createAuthRateLimitFetch(url) },
+    });
+    return cachedRateLimit;
   }
 
   cached ??= createClient(url, key, {

@@ -24,6 +24,7 @@ const ERROR_CODES = new Set<ErrorCode>([
   'UNPROCESSABLE',
   'RATE_LIMITED',
   'INTERNAL_ERROR',
+  'SERVICE_UNAVAILABLE',
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {

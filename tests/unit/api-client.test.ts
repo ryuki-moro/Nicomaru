@@ -106,6 +106,19 @@ describe('api の正常応答と通信例外', () => {
 });
 
 describe('非OK応答の正規化', () => {
+  it('503の一時障害コードを維持し、再操作の案内を画面に表示する', async () => {
+    const message = '認証サービスに接続できませんでした。時間をおいて再度お試しください';
+    const error = await responseError(503, JSON.stringify({ error: {
+      code: 'SERVICE_UNAVAILABLE', message, details: [],
+    } }));
+    expect(error.body.code).toBe('SERVICE_UNAVAILABLE');
+    expect(error.status).toBe(503);
+    const { router, handlers } = errorHandlers();
+    expect(handleApiError(error, router, handlers)).toBe(false);
+    expect(handlers.onSummary).toHaveBeenCalledWith(message);
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
   it.each([
     '', '<html>Server error</html>', '{broken', 'null', '[]', '{}',
     '{"error":null}', '{"error":"unexpected"}', '{"error":{}}',

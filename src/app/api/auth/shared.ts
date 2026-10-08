@@ -9,10 +9,24 @@
  */
 import { RATE_LIMITS } from '@/lib/constants';
 import { hmacHash, normalizeEmail } from '@/lib/crypto';
-import { fromPostgresError, rateLimited } from '@/lib/errors';
+import { ApiError, fromPostgresError, rateLimited } from '@/lib/errors';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 export type AuthRateLimitKey = keyof typeof RATE_LIMITS;
+
+function rateLimitError(
+  operation: 'check_rate_limit' | 'peek_rate_limit' | 'clear_rate_limit',
+  error: { code?: string; message?: string },
+  status: number,
+): ApiError {
+  // SDK の details / message には URL 等が含まれるため、そのまま記録しない。
+  const code = error.code && /^(?:[0-9A-Z]{5}|PGRST\d{3})$/.test(error.code)
+    ? error.code : status === 0 ? 'TRANSPORT_ERROR' : 'DATABASE_ERROR';
+  console.warn('[auth.rate-limit] RPC failed', { operation, status, code });
+  // status 0 は PostgREST SDK が fetch 例外を応答に変換したもの。
+  return [0, 502, 503, 504].includes(status)
+    ? new ApiError('SERVICE_UNAVAILABLE') : fromPostgresError(error);
+}
 
 /**
  * 招待URL・再設定リンクの着地先を組み立てる。
@@ -52,14 +66,14 @@ export async function enforceAuthRateLimit(
   const limit = RATE_LIMITS[keyType];
   const admin = createSupabaseAdminClient('auth.rate-limit');
 
-  const { data, error } = await admin.rpc('check_rate_limit', {
+  const { data, error, status } = await admin.rpc('check_rate_limit', {
     p_key_type: keyType,
     p_key_hash: rateLimitKey(request, email),
     p_window_seconds: limit.windowSeconds,
     p_max_attempts: limit.max,
   });
 
-  if (error) throw fromPostgresError(error);
+  if (error) throw rateLimitError('check_rate_limit', error, status);
   // 戻り値 false = 上限超過。null（想定外）は通してしまわず超過として扱う。
   if (data !== true) throw rateLimited();
 }
@@ -79,14 +93,14 @@ export async function isOtpCodeInvalidated(email: string): Promise<boolean> {
   const limit = RATE_LIMITS.otp_verify_failure;
   const admin = createSupabaseAdminClient('auth.rate-limit');
 
-  const { data, error } = await admin.rpc('peek_rate_limit', {
+  const { data, error, status } = await admin.rpc('peek_rate_limit', {
     p_key_type: 'otp_verify_failure',
     p_key_hash: otpFailureKey(email),
     p_window_seconds: limit.windowSeconds,
     p_max_attempts: limit.max,
   });
 
-  if (error) throw fromPostgresError(error);
+  if (error) throw rateLimitError('peek_rate_limit', error, status);
   // true = まだ受け付けてよい。想定外（null）は安全側に倒して「失効」と扱う。
   return data !== true;
 }
@@ -96,22 +110,22 @@ export async function recordOtpVerifyFailure(email: string): Promise<void> {
   const limit = RATE_LIMITS.otp_verify_failure;
   const admin = createSupabaseAdminClient('auth.rate-limit');
 
-  const { error } = await admin.rpc('check_rate_limit', {
+  const { error, status } = await admin.rpc('check_rate_limit', {
     p_key_type: 'otp_verify_failure',
     p_key_hash: otpFailureKey(email),
     p_window_seconds: limit.windowSeconds,
     p_max_attempts: limit.max,
   });
   // 数えられなかったこと自体でログインを止めない（判定は次回の peek に委ねる）
-  if (error) console.warn('[auth] ワンタイムコードの失敗回数を記録できませんでした', error);
+  if (error) rateLimitError('check_rate_limit', error, status);
 }
 
 /** 認証に成功したので失効カウンタを消す。打ち間違えた人を次回まで縛らない。 */
 export async function clearOtpVerifyFailures(email: string): Promise<void> {
   const admin = createSupabaseAdminClient('auth.rate-limit');
-  const { error } = await admin.rpc('clear_rate_limit', {
+  const { error, status } = await admin.rpc('clear_rate_limit', {
     p_key_type: 'otp_verify_failure',
     p_key_hash: otpFailureKey(email),
   });
-  if (error) console.warn('[auth] ワンタイムコードの失敗回数を消せませんでした', error);
+  if (error) rateLimitError('clear_rate_limit', error, status);
 }
