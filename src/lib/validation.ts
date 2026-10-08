@@ -356,7 +356,10 @@ export const venueUpdateSchema = z.object({
   name: shortText.optional(),
   contactEmail: email.optional().nullable(),
   active: z.boolean().optional(),
-});
+}).strict()
+  .refine((value) => Object.values(value).some((item) => item !== undefined), {
+    message: '更新する項目を指定してください',
+  });
 
 /** POST /api/line/link（機能1-3、Phase 2）。linkToken は follow イベント経由で受け取った値。 */
 export const lineLinkSchema = z.object({
