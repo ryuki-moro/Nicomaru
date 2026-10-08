@@ -55,6 +55,16 @@ openssl rand -base64 32
 npm run dev
 ```
 
+### デモ・テスト用の模擬データ
+
+```bash
+npx supabase start   # ローカル Supabase（Docker が必要）
+npm run demo:seed    # 架空のプランナー1人・案件5件を入れる。作り直しは npm run demo:reset
+```
+
+環境は「ローカル」「CI」「共有デモ環境（必要な場合のみ）」の3つだけで、本番・ステージングは作らない。
+接続先・データの扱い・共有デモ環境の準備は **[docs/環境の使い分け.md](docs/環境の使い分け.md)** を参照。
+
 ### 検証
 
 ```bash
@@ -110,6 +120,7 @@ TEST_PG_URL=postgres://postgres:<password>@127.0.0.1:5433/postgres npm run test:
 | `supabase/seed.sql` | 式場1件・プラン種別4種・宿題テンプレート・リスクルール |
 | `src/lib/` | 定数(表6-9 の単一ソース)・エラー体系・暗号化・招待・スケジュール・リスク |
 | `src/app/` | 画面(App Router)と Route Handler |
+| `scripts/demo/` | デモ・テスト用の模擬データ(架空の案件5件)と投入処理 |
 | `tests/` | RLSテスト・ユニットテスト・並行性テスト |
 | `worker/` | AIジョブワーカー(ローカルLLMサーバー上で動かす。Phase 3) |
 | `TASKS.md` | 残タスク一覧・フェーズ計画・レビュー指摘の全件表 |
