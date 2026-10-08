@@ -43,10 +43,14 @@ function safeNext(next: string | undefined): string | null {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; reset?: string }>;
+  searchParams: Promise<{ next?: string; reset?: string; mode?: string }>;
 }) {
-  const { next, reset } = await searchParams;
+  const { next, reset, mode } = await searchParams;
   const destination = safeNext(next);
+  // 式場管理へのリンクでは、管理者が使うパスワード入力を最初から表示する。
+  // 方式の選択だけであり、認証・認可は通常の経路で行う。
+  const isVenueDestination = destination === '/venues' || destination?.startsWith('/venues/');
+  const initialMode = mode === 'password' || isVenueDestination ? 'password' : 'otp';
 
   // ログイン済みで /login を開いた場合は種別ごとの初期画面へ戻す（4-2）
   const user = await getAppUser();
@@ -57,7 +61,9 @@ export default async function LoginPage({
       <div>
         <h1 className="text-title font-bold text-text-primary">ログイン</h1>
         <p className="mt-1 text-label text-text-muted">
-          新郎新婦さまはメールアドレスだけでログインできます。
+          {initialMode === 'password'
+            ? 'プランナー・管理者はメールアドレスとパスワードでログインしてください。'
+            : '新郎新婦さまはメールアドレスだけでログインできます。'}
         </p>
       </div>
 
@@ -67,7 +73,7 @@ export default async function LoginPage({
         </div>
       )}
 
-      <LoginForm next={destination} />
+      <LoginForm next={destination} initialMode={initialMode} />
     </div>
   );
 }

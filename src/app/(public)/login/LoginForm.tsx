@@ -109,10 +109,10 @@ type Mode = 'otp' | 'password';
  * パスワード認証は表6-6 に無いので Supabase クライアント経由で行う（6-5 の原則）。
  * 連続失敗に対する制限は Supabase Auth 側の既定のレート制限に委ねる。
  */
-export function LoginForm({ next }: { next: string | null }) {
+export function LoginForm({ next, initialMode = 'otp' }: { next: string | null; initialMode?: Mode }) {
   const router = useRouter();
 
-  const [mode, setMode] = useState<Mode>('otp');
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [codeSent, setCodeSent] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

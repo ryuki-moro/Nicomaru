@@ -166,6 +166,27 @@ test.describe('式場の詳細・変更', () => {
     await loginAsSystemAdmin(page, systemAdmin);
   });
 
+  test('未ログインの式場リンクは同じOriginのパスワード画面へ移り、メール送信せず保存できる', async ({ page, baseURL }) => {
+    await page.context().clearCookies();
+    let otpRequests = 0;
+    await page.route('**/api/auth/otp-request', async (route) => {
+      otpRequests += 1;
+      await route.abort();
+    });
+    await page.goto(detailPath);
+    await expect(page).toHaveURL(new URL(`/login?next=${encodeURIComponent(detailPath)}`, baseURL!).href);
+    await expect(page.getByLabel('パスワード', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'ログインリンクを送信', exact: true })).toHaveCount(0);
+    await page.getByLabel('メールアドレス').fill(systemAdmin!.email);
+    await page.getByLabel('パスワード', { exact: true }).fill(systemAdmin!.password);
+    await page.getByRole('button', { name: 'パスワードでログイン', exact: true }).click();
+    await expect(page).toHaveURL(new URL(detailPath, baseURL!).href);
+    await expect(page.getByRole('heading', { name: '式場の詳細・変更', exact: true })).toBeVisible();
+    await save(page);
+    await expect(page.getByText('変更を保存しました。', { exact: true })).toBeVisible();
+    expect(otpRequests).toBe(0);
+  });
+
   test('利用状況から一覧・詳細へ進み、変更が再読み込みと一覧に残る', async ({ page }) => {
     await page.getByRole('link', { name: '式場一覧', exact: true }).click();
     await findVenueInList(page, code);

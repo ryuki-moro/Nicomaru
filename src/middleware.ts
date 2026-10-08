@@ -63,9 +63,22 @@ export async function middleware(request: NextRequest) {
   const isApi = path === '/api' || path.startsWith('/api/');
 
   if (!data.user && !isPublic && !isApi) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = '/login';
-    loginUrl.search = path === '/' ? '' : `?next=${encodeURIComponent(path)}`;
+    let baseUrl: URL;
+    try {
+      // Next.js が 127.0.0.1 を localhost へ正規化しても、公開URLと
+      // Cookie／更新APIのOriginが一致するよう、配備側の設定を優先する。
+      // Host・転送ヘッダーは信頼せず、不正な設定から別のURLへ逃がさない。
+      baseUrl = new URL(process.env.APP_BASE_URL ?? request.url);
+      if (!['http:', 'https:'].includes(baseUrl.protocol) || baseUrl.username || baseUrl.password) {
+        throw new Error('Invalid app origin');
+      }
+    } catch {
+      return new NextResponse('ログイン先の設定に問題があります。管理者にお問い合わせください。', {
+        status: 500,
+      });
+    }
+    const loginUrl = new URL('/login', baseUrl.origin);
+    if (path !== '/') loginUrl.searchParams.set('next', path);
     return NextResponse.redirect(loginUrl);
   }
 
