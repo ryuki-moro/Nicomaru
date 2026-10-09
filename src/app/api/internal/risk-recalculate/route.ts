@@ -15,15 +15,14 @@
  * 1件の不整合で当日のリスク表示が丸ごと止まる方が運用上の損失が大きいため。
  */
 import { ok, route } from '@/lib/api/route';
-import { forEachActiveCase, requireInternalCall, runBatch } from '@/lib/api/internal';
+import { forEachActiveCase, runBatch } from '@/lib/api/internal';
 import { persistViaServiceRole, recalculateCaseRisk } from '@/lib/services/riskStore';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
 
-export const POST = route(async (request: Request) => {
-  requireInternalCall(request);
-
+// 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
+export const POST = route(async () => {
   // 表6-4「/api/cases/{caseId}/risk/recalculate（定期処理）｜使用する（内部バッチ）」
   const admin = createSupabaseAdminClient('cron.risk-recalculate');
 
@@ -51,4 +50,4 @@ export const POST = route(async (request: Request) => {
     processed: outcome.targetCount,
     failed: failures.length,
   });
-});
+}, { source: 'internal-cron' });

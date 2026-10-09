@@ -13,7 +13,7 @@
  * 落ちたワーカーが掴んだままのジョブを戻さないと、そのジョブは永久に processing で止まる。
  */
 import { ok, route } from '@/lib/api/route';
-import { requireInternalCall, runBatch } from '@/lib/api/internal';
+import { runBatch } from '@/lib/api/internal';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -22,9 +22,8 @@ export const runtime = 'nodejs';
 const STALE_MINUTES = 30;
 const MAX_ATTEMPTS = 3;
 
-export const POST = route(async (request: Request) => {
-  requireInternalCall(request);
-
+// 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
+export const POST = route(async () => {
   const admin = createSupabaseAdminClient('cron.ai-job-reclaim');
 
   const outcome = await runBatch(admin, 'ai_job_reclaim', async () => {
@@ -43,4 +42,4 @@ export const POST = route(async (request: Request) => {
   });
 
   return ok({ processed: outcome.targetCount, ...outcome.detail });
-});
+}, { source: 'internal-cron' });

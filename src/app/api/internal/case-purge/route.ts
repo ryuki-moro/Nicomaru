@@ -24,7 +24,7 @@
  * 消すと audit_logs から辿れなくなる）。個人が特定できる列だけを落とす。
  */
 import { ok, route } from '@/lib/api/route';
-import { requireInternalCall, runBatch } from '@/lib/api/internal';
+import { runBatch } from '@/lib/api/internal';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -36,9 +36,8 @@ const RETENTION_DAYS = 180;
 const AI_PAYLOAD_RETENTION_DAYS = 30;
 const AI_ROW_RETENTION_DAYS = 90;
 
-export const POST = route(async (request: Request) => {
-  requireInternalCall(request);
-
+// 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
+export const POST = route(async () => {
   const admin = createSupabaseAdminClient('cron.case-purge');
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
@@ -134,4 +133,4 @@ export const POST = route(async (request: Request) => {
     aiPayloadsCleared,
     aiRowsDeleted,
   });
-});
+}, { source: 'internal-cron' });

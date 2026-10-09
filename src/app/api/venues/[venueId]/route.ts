@@ -1,7 +1,6 @@
 /** S02 式場編集。式場コードと管理者アカウントはこのAPIでは変更しない。 */
 import { z } from 'zod';
 
-import { requireSameOrigin } from '@/lib/api/origin';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
 import { fromPostgresError, notFound } from '@/lib/errors';
@@ -12,7 +11,6 @@ type RouteContext = { params: Promise<{ venueId: string }> };
 
 export const PATCH = route<[RouteContext]>(async (request, context) => {
   await requireRole('system_admin');
-  requireSameOrigin(request);
   const { venueId } = await context.params;
   if (!z.string().uuid().safeParse(venueId).success) throw notFound('式場が見つかりません');
   const input = await parseBody(request, venueUpdateSchema);

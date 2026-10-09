@@ -14,7 +14,7 @@
  * 二重送信を避けるため、同じ案件・同じ宿題・同じ種別の通知はその日のうちに1通しか作らない。
  */
 import { ok, route } from '@/lib/api/route';
-import { forEachActiveCase, requireInternalCall, runBatch } from '@/lib/api/internal';
+import { forEachActiveCase, runBatch } from '@/lib/api/internal';
 import { COUPLE_PROFILE_COLUMNS, UNSUBMITTED_TASK_STATUSES } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { todayInJst } from '@/lib/format';
@@ -32,9 +32,8 @@ interface TaskRow {
   status: string;
 }
 
-export const POST = route(async (request: Request) => {
-  requireInternalCall(request);
-
+// 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
+export const POST = route(async () => {
   // 表6-4「/api/notifications/dispatch（定期処理）｜使用する（内部バッチ）」
   const admin = createSupabaseAdminClient('cron.notifications-dispatch');
   const today = todayInJst();
@@ -150,4 +149,4 @@ export const POST = route(async (request: Request) => {
   });
 
   return ok({ cases: outcome.targetCount, created, sent, failed });
-});
+}, { source: 'internal-cron' });

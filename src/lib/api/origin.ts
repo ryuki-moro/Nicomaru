@@ -1,6 +1,6 @@
 import { forbidden } from '@/lib/errors';
 
-/** Cookie認証の更新APIで、呼び出し元を同一Originに限定する。 */
+/** 認証前のAPIも含むブラウザーの更新リクエストを、同一Originに限定する。 */
 export function requireSameOrigin(request: Request): void {
   const origin = request.headers.get('origin');
   let supplied: URL;

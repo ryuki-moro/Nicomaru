@@ -13,7 +13,7 @@
  * あわせて通知の送信上限カウンタも同じ考え方で古い窓を落とす。
  */
 import { ok, route } from '@/lib/api/route';
-import { requireInternalCall, runBatch } from '@/lib/api/internal';
+import { runBatch } from '@/lib/api/internal';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -23,9 +23,8 @@ const RETENTION_DAYS = 7;
 /** 送信上限カウンタは月枠を見るため、月をまたいで参照されうる。2か月ぶんは残す。 */
 const QUOTA_RETENTION_DAYS = 62;
 
-export const POST = route(async (request: Request) => {
-  requireInternalCall(request);
-
+// 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
+export const POST = route(async () => {
   const admin = createSupabaseAdminClient('auth.rate-limit');
   const day = 24 * 60 * 60 * 1000;
 
@@ -58,4 +57,4 @@ export const POST = route(async (request: Request) => {
   });
 
   return ok({ removed: outcome.targetCount });
-});
+}, { source: 'internal-cron' });

@@ -12,7 +12,7 @@ const SERVICE_KEY = 'private-service-role-key';
 
 function request() {
   return new Request('http://app.test/api/auth/otp-request', {
-    method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': IP },
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': IP, origin: 'http://app.test' },
     body: JSON.stringify({ email: EMAIL }),
   });
 }

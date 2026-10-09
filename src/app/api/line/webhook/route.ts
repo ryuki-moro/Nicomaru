@@ -29,6 +29,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
+  // LINEサーバーから届くためOrigin検証の対象外。代わりに必ずraw bodyの署名を検証する。
   // 署名検証はパース前の生データに対して行う（6-10）。
   // JSON.parse を通した後の値から再構築すると、キーの順序や空白が変わって必ず落ちる。
   const rawBody = await request.text();
