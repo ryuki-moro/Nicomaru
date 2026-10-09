@@ -50,8 +50,9 @@ function fixture() {
     if (failure === 'database') return Response.json({ message: PRIVATE_ERROR, code: 'TEST', statusCode: '400' }, { status: 400 });
     if (table === 'storage-object') {
       const bucket = url.pathname.split('/').at(-1)!;
-      for (const path of body.prefixes as string[]) objects.delete(`${bucket}/${path}`);
-      return Response.json([]);
+      const removed = (body.prefixes as string[])
+        .filter((path) => objects.delete(`${bucket}/${path}`)).map((name) => ({ name }));
+      return Response.json(removed);
     }
     if (table === 'purge_ai_job_payloads') {
       return Response.json([{ payloads_cleared: 3, rows_deleted: 2 }]);
@@ -216,11 +217,11 @@ describe('案件削除バッチの失敗と再実行', () => {
     f.addCase('case-1');
     f.addFile('case-1', 'file-1');
     f.failWith((call) => call.table === 'storage_files' && call.method === 'DELETE' ? 'database' : undefined);
-    await failureOf(purgeCases(f.admin));
+    expect((await failureOf(purgeCases(f.admin))).outcome.detail).toMatchObject({ filesRemoved: 1 });
     expect(f.rows.storage_files).toHaveLength(1);
     expect(f.objects.size).toBe(0);
     f.failWith(() => undefined);
-    expect((await purgeCases(f.admin)).targetCount).toBe(1);
+    expect(await purgeCases(f.admin)).toMatchObject({ targetCount: 1, detail: { filesRemoved: 0 } });
     expect(f.rows.storage_files).toEqual([]);
   });
 

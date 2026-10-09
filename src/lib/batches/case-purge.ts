@@ -53,8 +53,9 @@ export async function purgeCases(admin: SupabaseClient): Promise<BatchOutcome> {
       const rows = (files.data ?? []) as { id: string; bucket: string; object_path: string }[];
       if (!rows.length) break;
       for (const file of rows) {
-        await step('storage.remove', () => admin.storage.from(file.bucket).remove([file.object_path]));
-        filesRemoved += 1;
+        const removed = await step('storage.remove', () => admin.storage.from(file.bucket).remove([file.object_path]));
+        // 前回実体だけ削除済みなら空配列。再実行で同じ実体を重複計上しない。
+        filesRemoved += removed.data?.length ?? 0;
         await step('storage_files.delete', () => admin.from('storage_files').delete()
           .eq('case_id', caseId).eq('id', file.id));
       }
