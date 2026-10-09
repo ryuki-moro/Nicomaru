@@ -17,9 +17,11 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:types": "supabase gen types typescript --local > src/lib/db/database.types.ts",
-    "test:pg": "vitest run tests/db/concurrency.test.ts",
+    "test:pg": "vitest run tests/db/concurrency.test.ts tests/db/demo-seed-pg.test.ts",
     "worker:ai": "tsx worker/ai-worker.ts",
-    "bootstrap:admin": "tsx scripts/bootstrap-system-admin.mts"
+    "bootstrap:admin": "tsx scripts/bootstrap-system-admin.mts",
+    "demo:seed": "tsx scripts/seed-demo.mts",
+    "demo:reset": "tsx scripts/seed-demo.mts --reset"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
