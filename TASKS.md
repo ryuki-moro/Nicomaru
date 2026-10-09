@@ -36,7 +36,9 @@ lint・型・buildと、ビルド済みサーバーでの保存200を確認済�
 実装commit `04d9e26`の[CI run 37715092140](https://github.com/ryuki-moro/Nicomaru/actions/runs/37715092140)は、verify/実PG成功、Dependency audit失敗・Secret scanはskip、E2E進行中。台帳更新後headのCIは確認待ち。
 [動作確認手順](docs/動作確認_式場編集.md)に沿うブラウザー確認を2026-10-09に実施し、ユーザーの指示で実装を再開した。
 
-[PR #68](https://github.com/ryuki-moro/Nicomaru/pull/68)で更新API28件へOrigin検証を適用。内部5件・Webhook1件の別認証を維持した。全体597件成功/実PG専用12skip、Chrome E2E28件成功、lint/型/build成功。[実装計画と検証結果](docs/実装計画_API送信元検証.md)を参照。GitHub CI・依存監査・main反映は別判定。次はGAP-11とIssue #47。
+[PR #68](https://github.com/ryuki-moro/Nicomaru/pull/68)で更新API28件へOrigin検証を適用。内部5件・Webhook1件の別認証を維持した。全体597件成功/実PG専用12skip、Chrome E2E28件成功、lint/型/build成功。[実装計画と検証結果](docs/実装計画_API送信元検証.md)を参照。
+
+[PR #70](https://github.com/ryuki-moro/Nicomaru/pull/70)でGAP-11（[Issue #69](https://github.com/ryuki-moro/Nicomaru/issues/69)）の削除失敗処理と、Issue #47の依存更新を実装。Storage情報の保持・部分失敗記録・再実行・201件目以降の処理を含む52件を追加し、全体649件成功/実PG専用12skip。Chrome E2E28件・lint/型/build成功、依存監査0件。初回CIはverify/実PG/security（Secret scan含む）成功、E2Eと最新headのCIはPRを参照。[計画・検証記録](docs/実装計画_削除バッチと依存更新.md)。main反映と10月版確定は残る。
 
 ## 2. 完了したこと
 

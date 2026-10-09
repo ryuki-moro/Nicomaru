@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-09T00:59:08.295Z",
+  "updatedAt": "2026-10-09T01:39:24.208Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "cc575f9a567fd2efbb785c032069ec689bcb5812",
-  "implementationCommit": "3f0284169f55c263354a3266441c23d0a4c01000",
+  "implementationCommit": "579d7d908d2a18e9f29c79dd8c75743c722baf61",
   "statusLabels": {
     "main": "mainに実装",
     "review": "マージ待ち",
@@ -20,7 +20,8 @@
     "mainのコード・現作業ブランチ",
     "2026-10-08 GitHub Issue/PR/コメント/CI読み取り",
     "2026-10-08 ユーザー指定の学校スケジュール・Agent AI利用条件・本番運用予定なし",
-    "2026-10-09 実装再開・GAP-06全28更新API/内部5件/Webhookの検証、PR66/68とmainの再確認"
+    "2026-10-09 実装再開・GAP-06全28更新API/内部5件/Webhookの検証、PR66/68とmainの再確認",
+    "2026-10-09 GAP-11/Issue47修正、失敗注入52件・全649件・Chrome28件、PR70 CIのverify/実PG/security成功を確認"
   ],
   "ci": {
     "run": 37406449671,
@@ -76,9 +77,19 @@
       "state": "open",
       "draft": true,
       "base": "codex/venue-edit-checkpoint",
-      "head": "3f0284169f55c263354a3266441c23d0a4c01000",
+      "head": "73a9b9f8a412e66b923a021ec0518999b8cba67a",
       "url": "https://github.com/ryuki-moro/Nicomaru/pull/68",
-      "checkSummary": "2026-10-09: 全体の単体/SQL・RLS597成功、実PG専用12skip。Origin10・式場16・認証再操作2、計28のPC/スマートフォン寸法Chrome E2E成功。lint/型/build成功。独立レビュー要対応指摘なし。GitHub CIは確認待ち、既存依存監査はIssue47。"
+      "checkSummary": "CI run 37867691442: verify/実PG/E2E成功、securityはNext.js/sharp依存監査で失敗。依存更新は後続PR70で対応。ローカル597件・Chrome E2E28件成功。"
+    },
+    {
+      "number": 70,
+      "title": "削除バッチの失敗・再実行を修正し、Next.jsとsharpの脆弱性に対応する",
+      "state": "open",
+      "draft": true,
+      "base": "codex/api-origin-guard",
+      "head": "579d7d908d2a18e9f29c79dd8c75743c722baf61",
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/70",
+      "checkSummary": "2026-10-09: 全649件成功/実PG専用12skip、うち新規失敗注入52件。Chrome E2E28件、lint/型/build成功、依存監査0件。初回99c1e6fのCI run 37870541948はverify/実PG/security（Secret scan含む）成功、E2E進行中。579d7d9では削除済み実体の件数重複計上を修正し52件再成功。最新CIはPR70を参照。"
     }
   ],
   "issues": [
@@ -387,6 +398,12 @@
       "title": "[1月・Agent AI不要] 最終発表・デモ用の資料と原稿を作成する",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/62"
+    },
+    {
+      "number": 69,
+      "title": "削除バッチの部分失敗を記録し、未削除ファイルを再処理できるようにする（GAP-11）",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/69"
     }
   ],
   "nextOrder": [
@@ -2442,16 +2459,25 @@
       "title": "削除・匿名化バッチの失敗を正しく記録",
       "category": "実装不足",
       "phase": "2",
-      "status": "partial",
+      "status": "review",
       "design": "基本設計6-12/9章",
       "screens": [],
       "evidence": [
-        "src/app/api/internal/case-purge/route.ts"
+        "src/app/api/internal/case-purge/route.ts",
+        "src/lib/batches/case-purge.ts",
+        "src/lib/api/internal.ts",
+        "tests/unit/case-purge.test.ts",
+        "tests/unit/internal-batch.test.ts",
+        "docs/実装計画_削除バッチと依存更新.md"
       ],
-      "note": "複数のdelete/update結果のerrorを確認せずpurgedを増やす経路がある。",
-      "next": "一部失敗を成功扱いしない。Storage/DBの再実行と匿名化漏れの失敗注入テスト。",
-      "issues": [],
-      "prs": [],
+      "note": "PR70で全操作エラーを検出し、Storage失敗時のメタ保持・部分成功/失敗工程記録・HTTP500・全ページ取得を実装。180日境界、各DB/通信失敗、再実行、201件超、記録失敗を模擬SDKで検証。削除済み実体は再計上しない。",
+      "next": "PR70の最新CI・レビューを確認して依存順にmainへ反映する。実案件では削除試験をしない。大量運用の実行時間・再開位置と全PII消去方針は別設計。",
+      "issues": [
+        69
+      ],
+      "prs": [
+        70
+      ],
       "dependsOn": [
         "BASE-15"
       ],
@@ -2511,10 +2537,10 @@
     },
     {
       "id": "FIX-47",
-      "title": "開発依存の脆弱性を解消",
+      "title": "依存関係の脆弱性を解消",
       "category": "改善",
       "phase": "改善",
-      "status": "partial",
+      "status": "review",
       "design": "Issue#47",
       "screens": [],
       "evidence": [
@@ -2522,13 +2548,14 @@
         "package-lock.json",
         "docs/依存関係の脆弱性対応.md"
       ],
-      "note": "PR46でVitest4/Tailwind4・lint互換性を修正し、2026-10-06時点は監査0件/CI成功。2026-10-08のPR66 CIで既存Next.jsのmoderate・sharpのhighを追加検出。依存監査失敗、Secret scanはskip。Issue47へ追記し、未解消。",
-      "next": "式場編集のユーザー動作確認後、追加検出された依存を更新・退行検証し、依存監査とSecret scanを成功させる。PR46を含むmain反映は未完了。",
+      "note": "PR70でNext.js/eslint-config-next15.5.27、sharp0.35.5へ更新。10/9の監査は全重大度0件。lint互換層と99ルールを維持し負例5件成功。初回CIのsecurity/Secret scanも成功。",
+      "next": "PR70の最終CIを確認し、PR46以降の依存順でmainへ反映する。脆弱性の追加公開に応じて継続監査する。",
       "issues": [
         47
       ],
       "prs": [
-        46
+        46,
+        70
       ],
       "dependsOn": [],
       "requiresAi": false,
@@ -4011,16 +4038,18 @@
       "evidence": [
         "docs/学校制作スケジュール.md",
         "docs/動作確認_式場編集.md",
-        "docs/実装計画_API送信元検証.md"
+        "docs/実装計画_API送信元検証.md",
+        "docs/実装計画_削除バッチと依存更新.md"
       ],
-      "note": "PR #66の式場編集とPR #68の更新API Origin検証を実装・ブラウザー確認済み。2026-10-09に実装を再開。削除バッチの失敗処理・依存監査・既存PRのmain反映・10月版確定は残る。",
-      "next": "GAP-11の削除バッチ失敗処理とIssue47の依存監査を進め、CI・レビュー済みの10月版コードと資料参照用の版・制限一覧を確定する。",
+      "note": "式場編集(PR66)、Origin検証(PR68)、削除バッチ失敗処理と依存更新(PR70)を実装・自動検証済み。削除失敗試験は実データを使わず実施。既存PRのmain反映と10月版確定は残る。",
+      "next": "積み上げPRのCI・レビューとmain反映、ユーザーの使い勝手確認を経て、10月版コードと資料参照用の版・制限一覧を確定する。PWA・容量集計など他の不足は個別項目で管理する。",
       "issues": [
         54
       ],
       "prs": [
         66,
-        68
+        68,
+        70
       ],
       "dependsOn": [],
       "requiresAi": false,
