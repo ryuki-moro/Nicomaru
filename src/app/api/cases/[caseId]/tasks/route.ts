@@ -14,38 +14,40 @@ import { phaseNameFor } from '@/lib/services/schedule';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { caseTaskCreateSchema } from '@/lib/validation';
 
-export const POST = route(async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
-  await requireRole('planner', 'admin', 'system_admin');
-  const { caseId } = await context.params;
-  const input = await parseBody(request, caseTaskCreateSchema);
-  const supabase = await createSupabaseServerClient();
+export const POST = route(
+  async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
+    await requireRole('planner', 'admin', 'system_admin');
+    const { caseId } = await context.params;
+    const input = await parseBody(request, caseTaskCreateSchema);
+    const supabase = await createSupabaseServerClient();
 
-  // タイムラインの見出し（phase_name）は挙式日からの距離で決まる（表5-14）
-  const { data: caseData, error: caseError } = await supabase
-    .from('wedding_cases')
-    .select('id, wedding_date')
-    .eq('id', caseId)
-    .maybeSingle();
-  if (caseError) throw fromPostgresError(caseError);
-  if (!caseData) throw notFound('案件が見つかりません');
-  const target = caseData as { wedding_date: string };
+    // タイムラインの見出し（phase_name）は挙式日からの距離で決まる（表5-14）
+    const { data: caseData, error: caseError } = await supabase
+      .from('wedding_cases')
+      .select('id, wedding_date')
+      .eq('id', caseId)
+      .maybeSingle();
+    if (caseError) throw fromPostgresError(caseError);
+    if (!caseData) throw notFound('案件が見つかりません');
+    const target = caseData as { wedding_date: string };
 
-  const { data, error } = await supabase.rpc('add_case_task', {
-    p_case_id: caseId,
-    p_task: {
-      title: input.title,
-      description: input.description ?? null,
-      submission_format: input.submissionFormat,
-      allowed_file_types: input.allowedFileTypes,
-      options: input.options,
-      is_required: input.isRequired,
-      importance: input.importance,
-      due_date: input.dueDate,
-      phase_name: phaseNameFor(target.wedding_date, input.dueDate),
-    },
-  });
-  if (error) throw fromPostgresError(error);
+    const { data, error } = await supabase.rpc('add_case_task', {
+      p_case_id: caseId,
+      p_task: {
+        title: input.title,
+        description: input.description ?? null,
+        submission_format: input.submissionFormat,
+        allowed_file_types: input.allowedFileTypes,
+        options: input.options,
+        is_required: input.isRequired,
+        importance: input.importance,
+        due_date: input.dueDate,
+        phase_name: phaseNameFor(target.wedding_date, input.dueDate),
+      },
+    });
+    if (error) throw fromPostgresError(error);
 
-  const created = data as { id: string; display_order: number };
-  return ok({ id: created.id, displayOrder: created.display_order }, 201);
-});
+    const created = data as { id: string; display_order: number };
+    return ok({ id: created.id, displayOrder: created.display_order }, 201);
+  },
+);

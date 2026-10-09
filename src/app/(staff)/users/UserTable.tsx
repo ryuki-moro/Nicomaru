@@ -8,12 +8,7 @@
 import Link from 'next/link';
 
 import { EmptyState } from '@/components/ui/EmptyState';
-import {
-  ROLE_LABEL,
-  USER_STATUS_LABEL,
-  type Role,
-  type UserStatus,
-} from '@/lib/constants';
+import { ROLE_LABEL, USER_STATUS_LABEL, type Role, type UserStatus } from '@/lib/constants';
 
 export interface UserListRow {
   id: string;
@@ -64,9 +59,7 @@ export function UserTable({
                 <Link href={`/users/${row.id}`} className="text-link hover:underline">
                   {row.displayName}
                 </Link>
-                {row.id === currentUserId && (
-                  <span className="ml-2 badge-neutral">ご自身</span>
-                )}
+                {row.id === currentUserId && <span className="ml-2 badge-neutral">ご自身</span>}
               </td>
               <td className="break-all">{row.email}</td>
               {showVenue && (

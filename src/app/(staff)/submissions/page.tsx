@@ -19,6 +19,7 @@ import { COUPLE_PROFILE_COLUMNS, LIST_PAGE_SIZE, type TaskStatus } from '@/lib/c
 import { readPii } from '@/lib/crypto';
 import { fromPostgresError } from '@/lib/errors';
 import { formatDate, formatDateTime } from '@/lib/format';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 interface SubmissionRow {
@@ -44,11 +45,11 @@ interface CoupleProfileRow {
 export default async function SubmissionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }) {
   const { page } = await searchParams;
   // 4-3 一覧画面共通: 既定の表示件数は50件、以降はページングとする
-  const currentPage = Math.max(1, Number.parseInt(page ?? '1', 10) || 1);
+  const currentPage = resolvePage(page);
   const offset = (currentPage - 1) * LIST_PAGE_SIZE;
 
   const supabase = await createSupabaseServerClient();
@@ -56,9 +57,9 @@ export default async function SubmissionsPage({
   const { data, error, count } = await supabase
     .from('task_submissions')
     .select(
-      'id, submitted_at,'
-      + ' case_tasks!inner ( id, title, due_date, case_id, status,'
-      + ' wedding_cases!inner ( id, case_code, wedding_date ) )',
+      'id, submitted_at,' +
+        ' case_tasks!inner ( id, title, due_date, case_id, status,' +
+        ' wedding_cases!inner ( id, case_code, wedding_date ) )',
       { count: 'exact' },
     )
     .eq('review_status', 'submitted')
@@ -93,7 +94,11 @@ export default async function SubmissionsPage({
       // 主連絡先を先頭に置く（K03「主連絡先」）
       coupleNames.set(
         profile.case_id,
-        current ? (profile.is_primary_contact ? `${name}・${current}` : `${current}・${name}`) : name,
+        current
+          ? profile.is_primary_contact
+            ? `${name}・${current}`
+            : `${current}・${name}`
+          : name,
       );
     }
   }

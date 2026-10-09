@@ -63,7 +63,13 @@ describe('buildCsv', () => {
   });
 
   it('ヘッダーと行を CRLF で連結する', () => {
-    const { content } = buildCsv(['a', 'b'], [[1, 2], [3, 4]]);
+    const { content } = buildCsv(
+      ['a', 'b'],
+      [
+        [1, 2],
+        [3, 4],
+      ],
+    );
     expect(content).toBe('﻿a,b\r\n1,2\r\n3,4\r\n');
   });
 

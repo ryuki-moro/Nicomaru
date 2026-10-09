@@ -70,7 +70,9 @@ export class TestDb {
     const pg = new PGlite({ extensions: { pgcrypto } });
     await pg.exec(SUPABASE_STUB);
 
-    for (const file of readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).sort()) {
+    for (const file of readdirSync(MIGRATIONS_DIR)
+      .filter((f) => f.endsWith('.sql'))
+      .sort()) {
       const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf8');
       try {
         await pg.exec(sql);
@@ -158,9 +160,7 @@ async function createUser(
 
 export async function seedFixture(db: TestDb): Promise<Fixture> {
   return db.asOwner(async () => {
-    const venue = await db.query<{ id: string }>(
-      `select id from venues where code = 'BRIDAL01'`,
-    );
+    const venue = await db.query<{ id: string }>(`select id from venues where code = 'BRIDAL01'`);
     const venueId = venue.rows[0].id;
 
     const otherVenue = await db.query<{ id: string }>(
@@ -174,7 +174,11 @@ export async function seedFixture(db: TestDb): Promise<Fixture> {
     const otherPlanner = await createUser(db, 'planner', venueId, 'planner2@example.test');
     const otherVenueAdmin = await createUser(db, 'admin', otherVenueId, 'admin2@example.test');
     const suspendedPlanner = await createUser(
-      db, 'planner', venueId, 'suspended@example.test', 'suspended',
+      db,
+      'planner',
+      venueId,
+      'suspended@example.test',
+      'suspended',
     );
     const couple = await createUser(db, 'couple', venueId, 'groom@example.test');
     const partner = await createUser(db, 'couple', venueId, 'bride@example.test');
@@ -189,15 +193,26 @@ export async function seedFixture(db: TestDb): Promise<Fixture> {
         `insert into wedding_cases
            (venue_id, plan_type_id, primary_planner_id, case_code, wedding_date, status, archived_at)
          values ($1, $2, $3, $4, current_date + 120, $5, $6) returning id`,
-        [vid, vid === venueId ? planType.rows[0].id : null, plannerId, code,
-         archived ? 'archived' : 'active', archived ? new Date().toISOString() : null],
+        [
+          vid,
+          vid === venueId ? planType.rows[0].id : null,
+          plannerId,
+          code,
+          archived ? 'archived' : 'active',
+          archived ? new Date().toISOString() : null,
+        ],
       );
       return res.rows[0].id;
     };
 
     const caseId = await mkCase('BRIDAL01-2026-0001', planner.profileId);
     const archivedCaseId = await mkCase('BRIDAL01-2026-0002', planner.profileId, true);
-    const otherCaseId = await mkCase('BRIDAL02-2026-0001', otherVenueAdmin.profileId, false, otherVenueId);
+    const otherCaseId = await mkCase(
+      'BRIDAL02-2026-0001',
+      otherVenueAdmin.profileId,
+      false,
+      otherVenueId,
+    );
 
     await db.query(
       `insert into couple_profiles
@@ -227,9 +242,19 @@ export async function seedFixture(db: TestDb): Promise<Fixture> {
     );
 
     return {
-      venueId, otherVenueId, systemAdmin, admin, planner, otherPlanner, otherVenueAdmin,
-      couple, partner, suspendedPlanner,
-      caseId, archivedCaseId, otherCaseId,
+      venueId,
+      otherVenueId,
+      systemAdmin,
+      admin,
+      planner,
+      otherPlanner,
+      otherVenueAdmin,
+      couple,
+      partner,
+      suspendedPlanner,
+      caseId,
+      archivedCaseId,
+      otherCaseId,
       taskId: task.rows[0].id,
       invitationId: invitation.rows[0].id,
     };

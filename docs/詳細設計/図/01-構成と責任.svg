@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850" role="img">
+<title>01  構成と責任分担</title>
+<style>text{font-family:Meiryo,"Noto Sans JP",sans-serif}</style>
+<rect x="0" y="0" width="1200" height="850" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="36" y="43" font-size="27" fill="#993556">01  構成と責任分担</text>
+<text x="36" y="77" font-size="13" fill="#5F5E5A">利用者の通信と限定的なシステム通信を分離。ローカルLLMを公開しない。</text>
+<polyline points="36,94 1164,94" fill="none" stroke="#D3D1C7" stroke-width="1.5"/>
+<text x="36" y="823" font-size="11" fill="#5F5E5A">にこまる | 実装連動の詳細設計 | 2026-10-09 | 学校発表・模擬データ用</text>
+<text x="1120" y="823" font-size="12" fill="#5F5E5A">01</text>
+<polyline points="341,187.5 387.5,187.5 387.5,187.5 434,187.5" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="434,187.5 425.8959760788259,191.41468980700108 425.8959760788259,183.58531019299892" fill="#89857B"/>
+<rect x="382.5" y="170.5" width="45.6962890625" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="387.5" y="185.5" font-size="11" fill="#5F5E5A">HTTPS</text>
+<polyline points="764,187.5 809.5,187.5 809.5,187.5 855,187.5" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="855,187.5 846.8959760788259,191.41468980700108 846.8959760788259,183.58531019299892" fill="#89857B"/>
+<rect x="804.5" y="170.5" width="54.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="809.5" y="185.5" font-size="11" fill="#5F5E5A">本人確認</text>
+<polyline points="599.0,245 599.0,300.0 599.0,300.0 599.0,355" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="599.0,355 595.0853101929989,346.8959760788259 602.9146898070011,346.8959760788259" fill="#89857B"/>
+<rect x="594.0" y="283.0" width="65.92919921875" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="599.0" y="298.0" font-size="11" fill="#5F5E5A">JWT / RLS</text>
+<polyline points="599.0,245 599.0,300.0 1010.0,300.0 1010.0,355" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="1010.0,355 1006.0853101929989,346.8959760788259 1013.9146898070011,346.8959760788259" fill="#89857B"/>
+<rect x="594.0" y="283.0" width="87.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="599.0" y="298.0" font-size="11" fill="#5F5E5A">必要な通知のみ</text>
+<polyline points="341,412.5 387.5,412.5 387.5,412.5 434,412.5" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="434,412.5 425.8959760788259,416.4146898070011 425.8959760788259,408.5853101929989" fill="#89857B"/>
+<rect x="382.5" y="395.5" width="53.45751953125" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="387.5" y="410.5" font-size="11" fill="#5F5E5A">限定RPC</text>
+<polyline points="599.0,580 599.0,525.0 599.0,525.0 599.0,470" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="599.0,470 602.9146898070011,478.1040239211741 595.0853101929989,478.1040239211741" fill="#89857B"/>
+<rect x="594.0" y="508.0" width="98.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="599.0" y="523.0" font-size="11" fill="#5F5E5A">ジョブ取得・結果</text>
+<polyline points="764,637.5 809.5,637.5 809.5,637.5 855,637.5" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="855,637.5 846.8959760788259,641.4146898070011 846.8959760788259,633.5853101929989" fill="#89857B"/>
+<rect x="804.5" y="620.5" width="76.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="809.5" y="635.5" font-size="11" fill="#5F5E5A">ローカル推論</text>
+<rect x="36" y="130" width="305" height="115" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="50" y="156" font-size="17" fill="#993556">ブラウザ / ホーム画面アプリ</text>
+<text x="50" y="182" font-size="14" fill="#2C2C2A">couple / planner / admin</text>
+<text x="50" y="202" font-size="14" fill="#2C2C2A">Service Workerは機微情報を保存しない</text>
+<rect x="434" y="130" width="330" height="115" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="448" y="156" font-size="17" fill="#993556">Next.js / Vercel</text>
+<text x="448" y="182" font-size="14" fill="#2C2C2A">画面・入力検証・認証・Origin検証</text>
+<text x="448" y="202" font-size="14" fill="#2C2C2A">RLSクライアントによる読み書き</text>
+<rect x="855" y="130" width="310" height="115" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="869" y="156" font-size="17" fill="#993556">Supabase Auth</text>
+<text x="869" y="182" font-size="14" fill="#2C2C2A">OTP / パスワード / セッション</text>
+<text x="869" y="202" font-size="14" fill="#2C2C2A">activeプロフィールと照合</text>
+<rect x="434" y="355" width="330" height="115" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="448" y="381" font-size="17" fill="#993556">Supabase DB / Storage</text>
+<text x="448" y="407" font-size="14" fill="#2C2C2A">RPCの原子性 + RLSの行境界</text>
+<text x="448" y="427" font-size="14" fill="#2C2C2A">非公開ファイル + 短命署名URL</text>
+<rect x="855" y="355" width="310" height="115" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="869" y="381" font-size="17" fill="#993556">LINE / Resend</text>
+<text x="869" y="407" font-size="14" fill="#2C2C2A">通知本文を外部へ送信する専用出口</text>
+<text x="869" y="427" font-size="14" fill="#2C2C2A">送信結果・上限・代替を管理</text>
+<rect x="36" y="355" width="305" height="115" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="50" y="381" font-size="17" fill="#993556">pg_cron / GitHub Actions</text>
+<text x="50" y="407" font-size="14" fill="#2C2C2A">定期登録 + 共有secret認証</text>
+<text x="50" y="427" font-size="14" fill="#2C2C2A">容量・監視・削除・通知・回収</text>
+<rect x="434" y="580" width="330" height="115" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="448" y="606" font-size="17" fill="#993556">校内・自宅のAI worker</text>
+<text x="448" y="632" font-size="14" fill="#2C2C2A">専用DBロールでpull / 30秒周期</text>
+<text x="448" y="652" font-size="14" fill="#2C2C2A">Service Roleを渡さない</text>
+<rect x="855" y="580" width="310" height="115" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="869" y="606" font-size="17" fill="#993556">Ollama（ローカル）</text>
+<text x="869" y="632" font-size="14" fill="#2C2C2A">必要な最小入力 / JSON出力</text>
+<text x="869" y="652" font-size="14" fill="#2C2C2A">人が確認・修正して採用</text>
+<text x="40" y="749" font-size="14" fill="#2C2C2A">学校の最終発表・デモが対象。常時本番運用/商用SLAは今回の予定に含めない。</text>
+</svg>

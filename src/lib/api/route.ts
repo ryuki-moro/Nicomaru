@@ -9,6 +9,15 @@ import type { z } from 'zod';
 
 import { ApiError, badRequest } from '@/lib/errors';
 import { toErrorDetails } from '@/lib/validation';
+import { recordApiPerformance } from '@/lib/observability/performance';
+
+import { requireInternalCall } from './internal';
+import { requireSameOrigin } from './origin';
+
+interface RouteOptions {
+  /** 内部cronだけはOriginの代わりに共有secretで認証する。検証の無効化ではない。 */
+  source?: 'browser' | 'internal-cron';
+}
 
 /** リクエストボディを zod で検証する。失敗時は 400 VALIDATION_ERROR。 */
 export async function parseBody<S extends z.ZodType>(
@@ -34,17 +43,39 @@ export function ok<T>(data: T, status = 200): NextResponse {
 
 export const noContent = () => new NextResponse(null, { status: 204 });
 
-/** Route Handler を包み、ApiError と想定外例外を 6-5-1 の形式へ変換する。 */
+/**
+ * 更新APIは本文や業務処理に触れる前に同一Originを検証する（基本設計9章 CSRF）。
+ * 内部cronは明示指定した場合だけ共有secret認証へ切り替える。
+ * ApiError と想定外例外は 6-5-1 の形式へ変換する。
+ */
 export function route<Args extends unknown[]>(
   handler: (request: Request, ...args: Args) => Promise<Response>,
+  options: RouteOptions = {},
 ) {
   return async (request: Request, ...args: Args): Promise<Response> => {
+    const startedAt = Date.now();
+    const startedMono = performance.now();
+    let status = 500;
     try {
-      return await handler(request, ...args);
+      if (options.source === 'internal-cron') {
+        requireInternalCall(request);
+      } else if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+        requireSameOrigin(request);
+      }
+      const response = await handler(request, ...args);
+      status = response.status;
+      return response;
     } catch (error) {
-      if (error instanceof ApiError) return error.toResponse();
-      console.error('[api] unhandled error', error);
-      return new ApiError('INTERNAL_ERROR').toResponse();
+      const response =
+        error instanceof ApiError
+          ? error.toResponse()
+          : new ApiError('INTERNAL_ERROR').toResponse();
+      status = response.status;
+      // DB等の例外本文にはPIIが含まれ得る。共通ログに原文を渡さない。
+      if (!(error instanceof ApiError)) console.error('[api] unhandled error');
+      return response;
+    } finally {
+      recordApiPerformance(request, startedAt, startedMono, status);
     }
   };
 }

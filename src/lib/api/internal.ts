@@ -23,6 +23,8 @@ export type BatchJobType =
   | 'case_purge'
   | 'health_check'
   | 'usage_rollup'
+  | 'monitoring'
+  | 'audit_log_purge'
   | 'backup'
   | 'rate_limit_cleanup';
 
@@ -39,6 +41,17 @@ export interface BatchOutcome {
   detail?: Record<string, unknown>;
 }
 
+/** 部分的に完了した処理を、成功件数を失わず失敗として記録する。 */
+export class BatchFailure extends Error {
+  constructor(
+    message: string,
+    readonly outcome: BatchOutcome,
+  ) {
+    super(message);
+    this.name = 'BatchFailure';
+  }
+}
+
 /**
  * 実行記録つきでバッチを走らせる（6-12）。
  *
@@ -51,36 +64,66 @@ export async function runBatch(
   fn: () => Promise<BatchOutcome>,
 ): Promise<BatchOutcome> {
   const startedAt = new Date().toISOString();
-  const started = await admin
-    .from('batch_runs')
-    .insert({ job_type: jobType, started_at: startedAt })
-    .select('id')
-    .single();
-  const runId = started.data ? (started.data as { id: string }).id : null;
+  let runId: string;
+  try {
+    const started = await admin
+      .from('batch_runs')
+      .insert({ job_type: jobType, started_at: startedAt })
+      .select('id')
+      .single();
+    if (started.error || !started.data?.id) throw new Error();
+    runId = started.data.id;
+  } catch {
+    // 開始記録がない状態では、特に削除などの副作用を開始しない。
+    throw new Error('バッチの開始記録を保存できませんでした');
+  }
 
   const finish = async (patch: Record<string, unknown>) => {
-    if (!runId) return;
-    await admin.from('batch_runs').update({
-      finished_at: new Date().toISOString(),
-      ...patch,
-    }).eq('id', runId);
+    try {
+      const saved = await admin
+        .from('batch_runs')
+        .update({
+          finished_at: new Date().toISOString(),
+          ...patch,
+        })
+        .eq('id', runId)
+        .select('id')
+        .single();
+      if (saved.error || !saved.data?.id) throw new Error();
+    } catch {
+      throw new Error('バッチの終了記録を保存できませんでした');
+    }
   };
 
+  let outcome: BatchOutcome;
   try {
-    const outcome = await fn();
-    await finish({
-      target_count: outcome.targetCount,
-      http_status: 200,
-      detail: outcome.detail ?? {},
-    });
-    return outcome;
+    outcome = await fn();
   } catch (error) {
-    await finish({
-      http_status: 500,
-      error_message: error instanceof Error ? error.message : String(error),
-    });
+    try {
+      await finish({
+        http_status: 500,
+        error_message: error instanceof Error ? error.message : String(error),
+        ...(error instanceof BatchFailure
+          ? {
+              target_count: error.outcome.targetCount,
+              detail: error.outcome.detail ?? {},
+            }
+          : {}),
+      });
+    } catch {
+      // 元の処理失敗を置き換えない。上流のレスポンス本文や個人情報はログへ出さない。
+      console.error('[batch] 失敗記録を保存できませんでした', { jobType, runId });
+    }
     throw error;
   }
+
+  // 終了記録が保存できなければHTTP成功にしない。失敗記録の再保存はしない。
+  await finish({
+    target_count: outcome.targetCount,
+    http_status: 200,
+    detail: outcome.detail ?? {},
+  });
+  return outcome;
 }
 
 /**

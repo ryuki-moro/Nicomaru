@@ -23,7 +23,9 @@ const DISPLAY_NAME = '佐藤 花子';
 async function main() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const admin = createClient(url, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email: EMAIL,

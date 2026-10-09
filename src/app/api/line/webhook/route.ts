@@ -29,6 +29,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
+  // LINEサーバーから届くためOrigin検証の対象外。代わりに必ずraw bodyの署名を検証する。
   // 署名検証はパース前の生データに対して行う（6-10）。
   // JSON.parse を通した後の値から再構築すると、キーの順序や空白が変わって必ず落ちる。
   const rawBody = await request.text();
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
 
   let events: LineEvent[] = [];
   try {
-    events = ((JSON.parse(rawBody) as { events?: LineEvent[] }).events ?? []);
+    events = (JSON.parse(rawBody) as { events?: LineEvent[] }).events ?? [];
   } catch {
     // 署名は通っているので LINE からの正規のリクエスト。形が読めないだけなら再送させない
     return NextResponse.json({ ok: true });
@@ -120,8 +121,7 @@ async function handleEvent(admin: Admin, event: LineEvent): Promise<void> {
 
   if (event.type === 'unfollow' && lineUserId) {
     // ブロックされた相手へ送り続けるとLINE側の評価を落とす。紐付けを外してメールへ戻す（6-9）。
-    await admin.from('user_profiles').update({ line_user_id: null })
-      .eq('line_user_id', lineUserId);
+    await admin.from('user_profiles').update({ line_user_id: null }).eq('line_user_id', lineUserId);
     return;
   }
 

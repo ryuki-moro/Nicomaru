@@ -14,17 +14,71 @@ export interface ApiErrorBody {
   details: ErrorDetail[];
 }
 
+const COMMUNICATION_ERROR_MESSAGE = '通信に失敗しました。時間をおいてお試しください';
+const ERROR_CODES = new Set<ErrorCode>([
+  'VALIDATION_ERROR',
+  'UNAUTHENTICATED',
+  'FORBIDDEN',
+  'NOT_FOUND',
+  'CONFLICT',
+  'UNPROCESSABLE',
+  'RATE_LIMITED',
+  'INTERNAL_ERROR',
+  'SERVICE_UNAVAILABLE',
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeErrorBody(value: unknown): ApiErrorBody {
+  const error = isRecord(value) ? value : {};
+  return {
+    code:
+      typeof error.code === 'string' && ERROR_CODES.has(error.code as ErrorCode)
+        ? (error.code as ErrorCode)
+        : 'INTERNAL_ERROR',
+    message:
+      typeof error.message === 'string' && error.message.trim() !== ''
+        ? error.message
+        : COMMUNICATION_ERROR_MESSAGE,
+    details: Array.isArray(error.details)
+      ? error.details.filter(
+          (detail): detail is ErrorDetail =>
+            isRecord(detail) &&
+            typeof detail.field === 'string' &&
+            typeof detail.reason === 'string',
+        )
+      : [],
+  };
+}
+
 export class ApiCallError extends Error {
-  constructor(readonly body: ApiErrorBody, readonly status: number) {
-    super(body.message);
+  readonly body: ApiErrorBody;
+
+  constructor(
+    body: unknown,
+    readonly status: number,
+  ) {
+    const normalizedBody = normalizeErrorBody(body);
+    super(normalizedBody.message);
+    this.body = normalizedBody;
     this.name = 'ApiCallError';
   }
 
   /** 項目名 → 最初のエラー文言。フォームの項目直下に出す用。 */
   get fieldErrors(): Record<string, string> {
     const map: Record<string, string> = {};
-    for (const d of this.body.details ?? []) {
-      map[d.field] ??= d.reason;
+    for (const d of this.body.details) {
+      if (!Object.hasOwn(map, d.field)) {
+        // __proto__ なども項目名として扱い、継承プロパティや setter に影響されないようにする。
+        Object.defineProperty(map, d.field, {
+          value: d.reason,
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        });
+      }
     }
     return map;
   }
@@ -40,16 +94,18 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (response.status === 204) return undefined as T;
 
   const text = await response.text();
-  const json = text ? JSON.parse(text) : {};
 
   if (!response.ok) {
-    const error = (json as { error?: ApiErrorBody }).error ?? {
-      code: 'INTERNAL_ERROR' as ErrorCode,
-      message: '通信に失敗しました。時間をおいてお試しください',
-      details: [],
-    };
-    throw new ApiCallError(error, response.status);
+    let json: unknown;
+    try {
+      json = text ? JSON.parse(text) : {};
+    } catch {
+      // プロキシなどが HTML を返しても HTTP status を失わず、共通エラー処理へ渡す。
+      json = undefined;
+    }
+    throw new ApiCallError(isRecord(json) ? json.error : undefined, response.status);
   }
+  const json = text ? JSON.parse(text) : {};
   return json as T;
 }
 
@@ -105,7 +161,7 @@ export function handleApiError(
     handlers.onFieldErrors?.(error.fieldErrors);
     return false;
   }
-  handlers.onSummary('通信に失敗しました。時間をおいてお試しください');
+  handlers.onSummary(COMMUNICATION_ERROR_MESSAGE);
   handlers.onFieldErrors?.({});
   return false;
 }

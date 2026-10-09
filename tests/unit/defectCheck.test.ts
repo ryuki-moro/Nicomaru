@@ -13,7 +13,12 @@ const schema: CsvSchemaDefinition = {
   columns: [
     { name: '氏名', required: true },
     { name: 'ふりがな', required: false },
-    { name: '郵便番号', required: true, pattern: '^\\d{3}-?\\d{4}$', patternHint: '郵便番号は7桁でご記入ください' },
+    {
+      name: '郵便番号',
+      required: true,
+      pattern: '^\\d{3}-?\\d{4}$',
+      patternHint: '郵便番号は7桁でご記入ください',
+    },
     { name: '住所', required: true },
   ],
   uniqueBy: ['氏名'],
@@ -42,7 +47,10 @@ describe('parseCsv', () => {
   });
 
   it('CRLF でも行が割れない', () => {
-    expect(parseCsv('a,b\r\n1,2\r\n')).toEqual([['a', 'b'], ['1', '2']]);
+    expect(parseCsv('a,b\r\n1,2\r\n')).toEqual([
+      ['a', 'b'],
+      ['1', '2'],
+    ]);
   });
 
   it('末尾に改行が無くても最終行を落とさない', () => {
@@ -63,9 +71,13 @@ describe('checkCsvDefects（9-4 ①）', () => {
   it('必須列そのものが無ければ指摘する', () => {
     const csv = '氏名,住所\n山田 太郎,東京都';
     const findings = checkCsvDefects(csv, schema);
-    expect(findings).toContainEqual(expect.objectContaining({
-      row: 0, column: '郵便番号', type: 'missing',
-    }));
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        row: 0,
+        column: '郵便番号',
+        type: 'missing',
+      }),
+    );
   });
 
   it('任意列が無くても指摘しない', () => {
@@ -77,9 +89,13 @@ describe('checkCsvDefects（9-4 ①）', () => {
   it('必須項目の未入力を行番号つきで指摘する', () => {
     const csv = `${header}\n山田 太郎,,100-0001,\n佐藤 花子,サトウ,100-0002,東京都`;
     const findings = checkCsvDefects(csv, schema);
-    expect(findings).toContainEqual(expect.objectContaining({
-      row: 1, column: '住所', type: 'missing',
-    }));
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        row: 1,
+        column: '住所',
+        type: 'missing',
+      }),
+    );
     // ふりがなは任意なので指摘しない
     expect(findings.filter((f) => f.column === 'ふりがな')).toEqual([]);
   });
@@ -93,10 +109,14 @@ describe('checkCsvDefects（9-4 ①）', () => {
   it('形式違反を設定の文言で指摘する', () => {
     const csv = `${header}\n山田 太郎,ヤマダ,1000001234,東京都`;
     const findings = checkCsvDefects(csv, schema);
-    expect(findings).toContainEqual(expect.objectContaining({
-      row: 1, column: '郵便番号', type: 'inconsistent_notation',
-      detail: '郵便番号は7桁でご記入ください',
-    }));
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        row: 1,
+        column: '郵便番号',
+        type: 'inconsistent_notation',
+        detail: '郵便番号は7桁でご記入ください',
+      }),
+    );
   });
 
   it('ハイフンの有無はどちらも許す（設定した正規表現のとおり）', () => {
@@ -114,17 +134,25 @@ describe('checkCsvDefects（9-4 ①）', () => {
   it('重複行を最初の出現行とともに指摘する', () => {
     const csv = `${header}\n山田 太郎,ヤマダ,100-0001,東京都\n佐藤,サトウ,100-0002,大阪府\n山田 太郎,ヤマダ,100-0003,京都府`;
     const findings = checkCsvDefects(csv, schema);
-    expect(findings).toContainEqual(expect.objectContaining({
-      row: 3, type: 'duplicate', detail: '1行目と同じ内容です',
-    }));
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        row: 3,
+        type: 'duplicate',
+        detail: '1行目と同じ内容です',
+      }),
+    );
   });
 
   it('行数の上限を超えたら指摘する', () => {
     const rows = Array.from({ length: 6 }, (_, i) => `氏名${i},カナ,100-000${i},住所`);
     const findings = checkCsvDefects([header, ...rows].join('\n'), schema);
-    expect(findings).toContainEqual(expect.objectContaining({
-      row: 0, type: 'duplicate', detail: expect.stringContaining('5行を超えています'),
-    }));
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        row: 0,
+        type: 'duplicate',
+        detail: expect.stringContaining('5行を超えています'),
+      }),
+    );
   });
 
   it('空のファイルは読み取れなかったこととして指摘する', () => {

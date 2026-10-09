@@ -55,8 +55,12 @@ export function TemplateForm({ mode, initial, save }: Props) {
 
   const [name, setName] = useState(initial.name);
   const [description, setDescription] = useState(initial.description);
-  const [submissionFormat, setSubmissionFormat] = useState<SubmissionFormat>(initial.submissionFormat);
-  const [allowedFileTypes, setAllowedFileTypes] = useState<AllowedFileType[]>(initial.allowedFileTypes);
+  const [submissionFormat, setSubmissionFormat] = useState<SubmissionFormat>(
+    initial.submissionFormat,
+  );
+  const [allowedFileTypes, setAllowedFileTypes] = useState<AllowedFileType[]>(
+    initial.allowedFileTypes,
+  );
   const [choicesText, setChoicesText] = useState(initial.choices.join('\n'));
   const [dueOffsetDays, setDueOffsetDays] = useState(initial.dueOffsetDays);
   const [importance, setImportance] = useState<Importance>(initial.importance);
@@ -69,7 +73,8 @@ export function TemplateForm({ mode, initial, save }: Props) {
 
   const toggleFileType = (type: AllowedFileType) => {
     setAllowedFileTypes((current) =>
-      current.includes(type) ? current.filter((t) => t !== type) : [...current, type]);
+      current.includes(type) ? current.filter((t) => t !== type) : [...current, type],
+    );
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -91,9 +96,15 @@ export function TemplateForm({ mode, initial, save }: Props) {
       submissionFormat,
       // 提出フォーマットに関係ない値を送ると DB のスナップショット（6-6-2）が汚れる
       allowedFileTypes: submissionFormat === 'file' ? allowedFileTypes : [],
-      defaultOptions: submissionFormat === 'select'
-        ? { choices: choicesText.split('\n').map((line) => line.trim()).filter(Boolean) }
-        : {},
+      defaultOptions:
+        submissionFormat === 'select'
+          ? {
+              choices: choicesText
+                .split('\n')
+                .map((line) => line.trim())
+                .filter(Boolean),
+            }
+          : {},
       dueOffsetDays: offset,
       importance,
       isRequired,

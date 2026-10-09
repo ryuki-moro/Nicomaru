@@ -72,6 +72,9 @@ export async function setAiWorkerHeartbeat(minutesAgo: number): Promise<void> {
 
 /** 心拍を全て消す＝「利用不可」の状態にする */
 export async function clearAiWorkerHeartbeats(): Promise<void> {
-  const { error } = await adminClient().from('ai_worker_heartbeats').delete().neq('worker_name', '');
+  const { error } = await adminClient()
+    .from('ai_worker_heartbeats')
+    .delete()
+    .neq('worker_name', '');
   if (error) throw new Error(`ai_worker_heartbeats の削除に失敗: ${error.message}`);
 }

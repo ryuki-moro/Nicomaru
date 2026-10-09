@@ -45,9 +45,9 @@ export const POST = route(
     const { data, error } = await supabase
       .from('task_submissions')
       .select(
-        'id, submission_type,'
-        + ' case_tasks!inner ( id, options ),'
-        + ' storage_files ( bucket, object_path, original_filename, mime_type )',
+        'id, submission_type,' +
+          ' case_tasks!inner ( id, options ),' +
+          ' storage_files ( bucket, object_path, original_filename, mime_type )',
       )
       .eq('id', submissionId)
       .maybeSingle();
@@ -68,12 +68,16 @@ export const POST = route(
       throw unprocessable('この宿題にはCSVの期待列が設定されていないためチェックできません');
     }
 
-    const checked = await checkSubmittedCsv(supabase, {
-      bucket: submission.storage_files.bucket,
-      objectPath: submission.storage_files.object_path,
-      fileName: submission.storage_files.original_filename,
-      mimeType: submission.storage_files.mime_type,
-    }, schema);
+    const checked = await checkSubmittedCsv(
+      supabase,
+      {
+        bucket: submission.storage_files.bucket,
+        objectPath: submission.storage_files.object_path,
+        fileName: submission.storage_files.original_filename,
+        mimeType: submission.storage_files.mime_type,
+      },
+      schema,
+    );
     if (!checked) {
       throw unprocessable('提出ファイルをCSVとして読み取れませんでした');
     }

@@ -38,13 +38,16 @@ async function makeTask(status: string): Promise<string> {
     db.query<{ id: string }>(
       `insert into case_tasks (case_id, title, submission_format, due_date, status)
        values ($1, $2, 'text', current_date + 30, $3) returning id`,
-      [fx.caseId, `宿題(${status})`, status]));
+      [fx.caseId, `宿題(${status})`, status],
+    ),
+  );
   return r.rows[0].id;
 }
 
 const statusOf = async (taskId: string) => {
   const r = await db.asOwner(() =>
-    db.query<{ status: string }>('select status from case_tasks where id = $1', [taskId]));
+    db.query<{ status: string }>('select status from case_tasks where id = $1', [taskId]),
+  );
   return r.rows[0].status;
 };
 
@@ -52,14 +55,22 @@ describe('対応不要（waived）の付与', () => {
   it('未着手の宿題には付与できる', async () => {
     const taskId = await makeTask('not_started');
     await db.asUser(fx.planner.authUserId, () =>
-      db.query('select update_case_task($1, $2::jsonb)', [taskId, JSON.stringify({ waived: true })]));
+      db.query('select update_case_task($1, $2::jsonb)', [
+        taskId,
+        JSON.stringify({ waived: true }),
+      ]),
+    );
     expect(await statusOf(taskId)).toBe('waived');
   });
 
   it('既に waived の宿題への再付与は受け付ける（画面の二重送信を落とさない）', async () => {
     const taskId = await makeTask('waived');
     await db.asUser(fx.planner.authUserId, () =>
-      db.query('select update_case_task($1, $2::jsonb)', [taskId, JSON.stringify({ waived: true })]));
+      db.query('select update_case_task($1, $2::jsonb)', [
+        taskId,
+        JSON.stringify({ waived: true }),
+      ]),
+    );
     expect(await statusOf(taskId)).toBe('waived');
   });
 
@@ -69,8 +80,12 @@ describe('対応不要（waived）の付与', () => {
       const taskId = await makeTask(status);
       const error = await db.asUser(fx.planner.authUserId, () =>
         errorOf(() =>
-          db.query('select update_case_task($1, $2::jsonb)',
-            [taskId, JSON.stringify({ waived: true })])));
+          db.query('select update_case_task($1, $2::jsonb)', [
+            taskId,
+            JSON.stringify({ waived: true }),
+          ]),
+        ),
+      );
       expect(error?.code).toBe('BH422');
       // message はそのまま画面へ出るため、内部IDや status の生値を含めない
       expect(error?.message).toContain('対応不要');
@@ -84,7 +99,11 @@ describe('対応不要の解除', () => {
   it('waived からは未着手へ戻せる', async () => {
     const taskId = await makeTask('waived');
     await db.asUser(fx.planner.authUserId, () =>
-      db.query('select update_case_task($1, $2::jsonb)', [taskId, JSON.stringify({ waived: false })]));
+      db.query('select update_case_task($1, $2::jsonb)', [
+        taskId,
+        JSON.stringify({ waived: false }),
+      ]),
+    );
     expect(await statusOf(taskId)).toBe('not_started');
   });
 
@@ -94,8 +113,12 @@ describe('対応不要の解除', () => {
       const taskId = await makeTask(status);
       const error = await db.asUser(fx.planner.authUserId, () =>
         errorOf(() =>
-          db.query('select update_case_task($1, $2::jsonb)',
-            [taskId, JSON.stringify({ waived: false })])));
+          db.query('select update_case_task($1, $2::jsonb)', [
+            taskId,
+            JSON.stringify({ waived: false }),
+          ]),
+        ),
+      );
       expect(error?.code).toBe('BH422');
       expect(await statusOf(taskId)).toBe(status);
     },
@@ -106,22 +129,30 @@ describe('waived を指定しない更新', () => {
   it('期限だけを変えても状態は動かない', async () => {
     const taskId = await makeTask('confirmed');
     await db.asUser(fx.planner.authUserId, () =>
-      db.query('select update_case_task($1, $2::jsonb)',
-        [taskId, JSON.stringify({ due_date: '2026-12-01' })]));
+      db.query('select update_case_task($1, $2::jsonb)', [
+        taskId,
+        JSON.stringify({ due_date: '2026-12-01' }),
+      ]),
+    );
     expect(await statusOf(taskId)).toBe('confirmed');
     // PGlite は date を JS の Date として返すため、比較は SQL 側で text に寄せる
     const r = await db.asOwner(() =>
       db.query<{ due_date: string }>(
         `select to_char(due_date, 'YYYY-MM-DD') as due_date from case_tasks where id = $1`,
-        [taskId]));
+        [taskId],
+      ),
+    );
     expect(r.rows[0].due_date).toBe('2026-12-01');
   });
 
   it('waived:null は「指定なし」として扱う（偽側へ落ちて巻き戻さない）', async () => {
     const taskId = await makeTask('confirmed');
     await db.asUser(fx.planner.authUserId, () =>
-      db.query('select update_case_task($1, $2::jsonb)',
-        [taskId, JSON.stringify({ waived: null, title: '改題' })]));
+      db.query('select update_case_task($1, $2::jsonb)', [
+        taskId,
+        JSON.stringify({ waived: null, title: '改題' }),
+      ]),
+    );
     expect(await statusOf(taskId)).toBe('confirmed');
   });
 });
@@ -131,8 +162,12 @@ describe('権限', () => {
     const taskId = await makeTask('not_started');
     const error = await db.asUser(fx.couple.authUserId, () =>
       errorOf(() =>
-        db.query('select update_case_task($1, $2::jsonb)',
-          [taskId, JSON.stringify({ waived: true })])));
+        db.query('select update_case_task($1, $2::jsonb)', [
+          taskId,
+          JSON.stringify({ waived: true }),
+        ]),
+      ),
+    );
     expect(error?.code).toBe('42501');
     expect(await statusOf(taskId)).toBe('not_started');
   });
@@ -141,8 +176,12 @@ describe('権限', () => {
     const taskId = await makeTask('not_started');
     const error = await db.asUser(fx.otherVenueAdmin.authUserId, () =>
       errorOf(() =>
-        db.query('select update_case_task($1, $2::jsonb)',
-          [taskId, JSON.stringify({ waived: true })])));
+        db.query('select update_case_task($1, $2::jsonb)', [
+          taskId,
+          JSON.stringify({ waived: true }),
+        ]),
+      ),
+    );
     expect(error?.code).toBe('42501');
   });
 });

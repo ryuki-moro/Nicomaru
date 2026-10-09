@@ -24,6 +24,7 @@ import {
 import { readPii } from '@/lib/crypto';
 import { fromPostgresError } from '@/lib/errors';
 import { formatDate, formatDateTime } from '@/lib/format';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 interface CaseRow {
@@ -45,18 +46,12 @@ interface FollowLogRow {
   followed_at: string;
 }
 
-/** ?page= を1始まりのページ番号にする。壊れた値は1ページ目へ寄せる（K01／M02 と同じ扱い）。 */
-function resolvePage(raw: string | undefined): number {
-  const parsed = Number(raw ?? '1');
-  return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
-}
-
 export default async function FollowLogPage({
   params,
   searchParams,
 }: {
   params: Promise<{ caseId: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }) {
   const { caseId } = await params;
   const page = resolvePage((await searchParams).page);
@@ -102,7 +97,7 @@ export default async function FollowLogPage({
   const hasNext = fetched.length > LIST_PAGE_SIZE;
   const logs = fetched.slice(0, LIST_PAGE_SIZE);
   const pageHref = (target: number) =>
-    (target > 1 ? `/cases/${caseId}/follow?page=${target}` : `/cases/${caseId}/follow`);
+    target > 1 ? `/cases/${caseId}/follow?page=${target}` : `/cases/${caseId}/follow`;
 
   // user_profiles の select ポリシーは「本人または同式場の admin」に限られるため、
   // planner が他プランナーの表示名を引くと 0 行になる。埋め込みではなく別クエリにして
@@ -165,9 +160,7 @@ export default async function FollowLogPage({
         {logs.length === 0 ? (
           <div className="mt-2">
             <EmptyState
-              message={
-                page > 1 ? 'これ以上の記録はありません。' : 'まだフォロー記録はありません。'
-              }
+              message={page > 1 ? 'これ以上の記録はありません。' : 'まだフォロー記録はありません。'}
             />
           </div>
         ) : (

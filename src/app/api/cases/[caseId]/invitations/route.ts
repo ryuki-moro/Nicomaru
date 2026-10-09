@@ -57,12 +57,11 @@ interface InvitationSummary {
 }
 
 const INVITATION_COLUMNS =
-  'id, target_partner_role, channel, purpose, expires_at, used_at, revoked_at, '
-  + 'sent_at, use_count, max_uses, created_at';
+  'id, target_partner_role, channel, purpose, expires_at, used_at, revoked_at, ' +
+  'sent_at, use_count, max_uses, created_at';
 
 /** 送信先の解決に必要な列。couple_profiles は memo を剥奪しているため列を明示する（付録A）。 */
-const CASE_WITH_PARTNERS_SELECT =
-  `id, case_code, contact_channel,
+const CASE_WITH_PARTNERS_SELECT = `id, case_code, contact_channel,
    couple_profiles ( ${COUPLE_PROFILE_COLUMNS}, user_profiles ( id, line_user_id ) )`;
 
 interface PartnerRow {
@@ -104,114 +103,118 @@ function summarize(rows: InvitationRow[], now = new Date()): InvitationSummary[]
     }));
 }
 
-export const GET = route(async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
-  await requireRole('planner', 'admin', 'system_admin');
-  const { caseId } = await context.params;
-  const supabase = await createSupabaseServerClient();
+export const GET = route(
+  async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
+    await requireRole('planner', 'admin', 'system_admin');
+    const { caseId } = await context.params;
+    const supabase = await createSupabaseServerClient();
 
-  const { data, error } = await supabase
-    .from('case_invitations')
-    .select(INVITATION_COLUMNS)
-    .eq('case_id', caseId)
-    .eq('purpose', 'initial_registration');
-  if (error) throw fromPostgresError(error);
+    const { data, error } = await supabase
+      .from('case_invitations')
+      .select(INVITATION_COLUMNS)
+      .eq('case_id', caseId)
+      .eq('purpose', 'initial_registration');
+    if (error) throw fromPostgresError(error);
 
-  return ok({ invitations: summarize((data ?? []) as unknown as InvitationRow[]) });
-});
+    return ok({ invitations: summarize((data ?? []) as unknown as InvitationRow[]) });
+  },
+);
 
-export const POST = route(async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
-  await requireRole('planner', 'admin', 'system_admin');
-  const { caseId } = await context.params;
-  const input = await parseBody(request, invitationIssueSchema);
-  const supabase = await createSupabaseServerClient();
+export const POST = route(
+  async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
+    await requireRole('planner', 'admin', 'system_admin');
+    const { caseId } = await context.params;
+    const input = await parseBody(request, invitationIssueSchema);
+    const supabase = await createSupabaseServerClient();
 
-  const { data: caseData, error: caseError } = await supabase
-    .from('wedding_cases')
-    .select(CASE_WITH_PARTNERS_SELECT)
-    .eq('id', caseId)
-    .maybeSingle();
-  if (caseError) throw fromPostgresError(caseError);
-  if (!caseData) throw notFound('案件が見つかりません');
+    const { data: caseData, error: caseError } = await supabase
+      .from('wedding_cases')
+      .select(CASE_WITH_PARTNERS_SELECT)
+      .eq('id', caseId)
+      .maybeSingle();
+    if (caseError) throw fromPostgresError(caseError);
+    if (!caseData) throw notFound('案件が見つかりません');
 
-  const target = caseData as unknown as {
-    id: string;
-    case_code: string;
-    contact_channel: ContactChannel;
-    couple_profiles: PartnerRow[];
-  };
+    const target = caseData as unknown as {
+      id: string;
+      case_code: string;
+      contact_channel: ContactChannel;
+      couple_profiles: PartnerRow[];
+    };
 
-  const partner = target.couple_profiles.find((p) => p.partner_role === input.targetPartnerRole);
-  if (!partner) throw notFound('対象の新郎新婦プロフィールが見つかりません');
+    const partner = target.couple_profiles.find((p) => p.partner_role === input.targetPartnerRole);
+    if (!partner) throw notFound('対象の新郎新婦プロフィールが見つかりません');
 
-  const token = generateInvitationToken();
-  const expiresAt = invitationExpiresAt('initial_registration');
-  // 送信を伴う場合はそのチャネル、発行のみなら案件の連絡起点を既定にする（6-6-1）
-  const channel: ContactChannel = input.send ?? target.contact_channel;
+    const token = generateInvitationToken();
+    const expiresAt = invitationExpiresAt('initial_registration');
+    // 送信を伴う場合はそのチャネル、発行のみなら案件の連絡起点を既定にする（6-6-1）
+    const channel: ContactChannel = input.send ?? target.contact_channel;
 
-  // recipient_email は暗号化列。保存済みの暗号文とHMACをそのまま引き継ぐ（再暗号化しない）
-  const { data, error } = await supabase.rpc('reissue_case_invitation', {
-    p_case_id: caseId,
-    p_target_partner_role: input.targetPartnerRole,
-    p_purpose: 'initial_registration',
-    p_token_hash: hashInvitationToken(token),
-    p_channel: channel,
-    p_expires_at: expiresAt.toISOString(),
-    p_max_uses: invitationMaxUses('initial_registration'),
-    p_recipient_email_enc: partner.email,
-    p_recipient_email_hash: partner.email_hash,
-  });
-  if (error) throw fromPostgresError(error);
+    // recipient_email は暗号化列。保存済みの暗号文とHMACをそのまま引き継ぐ（再暗号化しない）
+    const { data, error } = await supabase.rpc('reissue_case_invitation', {
+      p_case_id: caseId,
+      p_target_partner_role: input.targetPartnerRole,
+      p_purpose: 'initial_registration',
+      p_token_hash: hashInvitationToken(token),
+      p_channel: channel,
+      p_expires_at: expiresAt.toISOString(),
+      p_max_uses: invitationMaxUses('initial_registration'),
+      p_recipient_email_enc: partner.email,
+      p_recipient_email_hash: partner.email_hash,
+    });
+    if (error) throw fromPostgresError(error);
 
-  const issued = data as { id: string; expires_at: string; channel: ContactChannel };
-  const baseUrl = process.env.APP_BASE_URL ?? new URL(request.url).origin;
-  const url = buildInvitationUrl(baseUrl, token);
+    const issued = data as { id: string; expires_at: string; channel: ContactChannel };
+    const baseUrl = process.env.APP_BASE_URL ?? new URL(request.url).origin;
+    const url = buildInvitationUrl(baseUrl, token);
 
-  let sentAt: string | null = null;
-  let delivered = false;
-  let skippedReason: string | null = null;
+    let sentAt: string | null = null;
+    let delivered = false;
+    let skippedReason: string | null = null;
 
-  if (input.send) {
-    // 宛名・宛先は暗号化列（13-1）。復号できない値で発行応答ごと 500 にすると、
-    // ここでしか返らない平文の招待URLを失うため readPii で畳む（6-3-6）
-    const result = await sendInvitation(
-      input.send,
-      {
-        email: readPii(partner.email) || null,
-        lineUserId: partner.user_profiles?.line_user_id ?? null,
-      },
-      {
-        caseCode: target.case_code,
-        recipientName: readPii(partner.full_name),
-        invitationUrl: url,
-        expiresAt: issued.expires_at,
-      },
-    );
-    delivered = result.delivered;
-    skippedReason = result.skippedReason ?? null;
+    if (input.send) {
+      // 宛名・宛先は暗号化列（13-1）。復号できない値で発行応答ごと 500 にすると、
+      // ここでしか返らない平文の招待URLを失うため readPii で畳む（6-3-6）
+      const result = await sendInvitation(
+        input.send,
+        {
+          email: readPii(partner.email) || null,
+          lineUserId: partner.user_profiles?.line_user_id ?? null,
+        },
+        {
+          caseCode: target.case_code,
+          recipientName: readPii(partner.full_name),
+          invitationUrl: url,
+          expiresAt: issued.expires_at,
+        },
+      );
+      delivered = result.delivered;
+      skippedReason = result.skippedReason ?? null;
 
-    // 送信できたときだけ sent_at を進める。未構成でスキップした場合は「未送信」のままにする（13-1）
-    if (delivered) {
-      const { data: markedAt, error: markError } = await supabase.rpc('mark_invitation_sent', {
-        p_invitation_id: issued.id,
-        p_channel: input.send,
-      });
-      if (markError) throw fromPostgresError(markError);
-      sentAt = markedAt as string | null;
+      // 送信できたときだけ sent_at を進める。未構成でスキップした場合は「未送信」のままにする（13-1）
+      if (delivered) {
+        const { data: markedAt, error: markError } = await supabase.rpc('mark_invitation_sent', {
+          p_invitation_id: issued.id,
+          p_channel: input.send,
+        });
+        if (markError) throw fromPostgresError(markError);
+        sentAt = markedAt as string | null;
+      }
     }
-  }
 
-  // 平文URLを返せるのはこの応答だけ。画面はモーダルで1度だけ表示する（6-3-6）
-  return ok(
-    {
-      id: issued.id,
-      targetPartnerRole: input.targetPartnerRole,
-      channel: issued.channel,
-      expiresAt: issued.expires_at,
-      url,
-      sentAt,
-      delivered,
-      skippedReason,
-    },
-    201,
-  );
-});
+    // 平文URLを返せるのはこの応答だけ。画面はモーダルで1度だけ表示する（6-3-6）
+    return ok(
+      {
+        id: issued.id,
+        targetPartnerRole: input.targetPartnerRole,
+        channel: issued.channel,
+        expiresAt: issued.expires_at,
+        url,
+        sentAt,
+        delivered,
+        skippedReason,
+      },
+      201,
+    );
+  },
+);

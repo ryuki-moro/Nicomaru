@@ -47,17 +47,18 @@ interface IssueResponse {
   skippedReason: string | null;
 }
 
-
-
 export function InvitationSection({ caseId, readOnly }: { caseId: string; readOnly: boolean }) {
   const [invitations, setInvitations] = useState<InvitationSummary[] | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [channel, setChannel] = useState<ContactChannel>('email');
   /** 平文URLは1度だけ表示する（6-3-6）。閉じると再表示できない。 */
-  const [revealed, setRevealed] = useState<
-    { role: PartnerRole; url: string; expiresAt: string; note: string | null } | null
-  >(null);
+  const [revealed, setRevealed] = useState<{
+    role: PartnerRole;
+    url: string;
+    expiresAt: string;
+    note: string | null;
+  } | null>(null);
   const [copyNote, setCopyNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -90,9 +91,7 @@ export function InvitationSection({ caseId, readOnly }: { caseId: string; readOn
       setRevealed({ role, url: issued.url, expiresAt: issued.expiresAt, note: null });
       await load();
     } catch (error) {
-      setSummary(
-        error instanceof ApiCallError ? error.message : '招待URLを発行できませんでした。',
-      );
+      setSummary(error instanceof ApiCallError ? error.message : '招待URLを発行できませんでした。');
     } finally {
       setBusy(false);
     }
@@ -260,8 +259,8 @@ export function InvitationSection({ caseId, readOnly }: { caseId: string; readOn
               </div>
             )}
             <p className="text-label text-text-secondary">
-              このURLを表示できるのは今回だけです。閉じる前にコピーしてご案内ください。
-              （有効期限 {formatDateTime(revealed.expiresAt)}）
+              このURLを表示できるのは今回だけです。閉じる前にコピーしてご案内ください。 （有効期限{' '}
+              {formatDateTime(revealed.expiresAt)}）
             </p>
             <input
               readOnly

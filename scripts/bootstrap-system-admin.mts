@@ -94,9 +94,9 @@ const rows = (existing.data ?? []) as { id: string; email: string; status: strin
 if (rows.length > 0) {
   const list = rows.map((row) => `    - ${row.email}（${row.status}）`).join('\n');
   die(
-    `system_admin はすでに存在します。\n${list}\n\n`
-    + '  追加したい場合は、既存の system_admin でログインして S01 から登録してください。\n'
-    + '  作り直したい場合は、先に既存のアカウントを停止（suspended）してください。',
+    `system_admin はすでに存在します。\n${list}\n\n` +
+      '  追加したい場合は、既存の system_admin でログインして S01 から登録してください。\n' +
+      '  作り直したい場合は、先に既存のアカウントを停止（suspended）してください。',
   );
 }
 
@@ -108,10 +108,10 @@ const issued = await issuePasswordSetupLink(admin, { email });
 if (!issued.ok) {
   if (issued.reason === 'already_registered') {
     die(
-      `このメールアドレスの Auth ユーザーは既に存在します: ${email}\n\n`
-      + '  利用者プロフィールだけが無い状態の可能性があります。\n'
-      + '  Supabase の Authentication 画面で該当ユーザーを削除してから、'
-      + 'もう一度実行してください。',
+      `このメールアドレスの Auth ユーザーは既に存在します: ${email}\n\n` +
+        '  利用者プロフィールだけが無い状態の可能性があります。\n' +
+        '  Supabase の Authentication 画面で該当ユーザーを削除してから、' +
+        'もう一度実行してください。',
     );
   }
   die(`設定リンクを発行できませんでした: ${issued.detail ?? '原因不明'}`);

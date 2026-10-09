@@ -6,7 +6,14 @@ import { randomBytes } from 'node:crypto';
 
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { decryptPii, emailHash, encryptPii, hmacHash, normalizeEmail, safeEqual } from '@/lib/crypto';
+import {
+  decryptPii,
+  emailHash,
+  encryptPii,
+  hmacHash,
+  normalizeEmail,
+  safeEqual,
+} from '@/lib/crypto';
 
 beforeAll(() => {
   process.env.PII_ENCRYPTION_KEY = randomBytes(32).toString('base64');

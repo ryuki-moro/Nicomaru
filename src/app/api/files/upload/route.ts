@@ -32,7 +32,6 @@ import { isUuid } from '@/lib/uuid';
 // node:crypto を使うため Edge ではなく Node ランタイムで動かす
 export const runtime = 'nodejs';
 
-
 /** 表5-16／6-11。bucket 名は storage_files.bucket の DEFAULT と一致させる。 */
 const BUCKET = 'case-files';
 
@@ -55,8 +54,10 @@ function extensionOf(filename: string): string {
 /** case_tasks.allowed_file_types（jsonb）を値域つきの配列にする。 */
 function allowedTypesOf(raw: unknown): AllowedFileType[] {
   if (!Array.isArray(raw)) return [];
-  return raw.filter((v): v is AllowedFileType =>
-    typeof v === 'string' && (ALLOWED_FILE_TYPES as readonly string[]).includes(v));
+  return raw.filter(
+    (v): v is AllowedFileType =>
+      typeof v === 'string' && (ALLOWED_FILE_TYPES as readonly string[]).includes(v),
+  );
 }
 
 export const POST = route(async (request: Request) => {
@@ -66,9 +67,7 @@ export const POST = route(async (request: Request) => {
   // multipart 全体をメモリへ展開する前に、宣言サイズで明らかな超過を弾く
   const declared = Number(request.headers.get('content-length') ?? '0');
   if (Number.isFinite(declared) && declared > INPUT_LIMITS.fileBytes + 64 * 1024) {
-    throw badRequest([
-      { field: 'file', reason: 'ファイルは1件5MBまでにしてください' },
-    ]);
+    throw badRequest([{ field: 'file', reason: 'ファイルは1件5MBまでにしてください' }]);
   }
 
   let form: FormData;
@@ -116,9 +115,10 @@ export const POST = route(async (request: Request) => {
     throw badRequest([
       {
         field: 'file',
-        reason: allowed.length === 0
-          ? 'この宿題には受入ファイル形式が設定されていません。担当プランナーへご連絡ください'
-          : `${allowed.join('・')} のファイルを選んでください`,
+        reason:
+          allowed.length === 0
+            ? 'この宿題には受入ファイル形式が設定されていません。担当プランナーへご連絡ください'
+            : `${allowed.join('・')} のファイルを選んでください`,
       },
     ]);
   }
@@ -152,8 +152,10 @@ export const POST = route(async (request: Request) => {
     .select('file_size_bytes')
     .eq('case_id', task.case_id);
   if (usedResult.error) throw fromPostgresError(usedResult.error);
-  const used = ((usedResult.data ?? []) as { file_size_bytes: number | null }[])
-    .reduce((sum, row) => sum + Number(row.file_size_bytes ?? 0), 0);
+  const used = ((usedResult.data ?? []) as { file_size_bytes: number | null }[]).reduce(
+    (sum, row) => sum + Number(row.file_size_bytes ?? 0),
+    0,
+  );
   if (used + file.size > INPUT_LIMITS.caseTotalFileBytes) {
     throw unprocessable('この案件のファイル容量の上限に達しました。担当プランナーへご連絡ください');
   }

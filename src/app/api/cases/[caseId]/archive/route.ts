@@ -12,13 +12,15 @@ import { requireRole } from '@/lib/auth/session';
 import { setCaseArchived } from '@/lib/services/cases';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
-export const POST = route(async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
-  // K05 は admin のみ（4-1 表4-10）。DB側 apply_case_update でもロールを再検証する。
-  await requireRole('admin', 'system_admin');
-  const { caseId } = await context.params;
-  const supabase = await createSupabaseServerClient();
+export const POST = route(
+  async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
+    // K05 は admin のみ（4-1 表4-10）。DB側 apply_case_update でもロールを再検証する。
+    await requireRole('admin', 'system_admin');
+    const { caseId } = await context.params;
+    const supabase = await createSupabaseServerClient();
 
-  await setCaseArchived(supabase, caseId, true);
+    await setCaseArchived(supabase, caseId, true);
 
-  return ok({ archived: true });
-});
+    return ok({ archived: true });
+  },
+);

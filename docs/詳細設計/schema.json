@@ -1,0 +1,5754 @@
+{
+  "source": "supabase/migrations/*.sql applied to isolated PGlite; catalog only, no application data",
+  "tables": [
+    {
+      "name": "ai_jobs",
+      "rls": true
+    },
+    {
+      "name": "ai_prompt_templates",
+      "rls": true
+    },
+    {
+      "name": "ai_worker_heartbeats",
+      "rls": true
+    },
+    {
+      "name": "audit_logs",
+      "rls": true
+    },
+    {
+      "name": "auth_rate_limits",
+      "rls": true
+    },
+    {
+      "name": "batch_runs",
+      "rls": true
+    },
+    {
+      "name": "case_guests",
+      "rls": true
+    },
+    {
+      "name": "case_invitations",
+      "rls": true
+    },
+    {
+      "name": "case_tasks",
+      "rls": true
+    },
+    {
+      "name": "communication_logs",
+      "rls": true
+    },
+    {
+      "name": "couple_profiles",
+      "rls": true
+    },
+    {
+      "name": "follow_logs",
+      "rls": true
+    },
+    {
+      "name": "line_link_nonces",
+      "rls": true
+    },
+    {
+      "name": "line_webhook_events",
+      "rls": true
+    },
+    {
+      "name": "meeting_notes",
+      "rls": true
+    },
+    {
+      "name": "meeting_sheets",
+      "rls": true
+    },
+    {
+      "name": "notification_logs",
+      "rls": true
+    },
+    {
+      "name": "notification_quota_counters",
+      "rls": true
+    },
+    {
+      "name": "notification_settings",
+      "rls": true
+    },
+    {
+      "name": "notifications",
+      "rls": true
+    },
+    {
+      "name": "plan_task_templates",
+      "rls": true
+    },
+    {
+      "name": "plan_types",
+      "rls": true
+    },
+    {
+      "name": "risk_rules",
+      "rls": true
+    },
+    {
+      "name": "risk_score_snapshots",
+      "rls": true
+    },
+    {
+      "name": "storage_files",
+      "rls": true
+    },
+    {
+      "name": "system_alerts",
+      "rls": true
+    },
+    {
+      "name": "task_submissions",
+      "rls": true
+    },
+    {
+      "name": "task_templates",
+      "rls": true
+    },
+    {
+      "name": "timeline_items",
+      "rls": true
+    },
+    {
+      "name": "usage_snapshots",
+      "rls": true
+    },
+    {
+      "name": "user_profiles",
+      "rls": true
+    },
+    {
+      "name": "venues",
+      "rls": true
+    },
+    {
+      "name": "wedding_cases",
+      "rls": true
+    }
+  ],
+  "columns": [
+    {
+      "table_name": "ai_jobs",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "venue_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "case_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "related_task_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "job_type",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "input_ref",
+      "data_type": "jsonb",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "output",
+      "data_type": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "status",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'queued'::character varying"
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "model_name",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "prompt_template_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "attempts",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "started_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "finished_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "locked_by",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "locked_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "confirmed_by",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "confirmed_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "error_message",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "ai_jobs",
+      "column_name": "reviewed_output",
+      "data_type": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "column_name": "venue_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "column_name": "job_type",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "column_name": "name",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "column_name": "model_name",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "column_name": "prompt_text",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "column_name": "version",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "1"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "column_name": "active",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "ai_worker_heartbeats",
+      "column_name": "worker_name",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_worker_heartbeats",
+      "column_name": "model_name",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "ai_worker_heartbeats",
+      "column_name": "last_seen_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "audit_logs",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "audit_logs",
+      "column_name": "actor_user_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "audit_logs",
+      "column_name": "action",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "audit_logs",
+      "column_name": "target_type",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "audit_logs",
+      "column_name": "target_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "audit_logs",
+      "column_name": "detail_json",
+      "data_type": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "audit_logs",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "column_name": "key_type",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "column_name": "key_hash",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "column_name": "window_start",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "column_name": "attempt_count",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "column_name": "locked_until",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "batch_runs",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "batch_runs",
+      "column_name": "job_type",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "batch_runs",
+      "column_name": "started_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "batch_runs",
+      "column_name": "finished_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "batch_runs",
+      "column_name": "target_count",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "batch_runs",
+      "column_name": "http_status",
+      "data_type": "integer",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "batch_runs",
+      "column_name": "detail",
+      "data_type": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "table_name": "batch_runs",
+      "column_name": "error_message",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_guests",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "case_guests",
+      "column_name": "case_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_guests",
+      "column_name": "created_by_user_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_guests",
+      "column_name": "full_name",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_guests",
+      "column_name": "kana",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_guests",
+      "column_name": "relationship",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_guests",
+      "column_name": "address",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_guests",
+      "column_name": "allergy_note",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_guests",
+      "column_name": "invitation_status",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'unknown'::character varying"
+    },
+    {
+      "table_name": "case_guests",
+      "column_name": "table_name",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_guests",
+      "column_name": "seat_no",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_guests",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "case_guests",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "case_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "invited_by",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "target_partner_role",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "recipient_email",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "recipient_email_hash",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "channel",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'email'::character varying"
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "token_hash",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "purpose",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "used_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "revoked_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "sent_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "use_count",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "max_uses",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "1"
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "case_invitations",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "case_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "task_template_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "title",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "description",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "submission_format",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'text'::character varying"
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "allowed_file_types",
+      "data_type": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb"
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "options",
+      "data_type": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "is_required",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "due_date",
+      "data_type": "date",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "status",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'not_started'::character varying"
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "importance",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'normal'::character varying"
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "assigned_to",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "display_order",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "confirmed_by",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "confirmed_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "last_submitted_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "communication_logs",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "communication_logs",
+      "column_name": "case_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "communication_logs",
+      "column_name": "channel",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "communication_logs",
+      "column_name": "direction",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "communication_logs",
+      "column_name": "source",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "communication_logs",
+      "column_name": "summary",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "communication_logs",
+      "column_name": "occurred_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "communication_logs",
+      "column_name": "created_by",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "case_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "user_profile_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "partner_role",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "full_name",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "kana",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "email",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "email_hash",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "phone",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "address",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "is_primary_contact",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "memo",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "couple_profiles",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "follow_logs",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "follow_logs",
+      "column_name": "case_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "follow_logs",
+      "column_name": "planner_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "follow_logs",
+      "column_name": "method",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "follow_logs",
+      "column_name": "note",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "follow_logs",
+      "column_name": "followed_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "follow_logs",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "line_link_nonces",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "line_link_nonces",
+      "column_name": "nonce_hash",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "line_link_nonces",
+      "column_name": "user_profile_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "line_link_nonces",
+      "column_name": "link_token",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "line_link_nonces",
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "line_link_nonces",
+      "column_name": "used_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "line_link_nonces",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "line_webhook_events",
+      "column_name": "event_id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "line_webhook_events",
+      "column_name": "event_type",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "line_webhook_events",
+      "column_name": "received_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "meeting_notes",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "meeting_notes",
+      "column_name": "case_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_notes",
+      "column_name": "created_by",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_notes",
+      "column_name": "meeting_date",
+      "data_type": "date",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_notes",
+      "column_name": "participants",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_notes",
+      "column_name": "body",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_notes",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "meeting_notes",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "column_name": "case_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_sheets",
+      "column_name": "generated_by",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_sheets",
+      "column_name": "target_meeting_date",
+      "data_type": "date",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_sheets",
+      "column_name": "summary_json",
+      "data_type": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "column_name": "ai_draft_job_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_sheets",
+      "column_name": "pdf_file_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "meeting_sheets",
+      "column_name": "generated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "notification_logs",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "notification_logs",
+      "column_name": "notification_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notification_logs",
+      "column_name": "provider",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notification_logs",
+      "column_name": "provider_message_id",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "notification_logs",
+      "column_name": "response_json",
+      "data_type": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "notification_logs",
+      "column_name": "status",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notification_logs",
+      "column_name": "attempt_no",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "1"
+    },
+    {
+      "table_name": "notification_logs",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "column_name": "scope",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "column_name": "scope_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "column_name": "window_start",
+      "data_type": "date",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "column_name": "sent_count",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "notification_settings",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "notification_settings",
+      "column_name": "venue_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "notification_settings",
+      "column_name": "line_per_case_per_week",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "1"
+    },
+    {
+      "table_name": "notification_settings",
+      "column_name": "line_per_venue_per_month",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "180"
+    },
+    {
+      "table_name": "notification_settings",
+      "column_name": "due_reminder_days_before",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "7"
+    },
+    {
+      "table_name": "notification_settings",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "notification_settings",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "venue_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "case_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "recipient_user_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "created_by",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "channel",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "notification_type",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "title",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "body",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "status",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'queued'::character varying"
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "scheduled_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "sent_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "read_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "notifications",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "column_name": "plan_type_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "plan_task_templates",
+      "column_name": "task_template_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "plan_task_templates",
+      "column_name": "display_order",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "column_name": "is_required",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "column_name": "due_offset_days_override",
+      "data_type": "integer",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "plan_task_templates",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "plan_types",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "plan_types",
+      "column_name": "venue_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "plan_types",
+      "column_name": "name",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "plan_types",
+      "column_name": "description",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "plan_types",
+      "column_name": "default_guest_count_min",
+      "data_type": "integer",
+      "is_nullable": "YES",
+      "column_default": "0"
+    },
+    {
+      "table_name": "plan_types",
+      "column_name": "default_guest_count_max",
+      "data_type": "integer",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "plan_types",
+      "column_name": "display_order",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "plan_types",
+      "column_name": "active",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "plan_types",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "plan_types",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "risk_rules",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "risk_rules",
+      "column_name": "venue_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "risk_rules",
+      "column_name": "name",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "risk_rules",
+      "column_name": "condition_key",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "risk_rules",
+      "column_name": "level",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "risk_rules",
+      "column_name": "score_delta",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "risk_rules",
+      "column_name": "priority",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "risk_rules",
+      "column_name": "params",
+      "data_type": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "table_name": "risk_rules",
+      "column_name": "active",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "risk_rules",
+      "column_name": "description",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "risk_rules",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "risk_rules",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "column_name": "case_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "column_name": "risk_rule_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "column_name": "score_value",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "column_name": "score_level",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "column_name": "reasons",
+      "data_type": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "column_name": "is_current",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "column_name": "calculated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "storage_files",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "storage_files",
+      "column_name": "case_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "storage_files",
+      "column_name": "uploaded_by",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "storage_files",
+      "column_name": "bucket",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'case-files'::character varying"
+    },
+    {
+      "table_name": "storage_files",
+      "column_name": "object_path",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "storage_files",
+      "column_name": "original_filename",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "storage_files",
+      "column_name": "mime_type",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "storage_files",
+      "column_name": "file_size_bytes",
+      "data_type": "bigint",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "storage_files",
+      "column_name": "visibility",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'case_private'::character varying"
+    },
+    {
+      "table_name": "storage_files",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "system_alerts",
+      "column_name": "alert_key",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "system_alerts",
+      "column_name": "category",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "system_alerts",
+      "column_name": "source",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "system_alerts",
+      "column_name": "occurrence_count",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "1"
+    },
+    {
+      "table_name": "system_alerts",
+      "column_name": "affected_count",
+      "data_type": "bigint",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "system_alerts",
+      "column_name": "first_detected_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "system_alerts",
+      "column_name": "last_detected_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "system_alerts",
+      "column_name": "published_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "system_alerts",
+      "column_name": "resolved_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "case_task_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "submitted_by",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "submission_type",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "text_value",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "selected_value",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "content_json",
+      "data_type": "jsonb",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "file_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "comment",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "review_status",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'draft'::character varying"
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "planner_feedback",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "submitted_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "is_latest",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "reviewed_by",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "task_submissions",
+      "column_name": "reviewed_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "task_templates",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "task_templates",
+      "column_name": "venue_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_templates",
+      "column_name": "name",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_templates",
+      "column_name": "description",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "task_templates",
+      "column_name": "submission_format",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_templates",
+      "column_name": "allowed_file_types",
+      "data_type": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb"
+    },
+    {
+      "table_name": "task_templates",
+      "column_name": "due_offset_days",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "task_templates",
+      "column_name": "importance",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'normal'::character varying"
+    },
+    {
+      "table_name": "task_templates",
+      "column_name": "default_options",
+      "data_type": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "table_name": "task_templates",
+      "column_name": "is_required",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "task_templates",
+      "column_name": "active",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "task_templates",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "task_templates",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "timeline_items",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "timeline_items",
+      "column_name": "case_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "timeline_items",
+      "column_name": "related_task_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "timeline_items",
+      "column_name": "title",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "timeline_items",
+      "column_name": "description",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "timeline_items",
+      "column_name": "due_date",
+      "data_type": "date",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "timeline_items",
+      "column_name": "phase_name",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "timeline_items",
+      "column_name": "status",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'planned'::character varying"
+    },
+    {
+      "table_name": "timeline_items",
+      "column_name": "source",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'auto'::character varying"
+    },
+    {
+      "table_name": "timeline_items",
+      "column_name": "display_order",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_name": "timeline_items",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "timeline_items",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "column_name": "measured_on",
+      "data_type": "date",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "usage_snapshots",
+      "column_name": "measured_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "usage_snapshots",
+      "column_name": "database_bytes",
+      "data_type": "bigint",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "usage_snapshots",
+      "column_name": "storage_bytes",
+      "data_type": "bigint",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "usage_snapshots",
+      "column_name": "database_limit_bytes",
+      "data_type": "bigint",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "usage_snapshots",
+      "column_name": "storage_limit_bytes",
+      "data_type": "bigint",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "usage_snapshots",
+      "column_name": "venue_count",
+      "data_type": "bigint",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "usage_snapshots",
+      "column_name": "case_count",
+      "data_type": "bigint",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "usage_snapshots",
+      "column_name": "user_count",
+      "data_type": "bigint",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "usage_snapshots",
+      "column_name": "file_count",
+      "data_type": "bigint",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "usage_snapshots",
+      "column_name": "notification_count",
+      "data_type": "bigint",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "usage_snapshots",
+      "column_name": "notification_failure_count",
+      "data_type": "bigint",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "user_profiles",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "user_profiles",
+      "column_name": "auth_user_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "user_profiles",
+      "column_name": "venue_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "user_profiles",
+      "column_name": "role",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "user_profiles",
+      "column_name": "display_name",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "user_profiles",
+      "column_name": "email",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "user_profiles",
+      "column_name": "phone",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "user_profiles",
+      "column_name": "line_user_id",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "user_profiles",
+      "column_name": "status",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'active'::character varying"
+    },
+    {
+      "table_name": "user_profiles",
+      "column_name": "last_login_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "user_profiles",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "user_profiles",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "venues",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "venues",
+      "column_name": "name",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "venues",
+      "column_name": "code",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "venues",
+      "column_name": "official_line_channel_id",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "venues",
+      "column_name": "contact_email",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "venues",
+      "column_name": "active",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_name": "venues",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "venues",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "venue_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "plan_type_id",
+      "data_type": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "primary_planner_id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "case_code",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "wedding_date",
+      "data_type": "date",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "wedding_time",
+      "data_type": "time without time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "contact_channel",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'email'::character varying"
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "status",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "column_default": "'active'::character varying"
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "guest_count",
+      "data_type": "integer",
+      "is_nullable": "YES",
+      "column_default": "0"
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "venue_room",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "notes",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "archived_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_name": "wedding_cases",
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    }
+  ],
+  "constraints": [
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_attempts_not_null",
+      "type": "n",
+      "definition": "NOT NULL attempts"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_confirmed_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (confirmed_by) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_input_ref_not_null",
+      "type": "n",
+      "definition": "NOT NULL input_ref"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_job_type_check",
+      "type": "c",
+      "definition": "CHECK (((job_type)::text = ANY ((ARRAY['classification'::character varying, 'draft'::character varying, 'defect_check'::character varying, 'task_extraction'::character varying, 'faq_answer'::character varying, 'reschedule_plan'::character varying, 'handover_summary'::character varying, 'template_draft'::character varying, 'translation'::character varying])::text[])))"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_job_type_not_null",
+      "type": "n",
+      "definition": "NOT NULL job_type"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_prompt_template_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (prompt_template_id) REFERENCES ai_prompt_templates(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_related_task_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (related_task_id) REFERENCES case_tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_status_check",
+      "type": "c",
+      "definition": "CHECK (((status)::text = ANY ((ARRAY['queued'::character varying, 'processing'::character varying, 'done'::character varying, 'failed'::character varying, 'confirmed'::character varying, 'discarded'::character varying])::text[])))"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_status_not_null",
+      "type": "n",
+      "definition": "NOT NULL status"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_venue_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id)"
+    },
+    {
+      "table_name": "ai_jobs",
+      "name": "ai_jobs_venue_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL venue_id"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "name": "ai_prompt_templates_active_not_null",
+      "type": "n",
+      "definition": "NOT NULL active"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "name": "ai_prompt_templates_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "name": "ai_prompt_templates_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "name": "ai_prompt_templates_job_type_check",
+      "type": "c",
+      "definition": "CHECK (((job_type)::text = ANY ((ARRAY['classification'::character varying, 'draft'::character varying, 'defect_check'::character varying, 'task_extraction'::character varying, 'faq_answer'::character varying, 'reschedule_plan'::character varying, 'handover_summary'::character varying, 'template_draft'::character varying, 'translation'::character varying])::text[])))"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "name": "ai_prompt_templates_job_type_not_null",
+      "type": "n",
+      "definition": "NOT NULL job_type"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "name": "ai_prompt_templates_name_not_null",
+      "type": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "name": "ai_prompt_templates_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "name": "ai_prompt_templates_prompt_text_not_null",
+      "type": "n",
+      "definition": "NOT NULL prompt_text"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "name": "ai_prompt_templates_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "name": "ai_prompt_templates_venue_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "name": "ai_prompt_templates_version_not_null",
+      "type": "n",
+      "definition": "NOT NULL version"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "name": "ai_prompt_templates_version_uk",
+      "type": "u",
+      "definition": "UNIQUE (venue_id, job_type, version)"
+    },
+    {
+      "table_name": "ai_worker_heartbeats",
+      "name": "ai_worker_heartbeats_last_seen_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL last_seen_at"
+    },
+    {
+      "table_name": "ai_worker_heartbeats",
+      "name": "ai_worker_heartbeats_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (worker_name)"
+    },
+    {
+      "table_name": "ai_worker_heartbeats",
+      "name": "ai_worker_heartbeats_worker_name_not_null",
+      "type": "n",
+      "definition": "NOT NULL worker_name"
+    },
+    {
+      "table_name": "audit_logs",
+      "name": "audit_logs_action_not_null",
+      "type": "n",
+      "definition": "NOT NULL action"
+    },
+    {
+      "table_name": "audit_logs",
+      "name": "audit_logs_actor_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (actor_user_id) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "audit_logs",
+      "name": "audit_logs_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "audit_logs",
+      "name": "audit_logs_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "audit_logs",
+      "name": "audit_logs_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "audit_logs",
+      "name": "audit_logs_target_type_not_null",
+      "type": "n",
+      "definition": "NOT NULL target_type"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "name": "auth_rate_limits_attempt_count_not_null",
+      "type": "n",
+      "definition": "NOT NULL attempt_count"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "name": "auth_rate_limits_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "name": "auth_rate_limits_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "name": "auth_rate_limits_key_hash_not_null",
+      "type": "n",
+      "definition": "NOT NULL key_hash"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "name": "auth_rate_limits_key_type_check",
+      "type": "c",
+      "definition": "CHECK (((key_type)::text = ANY ((ARRAY['initial_register'::character varying, 'otp_request'::character varying, 'otp_verify'::character varying, 'otp_verify_failure'::character varying, 'password_reset'::character varying, 'password_login'::character varying, 'login_failure'::character varying])::text[])))"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "name": "auth_rate_limits_key_type_not_null",
+      "type": "n",
+      "definition": "NOT NULL key_type"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "name": "auth_rate_limits_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "name": "auth_rate_limits_uk",
+      "type": "u",
+      "definition": "UNIQUE (key_type, key_hash, window_start)"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "name": "auth_rate_limits_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "auth_rate_limits",
+      "name": "auth_rate_limits_window_start_not_null",
+      "type": "n",
+      "definition": "NOT NULL window_start"
+    },
+    {
+      "table_name": "batch_runs",
+      "name": "batch_runs_detail_not_null",
+      "type": "n",
+      "definition": "NOT NULL detail"
+    },
+    {
+      "table_name": "batch_runs",
+      "name": "batch_runs_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "batch_runs",
+      "name": "batch_runs_job_type_check",
+      "type": "c",
+      "definition": "CHECK (((job_type)::text = ANY ((ARRAY['risk_recalculate'::character varying, 'notifications_dispatch'::character varying, 'ai_job_reclaim'::character varying, 'case_purge'::character varying, 'health_check'::character varying, 'usage_rollup'::character varying, 'backup'::character varying, 'rate_limit_cleanup'::character varying, 'audit_log_purge'::character varying, 'monitoring'::character varying])::text[])))"
+    },
+    {
+      "table_name": "batch_runs",
+      "name": "batch_runs_job_type_not_null",
+      "type": "n",
+      "definition": "NOT NULL job_type"
+    },
+    {
+      "table_name": "batch_runs",
+      "name": "batch_runs_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "batch_runs",
+      "name": "batch_runs_started_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL started_at"
+    },
+    {
+      "table_name": "batch_runs",
+      "name": "batch_runs_target_count_not_null",
+      "type": "n",
+      "definition": "NOT NULL target_count"
+    },
+    {
+      "table_name": "case_guests",
+      "name": "case_guests_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "case_guests",
+      "name": "case_guests_case_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_id"
+    },
+    {
+      "table_name": "case_guests",
+      "name": "case_guests_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "case_guests",
+      "name": "case_guests_created_by_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (created_by_user_id) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "case_guests",
+      "name": "case_guests_full_name_not_null",
+      "type": "n",
+      "definition": "NOT NULL full_name"
+    },
+    {
+      "table_name": "case_guests",
+      "name": "case_guests_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "case_guests",
+      "name": "case_guests_invitation_status_check",
+      "type": "c",
+      "definition": "CHECK (((invitation_status)::text = ANY ((ARRAY['unknown'::character varying, 'not_sent'::character varying, 'sent'::character varying, 'reply_yes'::character varying, 'reply_no'::character varying])::text[])))"
+    },
+    {
+      "table_name": "case_guests",
+      "name": "case_guests_invitation_status_not_null",
+      "type": "n",
+      "definition": "NOT NULL invitation_status"
+    },
+    {
+      "table_name": "case_guests",
+      "name": "case_guests_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "case_guests",
+      "name": "case_guests_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_case_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_id"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_channel_check",
+      "type": "c",
+      "definition": "CHECK (((channel)::text = ANY ((ARRAY['line'::character varying, 'email'::character varying])::text[])))"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_channel_not_null",
+      "type": "n",
+      "definition": "NOT NULL channel"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_expires_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL expires_at"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_invited_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (invited_by) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_invited_by_not_null",
+      "type": "n",
+      "definition": "NOT NULL invited_by"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_max_uses_check",
+      "type": "c",
+      "definition": "CHECK ((max_uses >= 1))"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_max_uses_not_null",
+      "type": "n",
+      "definition": "NOT NULL max_uses"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_partner_role_check",
+      "type": "c",
+      "definition": "CHECK (((target_partner_role)::text = ANY ((ARRAY['groom'::character varying, 'bride'::character varying, 'partner_a'::character varying, 'partner_b'::character varying])::text[])))"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_purpose_check",
+      "type": "c",
+      "definition": "CHECK (((purpose)::text = ANY ((ARRAY['initial_registration'::character varying, 'mypage_access'::character varying])::text[])))"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_purpose_not_null",
+      "type": "n",
+      "definition": "NOT NULL purpose"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_target_partner_role_not_null",
+      "type": "n",
+      "definition": "NOT NULL target_partner_role"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_token_hash_key",
+      "type": "u",
+      "definition": "UNIQUE (token_hash)"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_token_hash_not_null",
+      "type": "n",
+      "definition": "NOT NULL token_hash"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_use_count_check",
+      "type": "c",
+      "definition": "CHECK (((use_count >= 0) AND (use_count <= max_uses)))"
+    },
+    {
+      "table_name": "case_invitations",
+      "name": "case_invitations_use_count_not_null",
+      "type": "n",
+      "definition": "NOT NULL use_count"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_allowed_file_types_not_null",
+      "type": "n",
+      "definition": "NOT NULL allowed_file_types"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_assigned_to_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (assigned_to) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_case_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_id"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_confirmed_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (confirmed_by) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_display_order_not_null",
+      "type": "n",
+      "definition": "NOT NULL display_order"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_due_date_not_null",
+      "type": "n",
+      "definition": "NOT NULL due_date"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_format_check",
+      "type": "c",
+      "definition": "CHECK (((submission_format)::text = ANY ((ARRAY['text'::character varying, 'select'::character varying, 'file'::character varying, 'none'::character varying])::text[])))"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_importance_check",
+      "type": "c",
+      "definition": "CHECK (((importance)::text = ANY ((ARRAY['normal'::character varying, 'important'::character varying, 'critical'::character varying])::text[])))"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_importance_not_null",
+      "type": "n",
+      "definition": "NOT NULL importance"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_is_required_not_null",
+      "type": "n",
+      "definition": "NOT NULL is_required"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_options_not_null",
+      "type": "n",
+      "definition": "NOT NULL options"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_status_check",
+      "type": "c",
+      "definition": "CHECK (((status)::text = ANY ((ARRAY['not_started'::character varying, 'submitted'::character varying, 'needs_fix'::character varying, 'confirmed'::character varying, 'waived'::character varying])::text[])))"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_status_not_null",
+      "type": "n",
+      "definition": "NOT NULL status"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_submission_format_not_null",
+      "type": "n",
+      "definition": "NOT NULL submission_format"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_task_template_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (task_template_id) REFERENCES task_templates(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_title_not_null",
+      "type": "n",
+      "definition": "NOT NULL title"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "communication_logs",
+      "name": "communication_logs_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "communication_logs",
+      "name": "communication_logs_case_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_id"
+    },
+    {
+      "table_name": "communication_logs",
+      "name": "communication_logs_channel_check",
+      "type": "c",
+      "definition": "CHECK (((channel)::text = ANY ((ARRAY['line'::character varying, 'email'::character varying, 'in_app'::character varying])::text[])))"
+    },
+    {
+      "table_name": "communication_logs",
+      "name": "communication_logs_channel_not_null",
+      "type": "n",
+      "definition": "NOT NULL channel"
+    },
+    {
+      "table_name": "communication_logs",
+      "name": "communication_logs_created_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (created_by) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "communication_logs",
+      "name": "communication_logs_direction_check",
+      "type": "c",
+      "definition": "CHECK (((direction)::text = ANY ((ARRAY['inbound'::character varying, 'outbound'::character varying])::text[])))"
+    },
+    {
+      "table_name": "communication_logs",
+      "name": "communication_logs_direction_not_null",
+      "type": "n",
+      "definition": "NOT NULL direction"
+    },
+    {
+      "table_name": "communication_logs",
+      "name": "communication_logs_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "communication_logs",
+      "name": "communication_logs_occurred_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL occurred_at"
+    },
+    {
+      "table_name": "communication_logs",
+      "name": "communication_logs_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "communication_logs",
+      "name": "communication_logs_source_not_null",
+      "type": "n",
+      "definition": "NOT NULL source"
+    },
+    {
+      "table_name": "communication_logs",
+      "name": "communication_logs_summary_not_null",
+      "type": "n",
+      "definition": "NOT NULL summary"
+    },
+    {
+      "table_name": "couple_profiles",
+      "name": "couple_profiles_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "couple_profiles",
+      "name": "couple_profiles_case_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_id"
+    },
+    {
+      "table_name": "couple_profiles",
+      "name": "couple_profiles_case_role_uk",
+      "type": "u",
+      "definition": "UNIQUE (case_id, partner_role)"
+    },
+    {
+      "table_name": "couple_profiles",
+      "name": "couple_profiles_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "couple_profiles",
+      "name": "couple_profiles_full_name_not_null",
+      "type": "n",
+      "definition": "NOT NULL full_name"
+    },
+    {
+      "table_name": "couple_profiles",
+      "name": "couple_profiles_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "couple_profiles",
+      "name": "couple_profiles_is_primary_contact_not_null",
+      "type": "n",
+      "definition": "NOT NULL is_primary_contact"
+    },
+    {
+      "table_name": "couple_profiles",
+      "name": "couple_profiles_partner_role_check",
+      "type": "c",
+      "definition": "CHECK (((partner_role)::text = ANY ((ARRAY['groom'::character varying, 'bride'::character varying, 'partner_a'::character varying, 'partner_b'::character varying])::text[])))"
+    },
+    {
+      "table_name": "couple_profiles",
+      "name": "couple_profiles_partner_role_not_null",
+      "type": "n",
+      "definition": "NOT NULL partner_role"
+    },
+    {
+      "table_name": "couple_profiles",
+      "name": "couple_profiles_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "couple_profiles",
+      "name": "couple_profiles_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "couple_profiles",
+      "name": "couple_profiles_user_profile_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_profile_id) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "couple_profiles",
+      "name": "couple_profiles_user_profile_id_key",
+      "type": "u",
+      "definition": "UNIQUE (user_profile_id)"
+    },
+    {
+      "table_name": "follow_logs",
+      "name": "follow_logs_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "follow_logs",
+      "name": "follow_logs_case_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_id"
+    },
+    {
+      "table_name": "follow_logs",
+      "name": "follow_logs_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "follow_logs",
+      "name": "follow_logs_followed_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL followed_at"
+    },
+    {
+      "table_name": "follow_logs",
+      "name": "follow_logs_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "follow_logs",
+      "name": "follow_logs_method_check",
+      "type": "c",
+      "definition": "CHECK (((method)::text = ANY ((ARRAY['phone'::character varying, 'line'::character varying, 'email'::character varying, 'meeting'::character varying, 'other'::character varying])::text[])))"
+    },
+    {
+      "table_name": "follow_logs",
+      "name": "follow_logs_method_not_null",
+      "type": "n",
+      "definition": "NOT NULL method"
+    },
+    {
+      "table_name": "follow_logs",
+      "name": "follow_logs_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "follow_logs",
+      "name": "follow_logs_planner_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (planner_id) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "follow_logs",
+      "name": "follow_logs_planner_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL planner_id"
+    },
+    {
+      "table_name": "line_link_nonces",
+      "name": "line_link_nonces_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "line_link_nonces",
+      "name": "line_link_nonces_expires_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL expires_at"
+    },
+    {
+      "table_name": "line_link_nonces",
+      "name": "line_link_nonces_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "line_link_nonces",
+      "name": "line_link_nonces_link_token_not_null",
+      "type": "n",
+      "definition": "NOT NULL link_token"
+    },
+    {
+      "table_name": "line_link_nonces",
+      "name": "line_link_nonces_nonce_hash_key",
+      "type": "u",
+      "definition": "UNIQUE (nonce_hash)"
+    },
+    {
+      "table_name": "line_link_nonces",
+      "name": "line_link_nonces_nonce_hash_not_null",
+      "type": "n",
+      "definition": "NOT NULL nonce_hash"
+    },
+    {
+      "table_name": "line_link_nonces",
+      "name": "line_link_nonces_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "line_link_nonces",
+      "name": "line_link_nonces_user_profile_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_profile_id) REFERENCES user_profiles(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "line_link_nonces",
+      "name": "line_link_nonces_user_profile_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL user_profile_id"
+    },
+    {
+      "table_name": "line_webhook_events",
+      "name": "line_webhook_events_event_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL event_id"
+    },
+    {
+      "table_name": "line_webhook_events",
+      "name": "line_webhook_events_event_type_not_null",
+      "type": "n",
+      "definition": "NOT NULL event_type"
+    },
+    {
+      "table_name": "line_webhook_events",
+      "name": "line_webhook_events_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (event_id)"
+    },
+    {
+      "table_name": "line_webhook_events",
+      "name": "line_webhook_events_received_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL received_at"
+    },
+    {
+      "table_name": "meeting_notes",
+      "name": "meeting_notes_body_not_null",
+      "type": "n",
+      "definition": "NOT NULL body"
+    },
+    {
+      "table_name": "meeting_notes",
+      "name": "meeting_notes_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "meeting_notes",
+      "name": "meeting_notes_case_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_id"
+    },
+    {
+      "table_name": "meeting_notes",
+      "name": "meeting_notes_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "meeting_notes",
+      "name": "meeting_notes_created_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (created_by) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "meeting_notes",
+      "name": "meeting_notes_created_by_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_by"
+    },
+    {
+      "table_name": "meeting_notes",
+      "name": "meeting_notes_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "meeting_notes",
+      "name": "meeting_notes_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "meeting_notes",
+      "name": "meeting_notes_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "name": "meeting_sheets_ai_draft_job_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (ai_draft_job_id) REFERENCES ai_jobs(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "name": "meeting_sheets_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "name": "meeting_sheets_case_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_id"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "name": "meeting_sheets_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "name": "meeting_sheets_generated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL generated_at"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "name": "meeting_sheets_generated_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (generated_by) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "name": "meeting_sheets_generated_by_not_null",
+      "type": "n",
+      "definition": "NOT NULL generated_by"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "name": "meeting_sheets_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "name": "meeting_sheets_pdf_file_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (pdf_file_id) REFERENCES storage_files(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "name": "meeting_sheets_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "name": "meeting_sheets_summary_json_not_null",
+      "type": "n",
+      "definition": "NOT NULL summary_json"
+    },
+    {
+      "table_name": "notification_logs",
+      "name": "notification_logs_attempt_no_not_null",
+      "type": "n",
+      "definition": "NOT NULL attempt_no"
+    },
+    {
+      "table_name": "notification_logs",
+      "name": "notification_logs_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "notification_logs",
+      "name": "notification_logs_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "notification_logs",
+      "name": "notification_logs_notification_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "notification_logs",
+      "name": "notification_logs_notification_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL notification_id"
+    },
+    {
+      "table_name": "notification_logs",
+      "name": "notification_logs_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "notification_logs",
+      "name": "notification_logs_provider_check",
+      "type": "c",
+      "definition": "CHECK (((provider)::text = ANY ((ARRAY['line'::character varying, 'email'::character varying])::text[])))"
+    },
+    {
+      "table_name": "notification_logs",
+      "name": "notification_logs_provider_not_null",
+      "type": "n",
+      "definition": "NOT NULL provider"
+    },
+    {
+      "table_name": "notification_logs",
+      "name": "notification_logs_status_check",
+      "type": "c",
+      "definition": "CHECK (((status)::text = ANY ((ARRAY['success'::character varying, 'failure'::character varying])::text[])))"
+    },
+    {
+      "table_name": "notification_logs",
+      "name": "notification_logs_status_not_null",
+      "type": "n",
+      "definition": "NOT NULL status"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "name": "notification_quota_counters_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "name": "notification_quota_counters_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "name": "notification_quota_counters_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "name": "notification_quota_counters_scope_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL scope_id"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "name": "notification_quota_counters_scope_not_null",
+      "type": "n",
+      "definition": "NOT NULL scope"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "name": "notification_quota_counters_sent_count_not_null",
+      "type": "n",
+      "definition": "NOT NULL sent_count"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "name": "notification_quota_counters_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "name": "notification_quota_counters_window_start_not_null",
+      "type": "n",
+      "definition": "NOT NULL window_start"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "name": "notification_quota_scope_check",
+      "type": "c",
+      "definition": "CHECK (((scope)::text = ANY ((ARRAY['case_week'::character varying, 'venue_month'::character varying])::text[])))"
+    },
+    {
+      "table_name": "notification_quota_counters",
+      "name": "notification_quota_uk",
+      "type": "u",
+      "definition": "UNIQUE (scope, scope_id, window_start)"
+    },
+    {
+      "table_name": "notification_settings",
+      "name": "notification_settings_case_limit_check",
+      "type": "c",
+      "definition": "CHECK ((line_per_case_per_week >= 0))"
+    },
+    {
+      "table_name": "notification_settings",
+      "name": "notification_settings_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "notification_settings",
+      "name": "notification_settings_due_reminder_days_before_not_null",
+      "type": "n",
+      "definition": "NOT NULL due_reminder_days_before"
+    },
+    {
+      "table_name": "notification_settings",
+      "name": "notification_settings_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "notification_settings",
+      "name": "notification_settings_line_per_case_per_week_not_null",
+      "type": "n",
+      "definition": "NOT NULL line_per_case_per_week"
+    },
+    {
+      "table_name": "notification_settings",
+      "name": "notification_settings_line_per_venue_per_month_not_null",
+      "type": "n",
+      "definition": "NOT NULL line_per_venue_per_month"
+    },
+    {
+      "table_name": "notification_settings",
+      "name": "notification_settings_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "notification_settings",
+      "name": "notification_settings_reminder_check",
+      "type": "c",
+      "definition": "CHECK ((due_reminder_days_before >= 0))"
+    },
+    {
+      "table_name": "notification_settings",
+      "name": "notification_settings_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "notification_settings",
+      "name": "notification_settings_venue_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "notification_settings",
+      "name": "notification_settings_venue_limit_check",
+      "type": "c",
+      "definition": "CHECK ((line_per_venue_per_month >= 0))"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_body_not_null",
+      "type": "n",
+      "definition": "NOT NULL body"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_channel_check",
+      "type": "c",
+      "definition": "CHECK (((channel)::text = ANY ((ARRAY['line'::character varying, 'email'::character varying, 'in_app'::character varying])::text[])))"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_channel_not_null",
+      "type": "n",
+      "definition": "NOT NULL channel"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_created_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (created_by) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_notification_type_not_null",
+      "type": "n",
+      "definition": "NOT NULL notification_type"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_recipient_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (recipient_user_id) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_recipient_user_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL recipient_user_id"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_status_check",
+      "type": "c",
+      "definition": "CHECK (((status)::text = ANY ((ARRAY['queued'::character varying, 'sent'::character varying, 'failed'::character varying, 'read'::character varying, 'cancelled'::character varying, 'skipped'::character varying])::text[])))"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_status_not_null",
+      "type": "n",
+      "definition": "NOT NULL status"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_title_not_null",
+      "type": "n",
+      "definition": "NOT NULL title"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_type_check",
+      "type": "c",
+      "definition": "CHECK (((notification_type)::text = ANY ((ARRAY['due_reminder'::character varying, 'overdue'::character varying, 'submission_request'::character varying, 'needs_fix'::character varying, 'info'::character varying, 'invitation'::character varying])::text[])))"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_venue_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id)"
+    },
+    {
+      "table_name": "notifications",
+      "name": "notifications_venue_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL venue_id"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "name": "plan_task_templates_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "name": "plan_task_templates_display_order_not_null",
+      "type": "n",
+      "definition": "NOT NULL display_order"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "name": "plan_task_templates_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "name": "plan_task_templates_is_required_not_null",
+      "type": "n",
+      "definition": "NOT NULL is_required"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "name": "plan_task_templates_override_check",
+      "type": "c",
+      "definition": "CHECK (((due_offset_days_override IS NULL) OR (due_offset_days_override >= 0)))"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "name": "plan_task_templates_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "name": "plan_task_templates_plan_type_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (plan_type_id) REFERENCES plan_types(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "name": "plan_task_templates_plan_type_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL plan_type_id"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "name": "plan_task_templates_task_template_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (task_template_id) REFERENCES task_templates(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "name": "plan_task_templates_task_template_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL task_template_id"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "name": "plan_task_templates_uk",
+      "type": "u",
+      "definition": "UNIQUE (plan_type_id, task_template_id)"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "name": "plan_task_templates_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "plan_types",
+      "name": "plan_types_active_not_null",
+      "type": "n",
+      "definition": "NOT NULL active"
+    },
+    {
+      "table_name": "plan_types",
+      "name": "plan_types_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "plan_types",
+      "name": "plan_types_display_order_not_null",
+      "type": "n",
+      "definition": "NOT NULL display_order"
+    },
+    {
+      "table_name": "plan_types",
+      "name": "plan_types_guest_max_check",
+      "type": "c",
+      "definition": "CHECK (((default_guest_count_max IS NULL) OR (default_guest_count_max >= COALESCE(default_guest_count_min, 0))))"
+    },
+    {
+      "table_name": "plan_types",
+      "name": "plan_types_guest_min_check",
+      "type": "c",
+      "definition": "CHECK ((default_guest_count_min >= 0))"
+    },
+    {
+      "table_name": "plan_types",
+      "name": "plan_types_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "plan_types",
+      "name": "plan_types_name_not_null",
+      "type": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table_name": "plan_types",
+      "name": "plan_types_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "plan_types",
+      "name": "plan_types_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "plan_types",
+      "name": "plan_types_venue_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id)"
+    },
+    {
+      "table_name": "plan_types",
+      "name": "plan_types_venue_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL venue_id"
+    },
+    {
+      "table_name": "plan_types",
+      "name": "plan_types_venue_name_uk",
+      "type": "u",
+      "definition": "UNIQUE (venue_id, name)"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_active_not_null",
+      "type": "n",
+      "definition": "NOT NULL active"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_condition_key_not_null",
+      "type": "n",
+      "definition": "NOT NULL condition_key"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_level_check",
+      "type": "c",
+      "definition": "CHECK (((level)::text = ANY ((ARRAY['low'::character varying, 'caution'::character varying, 'high'::character varying])::text[])))"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_level_not_null",
+      "type": "n",
+      "definition": "NOT NULL level"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_name_not_null",
+      "type": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_params_not_null",
+      "type": "n",
+      "definition": "NOT NULL params"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_priority_not_null",
+      "type": "n",
+      "definition": "NOT NULL priority"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_score_delta_check",
+      "type": "c",
+      "definition": "CHECK (((score_delta >= 0) AND (score_delta <= 100)))"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_score_delta_not_null",
+      "type": "n",
+      "definition": "NOT NULL score_delta"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "risk_rules",
+      "name": "risk_rules_venue_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "name": "risk_score_snapshots_calculated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL calculated_at"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "name": "risk_score_snapshots_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "name": "risk_score_snapshots_case_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_id"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "name": "risk_score_snapshots_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "name": "risk_score_snapshots_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "name": "risk_score_snapshots_is_current_not_null",
+      "type": "n",
+      "definition": "NOT NULL is_current"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "name": "risk_score_snapshots_level_check",
+      "type": "c",
+      "definition": "CHECK (((score_level)::text = ANY ((ARRAY['low'::character varying, 'caution'::character varying, 'high'::character varying])::text[])))"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "name": "risk_score_snapshots_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "name": "risk_score_snapshots_reasons_not_null",
+      "type": "n",
+      "definition": "NOT NULL reasons"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "name": "risk_score_snapshots_risk_rule_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (risk_rule_id) REFERENCES risk_rules(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "name": "risk_score_snapshots_score_level_not_null",
+      "type": "n",
+      "definition": "NOT NULL score_level"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "name": "risk_score_snapshots_score_value_not_null",
+      "type": "n",
+      "definition": "NOT NULL score_value"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "name": "risk_score_snapshots_value_check",
+      "type": "c",
+      "definition": "CHECK (((score_value >= 0) AND (score_value <= 100)))"
+    },
+    {
+      "table_name": "storage_files",
+      "name": "storage_files_bucket_not_null",
+      "type": "n",
+      "definition": "NOT NULL bucket"
+    },
+    {
+      "table_name": "storage_files",
+      "name": "storage_files_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "storage_files",
+      "name": "storage_files_case_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_id"
+    },
+    {
+      "table_name": "storage_files",
+      "name": "storage_files_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "storage_files",
+      "name": "storage_files_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "storage_files",
+      "name": "storage_files_object_path_key",
+      "type": "u",
+      "definition": "UNIQUE (object_path)"
+    },
+    {
+      "table_name": "storage_files",
+      "name": "storage_files_object_path_not_null",
+      "type": "n",
+      "definition": "NOT NULL object_path"
+    },
+    {
+      "table_name": "storage_files",
+      "name": "storage_files_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "storage_files",
+      "name": "storage_files_size_check",
+      "type": "c",
+      "definition": "CHECK (((file_size_bytes IS NULL) OR (file_size_bytes >= 0)))"
+    },
+    {
+      "table_name": "storage_files",
+      "name": "storage_files_uploaded_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (uploaded_by) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "storage_files",
+      "name": "storage_files_uploaded_by_not_null",
+      "type": "n",
+      "definition": "NOT NULL uploaded_by"
+    },
+    {
+      "table_name": "storage_files",
+      "name": "storage_files_visibility_check",
+      "type": "c",
+      "definition": "CHECK (((visibility)::text = ANY ((ARRAY['case_private'::character varying, 'planner_only'::character varying, 'system'::character varying])::text[])))"
+    },
+    {
+      "table_name": "storage_files",
+      "name": "storage_files_visibility_not_null",
+      "type": "n",
+      "definition": "NOT NULL visibility"
+    },
+    {
+      "table_name": "system_alerts",
+      "name": "system_alerts_affected_count_not_null",
+      "type": "n",
+      "definition": "NOT NULL affected_count"
+    },
+    {
+      "table_name": "system_alerts",
+      "name": "system_alerts_alert_key_not_null",
+      "type": "n",
+      "definition": "NOT NULL alert_key"
+    },
+    {
+      "table_name": "system_alerts",
+      "name": "system_alerts_category_check",
+      "type": "c",
+      "definition": "CHECK ((category = ANY (ARRAY['batch'::text, 'health'::text, 'ai'::text, 'notification'::text, 'capacity'::text, 'auth'::text])))"
+    },
+    {
+      "table_name": "system_alerts",
+      "name": "system_alerts_category_not_null",
+      "type": "n",
+      "definition": "NOT NULL category"
+    },
+    {
+      "table_name": "system_alerts",
+      "name": "system_alerts_first_detected_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL first_detected_at"
+    },
+    {
+      "table_name": "system_alerts",
+      "name": "system_alerts_last_detected_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL last_detected_at"
+    },
+    {
+      "table_name": "system_alerts",
+      "name": "system_alerts_occurrence_count_not_null",
+      "type": "n",
+      "definition": "NOT NULL occurrence_count"
+    },
+    {
+      "table_name": "system_alerts",
+      "name": "system_alerts_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (alert_key)"
+    },
+    {
+      "table_name": "system_alerts",
+      "name": "system_alerts_published_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL published_at"
+    },
+    {
+      "table_name": "system_alerts",
+      "name": "system_alerts_source_not_null",
+      "type": "n",
+      "definition": "NOT NULL source"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_case_task_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_task_id) REFERENCES case_tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_case_task_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_task_id"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_file_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (file_id) REFERENCES storage_files(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_is_latest_not_null",
+      "type": "n",
+      "definition": "NOT NULL is_latest"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_review_status_check",
+      "type": "c",
+      "definition": "CHECK (((review_status)::text = ANY ((ARRAY['draft'::character varying, 'submitted'::character varying, 'needs_fix'::character varying, 'confirmed'::character varying])::text[])))"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_review_status_not_null",
+      "type": "n",
+      "definition": "NOT NULL review_status"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_reviewed_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (reviewed_by) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_submission_type_not_null",
+      "type": "n",
+      "definition": "NOT NULL submission_type"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_submitted_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL submitted_at"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_submitted_by_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (submitted_by) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_submitted_by_not_null",
+      "type": "n",
+      "definition": "NOT NULL submitted_by"
+    },
+    {
+      "table_name": "task_submissions",
+      "name": "task_submissions_type_check",
+      "type": "c",
+      "definition": "CHECK (((submission_type)::text = ANY ((ARRAY['text'::character varying, 'select'::character varying, 'file'::character varying, 'none'::character varying])::text[])))"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_active_not_null",
+      "type": "n",
+      "definition": "NOT NULL active"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_allowed_file_types_not_null",
+      "type": "n",
+      "definition": "NOT NULL allowed_file_types"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_default_options_not_null",
+      "type": "n",
+      "definition": "NOT NULL default_options"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_due_offset_check",
+      "type": "c",
+      "definition": "CHECK ((due_offset_days >= 0))"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_due_offset_days_not_null",
+      "type": "n",
+      "definition": "NOT NULL due_offset_days"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_format_check",
+      "type": "c",
+      "definition": "CHECK (((submission_format)::text = ANY ((ARRAY['text'::character varying, 'select'::character varying, 'file'::character varying, 'none'::character varying])::text[])))"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_importance_check",
+      "type": "c",
+      "definition": "CHECK (((importance)::text = ANY ((ARRAY['normal'::character varying, 'important'::character varying, 'critical'::character varying])::text[])))"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_importance_not_null",
+      "type": "n",
+      "definition": "NOT NULL importance"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_is_required_not_null",
+      "type": "n",
+      "definition": "NOT NULL is_required"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_name_not_null",
+      "type": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_submission_format_not_null",
+      "type": "n",
+      "definition": "NOT NULL submission_format"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_venue_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id)"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_venue_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL venue_id"
+    },
+    {
+      "table_name": "task_templates",
+      "name": "task_templates_venue_name_uk",
+      "type": "u",
+      "definition": "UNIQUE (venue_id, name)"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_case_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_id"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_display_order_not_null",
+      "type": "n",
+      "definition": "NOT NULL display_order"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_due_date_not_null",
+      "type": "n",
+      "definition": "NOT NULL due_date"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_related_task_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (related_task_id) REFERENCES case_tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_source_check",
+      "type": "c",
+      "definition": "CHECK (((source)::text = ANY ((ARRAY['auto'::character varying, 'manual'::character varying])::text[])))"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_source_not_null",
+      "type": "n",
+      "definition": "NOT NULL source"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_status_check",
+      "type": "c",
+      "definition": "CHECK (((status)::text = ANY ((ARRAY['planned'::character varying, 'done'::character varying, 'overdue'::character varying, 'skipped'::character varying])::text[])))"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_status_not_null",
+      "type": "n",
+      "definition": "NOT NULL status"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_title_not_null",
+      "type": "n",
+      "definition": "NOT NULL title"
+    },
+    {
+      "table_name": "timeline_items",
+      "name": "timeline_items_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_case_count_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_count"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_database_bytes_check",
+      "type": "c",
+      "definition": "CHECK ((database_bytes >= 0))"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_database_bytes_not_null",
+      "type": "n",
+      "definition": "NOT NULL database_bytes"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_database_limit_bytes_check",
+      "type": "c",
+      "definition": "CHECK ((database_limit_bytes > 0))"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_file_count_not_null",
+      "type": "n",
+      "definition": "NOT NULL file_count"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_measured_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL measured_at"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_measured_on_not_null",
+      "type": "n",
+      "definition": "NOT NULL measured_on"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_notification_count_not_null",
+      "type": "n",
+      "definition": "NOT NULL notification_count"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_notification_failure_count_not_null",
+      "type": "n",
+      "definition": "NOT NULL notification_failure_count"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (measured_on)"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_storage_bytes_check",
+      "type": "c",
+      "definition": "CHECK ((storage_bytes >= 0))"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_storage_limit_bytes_check",
+      "type": "c",
+      "definition": "CHECK ((storage_limit_bytes > 0))"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_user_count_not_null",
+      "type": "n",
+      "definition": "NOT NULL user_count"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "name": "usage_snapshots_venue_count_not_null",
+      "type": "n",
+      "definition": "NOT NULL venue_count"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_auth_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (auth_user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_auth_user_id_key",
+      "type": "u",
+      "definition": "UNIQUE (auth_user_id)"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_auth_user_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL auth_user_id"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_display_name_not_null",
+      "type": "n",
+      "definition": "NOT NULL display_name"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_email_key",
+      "type": "u",
+      "definition": "UNIQUE (email)"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_email_not_null",
+      "type": "n",
+      "definition": "NOT NULL email"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_line_user_id_key",
+      "type": "u",
+      "definition": "UNIQUE (line_user_id)"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_role_check",
+      "type": "c",
+      "definition": "CHECK (((role)::text = ANY ((ARRAY['couple'::character varying, 'planner'::character varying, 'admin'::character varying, 'system_admin'::character varying])::text[])))"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_role_not_null",
+      "type": "n",
+      "definition": "NOT NULL role"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_status_check",
+      "type": "c",
+      "definition": "CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'invited'::character varying, 'suspended'::character varying, 'deleted'::character varying])::text[])))"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_status_not_null",
+      "type": "n",
+      "definition": "NOT NULL status"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_venue_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id)"
+    },
+    {
+      "table_name": "user_profiles",
+      "name": "user_profiles_venue_scope_check",
+      "type": "c",
+      "definition": "CHECK (((((role)::text = 'system_admin'::text) AND (venue_id IS NULL)) OR (((role)::text <> 'system_admin'::text) AND (venue_id IS NOT NULL))))"
+    },
+    {
+      "table_name": "venues",
+      "name": "venues_active_not_null",
+      "type": "n",
+      "definition": "NOT NULL active"
+    },
+    {
+      "table_name": "venues",
+      "name": "venues_code_format",
+      "type": "c",
+      "definition": "CHECK (((code)::text ~ '^[A-Z0-9]{4,10}$'::text))"
+    },
+    {
+      "table_name": "venues",
+      "name": "venues_code_key",
+      "type": "u",
+      "definition": "UNIQUE (code)"
+    },
+    {
+      "table_name": "venues",
+      "name": "venues_code_not_null",
+      "type": "n",
+      "definition": "NOT NULL code"
+    },
+    {
+      "table_name": "venues",
+      "name": "venues_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "venues",
+      "name": "venues_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "venues",
+      "name": "venues_name_not_null",
+      "type": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table_name": "venues",
+      "name": "venues_official_line_channel_id_key",
+      "type": "u",
+      "definition": "UNIQUE (official_line_channel_id)"
+    },
+    {
+      "table_name": "venues",
+      "name": "venues_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "venues",
+      "name": "venues_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_archived_consistency_check",
+      "type": "c",
+      "definition": "CHECK (((((status)::text = 'archived'::text) AND (archived_at IS NOT NULL)) OR (((status)::text <> 'archived'::text) AND (archived_at IS NULL))))"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_case_code_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_code"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_channel_check",
+      "type": "c",
+      "definition": "CHECK (((contact_channel)::text = ANY ((ARRAY['line'::character varying, 'email'::character varying])::text[])))"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_code_uk",
+      "type": "u",
+      "definition": "UNIQUE (venue_id, case_code)"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_contact_channel_not_null",
+      "type": "n",
+      "definition": "NOT NULL contact_channel"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_guest_count_check",
+      "type": "c",
+      "definition": "CHECK ((guest_count >= 0))"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_plan_type_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (plan_type_id) REFERENCES plan_types(id) ON DELETE SET NULL"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_primary_planner_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (primary_planner_id) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_primary_planner_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL primary_planner_id"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_status_check",
+      "type": "c",
+      "definition": "CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'active'::character varying, 'completed'::character varying, 'archived'::character varying])::text[])))"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_status_not_null",
+      "type": "n",
+      "definition": "NOT NULL status"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_venue_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (venue_id) REFERENCES venues(id)"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_venue_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL venue_id"
+    },
+    {
+      "table_name": "wedding_cases",
+      "name": "wedding_cases_wedding_date_not_null",
+      "type": "n",
+      "definition": "NOT NULL wedding_date"
+    }
+  ],
+  "policies": [
+    {
+      "table_name": "ai_jobs",
+      "policyname": "ai_jobs_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND ((EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))) OR ((job_type)::text = 'faq_answer'::text)))",
+      "with_check": null
+    },
+    {
+      "table_name": "ai_jobs",
+      "policyname": "ai_jobs_write",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
+      "with_check": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))"
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "policyname": "ai_prompt_templates_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "(is_system_admin() OR (venue_id IS NULL) OR (venue_id = ( SELECT u.venue_id\n   FROM current_app_user() u(id, role, venue_id))))",
+      "with_check": null
+    },
+    {
+      "table_name": "ai_prompt_templates",
+      "policyname": "ai_prompt_templates_write",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "is_system_admin()",
+      "with_check": "is_system_admin()"
+    },
+    {
+      "table_name": "audit_logs",
+      "policyname": "audit_logs_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "is_system_admin()",
+      "with_check": null
+    },
+    {
+      "table_name": "batch_runs",
+      "policyname": "batch_runs_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "is_system_admin()",
+      "with_check": null
+    },
+    {
+      "table_name": "case_guests",
+      "policyname": "case_guests_all",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id))",
+      "with_check": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id))"
+    },
+    {
+      "table_name": "case_invitations",
+      "policyname": "case_invitations_delete",
+      "roles": ["public"],
+      "cmd": "DELETE",
+      "qual": "false",
+      "with_check": null
+    },
+    {
+      "table_name": "case_invitations",
+      "policyname": "case_invitations_insert",
+      "roles": ["public"],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))"
+    },
+    {
+      "table_name": "case_invitations",
+      "policyname": "case_invitations_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
+      "with_check": null
+    },
+    {
+      "table_name": "case_invitations",
+      "policyname": "case_invitations_update",
+      "roles": ["public"],
+      "cmd": "UPDATE",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
+      "with_check": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))"
+    },
+    {
+      "table_name": "case_tasks",
+      "policyname": "case_tasks_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id))",
+      "with_check": null
+    },
+    {
+      "table_name": "case_tasks",
+      "policyname": "case_tasks_write",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
+      "with_check": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))"
+    },
+    {
+      "table_name": "communication_logs",
+      "policyname": "communication_logs_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
+      "with_check": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "policyname": "couple_profiles_delete",
+      "roles": ["public"],
+      "cmd": "DELETE",
+      "qual": "false",
+      "with_check": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "policyname": "couple_profiles_insert_staff",
+      "roles": ["public"],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))"
+    },
+    {
+      "table_name": "couple_profiles",
+      "policyname": "couple_profiles_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "(case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids))",
+      "with_check": null
+    },
+    {
+      "table_name": "couple_profiles",
+      "policyname": "couple_profiles_update_staff",
+      "roles": ["public"],
+      "cmd": "UPDATE",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
+      "with_check": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))"
+    },
+    {
+      "table_name": "follow_logs",
+      "policyname": "follow_logs_all",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
+      "with_check": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))"
+    },
+    {
+      "table_name": "meeting_notes",
+      "policyname": "meeting_notes_all",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
+      "with_check": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))"
+    },
+    {
+      "table_name": "meeting_sheets",
+      "policyname": "meeting_sheets_all",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
+      "with_check": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))"
+    },
+    {
+      "table_name": "notification_logs",
+      "policyname": "notification_logs_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "(EXISTS ( SELECT 1\n   FROM notification_owner(notification_logs.notification_id) o(recipient_user_id, venue_id)\n  WHERE ((o.recipient_user_id = ( SELECT u.id\n           FROM current_app_user() u(id, role, venue_id))) OR is_admin_of(o.venue_id) OR is_system_admin())))",
+      "with_check": null
+    },
+    {
+      "table_name": "notification_settings",
+      "policyname": "notification_settings_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "(is_system_admin() OR (venue_id IS NULL) OR (venue_id = ( SELECT u.venue_id\n   FROM current_app_user() u(id, role, venue_id))))",
+      "with_check": null
+    },
+    {
+      "table_name": "notification_settings",
+      "policyname": "notification_settings_write",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "(is_system_admin() OR ((venue_id IS NOT NULL) AND is_admin_of(venue_id)))",
+      "with_check": "(is_system_admin() OR ((venue_id IS NOT NULL) AND is_admin_of(venue_id)))"
+    },
+    {
+      "table_name": "notifications",
+      "policyname": "notifications_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "((recipient_user_id = ( SELECT u.id\n   FROM current_app_user() u(id, role, venue_id))) OR is_admin_of(venue_id) OR is_system_admin() OR ((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = 'planner'::text)))))",
+      "with_check": null
+    },
+    {
+      "table_name": "notifications",
+      "policyname": "notifications_update_recipient",
+      "roles": ["public"],
+      "cmd": "UPDATE",
+      "qual": "(recipient_user_id = ( SELECT u.id\n   FROM current_app_user() u(id, role, venue_id)))",
+      "with_check": "(recipient_user_id = ( SELECT u.id\n   FROM current_app_user() u(id, role, venue_id)))"
+    },
+    {
+      "table_name": "plan_task_templates",
+      "policyname": "plan_task_templates_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "(is_system_admin() OR (plan_type_venue(plan_type_id) = ( SELECT u.venue_id\n   FROM current_app_user() u(id, role, venue_id))))",
+      "with_check": null
+    },
+    {
+      "table_name": "plan_task_templates",
+      "policyname": "plan_task_templates_write",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "(is_system_admin() OR is_admin_of(plan_type_venue(plan_type_id)))",
+      "with_check": "(is_system_admin() OR is_admin_of(plan_type_venue(plan_type_id)))"
+    },
+    {
+      "table_name": "plan_types",
+      "policyname": "plan_types_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "(is_system_admin() OR (venue_id = ( SELECT u.venue_id\n   FROM current_app_user() u(id, role, venue_id))))",
+      "with_check": null
+    },
+    {
+      "table_name": "plan_types",
+      "policyname": "plan_types_write",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "(is_admin_of(venue_id) OR is_system_admin())",
+      "with_check": "(is_admin_of(venue_id) OR is_system_admin())"
+    },
+    {
+      "table_name": "risk_rules",
+      "policyname": "risk_rules_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "(is_system_admin() OR (venue_id IS NULL) OR (venue_id = ( SELECT u.venue_id\n   FROM current_app_user() u(id, role, venue_id))))",
+      "with_check": null
+    },
+    {
+      "table_name": "risk_rules",
+      "policyname": "risk_rules_write",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "(is_system_admin() OR ((venue_id IS NOT NULL) AND is_admin_of(venue_id)))",
+      "with_check": "(is_system_admin() OR ((venue_id IS NOT NULL) AND is_admin_of(venue_id)))"
+    },
+    {
+      "table_name": "risk_score_snapshots",
+      "policyname": "risk_score_snapshots_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
+      "with_check": null
+    },
+    {
+      "table_name": "storage_files",
+      "policyname": "storage_files_delete",
+      "roles": ["public"],
+      "cmd": "DELETE",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND ((uploaded_by = ( SELECT u.id\n   FROM current_app_user() u(id, role, venue_id))) OR (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))) OR (EXISTS ( SELECT 1\n   FROM couple_profiles cp\n  WHERE ((cp.case_id = storage_files.case_id) AND (cp.user_profile_id = storage_files.uploaded_by))))))",
+      "with_check": null
+    },
+    {
+      "table_name": "storage_files",
+      "policyname": "storage_files_hide_planner_only",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "(((visibility)::text <> 'planner_only'::text) OR (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
+      "with_check": null
+    },
+    {
+      "table_name": "storage_files",
+      "policyname": "storage_files_insert",
+      "roles": ["public"],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (uploaded_by = ( SELECT u.id\n   FROM current_app_user() u(id, role, venue_id))))"
+    },
+    {
+      "table_name": "storage_files",
+      "policyname": "storage_files_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id))",
+      "with_check": null
+    },
+    {
+      "table_name": "system_alerts",
+      "policyname": "system_alerts_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "is_system_admin()",
+      "with_check": null
+    },
+    {
+      "table_name": "task_submissions",
+      "policyname": "task_submissions_delete",
+      "roles": ["public"],
+      "cmd": "DELETE",
+      "qual": "false",
+      "with_check": null
+    },
+    {
+      "table_name": "task_submissions",
+      "policyname": "task_submissions_hide_draft",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "(((review_status)::text <> 'draft'::text) OR (submitted_by = ( SELECT u.id\n   FROM current_app_user() u(id, role, venue_id))))",
+      "with_check": null
+    },
+    {
+      "table_name": "task_submissions",
+      "policyname": "task_submissions_insert_couple",
+      "roles": ["public"],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((submitted_by = ( SELECT u.id\n   FROM current_app_user() u(id, role, venue_id))) AND (EXISTS ( SELECT 1\n   FROM case_tasks ct\n  WHERE ((ct.id = task_submissions.case_task_id) AND (ct.case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids))))) AND ((review_status)::text = ANY ((ARRAY['draft'::character varying, 'submitted'::character varying])::text[])))"
+    },
+    {
+      "table_name": "task_submissions",
+      "policyname": "task_submissions_review_planner",
+      "roles": ["public"],
+      "cmd": "UPDATE",
+      "qual": "(EXISTS ( SELECT 1\n   FROM case_tasks ct,\n    current_app_user() u(id, role, venue_id)\n  WHERE ((ct.id = task_submissions.case_task_id) AND (ct.case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
+      "with_check": "(((review_status)::text = ANY ((ARRAY['needs_fix'::character varying, 'confirmed'::character varying])::text[])) AND (EXISTS ( SELECT 1\n   FROM case_tasks ct,\n    current_app_user() u(id, role, venue_id)\n  WHERE ((ct.id = task_submissions.case_task_id) AND (ct.case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text]))))))"
+    },
+    {
+      "table_name": "task_submissions",
+      "policyname": "task_submissions_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "(EXISTS ( SELECT 1\n   FROM case_tasks ct\n  WHERE ((ct.id = task_submissions.case_task_id) AND (ct.case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(ct.case_id))))",
+      "with_check": null
+    },
+    {
+      "table_name": "task_submissions",
+      "policyname": "task_submissions_update_couple",
+      "roles": ["public"],
+      "cmd": "UPDATE",
+      "qual": "(((review_status)::text = ANY ((ARRAY['draft'::character varying, 'submitted'::character varying])::text[])) AND (EXISTS ( SELECT 1\n   FROM case_tasks ct,\n    current_app_user() u(id, role, venue_id)\n  WHERE ((ct.id = task_submissions.case_task_id) AND (ct.case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(ct.case_id) AND (u.role = 'couple'::text)))))",
+      "with_check": "(((review_status)::text = ANY ((ARRAY['draft'::character varying, 'submitted'::character varying])::text[])) AND (submitted_by = ( SELECT u.id\n   FROM current_app_user() u(id, role, venue_id))) AND (EXISTS ( SELECT 1\n   FROM case_tasks ct,\n    current_app_user() u(id, role, venue_id)\n  WHERE ((ct.id = task_submissions.case_task_id) AND (ct.case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(ct.case_id) AND (u.role = 'couple'::text)))))"
+    },
+    {
+      "table_name": "task_templates",
+      "policyname": "task_templates_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "(is_system_admin() OR (venue_id = ( SELECT u.venue_id\n   FROM current_app_user() u(id, role, venue_id))))",
+      "with_check": null
+    },
+    {
+      "table_name": "task_templates",
+      "policyname": "task_templates_write",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "(is_admin_of(venue_id) OR is_system_admin())",
+      "with_check": "(is_admin_of(venue_id) OR is_system_admin())"
+    },
+    {
+      "table_name": "timeline_items",
+      "policyname": "timeline_items_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id))",
+      "with_check": null
+    },
+    {
+      "table_name": "timeline_items",
+      "policyname": "timeline_items_write",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
+      "with_check": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))"
+    },
+    {
+      "table_name": "usage_snapshots",
+      "policyname": "usage_snapshots_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "is_system_admin()",
+      "with_check": null
+    },
+    {
+      "table_name": "user_profiles",
+      "policyname": "user_profiles_admin_write",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "(is_admin_of(venue_id) OR is_system_admin())",
+      "with_check": "((is_admin_of(venue_id) AND ((role)::text = 'planner'::text) AND (venue_id = ( SELECT u.venue_id\n   FROM current_app_user() u(id, role, venue_id)))) OR (is_system_admin() AND ((role)::text = 'admin'::text)))"
+    },
+    {
+      "table_name": "user_profiles",
+      "policyname": "user_profiles_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "((auth_user_id = auth.uid()) OR is_admin_of(venue_id) OR is_system_admin())",
+      "with_check": null
+    },
+    {
+      "table_name": "user_profiles",
+      "policyname": "user_profiles_update_self",
+      "roles": ["public"],
+      "cmd": "UPDATE",
+      "qual": "(auth_user_id = auth.uid())",
+      "with_check": "((auth_user_id = auth.uid()) AND ((role)::text = ( SELECT u.role\n   FROM current_app_user() u(id, role, venue_id))) AND (NOT (venue_id IS DISTINCT FROM ( SELECT u.venue_id\n   FROM current_app_user() u(id, role, venue_id)))) AND ((status)::text = 'active'::text))"
+    },
+    {
+      "table_name": "venues",
+      "policyname": "venues_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "(is_system_admin() OR (id = ( SELECT u.venue_id\n   FROM current_app_user() u(id, role, venue_id))))",
+      "with_check": null
+    },
+    {
+      "table_name": "venues",
+      "policyname": "venues_write",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "is_system_admin()",
+      "with_check": "is_system_admin()"
+    },
+    {
+      "table_name": "wedding_cases",
+      "policyname": "cases_delete",
+      "roles": ["public"],
+      "cmd": "DELETE",
+      "qual": "false",
+      "with_check": null
+    },
+    {
+      "table_name": "wedding_cases",
+      "policyname": "cases_exclude_archived",
+      "roles": ["public"],
+      "cmd": "ALL",
+      "qual": "((archived_at IS NULL) OR can_see_archived())",
+      "with_check": "((archived_at IS NULL) OR can_see_archived())"
+    },
+    {
+      "table_name": "wedding_cases",
+      "policyname": "cases_insert",
+      "roles": ["public"],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "(EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE ((u.role = ANY (ARRAY['planner'::text, 'admin'::text])) AND (u.venue_id = wedding_cases.venue_id))))"
+    },
+    {
+      "table_name": "wedding_cases",
+      "policyname": "cases_select",
+      "roles": ["public"],
+      "cmd": "SELECT",
+      "qual": "(id IN ( SELECT accessible_case_ids() AS accessible_case_ids))",
+      "with_check": null
+    },
+    {
+      "table_name": "wedding_cases",
+      "policyname": "cases_update",
+      "roles": ["public"],
+      "cmd": "UPDATE",
+      "qual": "(id IN ( SELECT accessible_case_ids() AS accessible_case_ids))",
+      "with_check": "(id IN ( SELECT accessible_case_ids() AS accessible_case_ids))"
+    }
+  ],
+  "functions": [
+    {
+      "name": "accessible_case_ids",
+      "arguments": "",
+      "result": "SETOF uuid",
+      "security_definer": true
+    },
+    {
+      "name": "add_case_task",
+      "arguments": "p_case_id uuid, p_task jsonb",
+      "result": "jsonb",
+      "security_definer": true
+    },
+    {
+      "name": "ai_assist_status",
+      "arguments": "",
+      "result": "TABLE(available boolean, last_seen_at timestamp with time zone)",
+      "security_definer": true
+    },
+    {
+      "name": "ai_worker_ping",
+      "arguments": "p_worker text, p_model text",
+      "result": "void",
+      "security_definer": true
+    },
+    {
+      "name": "apply_case_update",
+      "arguments": "p_case_id uuid, p_patch jsonb, p_profiles jsonb, p_due_changes jsonb, p_waived_task_ids uuid[], p_new_tasks jsonb",
+      "result": "jsonb",
+      "security_definer": true
+    },
+    {
+      "name": "assert_case_staff",
+      "arguments": "p_case_id uuid",
+      "result": "jsonb",
+      "security_definer": true
+    },
+    {
+      "name": "assign_case_tasks",
+      "arguments": "p_case_id uuid, p_tasks jsonb",
+      "result": "integer",
+      "security_definer": true
+    },
+    {
+      "name": "audit_managed_change",
+      "arguments": "",
+      "result": "trigger",
+      "security_definer": true
+    },
+    {
+      "name": "audit_password_changed",
+      "arguments": "",
+      "result": "void",
+      "security_definer": true
+    },
+    {
+      "name": "audit_retention_cutoff",
+      "arguments": "p_now timestamp with time zone",
+      "result": "timestamp with time zone",
+      "security_definer": false
+    },
+    {
+      "name": "can_see_archived",
+      "arguments": "",
+      "result": "boolean",
+      "security_definer": true
+    },
+    {
+      "name": "case_is_visible",
+      "arguments": "cid uuid",
+      "result": "boolean",
+      "security_definer": true
+    },
+    {
+      "name": "check_rate_limit",
+      "arguments": "p_key_type text, p_key_hash text, p_window_seconds integer, p_max_attempts integer",
+      "result": "boolean",
+      "security_definer": true
+    },
+    {
+      "name": "claim_ai_job",
+      "arguments": "p_worker text, p_job_types text[]",
+      "result": "TABLE(id uuid, job_type text, venue_id uuid, case_id uuid, related_task_id uuid, input_ref jsonb, model_name text, prompt_text text, prompt_template_id uuid, attempts integer)",
+      "security_definer": true
+    },
+    {
+      "name": "claim_latest_submission",
+      "arguments": "p_case_task_id uuid",
+      "result": "uuid",
+      "security_definer": true
+    },
+    {
+      "name": "claim_line_quota",
+      "arguments": "p_case_id uuid, p_venue_id uuid",
+      "result": "boolean",
+      "security_definer": true
+    },
+    {
+      "name": "clear_rate_limit",
+      "arguments": "p_key_type text, p_key_hash text",
+      "result": "integer",
+      "security_definer": true
+    },
+    {
+      "name": "collect_usage_snapshot",
+      "arguments": "p_database_limit_bytes bigint, p_storage_limit_bytes bigint",
+      "result": "usage_snapshots",
+      "security_definer": true
+    },
+    {
+      "name": "complete_ai_job",
+      "arguments": "p_job_id uuid, p_worker text, p_output jsonb, p_error text, p_model text",
+      "result": "boolean",
+      "security_definer": true
+    },
+    {
+      "name": "complete_invite",
+      "arguments": "",
+      "result": "text",
+      "security_definer": true
+    },
+    {
+      "name": "complete_line_link",
+      "arguments": "p_nonce_hash text, p_line_user_id text",
+      "result": "uuid",
+      "security_definer": true
+    },
+    {
+      "name": "consume_invitation",
+      "arguments": "p_token_hash text, p_purpose text",
+      "result": "TABLE(id uuid, case_id uuid, target_partner_role text, recipient_email_hash text)",
+      "security_definer": true
+    },
+    {
+      "name": "create_notification",
+      "arguments": "p_case_id uuid, p_recipient_user_id uuid, p_channel text, p_notification_type text, p_title text, p_body text",
+      "result": "uuid",
+      "security_definer": true
+    },
+    {
+      "name": "create_wedding_case",
+      "arguments": "p_wedding_date date, p_wedding_time time without time zone, p_plan_type_id uuid, p_contact_channel text, p_guest_count integer, p_venue_room text, p_notes text, p_primary_contact text, p_groom_name_enc text, p_bride_name_enc text, p_contact_email_enc text, p_contact_email_hash text, p_invitations jsonb",
+      "result": "jsonb",
+      "security_definer": true
+    },
+    {
+      "name": "current_app_user",
+      "arguments": "",
+      "result": "TABLE(id uuid, role text, venue_id uuid)",
+      "security_definer": true
+    },
+    {
+      "name": "demote_latest_submission",
+      "arguments": "p_case_task_id uuid",
+      "result": "uuid",
+      "security_definer": true
+    },
+    {
+      "name": "enqueue_ai_job",
+      "arguments": "p_case_id uuid, p_job_type text, p_input_ref jsonb, p_related_task_id uuid",
+      "result": "uuid",
+      "security_definer": true
+    },
+    {
+      "name": "enqueue_submission_ai_job",
+      "arguments": "p_case_task_id uuid, p_job_type text, p_input_ref jsonb",
+      "result": "uuid",
+      "security_definer": true
+    },
+    {
+      "name": "evaluate_system_alerts",
+      "arguments": "p_expected_jobs jsonb, p_now timestamp with time zone",
+      "result": "TABLE(active_count integer, published_count integer, resolved_count integer)",
+      "security_definer": true
+    },
+    {
+      "name": "get_couple_memo",
+      "arguments": "p_couple_profile_id uuid",
+      "result": "text",
+      "security_definer": true
+    },
+    {
+      "name": "is_admin_of",
+      "arguments": "v uuid",
+      "result": "boolean",
+      "security_definer": true
+    },
+    {
+      "name": "is_system_admin",
+      "arguments": "",
+      "result": "boolean",
+      "security_definer": true
+    },
+    {
+      "name": "latest_submission_for_task",
+      "arguments": "p_case_task_id uuid",
+      "result": "TABLE(id uuid, review_status text, submitted_by uuid, file_id uuid)",
+      "security_definer": true
+    },
+    {
+      "name": "log_audit",
+      "arguments": "p_action text, p_target_type text, p_target_id uuid, p_detail jsonb",
+      "result": "void",
+      "security_definer": true
+    },
+    {
+      "name": "log_communication",
+      "arguments": "p_case_id uuid, p_channel text, p_direction text, p_source text, p_summary text",
+      "result": "void",
+      "security_definer": true
+    },
+    {
+      "name": "mark_invitation_sent",
+      "arguments": "p_invitation_id uuid, p_channel text",
+      "result": "timestamp with time zone",
+      "security_definer": true
+    },
+    {
+      "name": "next_case_code",
+      "arguments": "p_venue_id uuid, p_year integer",
+      "result": "text",
+      "security_definer": true
+    },
+    {
+      "name": "notification_owner",
+      "arguments": "p uuid",
+      "result": "TABLE(recipient_user_id uuid, venue_id uuid)",
+      "security_definer": true
+    },
+    {
+      "name": "peek_rate_limit",
+      "arguments": "p_key_type text, p_key_hash text, p_window_seconds integer, p_max_attempts integer",
+      "result": "boolean",
+      "security_definer": true
+    },
+    {
+      "name": "plan_type_venue",
+      "arguments": "p uuid",
+      "result": "uuid",
+      "security_definer": true
+    },
+    {
+      "name": "purge_ai_job_payloads",
+      "arguments": "p_payload_days integer, p_row_days integer",
+      "result": "TABLE(payloads_cleared integer, rows_deleted integer)",
+      "security_definer": true
+    },
+    {
+      "name": "purge_expired_audit_logs",
+      "arguments": "",
+      "result": "TABLE(deleted_count bigint, cutoff timestamp with time zone)",
+      "security_definer": true
+    },
+    {
+      "name": "reclaim_stalled_ai_jobs",
+      "arguments": "p_stale_minutes integer, p_max_attempts integer",
+      "result": "TABLE(requeued integer, failed integer)",
+      "security_definer": true
+    },
+    {
+      "name": "record_auth_failure",
+      "arguments": "p_account_hash text, p_method text",
+      "result": "integer",
+      "security_definer": true
+    },
+    {
+      "name": "record_password_reset_request",
+      "arguments": "",
+      "result": "void",
+      "security_definer": true
+    },
+    {
+      "name": "register_scheduled_jobs",
+      "arguments": "p_base_url text, p_internal_cron_secret text",
+      "result": "integer",
+      "security_definer": false
+    },
+    {
+      "name": "reissue_case_invitation",
+      "arguments": "p_case_id uuid, p_target_partner_role text, p_purpose text, p_token_hash text, p_channel text, p_expires_at timestamp with time zone, p_max_uses integer, p_recipient_email_enc text, p_recipient_email_hash text",
+      "result": "jsonb",
+      "security_definer": true
+    },
+    {
+      "name": "restore_invitation",
+      "arguments": "p_invitation_id uuid",
+      "result": "void",
+      "security_definer": true
+    },
+    {
+      "name": "review_ai_job",
+      "arguments": "p_job_id uuid, p_decision text, p_output jsonb",
+      "result": "boolean",
+      "security_definer": true
+    },
+    {
+      "name": "review_submission",
+      "arguments": "p_submission_id uuid, p_decision text, p_comment text",
+      "result": "TABLE(submission_id uuid, case_id uuid, case_task_id uuid, task_title text)",
+      "security_definer": false
+    },
+    {
+      "name": "save_risk_snapshot",
+      "arguments": "p_case_id uuid, p_score_value integer, p_score_level text, p_risk_rule_id uuid, p_reasons jsonb",
+      "result": "uuid",
+      "security_definer": true
+    },
+    {
+      "name": "submit_task",
+      "arguments": "p_case_task_id uuid, p_status text",
+      "result": "void",
+      "security_definer": true
+    },
+    {
+      "name": "submit_task_atomic",
+      "arguments": "p_case_task_id uuid, p_submission_type text, p_text_value text, p_selected_value text, p_file_id uuid, p_comment text, p_draft boolean",
+      "result": "TABLE(submission_id uuid, replaced_file_id uuid)",
+      "security_definer": false
+    },
+    {
+      "name": "touch_updated_at",
+      "arguments": "",
+      "result": "trigger",
+      "security_definer": false
+    },
+    {
+      "name": "update_case_task",
+      "arguments": "p_case_task_id uuid, p_patch jsonb",
+      "result": "void",
+      "security_definer": true
+    }
+  ]
+}

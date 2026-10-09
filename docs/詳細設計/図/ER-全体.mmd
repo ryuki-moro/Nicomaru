@@ -1,0 +1,464 @@
+erDiagram
+  ai_jobs {
+    uuid id PK
+    uuid venue_id FK
+    uuid case_id FK
+    uuid related_task_id FK
+    character_varying job_type
+    jsonb input_ref
+    jsonb output
+    character_varying status
+    character_varying model_name
+    uuid prompt_template_id FK
+    integer attempts
+    timestamp_with_time_zone started_at
+    timestamp_with_time_zone finished_at
+    character_varying locked_by
+    timestamp_with_time_zone locked_at
+    uuid confirmed_by FK
+    timestamp_with_time_zone confirmed_at
+    text error_message
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+    jsonb reviewed_output
+  }
+  ai_prompt_templates {
+    uuid id PK
+    uuid venue_id FK
+    character_varying job_type
+    character_varying name
+    character_varying model_name
+    text prompt_text
+    integer version
+    boolean active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  ai_worker_heartbeats {
+    character_varying worker_name PK
+    character_varying model_name
+    timestamp_with_time_zone last_seen_at
+  }
+  audit_logs {
+    uuid id PK
+    uuid actor_user_id FK
+    character_varying action
+    character_varying target_type
+    uuid target_id
+    jsonb detail_json
+    timestamp_with_time_zone created_at
+  }
+  auth_rate_limits {
+    uuid id PK
+    character_varying key_type
+    text key_hash
+    timestamp_with_time_zone window_start
+    integer attempt_count
+    timestamp_with_time_zone locked_until
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  batch_runs {
+    uuid id PK
+    character_varying job_type
+    timestamp_with_time_zone started_at
+    timestamp_with_time_zone finished_at
+    integer target_count
+    integer http_status
+    jsonb detail
+    text error_message
+  }
+  case_guests {
+    uuid id PK
+    uuid case_id FK
+    uuid created_by_user_id FK
+    text full_name
+    text kana
+    character_varying relationship
+    text address
+    text allergy_note
+    character_varying invitation_status
+    character_varying table_name
+    character_varying seat_no
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  case_invitations {
+    uuid id PK
+    uuid case_id FK
+    uuid invited_by FK
+    character_varying target_partner_role
+    text recipient_email
+    text recipient_email_hash
+    character_varying channel
+    text token_hash
+    character_varying purpose
+    timestamp_with_time_zone expires_at
+    timestamp_with_time_zone used_at
+    timestamp_with_time_zone revoked_at
+    timestamp_with_time_zone sent_at
+    integer use_count
+    integer max_uses
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  case_tasks {
+    uuid id PK
+    uuid case_id FK
+    uuid task_template_id FK
+    character_varying title
+    text description
+    character_varying submission_format
+    jsonb allowed_file_types
+    jsonb options
+    boolean is_required
+    date due_date
+    character_varying status
+    character_varying importance
+    uuid assigned_to FK
+    integer display_order
+    uuid confirmed_by FK
+    timestamp_with_time_zone confirmed_at
+    timestamp_with_time_zone last_submitted_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  communication_logs {
+    uuid id PK
+    uuid case_id FK
+    character_varying channel
+    character_varying direction
+    character_varying source
+    text summary
+    timestamp_with_time_zone occurred_at
+    uuid created_by FK
+  }
+  couple_profiles {
+    uuid id PK
+    uuid case_id FK
+    uuid user_profile_id FK
+    character_varying partner_role
+    text full_name
+    text kana
+    text email
+    text email_hash
+    text phone
+    text address
+    boolean is_primary_contact
+    text memo
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  follow_logs {
+    uuid id PK
+    uuid case_id FK
+    uuid planner_id FK
+    character_varying method
+    text note
+    timestamp_with_time_zone followed_at
+    timestamp_with_time_zone created_at
+  }
+  line_link_nonces {
+    uuid id PK
+    text nonce_hash
+    uuid user_profile_id FK
+    text link_token
+    timestamp_with_time_zone expires_at
+    timestamp_with_time_zone used_at
+    timestamp_with_time_zone created_at
+  }
+  line_webhook_events {
+    text event_id PK
+    character_varying event_type
+    timestamp_with_time_zone received_at
+  }
+  meeting_notes {
+    uuid id PK
+    uuid case_id FK
+    uuid created_by FK
+    date meeting_date
+    text participants
+    text body
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  meeting_sheets {
+    uuid id PK
+    uuid case_id FK
+    uuid generated_by FK
+    date target_meeting_date
+    jsonb summary_json
+    uuid ai_draft_job_id FK
+    uuid pdf_file_id FK
+    timestamp_with_time_zone generated_at
+    timestamp_with_time_zone created_at
+  }
+  notification_logs {
+    uuid id PK
+    uuid notification_id FK
+    character_varying provider
+    character_varying provider_message_id
+    jsonb response_json
+    character_varying status
+    integer attempt_no
+    timestamp_with_time_zone created_at
+  }
+  notification_quota_counters {
+    uuid id PK
+    character_varying scope
+    uuid scope_id
+    date window_start
+    integer sent_count
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  notification_settings {
+    uuid id PK
+    uuid venue_id FK
+    integer line_per_case_per_week
+    integer line_per_venue_per_month
+    integer due_reminder_days_before
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  notifications {
+    uuid id PK
+    uuid venue_id FK
+    uuid case_id FK
+    uuid recipient_user_id FK
+    uuid created_by FK
+    character_varying channel
+    character_varying notification_type
+    character_varying title
+    text body
+    character_varying status
+    timestamp_with_time_zone scheduled_at
+    timestamp_with_time_zone sent_at
+    timestamp_with_time_zone read_at
+    timestamp_with_time_zone created_at
+  }
+  plan_task_templates {
+    uuid id PK
+    uuid plan_type_id FK
+    uuid task_template_id FK
+    integer display_order
+    boolean is_required
+    integer due_offset_days_override
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  plan_types {
+    uuid id PK
+    uuid venue_id FK
+    character_varying name
+    text description
+    integer default_guest_count_min
+    integer default_guest_count_max
+    integer display_order
+    boolean active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  risk_rules {
+    uuid id PK
+    uuid venue_id FK
+    character_varying name
+    character_varying condition_key
+    character_varying level
+    integer score_delta
+    integer priority
+    jsonb params
+    boolean active
+    text description
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  risk_score_snapshots {
+    uuid id PK
+    uuid case_id FK
+    uuid risk_rule_id FK
+    integer score_value
+    character_varying score_level
+    jsonb reasons
+    boolean is_current
+    timestamp_with_time_zone calculated_at
+    timestamp_with_time_zone created_at
+  }
+  storage_files {
+    uuid id PK
+    uuid case_id FK
+    uuid uploaded_by FK
+    character_varying bucket
+    text object_path
+    character_varying original_filename
+    character_varying mime_type
+    bigint file_size_bytes
+    character_varying visibility
+    timestamp_with_time_zone created_at
+  }
+  system_alerts {
+    text alert_key PK
+    text category
+    text source
+    integer occurrence_count
+    bigint affected_count
+    timestamp_with_time_zone first_detected_at
+    timestamp_with_time_zone last_detected_at
+    timestamp_with_time_zone published_at
+    timestamp_with_time_zone resolved_at
+  }
+  task_submissions {
+    uuid id PK
+    uuid case_task_id FK
+    uuid submitted_by FK
+    character_varying submission_type
+    text text_value
+    text selected_value
+    jsonb content_json
+    uuid file_id FK
+    text comment
+    character_varying review_status
+    text planner_feedback
+    timestamp_with_time_zone submitted_at
+    boolean is_latest
+    uuid reviewed_by FK
+    timestamp_with_time_zone reviewed_at
+  }
+  task_templates {
+    uuid id PK
+    uuid venue_id FK
+    character_varying name
+    text description
+    character_varying submission_format
+    jsonb allowed_file_types
+    integer due_offset_days
+    character_varying importance
+    jsonb default_options
+    boolean is_required
+    boolean active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  timeline_items {
+    uuid id PK
+    uuid case_id FK
+    uuid related_task_id FK
+    character_varying title
+    text description
+    date due_date
+    character_varying phase_name
+    character_varying status
+    character_varying source
+    integer display_order
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  usage_snapshots {
+    date measured_on PK
+    timestamp_with_time_zone measured_at
+    bigint database_bytes
+    bigint storage_bytes
+    bigint database_limit_bytes
+    bigint storage_limit_bytes
+    bigint venue_count
+    bigint case_count
+    bigint user_count
+    bigint file_count
+    bigint notification_count
+    bigint notification_failure_count
+  }
+  user_profiles {
+    uuid id PK
+    uuid auth_user_id FK
+    uuid venue_id FK
+    character_varying role
+    character_varying display_name
+    character_varying email
+    character_varying phone
+    character_varying line_user_id
+    character_varying status
+    timestamp_with_time_zone last_login_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  venues {
+    uuid id PK
+    character_varying name
+    character_varying code
+    character_varying official_line_channel_id
+    character_varying contact_email
+    boolean active
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  wedding_cases {
+    uuid id PK
+    uuid venue_id FK
+    uuid plan_type_id FK
+    uuid primary_planner_id FK
+    character_varying case_code
+    date wedding_date
+    time_without_time_zone wedding_time
+    character_varying contact_channel
+    character_varying status
+    integer guest_count
+    character_varying venue_room
+    text notes
+    timestamp_with_time_zone archived_at
+    timestamp_with_time_zone created_at
+    timestamp_with_time_zone updated_at
+  }
+  auth_users ||--o| user_profiles : "auth_user_id"
+  venues |o--o{ user_profiles : "venue_id"
+  venues ||--o{ plan_types : "venue_id"
+  plan_types |o--o{ wedding_cases : "plan_type_id"
+  user_profiles ||--o{ wedding_cases : "primary_planner_id"
+  venues ||--o{ wedding_cases : "venue_id"
+  wedding_cases ||--o{ couple_profiles : "case_id"
+  user_profiles |o--o| couple_profiles : "user_profile_id"
+  wedding_cases ||--o{ case_invitations : "case_id"
+  user_profiles ||--o{ case_invitations : "invited_by"
+  wedding_cases ||--o{ case_guests : "case_id"
+  user_profiles |o--o{ case_guests : "created_by_user_id"
+  venues ||--o{ task_templates : "venue_id"
+  plan_types ||--o{ plan_task_templates : "plan_type_id"
+  task_templates ||--o{ plan_task_templates : "task_template_id"
+  user_profiles |o--o{ case_tasks : "assigned_to"
+  wedding_cases ||--o{ case_tasks : "case_id"
+  user_profiles |o--o{ case_tasks : "confirmed_by"
+  task_templates |o--o{ case_tasks : "task_template_id"
+  case_tasks ||--o{ task_submissions : "case_task_id"
+  storage_files |o--o{ task_submissions : "file_id"
+  user_profiles |o--o{ task_submissions : "reviewed_by"
+  user_profiles ||--o{ task_submissions : "submitted_by"
+  wedding_cases ||--o{ storage_files : "case_id"
+  user_profiles ||--o{ storage_files : "uploaded_by"
+  wedding_cases ||--o{ timeline_items : "case_id"
+  case_tasks |o--o{ timeline_items : "related_task_id"
+  venues |o--o{ risk_rules : "venue_id"
+  wedding_cases ||--o{ risk_score_snapshots : "case_id"
+  risk_rules |o--o{ risk_score_snapshots : "risk_rule_id"
+  wedding_cases ||--o{ communication_logs : "case_id"
+  user_profiles |o--o{ communication_logs : "created_by"
+  wedding_cases ||--o{ follow_logs : "case_id"
+  user_profiles ||--o{ follow_logs : "planner_id"
+  wedding_cases ||--o{ meeting_notes : "case_id"
+  user_profiles ||--o{ meeting_notes : "created_by"
+  ai_jobs |o--o{ meeting_sheets : "ai_draft_job_id"
+  wedding_cases ||--o{ meeting_sheets : "case_id"
+  user_profiles ||--o{ meeting_sheets : "generated_by"
+  storage_files |o--o{ meeting_sheets : "pdf_file_id"
+  wedding_cases |o--o{ notifications : "case_id"
+  user_profiles |o--o{ notifications : "created_by"
+  user_profiles ||--o{ notifications : "recipient_user_id"
+  venues ||--o{ notifications : "venue_id"
+  notifications ||--o{ notification_logs : "notification_id"
+  venues |o--o{ notification_settings : "venue_id"
+  user_profiles ||--o{ line_link_nonces : "user_profile_id"
+  wedding_cases |o--o{ ai_jobs : "case_id"
+  user_profiles |o--o{ ai_jobs : "confirmed_by"
+  ai_prompt_templates |o--o{ ai_jobs : "prompt_template_id"
+  case_tasks |o--o{ ai_jobs : "related_task_id"
+  venues ||--o{ ai_jobs : "venue_id"
+  venues |o--o{ ai_prompt_templates : "venue_id"
+  user_profiles |o--o{ audit_logs : "actor_user_id"

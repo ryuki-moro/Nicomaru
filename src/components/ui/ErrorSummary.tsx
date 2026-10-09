@@ -12,7 +12,11 @@ export function ErrorSummary({ message }: { message: string | null }) {
 }
 
 /** 項目直下のエラー文言。 */
-export function FieldError({ message }: { message?: string }) {
+export function FieldError({ message, id }: { message?: string; id?: string }) {
   if (!message) return null;
-  return <p className="field-error">{message}</p>;
+  return (
+    <p id={id} className="field-error">
+      {message}
+    </p>
+  );
 }

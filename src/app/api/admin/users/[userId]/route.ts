@@ -16,7 +16,14 @@
 import { noContent, ok, parseBody, route } from '@/lib/api/route';
 import { requireRole, type AppUser } from '@/lib/auth/session';
 import { ROLE_LABEL, type Role, type UserStatus } from '@/lib/constants';
-import { ApiError, conflict, forbidden, fromPostgresError, notFound, unprocessable } from '@/lib/errors';
+import {
+  ApiError,
+  conflict,
+  forbidden,
+  fromPostgresError,
+  notFound,
+  unprocessable,
+} from '@/lib/errors';
 import { issuePasswordSetupLink, sendPasswordSetupMail } from '@/lib/notify/mailer';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient, type SupabaseServerClient } from '@/lib/supabase/server';
@@ -58,9 +65,10 @@ async function loadManagedUser(
   if (!data) throw notFound();
 
   const target = data as ManagedUser;
-  const manageable = actor.role === 'admin'
-    ? target.role === 'planner' && target.venue_id === actor.venueId
-    : target.role === 'planner' || target.role === 'admin';
+  const manageable =
+    actor.role === 'admin'
+      ? target.role === 'planner' && target.venue_id === actor.venueId
+      : target.role === 'planner' || target.role === 'admin';
   if (!manageable) throw forbidden();
 
   return target;
@@ -88,7 +96,10 @@ async function writeAudit(
 }
 
 /** 式場名はメール本文の宛名にだけ使う。system_admin は venue_id を持たない（5-3）。 */
-async function venueNameOf(supabase: SupabaseServerClient, venueId: string | null): Promise<string | null> {
+async function venueNameOf(
+  supabase: SupabaseServerClient,
+  venueId: string | null,
+): Promise<string | null> {
   if (!venueId) return null;
   const { data } = await supabase.from('venues').select('name').eq('id', venueId).maybeSingle();
   return (data as { name: string } | null)?.name ?? null;
@@ -104,7 +115,9 @@ export const PATCH = route<[RouteContext]>(async (request, context) => {
 
   // 再送の可否は書き込み前に判定する。途中まで反映してから 422 を返すと状態が読めなくなる
   if (input.resendInviteLink && (input.status ?? target.status) !== 'invited') {
-    throw unprocessable('初回パスワード設定リンクを再送できるのは、まだ設定が済んでいない利用者だけです');
+    throw unprocessable(
+      '初回パスワード設定リンクを再送できるのは、まだ設定が済んでいない利用者だけです',
+    );
   }
 
   const patch: Record<string, unknown> = {};
@@ -124,13 +137,15 @@ export const PATCH = route<[RouteContext]>(async (request, context) => {
     }
   }
 
-  const needsAuthAdmin = nextEmail !== undefined || nextStatus !== undefined
-    || input.resendInviteLink === true;
+  const needsAuthAdmin =
+    nextEmail !== undefined || nextStatus !== undefined || input.resendInviteLink === true;
   const admin = needsAuthAdmin ? createSupabaseAdminClient('admin.users') : null;
 
   if (admin && nextEmail !== undefined) {
     // 表4-20:「変更時は Supabase Auth 側のメールも同期する」
-    const { error } = await admin.auth.admin.updateUserById(target.auth_user_id, { email: nextEmail });
+    const { error } = await admin.auth.admin.updateUserById(target.auth_user_id, {
+      email: nextEmail,
+    });
     if (error) {
       // 片側だけ変わるとログインできないアカウントになるため、DB を元へ戻す
       await supabase.from('user_profiles').update({ email: target.email }).eq('id', target.id);
@@ -210,12 +225,16 @@ export const DELETE = route<[RouteContext]>(async (request, context) => {
         .maybeSingle();
       if (successorError) throw fromPostgresError(successorError);
 
-      const successor = successorData as Pick<ManagedUser, 'id' | 'role' | 'status' | 'venue_id'> | null;
-      const usable = successor
-        && successor.id !== target.id
-        && successor.role === 'planner'
-        && successor.status === 'active'
-        && successor.venue_id === target.venue_id;
+      const successor = successorData as Pick<
+        ManagedUser,
+        'id' | 'role' | 'status' | 'venue_id'
+      > | null;
+      const usable =
+        successor &&
+        successor.id !== target.id &&
+        successor.role === 'planner' &&
+        successor.status === 'active' &&
+        successor.venue_id === target.venue_id;
       if (!usable) {
         throw unprocessable('引き継ぎ先に指定できない利用者です', [
           { field: 'successorPlannerId', reason: '同じ式場の利用中プランナーを選んでください' },

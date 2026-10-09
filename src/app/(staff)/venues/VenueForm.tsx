@@ -82,8 +82,12 @@ export function VenueForm() {
           </p>
         )}
         <div className="flex flex-wrap gap-3">
-          <a href="/venues" className="btn-secondary w-auto px-5 text-center">式場一覧へ戻る</a>
-          <a href={`/venues/${result.id}`} className="btn-ghost">この式場を開く</a>
+          <a href="/venues" className="btn-secondary w-auto px-5 text-center">
+            式場一覧へ戻る
+          </a>
+          <a href={`/venues/${result.id}`} className="btn-ghost">
+            この式場を開く
+          </a>
         </div>
       </div>
     );
@@ -94,9 +98,17 @@ export function VenueForm() {
       <ErrorSummary message={summaryError} />
 
       <div>
-        <label htmlFor="name" className="field-label">式場名（必須）</label>
-        <input id="name" className="field" value={name} maxLength={INPUT_LIMITS.shortText}
-          onChange={(e) => setName(e.target.value)} required />
+        <label htmlFor="name" className="field-label">
+          式場名（必須）
+        </label>
+        <input
+          id="name"
+          className="field"
+          value={name}
+          maxLength={INPUT_LIMITS.shortText}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
         <FieldError message={fieldErrors.name} />
       </div>
 
@@ -104,8 +116,14 @@ export function VenueForm() {
         <label htmlFor="code" className="field-label">
           式場コード（必須・英大文字と数字で4〜10字。全式場で一意）
         </label>
-        <input id="code" className="field uppercase" value={code} maxLength={10}
-          onChange={(e) => setCode(e.target.value)} required />
+        <input
+          id="code"
+          className="field uppercase"
+          value={code}
+          maxLength={10}
+          onChange={(e) => setCode(e.target.value)}
+          required
+        />
         <FieldError message={fieldErrors.code} />
         <p className="mt-1 text-caption text-text-muted">
           案件番号の先頭に使われます（例 BRIDAL01-2026-0001）。あとから変更できません。
@@ -113,25 +131,45 @@ export function VenueForm() {
       </div>
 
       <div>
-        <label htmlFor="contactEmail" className="field-label">式場代表メール（任意）</label>
-        <input id="contactEmail" type="email" className="field" value={contactEmail}
-          onChange={(e) => setContactEmail(e.target.value)} />
+        <label htmlFor="contactEmail" className="field-label">
+          式場代表メール（任意）
+        </label>
+        <input
+          id="contactEmail"
+          type="email"
+          className="field"
+          value={contactEmail}
+          onChange={(e) => setContactEmail(e.target.value)}
+        />
         <FieldError message={fieldErrors.contactEmail} />
       </div>
 
       <fieldset className="space-y-3 rounded-card border border-border-light p-3">
         <legend className="px-1 text-caption text-text-muted">式場管理者（新規登録時）</legend>
         <div>
-          <label htmlFor="adminName" className="field-label">管理者氏名</label>
-          <input id="adminName" className="field" value={adminName}
+          <label htmlFor="adminName" className="field-label">
+            管理者氏名
+          </label>
+          <input
+            id="adminName"
+            className="field"
+            value={adminName}
             maxLength={INPUT_LIMITS.shortText}
-            onChange={(e) => setAdminName(e.target.value)} />
+            onChange={(e) => setAdminName(e.target.value)}
+          />
           <FieldError message={fieldErrors.adminName} />
         </div>
         <div>
-          <label htmlFor="adminEmail" className="field-label">管理者メールアドレス</label>
-          <input id="adminEmail" type="email" className="field" value={adminEmail}
-            onChange={(e) => setAdminEmail(e.target.value)} />
+          <label htmlFor="adminEmail" className="field-label">
+            管理者メールアドレス
+          </label>
+          <input
+            id="adminEmail"
+            type="email"
+            className="field"
+            value={adminEmail}
+            onChange={(e) => setAdminEmail(e.target.value)}
+          />
           <FieldError message={fieldErrors.adminEmail} />
           <p className="mt-1 text-caption text-text-muted">
             初期パスワードは発行しません。ご本人がパスワードを設定するリンクをお送りします。

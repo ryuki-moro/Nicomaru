@@ -143,6 +143,7 @@ export default async function MyPage() {
               <li key={task.id}>
                 <Link
                   href={`/mypage/tasks/${task.id}`}
+                  prefetch={false}
                   className="flex items-center gap-3 rounded-card bg-field-filled-bg px-4 py-[13px]"
                 >
                   <span className="flex-1">
@@ -166,14 +167,18 @@ export default async function MyPage() {
       </section>
 
       <div className="mt-1 flex flex-col gap-[10px]">
-        <Link href="/mypage/tasks" className="btn-primary block text-center">
+        <Link href="/mypage/tasks" prefetch={false} className="btn-primary block text-center">
           宿題・提出物を見る
         </Link>
-        <Link href="/mypage/timeline" className="btn-secondary block text-center">
+        <Link href="/mypage/timeline" prefetch={false} className="btn-secondary block text-center">
           準備タイムラインを見る
         </Link>
         {/* 4-3 M01「通知一覧（M05）は Phase 2 で追加する」 */}
-        <Link href="/mypage/notifications" className="btn-secondary block text-center">
+        <Link
+          href="/mypage/notifications"
+          prefetch={false}
+          className="btn-secondary block text-center"
+        >
           お知らせを見る
         </Link>
       </div>

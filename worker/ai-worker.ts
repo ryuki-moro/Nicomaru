@@ -50,7 +50,11 @@ interface ClaimedJob {
   venue_id: string;
   case_id: string | null;
   related_task_id: string | null;
-  input_ref: { ref?: { table: string; id: string }; text?: string; params?: Record<string, unknown> };
+  input_ref: {
+    ref?: { table: string; id: string };
+    text?: string;
+    params?: Record<string, unknown>;
+  };
   model_name: string | null;
   prompt_text: string | null;
   prompt_template_id: string | null;
@@ -126,7 +130,8 @@ async function processJob(client: Client, job: ClaimedJob): Promise<void> {
   // 見つからない場合はコードに埋め込んだ文言で代用せず、失敗させて設定漏れを表面化させる。
   if (!job.prompt_text) {
     await client.query('select complete_ai_job($1, $2, null, $3, $4)', [
-      job.id, workerId,
+      job.id,
+      workerId,
       `job_type=${job.job_type} の有効なプロンプトテンプレートがありません`,
       model,
     ]);
@@ -144,13 +149,17 @@ async function processJob(client: Client, job: ClaimedJob): Promise<void> {
       // ここで failed を書かずに processing のまま抜けると、
       // locked_at 超過で queued へ戻り、attempts が加算される（7-3）。
       log('出力がスキーマに合いませんでした。再試行に回します', {
-        id: job.id, error: validated.error,
+        id: job.id,
+        error: validated.error,
       });
       return;
     }
 
     await client.query('select complete_ai_job($1, $2, $3::jsonb, null, $4)', [
-      job.id, workerId, JSON.stringify(validated.value), model,
+      job.id,
+      workerId,
+      JSON.stringify(validated.value),
+      model,
     ]);
     log('完了', { id: job.id, jobType: job.job_type });
   } catch (error) {
@@ -160,7 +169,10 @@ async function processJob(client: Client, job: ClaimedJob): Promise<void> {
     // 達していなければ processing のまま抜け、滞留回収で queued へ戻す。
     if (job.attempts >= 3) {
       await client.query('select complete_ai_job($1, $2, null, $3, $4)', [
-        job.id, workerId, message, model,
+        job.id,
+        workerId,
+        message,
+        model,
       ]);
       log('試行上限のため failed', { id: job.id, message });
     } else {
@@ -172,8 +184,10 @@ async function processJob(client: Client, job: ClaimedJob): Promise<void> {
 async function main(): Promise<void> {
   const url = process.env.AI_WORKER_DATABASE_URL;
   if (!url) {
-    console.error('AI_WORKER_DATABASE_URL が設定されていません。'
-      + 'ワーカー専用ロール（ai_worker）の接続情報を渡してください（7-3）。');
+    console.error(
+      'AI_WORKER_DATABASE_URL が設定されていません。' +
+        'ワーカー専用ロール（ai_worker）の接続情報を渡してください（7-3）。',
+    );
     process.exit(1);
   }
 
@@ -195,10 +209,10 @@ async function main(): Promise<void> {
       // ジョブが無い間は locked_at が動かないので、それでは「暇」と「停止」を区別できない。
       await client.query('select ai_worker_ping($1, $2)', [workerId, DEFAULT_MODEL]);
 
-      const claimed = await client.query<ClaimedJob>(
-        'select * from claim_ai_job($1, $2)',
-        [workerId, AI_JOB_TYPES as unknown as string[]],
-      );
+      const claimed = await client.query<ClaimedJob>('select * from claim_ai_job($1, $2)', [
+        workerId,
+        AI_JOB_TYPES as unknown as string[],
+      ]);
 
       if (claimed.rows.length === 0) {
         await new Promise((resolve) => setTimeout(resolve, IDLE_INTERVAL_MS));

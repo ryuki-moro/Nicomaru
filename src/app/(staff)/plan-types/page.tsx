@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { fromPostgresError } from '@/lib/errors';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { planTypeSaveSchema, toErrorDetails } from '@/lib/validation';
 
@@ -124,18 +125,14 @@ async function savePlanType(planTypeId: string, values: unknown): Promise<SavePl
     active: input.active,
   };
 
-  const { data: saved, error: saveError } = planTypeId === 'new'
-    ? await supabase
-      .from('plan_types')
-      .insert({ ...row, venue_id: user.venueId })
-      .select('id')
-      .single()
-    : await supabase
-      .from('plan_types')
-      .update(row)
-      .eq('id', planTypeId)
-      .select('id')
-      .single();
+  const { data: saved, error: saveError } =
+    planTypeId === 'new'
+      ? await supabase
+          .from('plan_types')
+          .insert({ ...row, venue_id: user.venueId })
+          .select('id')
+          .single()
+      : await supabase.from('plan_types').update(row).eq('id', planTypeId).select('id').single();
 
   if (saveError) return mapWriteError(saveError);
   const savedId = (saved as { id: string }).id;
@@ -147,7 +144,7 @@ async function savePlanType(planTypeId: string, values: unknown): Promise<SavePl
   if (existingError) return mapWriteError(existingError);
 
   const keep = new Set(templateIds);
-  const removed = (existing as { task_template_id: string }[] | null ?? [])
+  const removed = ((existing as { task_template_id: string }[] | null) ?? [])
     .map((r) => r.task_template_id)
     .filter((id) => !keep.has(id));
 
@@ -177,12 +174,6 @@ async function savePlanType(planTypeId: string, values: unknown): Promise<SavePl
   return { ok: true, id: savedId };
 }
 
-/** ?page= を1始まりのページ番号にする。壊れた値は1ページ目へ寄せる（K01／M02 と同じ扱い）。 */
-function resolvePage(raw: string | undefined): number {
-  const parsed = Number(raw ?? '1');
-  return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
-}
-
 /** 編集対象（?edit=）とページ（?page=）は互いに独立して保つ。 */
 function hrefFor(params: { edit?: string; page?: number }): string {
   const query = new URLSearchParams();
@@ -195,7 +186,7 @@ function hrefFor(params: { edit?: string; page?: number }): string {
 export default async function PlanTypesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ edit?: string; page?: string }>;
+  searchParams: Promise<{ edit?: string; page?: string | string[] }>;
 }) {
   const { edit, page: pageParam } = await searchParams;
   const page = resolvePage(pageParam);
@@ -207,9 +198,10 @@ export default async function PlanTypesPage({
   // 編集対象は一覧の結果から探さず id で直接引く。
   // ページングを入れた以上、2ページ目を開いた状態で1ページ目の行を編集する場合に
   // 一覧から探すと対象が見つからずフォームが黙って消えるため。
-  const editingQuery = edit && edit !== 'new'
-    ? supabase.from('plan_types').select(PLAN_TYPE_COLUMNS).eq('id', edit).maybeSingle()
-    : null;
+  const editingQuery =
+    edit && edit !== 'new'
+      ? supabase.from('plan_types').select(PLAN_TYPE_COLUMNS).eq('id', edit).maybeSingle()
+      : null;
 
   // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する（K01／M02 と同じ形）。
   const from = (page - 1) * LIST_PAGE_SIZE;
@@ -248,7 +240,7 @@ export default async function PlanTypesPage({
 
   // 権限外・不存在の id は RLS により 0 行になるので、フォームを出さないことで自然に弾かれる
   const editingRow = (editingResult?.data ?? null) as PlanTypeRow | null;
-  const editing = edit === 'new' ? 'new' : editingRow?.id ?? null;
+  const editing = edit === 'new' ? 'new' : (editingRow?.id ?? null);
 
   const templates: TemplateChoice[] = templateRows.map((t) => ({
     id: t.id,
@@ -260,10 +252,10 @@ export default async function PlanTypesPage({
   const initial: PlanTypeFormInitial = {
     name: editingRow?.name ?? '',
     description: editingRow?.description ?? '',
-    defaultGuestCountMin: editingRow?.default_guest_count_min == null
-      ? '' : String(editingRow.default_guest_count_min),
-    defaultGuestCountMax: editingRow?.default_guest_count_max == null
-      ? '' : String(editingRow.default_guest_count_max),
+    defaultGuestCountMin:
+      editingRow?.default_guest_count_min == null ? '' : String(editingRow.default_guest_count_min),
+    defaultGuestCountMax:
+      editingRow?.default_guest_count_max == null ? '' : String(editingRow.default_guest_count_max),
     // 新規は既存の総数＝末尾を既定値にする。ページ内の件数だと2ページ目以降で先頭に割り込む
     displayOrder: editingRow
       ? String(editingRow.display_order)
@@ -271,12 +263,12 @@ export default async function PlanTypesPage({
     active: editingRow?.active ?? true,
     assignments: editingRow
       ? assignments
-        .filter((a) => a.plan_type_id === editingRow.id)
-        .map((a) => ({
-          taskTemplateId: a.task_template_id,
-          displayOrder: a.display_order,
-          dueOffsetDaysOverride: a.due_offset_days_override,
-        }))
+          .filter((a) => a.plan_type_id === editingRow.id)
+          .map((a) => ({
+            taskTemplateId: a.task_template_id,
+            displayOrder: a.display_order,
+            dueOffsetDaysOverride: a.due_offset_days_override,
+          }))
       : [],
   };
 
@@ -385,7 +377,9 @@ export default async function PlanTypesPage({
       {editing && (
         <section className="space-y-3">
           <h2 className="section-head">
-            {editing === 'new' ? 'プラン種別の新規登録' : `プラン種別の編集：${editingRow?.name ?? ''}`}
+            {editing === 'new'
+              ? 'プラン種別の新規登録'
+              : `プラン種別の編集：${editingRow?.name ?? ''}`}
           </h2>
           <PlanTypeForm
             /* 編集対象が変わったらフォームの内部状態を作り直す */

@@ -14,7 +14,12 @@ import { useState } from 'react';
 
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { api, handleApiError } from '@/lib/api/client';
-import { FOLLOW_METHODS, FOLLOW_METHOD_LABEL, INPUT_LIMITS, type FollowMethod } from '@/lib/constants';
+import {
+  FOLLOW_METHODS,
+  FOLLOW_METHOD_LABEL,
+  INPUT_LIMITS,
+  type FollowMethod,
+} from '@/lib/constants';
 
 /**
  * <input type="datetime-local"> が受け取る現地時刻の書式（YYYY-MM-DDTHH:mm）。
@@ -27,8 +32,10 @@ import { FOLLOW_METHODS, FOLLOW_METHOD_LABEL, INPUT_LIMITS, type FollowMethod } 
  */
 function toLocalInputValue(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-    + `T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
 }
 
 export function FollowForm({ caseId }: { caseId: string }) {

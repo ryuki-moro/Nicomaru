@@ -12,52 +12,20 @@
  */
 import { requireRole } from '@/lib/auth/session';
 import { route } from '@/lib/api/route';
-import { CSV_MAX_ROWS, buildCsv } from '@/lib/csv';
-import { fromPostgresError } from '@/lib/errors';
+import { buildCsv } from '@/lib/csv';
 import { formatDateTime } from '@/lib/format';
-import { NOTIFICATION_TYPE_LABEL, type NotificationType } from '@/lib/notify/templates';
+import { parseNotificationLogPeriod } from '@/lib/notification-log-export';
+import { NOTIFICATION_TYPE_LABEL } from '@/lib/notify/templates';
+import { loadNotificationLogsForExport } from '@/lib/services/notification-log-export';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
-interface LogRow {
-  provider: string;
-  status: string;
-  provider_message_id: string | null;
-  created_at: string;
-  notifications: {
-    notification_type: NotificationType;
-    venues: { name: string } | null;
-    wedding_cases: { case_code: string } | null;
-  } | null;
-}
-
 export const GET = route(async (request: Request) => {
   await requireRole('system_admin');
-
-  const url = new URL(request.url);
-  const from = url.searchParams.get('from');
-  const to = url.searchParams.get('to');
-
+  const period = parseNotificationLogPeriod(new URL(request.url).searchParams);
   const supabase = await createSupabaseServerClient();
-  let query = supabase
-    .from('notification_logs')
-    .select(
-      `provider, status, provider_message_id, created_at,
-       notifications ( notification_type, venues ( name ), wedding_cases ( case_code ) )`,
-    )
-    .order('created_at', { ascending: false })
-    // 上限に達したかを判定するため1件多く取る
-    .limit(CSV_MAX_ROWS + 1);
-
-  // 「超過分は期間を絞る」ための入口（4-3 S03）
-  if (from) query = query.gte('created_at', from);
-  if (to) query = query.lte('created_at', to);
-
-  const { data, error } = await query;
-  if (error) throw fromPostgresError(error);
-
-  const rows = (data ?? []) as unknown as LogRow[];
+  const rows = await loadNotificationLogsForExport(supabase, period);
   const csv = buildCsv(
     ['日時', '式場', '案件番号', 'チャネル', '種別', '送信結果', 'プロバイダ側メッセージID'],
     rows.map((row) => [
@@ -75,7 +43,8 @@ export const GET = route(async (request: Request) => {
     headers: {
       'content-type': 'text/csv; charset=utf-8',
       'content-disposition': 'attachment; filename="notification-logs.csv"',
-      // 切り詰めた事実を画面ではなくヘッダーで伝える（本文はCSVそのものなので混ぜられない）
+      'cache-control': 'private, no-store',
+      // CSVの本文を変えず、画面が上限超過の案内に使えるようヘッダーで伝える。
       'x-truncated': String(csv.truncated),
     },
   });

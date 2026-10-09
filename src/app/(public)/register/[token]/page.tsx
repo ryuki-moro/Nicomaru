@@ -16,11 +16,7 @@ export const metadata: Metadata = { title: '初回登録' };
  *
  * 挙式日・新郎新婦氏名などの案件情報は招待トークンで案件に自動紐付くため入力しない（表4-12）。
  */
-export default async function RegisterPage({
-  params,
-}: {
-  params: Promise<{ token: string }>;
-}) {
+export default async function RegisterPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
 
   return (

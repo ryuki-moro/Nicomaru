@@ -19,7 +19,9 @@ test('未ログインで保護ページを開くと、戻り先つきでログ�
   await expect(page.getByRole('heading', { name: 'ログイン' })).toBeVisible();
 });
 
-test('/api は未ログインでも 401 の JSON を返す（ログイン画面のHTMLを返さない）', async ({ request }) => {
+test('/api は未ログインでも 401 の JSON を返す（ログイン画面のHTMLを返さない）', async ({
+  request,
+}) => {
   const res = await request.get('/api/ai/status');
   expect(res.status()).toBe(401);
   const body = (await res.json()) as { error?: { code?: string } };
@@ -66,14 +68,18 @@ test.describe('ログイン済みの権限', () => {
   test('存在しない案件は権限外と同じくエラー画面へ（P04）', async () => {
     await planner.goto('/cases/00000000-0000-4000-8000-000000000000');
     await planner.waitForURL(/\/error$/);
-    await expect(planner.getByRole('heading', { name: 'ページを表示できませんでした' })).toBeVisible();
+    await expect(
+      planner.getByRole('heading', { name: 'ページを表示できませんでした' }),
+    ).toBeVisible();
     await expect(planner.getByRole('link', { name: 'ログイン画面へ戻る' })).toBeVisible();
   });
 
   test('system_admin 専用画面は 403 の文面', async () => {
     await planner.goto('/system');
     await planner.waitForURL(/\/error\?code=403$/);
-    await expect(planner.getByRole('heading', { name: 'このページは表示できません' })).toBeVisible();
+    await expect(
+      planner.getByRole('heading', { name: 'このページは表示できません' }),
+    ).toBeVisible();
   });
 
   test('セッションが切れるとログイン画面へ戻る（新郎新婦）', async () => {

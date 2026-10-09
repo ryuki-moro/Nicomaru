@@ -58,8 +58,8 @@ export function SheetDraftPanel({ initialJob, aiAvailable, lastSeenAt, requestSl
   }
 
   const output = adoptedOutput('draft', job);
-  const idle = !job || job.status === 'failed' || job.status === 'discarded'
-    || job.status === 'confirmed';
+  const idle =
+    !job || job.status === 'failed' || job.status === 'discarded' || job.status === 'confirmed';
 
   return (
     <section className="card">

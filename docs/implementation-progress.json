@@ -1,0 +1,4712 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-09T02:54:16.105Z",
+  "repository": "ryuki-moro/Nicomaru",
+  "mainCommit": "cc575f9a567fd2efbb785c032069ec689bcb5812",
+  "implementationCommit": "ad96179d30fc1e1f2075d226b689b7c40503aa9f",
+  "statusLabels": {
+    "main": "mainに実装",
+    "review": "マージ待ち",
+    "partial": "一部実装",
+    "todo": "未着手",
+    "recorded": "実施記録あり",
+    "setup": "設定・準備待ち",
+    "verify": "確認・整理待ち",
+    "conditional": "条件付き保留",
+    "prepared": "準備完了・実施待ち",
+    "manual": "人による実施待ち",
+    "environment": "環境反映待ち"
+  },
+  "basis": [
+    "docs/にこまる_要件定義書_完成版.docx Version1.2",
+    "docs/BridalHub_基本設計書.docx Version1.6",
+    "mainのコード・現作業ブランチ",
+    "2026-10-08 GitHub Issue/PR/コメント/CI読み取り",
+    "2026-10-08 ユーザー指定の学校スケジュール・Agent AI利用条件・本番運用予定なし",
+    "2026-10-09 実装再開・GAP-06全28更新API/内部5件/Webhookの検証、PR66/68とmainの再確認",
+    "2026-10-09 GAP-11/Issue47修正、失敗注入52件・全649件・Chrome28件、PR70 CIのverify/実PG/security成功を確認",
+    "2026-10-09 PR79へ残実装8項目/既存8PRを統合。詳細設計・発表PPTX/PDF・試験仕様Excel・WBS・評価/引継ぎを作成。人の実施と共有DB更新を区別。"
+  ],
+  "ci": {
+    "run": 37406449671,
+    "date": "2026-10-06",
+    "url": "https://github.com/ryuki-moro/Nicomaru/actions/runs/37406449671",
+    "unitRlsPassed": 466,
+    "pgSkippedInUnit": 12,
+    "realPgPassed": 12,
+    "e2ePassed": 44,
+    "security": "success",
+    "verify": "success",
+    "auditVulnerabilities": 0,
+    "note": "PR48の1cfb7d9。実PostgreSQL12件は別ジョブ。mainの結果ではない。"
+  },
+  "pullRequests": [
+    {
+      "number": 41,
+      "title": "#14: 定期処理の登録を register_scheduled_jobs() にする（本番で一度も動いていなかった）",
+      "state": "open",
+      "base": "main",
+      "head": "15e549b603d97f1f88dad40353e7f07a6f5e568e",
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/41"
+    },
+    {
+      "number": 46,
+      "title": "APIエラー・一覧取得の安定化と依存関係の脆弱性修正",
+      "state": "open",
+      "base": "main",
+      "head": "d8f8ce2f0e1851f5c3613a4ca7f46944664bbfee",
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/46"
+    },
+    {
+      "number": 48,
+      "title": "通知ログCSVの期間指定・分割取得を追加しE2Eを安定化",
+      "state": "open",
+      "base": "codex/non-ai-core-reliability",
+      "head": "1cfb7d9c338bd99a4a7c213389f3ee3001b6d611",
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/48"
+    },
+    {
+      "number": 66,
+      "title": "式場編集と確認用ログインを実装し、認証DBの接続障害に対応する",
+      "state": "open",
+      "draft": true,
+      "base": "codex/implementation-progress",
+      "head": "303e874f84587fcfde4e99b8952ca4ba08c45bb7",
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/66",
+      "checkSummary": "2026-10-09にPC/スマートフォン寸法Chromeの式場編集16件・認証再操作2件が成功。ユーザーの実装再開指示あり。303e874のCI run 37866134420は確認時点でverify/concurrency-db成功、security失敗、E2E進行中。ユーザー自身の使い勝手評価と実WebKitは未確認。"
+    },
+    {
+      "number": 68,
+      "title": "ブラウザー向け更新API28件に同一Origin検証を適用する",
+      "state": "open",
+      "draft": true,
+      "base": "codex/venue-edit-checkpoint",
+      "head": "73a9b9f8a412e66b923a021ec0518999b8cba67a",
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/68",
+      "checkSummary": "CI run 37867691442: verify/実PG/E2E成功、securityはNext.js/sharp依存監査で失敗。依存更新は後続PR70で対応。ローカル597件・Chrome E2E28件成功。"
+    },
+    {
+      "number": 70,
+      "title": "削除バッチの失敗・再実行を修正し、Next.jsとsharpの脆弱性に対応する",
+      "state": "open",
+      "draft": true,
+      "base": "codex/api-origin-guard",
+      "head": "579d7d908d2a18e9f29c79dd8c75743c722baf61",
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/70",
+      "checkSummary": "2026-10-09: 全649件成功/実PG専用12skip、うち新規失敗注入52件。Chrome E2E28件、lint/型/build成功、依存監査0件。初回99c1e6fのCI run 37870541948はverify/実PG/security（Secret scan含む）成功、E2E進行中。579d7d9では削除済み実体の件数重複計上を修正し52件再成功。最新CIはPR70を参照。"
+    },
+    {
+      "number": 79,
+      "title": "学校デモの残実装・検証・成果物を統合する",
+      "state": "open",
+      "draft": true,
+      "base": "main",
+      "head": "ad96179d30fc1e1f2075d226b689b7c40503aa9f",
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/79",
+      "checkSummary": "統合検証中。各CIの対象commitを区別して検証記録へ保存。"
+    }
+  ],
+  "issues": [
+    {
+      "number": 49,
+      "title": "OTPの自動送信後にE2Eが確認ボタンを待ち続ける競合を解消する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/49"
+    },
+    {
+      "number": 47,
+      "title": "CIで検出された既存依存の脆弱性を解消し、security検査を通す",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/47"
+    },
+    {
+      "number": 45,
+      "title": "通知ログCSVがSupabaseの1,000件上限で欠落しないように分割取得する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/45"
+    },
+    {
+      "number": 44,
+      "title": "通知ログCSVの期間を画面で指定し、終了日の全件を日本時間で出力する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/44"
+    },
+    {
+      "number": 43,
+      "title": "一覧画面のページ番号を共通検証し、小数・無限大・巨大値による取得エラーを防ぐ",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/43"
+    },
+    {
+      "number": 42,
+      "title": "APIがHTML・不正JSONを返しても、ログイン・権限エラーの画面遷移を維持する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/42"
+    },
+    {
+      "number": 33,
+      "title": "SourceTree の使い方資料を作る（画面写真つき）",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/33"
+    },
+    {
+      "number": 29,
+      "title": "チーム用の用語集を作る",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/29"
+    },
+    {
+      "number": 28,
+      "title": "画面のスクリーンショットを撮って残す",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/28"
+    },
+    {
+      "number": 27,
+      "title": "Issue と Pull Request のテンプレートを作る",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/27"
+    },
+    {
+      "number": 26,
+      "title": "main ブランチに鍵をかけて、PR で進める形にする",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/26"
+    },
+    {
+      "number": 25,
+      "title": "[将来候補] 商用・協力式場運用時のホスティング条件と費用を判断する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/25"
+    },
+    {
+      "number": 24,
+      "title": "デモ・テスト用環境を分離し、模擬データで再現する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/24"
+    },
+    {
+      "number": 23,
+      "title": "[Epic] 学校の制作・発表・検証 — 担当区分と進捗",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/23"
+    },
+    {
+      "number": 22,
+      "title": "発表デモでAI補助を動かし、停止時の手動操作を確認する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/22"
+    },
+    {
+      "number": 21,
+      "title": "学校内の模擬評価の方法・アンケート・利用手順を整える",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/21"
+    },
+    {
+      "number": 20,
+      "title": "[将来候補] 実データ運用時の定期バックアップ・Storage同期・復元を整える",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/20"
+    },
+    {
+      "number": 19,
+      "title": "通しで動くかを自動で確かめる仕組みを作る（E2Eテスト）",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/19"
+    },
+    {
+      "number": 18,
+      "title": "[技術的負債] 5人並列実装で残った重複と規約の不統一",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/18"
+    },
+    {
+      "number": 17,
+      "title": "[将来候補] 外部送信が必要になった場合のメールドメインを整える",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/17"
+    },
+    {
+      "number": 16,
+      "title": "[Phase 2] 提出・確認を単一トランザクションにする",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/16"
+    },
+    {
+      "number": 15,
+      "title": "[Phase 1] ワンタイムコードの「検証失敗5回で失効」が未実装",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/15"
+    },
+    {
+      "number": 14,
+      "title": "発表・検証用環境を整える（Supabase・メール・LINE）",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/14"
+    },
+    {
+      "number": 13,
+      "title": "[P1ブロッカー][要検証] rank 10: リスクスコアの算出式と「重要宿題」の定義が無く、重要度カラムも2名称ある",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/13"
+    },
+    {
+      "number": 12,
+      "title": "[P1ブロッカー][要検証] rank 9: timeline生成APIの本数と assign-tasks 再実行時の挙動が未確定",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/12"
+    },
+    {
+      "number": 11,
+      "title": "[P1ブロッカー][要検証] rank 8: 利用者・式場管理のAPIとService Role使用範囲が未定義でadminがプランナーを登録できない",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/11"
+    },
+    {
+      "number": 10,
+      "title": "[P1ブロッカー][要検証] rank 7: 提出形式の値域が3箇所で不一致、case_tasks に提出形式が無くM03を描画できない",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/10"
+    },
+    {
+      "number": 9,
+      "title": "[P1ブロッカー][要検証] rank 6: couple_profiles のRLSに planner 分岐が無く、案件管理が0行になる",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/9"
+    },
+    {
+      "number": 8,
+      "title": "[P1ブロッカー][要検証] rank 5: update／insert／delete ポリシー欠落で role・venue_id 自己更新による権限昇格",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/8"
+    },
+    {
+      "number": 7,
+      "title": "[P1ブロッカー][要検証] rank 4: 発行した招待URLを表示・送信・再発行する導線が画面設計に無い",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/7"
+    },
+    {
+      "number": 6,
+      "title": "[P1ブロッカー][要検証] rank 3: 招待トークンと登録メールが未照合。失効チェック漏れとトークン消費の非原子性",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/6"
+    },
+    {
+      "number": 5,
+      "title": "[P1ブロッカー][要検証] rank 2: 新郎新婦氏名の保存先と couple_profiles の作成主体が章間で矛盾",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/5"
+    },
+    {
+      "number": 4,
+      "title": "[P1ブロッカー][要検証] rank 1: RLSポリシーが相互再帰し、couple・plannerの主要画面が実行時エラーになる",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/4"
+    },
+    {
+      "number": 3,
+      "title": "[決定待ち] 招待トークンの有効期限を確定",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/3"
+    },
+    {
+      "number": 2,
+      "title": "[決定待ち] ワンタイム認証(マジックリンク＋6桁コード)の正式採用",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/2"
+    },
+    {
+      "number": 1,
+      "title": "[Epic] Phase 1 実装(案件登録 → 招待 → 初回登録 → 提出 → 確認)",
+      "state": "closed",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/1"
+    },
+    {
+      "number": 50,
+      "title": "[TASK] 実装と対応する詳細設計図を作成する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/50"
+    },
+    {
+      "number": 51,
+      "title": "[TASK] 中間発表用PowerPoint・発表原稿を作成する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/51"
+    },
+    {
+      "number": 53,
+      "title": "[Epic] 学校の月別成果物を前倒しで揃える（2026年10月〜2027年2月）",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/53"
+    },
+    {
+      "number": 55,
+      "title": "[11月・製造] 継続製造と中間発表時点のコードを確定する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/55"
+    },
+    {
+      "number": 58,
+      "title": "[11月・Agent AI不要] 中間発表・デモを実施し質疑と改善点を記録する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/58"
+    },
+    {
+      "number": 63,
+      "title": "[1月・製造] 最終ソースコードと再現手順を確定する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/63"
+    },
+    {
+      "number": 59,
+      "title": "[12月・Agent AI不要] テスト仕様書を作成し機能・ケース・期待結果を対応付ける",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/59"
+    },
+    {
+      "number": 60,
+      "title": "[12月・Agent AI不要] テストを実施しエビデンスと不具合票を残す",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/60"
+    },
+    {
+      "number": 65,
+      "title": "[2月・Agent AI不要] 作業実績が書かれたWBSを完成する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/65"
+    },
+    {
+      "number": 57,
+      "title": "[11月・Agent AI不要] AWSの学校要件を確認し演習・構成検証を記録する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/57"
+    },
+    {
+      "number": 64,
+      "title": "[2月・Agent AI不要] 学校の最終発表・デモを実施し結果を記録する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/64"
+    },
+    {
+      "number": 61,
+      "title": "[1月・Agent AI不要] 最終回帰テストとエビデンスを確定する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/61"
+    },
+    {
+      "number": 54,
+      "title": "[10月・製造] 優先修正を反映し月次ソースコードを確定する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/54"
+    },
+    {
+      "number": 56,
+      "title": "[11月・Agent AI不要] テスト技法を選定し主要機能のケースを設計する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/56"
+    },
+    {
+      "number": 62,
+      "title": "[1月・Agent AI不要] 最終発表・デモ用の資料と原稿を作成する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/62"
+    },
+    {
+      "number": 69,
+      "title": "削除バッチの部分失敗を記録し、未削除ファイルを再処理できるようにする（GAP-11）",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/69"
+    },
+    {
+      "number": 71,
+      "title": "PWAのホーム画面追加と機微データ非保持を完成する（GAP-02）",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/71",
+      "state": "open"
+    },
+    {
+      "number": 72,
+      "title": "DB・Storage容量と利用件数を日次集計し管理画面に表示する（GAP-03）",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/72",
+      "state": "open"
+    },
+    {
+      "number": 73,
+      "title": "6種類の障害監視・再通知抑制・回復記録を実装する（GAP-04）",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/73",
+      "state": "open"
+    },
+    {
+      "number": 74,
+      "title": "個人情報を含まないAPI・画面性能ログを記録する（GAP-05）",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/74",
+      "state": "open"
+    },
+    {
+      "number": 75,
+      "title": "管理操作・権限変更・認証イベントの監査対象を揃える（GAP-07）",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/75",
+      "state": "open"
+    },
+    {
+      "number": 76,
+      "title": "2暦年を過ぎた監査ログを専用バッチで整理する（GAP-08）",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/76",
+      "state": "open"
+    },
+    {
+      "number": 77,
+      "title": "依存パッケージとActionsの週次更新PRを自動化する（GAP-09）",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/77",
+      "state": "open"
+    },
+    {
+      "number": 78,
+      "title": "共通のコード整形とコア分岐網羅をCIで検査する（GAP-10）",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/78",
+      "state": "open"
+    }
+  ],
+  "nextOrder": [
+    "OPS-01",
+    "QA-06",
+    "DOC-50",
+    "DOC-51",
+    "SCHOOL-TEST-SPEC",
+    "QA-07",
+    "SCHOOL-AWS",
+    "SCHOOL-MID-EVENT",
+    "SCHOOL-WBS"
+  ],
+  "screens": [
+    {
+      "id": "P01",
+      "title": "ログイン",
+      "file": "src/app/(public)/login/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "P02",
+      "title": "初回登録",
+      "file": "src/app/(public)/register/[token]/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "P03",
+      "title": "パスワード再設定",
+      "file": "src/app/(public)/password/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "P04",
+      "title": "エラー",
+      "file": "src/app/error/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "M01",
+      "title": "マイページ",
+      "file": "src/app/(couple)/mypage/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "M02",
+      "title": "宿題一覧",
+      "file": "src/app/(couple)/mypage/tasks/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "M03",
+      "title": "宿題詳細・提出",
+      "file": "src/app/(couple)/mypage/tasks/[taskId]/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "M04",
+      "title": "タイムライン",
+      "file": "src/app/(couple)/mypage/timeline/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "M05",
+      "title": "通知一覧",
+      "file": "src/app/(couple)/mypage/notifications/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "M06",
+      "title": "アカウント/LINE",
+      "file": "src/app/(couple)/mypage/account/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "K01",
+      "title": "案件一覧",
+      "file": "src/app/(staff)/cases/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "K02",
+      "title": "案件詳細",
+      "file": "src/app/(staff)/cases/[caseId]/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "K03",
+      "title": "案件登録",
+      "file": "src/app/(staff)/cases/new/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "K04",
+      "title": "案件変更",
+      "file": "src/app/(staff)/cases/[caseId]/edit/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "K05",
+      "title": "アーカイブ確認",
+      "file": "src/app/(staff)/cases/[caseId]/archive/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "D01",
+      "title": "ダッシュボード",
+      "file": "src/app/(staff)/dashboard/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "D02",
+      "title": "提出物確認",
+      "file": "src/app/(staff)/submissions/[submissionId]/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "D03",
+      "title": "準備シート",
+      "file": "src/app/(staff)/cases/[caseId]/sheet/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "D04",
+      "title": "フォロー記録",
+      "file": "src/app/(staff)/cases/[caseId]/follow/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "D05",
+      "title": "打ち合わせ/起票",
+      "file": "src/app/(staff)/cases/[caseId]/meeting-notes/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "T01",
+      "title": "テンプレート一覧",
+      "file": "src/app/(staff)/templates/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "T02",
+      "title": "テンプレート編集/新規",
+      "file": "src/app/(staff)/templates/[templateId]/page.tsx",
+      "status": "main",
+      "note": "newも動的ルートで処理"
+    },
+    {
+      "id": "T03",
+      "title": "プラン種別",
+      "file": "src/app/(staff)/plan-types/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "U01",
+      "title": "利用者一覧",
+      "file": "src/app/(staff)/users/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "U02",
+      "title": "利用者登録",
+      "file": "src/app/(staff)/users/new/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "U03",
+      "title": "利用者変更",
+      "file": "src/app/(staff)/users/[userId]/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "U04",
+      "title": "利用者削除確認",
+      "file": "src/app/(staff)/users/UserTable.tsx",
+      "status": "main",
+      "note": "UserTable内の確認UI"
+    },
+    {
+      "id": "N01",
+      "title": "staff通知履歴",
+      "file": "src/app/(staff)/notifications/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "S01",
+      "title": "式場一覧",
+      "file": "src/app/(staff)/venues/page.tsx",
+      "status": "main",
+      "note": "画面コードあり。実端末/本番の完了判定とは別"
+    },
+    {
+      "id": "S02",
+      "title": "式場登録/編集",
+      "file": "src/app/(staff)/venues/[venueId]/page.tsx",
+      "status": "review",
+      "note": "式場編集を統合PR79に実装。共有DB反映と実端末確認は別項目。"
+    },
+    {
+      "id": "S03",
+      "title": "利用状況/ログ",
+      "file": "src/app/(staff)/system/page.tsx",
+      "status": "review",
+      "note": "容量/監視/CSVを統合PR79に実装。共有DB反映と実端末確認は別項目。"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "F-1-1",
+      "title": "招待URLの発行・再発行・送付",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 1-1",
+      "screens": [
+        "K03",
+        "K02"
+      ],
+      "evidence": [
+        "src/lib/services/invitations.ts",
+        "src/app/(staff)/cases/[caseId]/InvitationSection.tsx"
+      ],
+      "note": "トークンハッシュ保存、期限・失効、送付履歴。外部メール/LINEの到達確認は環境タスク。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-1-2",
+      "title": "招待URLから初回登録",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 1-2",
+      "screens": [
+        "P02"
+      ],
+      "evidence": [
+        "src/app/api/auth/initial-register/route.ts",
+        "src/app/(public)/register/[token]/RegisterForm.tsx"
+      ],
+      "note": "メール照合・原子的トークン消費・OTP確認。設計13-1によりcoupleはパスワードレス。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-1-3",
+      "title": "LINEアカウント紐付け",
+      "category": "機能",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計3-2 / 1-3",
+      "screens": [
+        "M06"
+      ],
+      "evidence": [
+        "src/app/api/line/link/route.ts",
+        "src/app/api/line/webhook/route.ts"
+      ],
+      "note": "linkToken/nonce、署名検証、重複イベント排除。実チャネルでの確認は別途。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-1-4",
+      "title": "ログイン・認証後の役割別遷移",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 1-4",
+      "screens": [
+        "P01"
+      ],
+      "evidence": [
+        "src/app/(public)/login/LoginForm.tsx",
+        "src/app/api/auth/otp-request/route.ts",
+        "src/app/api/auth/otp-verify/route.ts"
+      ],
+      "note": "coupleはマジックリンク/6桁OTP、staffはパスワード。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-1-5",
+      "title": "ログアウト",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 1-5",
+      "screens": [],
+      "evidence": [
+        "src/components/layout/LogoutButton.tsx"
+      ],
+      "note": "セッション解除と公開画面への戻り。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-1-6",
+      "title": "パスワード再設定・初回設定",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 1-6",
+      "screens": [
+        "P03"
+      ],
+      "evidence": [
+        "src/app/api/auth/password-reset/route.ts",
+        "src/app/(public)/password/PasswordForms.tsx"
+      ],
+      "note": "staff向け。実メール到達は環境設定後に確認する。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-2-1",
+      "title": "案件登録・採番・招待・初期宿題",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 2-1",
+      "screens": [
+        "K03"
+      ],
+      "evidence": [
+        "src/app/api/cases/route.ts",
+        "supabase/migrations/20260828000800_case_functions.sql"
+      ],
+      "note": "案件・2人のプロフィール・宿題・タイムラインを作成。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-2-2",
+      "title": "案件一覧・検索・並べ替え",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 2-2",
+      "screens": [
+        "K01"
+      ],
+      "evidence": [
+        "src/lib/services/cases.ts",
+        "src/app/(staff)/cases/page.tsx"
+      ],
+      "note": "担当/式場スコープ、挙式日・リスク順。ページ番号の堅牢化はFIX-43。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-2-3",
+      "title": "案件詳細・進捗表示",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 2-3",
+      "screens": [
+        "K02"
+      ],
+      "evidence": [
+        "src/app/(staff)/cases/[caseId]/page.tsx",
+        "src/app/(couple)/mypage/case/page.tsx"
+      ],
+      "note": "staffとcoupleの表示を分離。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-2-4",
+      "title": "案件変更・担当変更・期限再計算",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 2-4",
+      "screens": [
+        "K04"
+      ],
+      "evidence": [
+        "src/app/api/cases/[caseId]/route.ts",
+        "src/lib/services/schedule.ts"
+      ],
+      "note": "挙式日の変更に伴う未完了宿題の期限調整。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-2-5",
+      "title": "案件アーカイブ",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 2-5",
+      "screens": [
+        "K05"
+      ],
+      "evidence": [
+        "src/app/(staff)/cases/[caseId]/archive/page.tsx",
+        "src/lib/services/cases.ts"
+      ],
+      "note": "admin確認操作、論理削除、アーカイブ中の更新制限。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-2-6",
+      "title": "案件復元",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 2-6",
+      "screens": [
+        "K01",
+        "K05"
+      ],
+      "evidence": [
+        "src/app/(staff)/cases/page.tsx",
+        "src/lib/services/cases.ts"
+      ],
+      "note": "アーカイブ解除のサービス/RPC経路。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-3-1",
+      "title": "coupleのダッシュボード",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 3-1",
+      "screens": [
+        "M01"
+      ],
+      "evidence": [
+        "src/app/(couple)/mypage/page.tsx"
+      ],
+      "note": "残日数・次の宿題・未提出件数。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-3-2",
+      "title": "coupleの宿題一覧・状態表示",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 3-2",
+      "screens": [
+        "M02"
+      ],
+      "evidence": [
+        "src/app/(couple)/mypage/tasks/page.tsx",
+        "src/app/(couple)/mypage/tasks/TaskFilterTabs.tsx"
+      ],
+      "note": "状態・期限順・タブ。新郎新婦で案件を共有。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-3-3",
+      "title": "宿題提出・一時保存・再提出",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 3-3",
+      "screens": [
+        "M03"
+      ],
+      "evidence": [
+        "src/app/(couple)/mypage/tasks/[taskId]/SubmitForm.tsx",
+        "src/app/api/tasks/[taskId]/submit/route.ts"
+      ],
+      "note": "text/select/file/noneを扱う。2人の共有と原子性をDB/E2Eで検査。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-3-4",
+      "title": "逆算した準備タイムライン",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 3-4",
+      "screens": [
+        "M04"
+      ],
+      "evidence": [
+        "src/app/(couple)/mypage/timeline/page.tsx",
+        "src/lib/services/schedule.ts"
+      ],
+      "note": "挙式日と逆算日数から生成。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-3-5",
+      "title": "coupleの通知一覧",
+      "category": "機能",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計3-2 / 3-5",
+      "screens": [
+        "M05"
+      ],
+      "evidence": [
+        "src/app/(couple)/mypage/notifications/page.tsx"
+      ],
+      "note": "自案件・本人の通知履歴。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-4-1",
+      "title": "プランナーの案件サマリー",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 4-1",
+      "screens": [
+        "D01"
+      ],
+      "evidence": [
+        "src/app/(staff)/dashboard/page.tsx"
+      ],
+      "note": "担当案件・未提出・高リスクのサマリー。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-4-2",
+      "title": "今日フォローすべき案件と根拠",
+      "category": "機能",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計3-2 / 4-2",
+      "screens": [
+        "D01"
+      ],
+      "evidence": [
+        "src/app/api/dashboard/follow-up-today/route.ts",
+        "src/lib/services/riskStore.ts"
+      ],
+      "note": "保存済みスコアと根拠を利用し表示時の全件再計算を回避。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-4-3",
+      "title": "提出物の確認・不備指摘",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 4-3",
+      "screens": [
+        "D02"
+      ],
+      "evidence": [
+        "src/app/(staff)/submissions/[submissionId]/ReviewForm.tsx",
+        "src/app/api/submissions/[submissionId]/review/route.ts"
+      ],
+      "note": "確認済/不備あり、コメント、通知生成。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-4-4",
+      "title": "フォロー記録",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 4-4",
+      "screens": [
+        "D04"
+      ],
+      "evidence": [
+        "src/app/api/cases/[caseId]/follow-logs/route.ts",
+        "src/app/(staff)/cases/[caseId]/follow/page.tsx"
+      ],
+      "note": "日時・手段・メモを保存し連絡履歴/準備シートへ反映。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-4-5",
+      "title": "打ち合わせ前準備シート・印刷",
+      "category": "機能",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計3-2 / 4-5",
+      "screens": [
+        "D03"
+      ],
+      "evidence": [
+        "src/app/(staff)/cases/[caseId]/sheet/page.tsx",
+        "src/app/(staff)/cases/[caseId]/sheet/PrintButton.tsx",
+        "src/app/globals.css"
+      ],
+      "note": "集約・meeting_sheets保存・印刷CSS/ブラウザPDF保存。専用PDF生成APIは未実装の任意代替。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-5-1",
+      "title": "宿題テンプレート一覧",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 5-1",
+      "screens": [
+        "T01"
+      ],
+      "evidence": [
+        "src/app/(staff)/templates/page.tsx"
+      ],
+      "note": "式場内テンプレートの一覧。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-5-2",
+      "title": "宿題テンプレート登録・編集",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 5-2",
+      "screens": [
+        "T02"
+      ],
+      "evidence": [
+        "src/app/(staff)/templates/[templateId]/TemplateForm.tsx",
+        "src/app/(staff)/templates/[templateId]/page.tsx"
+      ],
+      "note": "提出形式・説明・逆算日数の編集。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-5-3",
+      "title": "プラン種別・テンプレートセット",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 5-3",
+      "screens": [
+        "T03"
+      ],
+      "evidence": [
+        "src/app/(staff)/plan-types/page.tsx",
+        "src/app/(staff)/plan-types/PlanTypeForm.tsx"
+      ],
+      "note": "プラン種別と宿題セットを管理。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-5-4",
+      "title": "案件への宿題一括割当",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 5-4",
+      "screens": [
+        "K03"
+      ],
+      "evidence": [
+        "src/app/api/cases/[caseId]/assign-tasks/route.ts",
+        "supabase/migrations/20260828000800_case_functions.sql"
+      ],
+      "note": "テンプレートのスナップショットとタイムラインを同時生成。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-5-5",
+      "title": "宿題の追加・期限変更・対応不要",
+      "category": "機能",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計3-2 / 5-5",
+      "screens": [
+        "K02"
+      ],
+      "evidence": [
+        "src/app/(staff)/cases/[caseId]/TaskSection.tsx",
+        "src/app/api/cases/[caseId]/tasks/[taskId]/route.ts"
+      ],
+      "note": "個別編集、waived付与/解除の状態制約。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-6-1",
+      "title": "ルールによるリスク算出・保存",
+      "category": "機能",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計3-2 / 6-1",
+      "screens": [],
+      "evidence": [
+        "src/lib/services/risk.ts",
+        "src/lib/services/riskStore.ts",
+        "tests/unit/risk.test.ts"
+      ],
+      "note": "LLMを使用しない。期限超過等の5条件とスコア/根拠を保存。定期起動はPR41/OPS-06。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-6-2",
+      "title": "リスクスコア・根拠の表示",
+      "category": "機能",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計3-2 / 6-2",
+      "screens": [
+        "D01",
+        "K01",
+        "K02"
+      ],
+      "evidence": [
+        "src/app/(staff)/cases/[caseId]/RiskSection.tsx",
+        "src/components/ui/RiskBadge.tsx"
+      ],
+      "note": "high/medium/lowと説明。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-6-3",
+      "title": "coupleからリスクを隠す",
+      "category": "機能",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計3-2 / 6-3",
+      "screens": [
+        "M01",
+        "M04"
+      ],
+      "evidence": [
+        "supabase/migrations/20260828000500_rls_policies.sql",
+        "tests/db/risk.test.ts"
+      ],
+      "note": "coupleへのスコア参照をRLSで制限。次にやることを表示。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-7-1",
+      "title": "重要通知・LINE上限・メール代替",
+      "category": "機能",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計3-2 / 7-1",
+      "screens": [],
+      "evidence": [
+        "src/lib/services/notifications.ts",
+        "src/lib/notify/send.ts",
+        "supabase/migrations/20260828001300_notification_functions.sql"
+      ],
+      "note": "原子的LINE上限、未連携/上限時メール切替。実送信はOPS-03/07。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-7-2",
+      "title": "マイページ内通知",
+      "category": "機能",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計3-2 / 7-2",
+      "screens": [
+        "M05"
+      ],
+      "evidence": [
+        "src/app/api/notifications/route.ts",
+        "src/lib/services/notifications.ts"
+      ],
+      "note": "アプリ内通知の生成・取得。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-7-3",
+      "title": "通知履歴・送信結果",
+      "category": "機能",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計3-2 / 7-3",
+      "screens": [
+        "N01",
+        "M05"
+      ],
+      "evidence": [
+        "src/app/(staff)/notifications/page.tsx",
+        "src/lib/services/notifications.ts"
+      ],
+      "note": "チャネル・日時・内容・送信ログ。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-8-1",
+      "title": "利用者・式場一覧",
+      "category": "機能",
+      "phase": "1/2",
+      "status": "main",
+      "design": "基本設計3-2 / 8-1",
+      "screens": [
+        "U01",
+        "S01"
+      ],
+      "evidence": [
+        "src/lib/services/users.ts",
+        "src/app/(staff)/users/page.tsx",
+        "src/app/(staff)/venues/page.tsx"
+      ],
+      "note": "管理範囲と削除済み利用者の制御。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-8-2",
+      "title": "利用者・式場の登録",
+      "category": "機能",
+      "phase": "1/2",
+      "status": "main",
+      "design": "基本設計3-2 / 8-2",
+      "screens": [
+        "U02",
+        "S02"
+      ],
+      "evidence": [
+        "src/app/api/admin/users/route.ts",
+        "src/app/api/venues/route.ts"
+      ],
+      "note": "Authユーザー・プロフィール登録と初回設定メール。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-8-3",
+      "title": "利用者・式場の変更",
+      "category": "機能",
+      "phase": "1/2",
+      "status": "review",
+      "design": "基本設計3-2 / 8-3",
+      "screens": [
+        "U03",
+        "S02"
+      ],
+      "evidence": [
+        "src/app/api/admin/users/[userId]/route.ts",
+        "src/app/api/venues/route.ts",
+        "src/app/(staff)/venues/page.tsx",
+        "src/app/(staff)/venues/[venueId]/page.tsx",
+        "src/app/(staff)/venues/[venueId]/VenueEditForm.tsx",
+        "src/app/api/venues/[venueId]/route.ts",
+        "tests/e2e/venue-edit.spec.ts",
+        "docs/動作確認_式場編集.md"
+      ],
+      "note": "式場編集を既存PR66から統合。system_admin/RLS、更新/権限/エラー再試行を検証。",
+      "next": "PR79のmain反映。人の使い勝手は実機試験票へ記録。",
+      "issues": [
+        54
+      ],
+      "prs": [
+        66,
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-8-4",
+      "title": "利用者の停止・論理削除・引継ぎ",
+      "category": "機能",
+      "phase": "1/2",
+      "status": "main",
+      "design": "基本設計3-2 / 8-4",
+      "screens": [
+        "U04"
+      ],
+      "evidence": [
+        "src/app/api/admin/users/[userId]/route.ts",
+        "src/app/(staff)/users/UserTable.tsx"
+      ],
+      "note": "自身の削除禁止、担当引継ぎ、Auth停止とDB遮断。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-8-5",
+      "title": "システム利用状況・通知ログ・CSV",
+      "category": "機能",
+      "phase": "2",
+      "status": "review",
+      "design": "基本設計3-2 / 8-5",
+      "screens": [
+        "S03"
+      ],
+      "evidence": [
+        "src/app/(staff)/system/page.tsx",
+        "src/app/api/system/notification-logs.csv/route.ts",
+        "src/app/(staff)/system/MonitoringSummary.tsx"
+      ],
+      "note": "S03の容量・集計日時・監視通知と、CSV期間/全件分割を統合版に実装。",
+      "next": "PR79のmain反映と共有DB更新。",
+      "issues": [],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-9-1",
+      "title": "自由記述分類と修正・採用",
+      "category": "機能",
+      "phase": "3",
+      "status": "main",
+      "design": "基本設計3-2 / 9-1",
+      "screens": [
+        "D02",
+        "K02"
+      ],
+      "evidence": [
+        "src/app/(staff)/submissions/[submissionId]/ClassificationPanel.tsx",
+        "supabase/migrations/20260828001800_ai_assist.sql"
+      ],
+      "note": "提出から自動投入、reviewed_outputに修正採用を保存。品質/稼働は別タスク。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-9-2",
+      "title": "準備シート下書きと採用",
+      "category": "機能",
+      "phase": "3",
+      "status": "main",
+      "design": "基本設計3-2 / 9-2",
+      "screens": [
+        "D03"
+      ],
+      "evidence": [
+        "src/app/(staff)/cases/[caseId]/sheet/SheetDraftPanel.tsx",
+        "src/app/(staff)/cases/[caseId]/sheet/page.tsx"
+      ],
+      "note": "入力をサーバーで最小化、採用分のみ印刷へ反映。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-9-3",
+      "title": "コメント文面下書き",
+      "category": "機能",
+      "phase": "3",
+      "status": "main",
+      "design": "基本設計3-2 / 9-3",
+      "screens": [
+        "D02"
+      ],
+      "evidence": [
+        "src/app/(staff)/submissions/[submissionId]/DraftAssist.tsx"
+      ],
+      "note": "コメント欄へ挿入。確定・送信は人の操作。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-9-4",
+      "title": "提出CSVの不備一次チェック",
+      "category": "機能",
+      "phase": "3",
+      "status": "main",
+      "design": "基本設計3-2 / 9-4",
+      "screens": [
+        "D02"
+      ],
+      "evidence": [
+        "src/lib/ai/defectCheck.ts",
+        "src/app/api/submissions/[submissionId]/defect-check/route.ts",
+        "src/app/(staff)/submissions/[submissionId]/DefectPanel.tsx"
+      ],
+      "note": "決定的なルール検査はAI停止中も動作。LLM候補は任意依頼・要確認。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-9-5",
+      "title": "打ち合わせ記録・宿題起票案",
+      "category": "機能",
+      "phase": "3",
+      "status": "main",
+      "design": "基本設計3-2 / 9-5",
+      "screens": [
+        "D05"
+      ],
+      "evidence": [
+        "src/app/(staff)/cases/[caseId]/meeting-notes/page.tsx",
+        "src/app/(staff)/cases/[caseId]/meeting-notes/TaskProposalPanel.tsx"
+      ],
+      "note": "記録保存→非同期抽出→編集/承認→既存宿題APIで登録。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-9-6",
+      "title": "AI共通ジョブ基盤",
+      "category": "機能",
+      "phase": "3",
+      "status": "main",
+      "design": "基本設計3-2 / 9-6",
+      "screens": [],
+      "evidence": [
+        "worker/ai-worker.ts",
+        "src/lib/ai/schemas.ts",
+        "supabase/migrations/20260828001600_ai_job_queue.sql"
+      ],
+      "note": "プル型、入出力検証、確認・採用、心拍、最小権限。運用自動復帰はOPS-15。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "active",
+      "kind": "feature"
+    },
+    {
+      "id": "F-9-7",
+      "title": "FAQ一次回答・RAG",
+      "category": "拡張",
+      "phase": "3拡張",
+      "status": "conditional",
+      "design": "基本設計7-5 / 9-7",
+      "screens": [
+        "M01"
+      ],
+      "evidence": [
+        "src/lib/ai/schemas.ts",
+        "src/lib/validation.ts",
+        "supabase/migrations/20260828000300_phase2_tables.sql"
+      ],
+      "note": "専用FAQ API、venue_knowledge/pgvector、根拠・無回答・引継ぎUIはない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
+      "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "conditional",
+      "kind": "feature"
+    },
+    {
+      "id": "F-9-8",
+      "title": "遅延時リスケジュール案",
+      "category": "拡張",
+      "phase": "3拡張",
+      "status": "conditional",
+      "design": "基本設計7-5 / 9-8",
+      "screens": [
+        "K02"
+      ],
+      "evidence": [
+        "src/lib/ai/schemas.ts",
+        "src/lib/validation.ts",
+        "supabase/migrations/20260828000300_phase2_tables.sql"
+      ],
+      "note": "schema/DB job_typeはある。調整案の生成・確認・適用UIはない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
+      "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "conditional",
+      "kind": "feature"
+    },
+    {
+      "id": "F-9-9",
+      "title": "担当引継ぎサマリー",
+      "category": "拡張",
+      "phase": "3拡張",
+      "status": "conditional",
+      "design": "基本設計7-5 / 9-9",
+      "screens": [
+        "K02"
+      ],
+      "evidence": [
+        "src/lib/ai/schemas.ts",
+        "src/lib/validation.ts",
+        "supabase/migrations/20260828000300_phase2_tables.sql"
+      ],
+      "note": "schema/DB job_typeはある。専用入力・承認表示・業務導線はない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
+      "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "conditional",
+      "kind": "feature"
+    },
+    {
+      "id": "F-9-10",
+      "title": "宿題テンプレートセット案",
+      "category": "拡張",
+      "phase": "3拡張",
+      "status": "conditional",
+      "design": "基本設計7-5 / 9-10",
+      "screens": [
+        "T03"
+      ],
+      "evidence": [
+        "src/lib/ai/schemas.ts",
+        "src/lib/validation.ts",
+        "supabase/migrations/20260828000300_phase2_tables.sql"
+      ],
+      "note": "schema/DB job_typeはある。案の編集・確定登録UIはない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
+      "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "conditional",
+      "kind": "feature"
+    },
+    {
+      "id": "F-9-11",
+      "title": "翻訳補助",
+      "category": "拡張",
+      "phase": "3拡張",
+      "status": "conditional",
+      "design": "基本設計7-5 / 9-11",
+      "screens": [
+        "D02"
+      ],
+      "evidence": [
+        "src/lib/ai/schemas.ts",
+        "src/lib/validation.ts",
+        "supabase/migrations/20260828000300_phase2_tables.sql"
+      ],
+      "note": "schema/DB job_typeはある。翻訳依頼・確認・送信前の業務導線はない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
+      "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "conditional",
+      "kind": "feature"
+    },
+    {
+      "id": "BASE-01",
+      "title": "DBスキーマ・マイグレーション・初期データ",
+      "category": "基盤",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計5章/12章",
+      "screens": [],
+      "evidence": [
+        "supabase/migrations/20260828000200_core_tables.sql",
+        "supabase/seed.sql"
+      ],
+      "note": "publicテーブル31種、mainのSQL22本。PR48で索引1本、PR41の別関数は未反映。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-02",
+      "title": "役割・式場・案件を隔離するRLS",
+      "category": "基盤",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計6-3/付録A",
+      "screens": [],
+      "evidence": [
+        "supabase/migrations/20260828000400_functions.sql",
+        "supabase/migrations/20260828000500_rls_policies.sql",
+        "tests/db/rls.test.ts"
+      ],
+      "note": "再帰回避、停止利用者、他式場/他案件アクセスの制限。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-03",
+      "title": "招待消費・登録失敗の補償",
+      "category": "基盤",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計6-6-1",
+      "screens": [],
+      "evidence": [
+        "src/app/api/auth/initial-register/route.ts",
+        "supabase/migrations/20260828000700_auth_functions.sql",
+        "tests/db/concurrency.test.ts"
+      ],
+      "note": "原子的消費と失敗時の招待復元。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-04",
+      "title": "OTP失敗ロック・送信/検証のレート制限",
+      "category": "基盤",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計5-3/13-1",
+      "screens": [],
+      "evidence": [
+        "src/app/api/auth/shared.ts",
+        "supabase/migrations/20260828002000_otp_failure_lockout.sql"
+      ],
+      "note": "失敗5回ロックを追加済み。Issue15はclosed。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-05",
+      "title": "提出/確認の単一DBトランザクション",
+      "category": "基盤",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計6-7",
+      "screens": [],
+      "evidence": [
+        "supabase/migrations/20260828002100_submission_transactions.sql",
+        "tests/db/rls-submission.test.ts"
+      ],
+      "note": "submit_task_atomic/review_submission。Storage実体削除はDB取引外。Issue16はclosed。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-06",
+      "title": "PII暗号化・等値検索ハッシュ",
+      "category": "基盤",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計5-1/9章/13-1",
+      "screens": [],
+      "evidence": [
+        "src/lib/crypto.ts",
+        "tests/unit/crypto.test.ts"
+      ],
+      "note": "AES-GCM/HMAC、鍵は環境変数。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-07",
+      "title": "ファイル形式・サイズ・CSV入力検査",
+      "category": "基盤",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計6-11/9章",
+      "screens": [],
+      "evidence": [
+        "src/app/api/files/upload/route.ts",
+        "src/lib/ai/submissionCheck.ts"
+      ],
+      "note": "private保存、5MB/案件100MB、CSV/拡張子/MIME検証の経路がある。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-08",
+      "title": "ファイルのRLS・短命ダウンロードURL",
+      "category": "基盤",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計6-11/付録A",
+      "screens": [],
+      "evidence": [
+        "src/app/api/files/[fileId]/download/route.ts",
+        "supabase/migrations/20260828000500_rls_policies.sql"
+      ],
+      "note": "visibility/RLS後に署名URL発行。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-09",
+      "title": "APIエラーと画面の共通処理",
+      "category": "基盤",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計4-3/6-5-1",
+      "screens": [],
+      "evidence": [
+        "src/lib/api/client.ts",
+        "src/lib/api/route.ts",
+        "src/lib/errors.ts"
+      ],
+      "note": "401/403/404と項目エラー。異常本文への耐性はFIX-42。Issue18はclosed。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-10",
+      "title": "サービス層・表示値・入力型の共通化",
+      "category": "基盤",
+      "phase": "1",
+      "status": "main",
+      "design": "基本設計6-2/12-2",
+      "screens": [],
+      "evidence": [
+        "src/lib/services/cases.ts",
+        "src/lib/services/users.ts",
+        "src/lib/constants.ts",
+        "src/lib/validation.ts"
+      ],
+      "note": "案件/利用者検索、UUID・状態値等を共通化。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-11",
+      "title": "Service Roleの用途制限・DB最小権限",
+      "category": "基盤",
+      "phase": "1/3",
+      "status": "main",
+      "design": "基本設計6-3-5/7-3",
+      "screens": [],
+      "evidence": [
+        "eslint.config.mjs",
+        "src/lib/supabase/admin.ts",
+        "supabase/migrations/20260828002200_service_role_grants.sql"
+      ],
+      "note": "用途名で制限、ai_workerにはRPCのみ。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-12",
+      "title": "LINE署名・nonce・重複配信排除",
+      "category": "基盤",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計6-10",
+      "screens": [],
+      "evidence": [
+        "src/app/api/line/webhook/route.ts",
+        "supabase/migrations/20260828001500_line_link.sql",
+        "tests/unit/line.test.ts"
+      ],
+      "note": "raw body署名とイベントID/nonce検証。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-13",
+      "title": "通知文面・チャネル選択・原子的上限",
+      "category": "基盤",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計6-9/付録D",
+      "screens": [],
+      "evidence": [
+        "src/lib/notify/templates.ts",
+        "src/lib/notify/send.ts",
+        "tests/db/notifications.test.ts"
+      ],
+      "note": "LINE上限/メール代替/圧迫感を抑えた固定文面。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-14",
+      "title": "バッチの共有シークレット・実行記録",
+      "category": "基盤",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計6-5-2/6-12",
+      "screens": [],
+      "evidence": [
+        "src/lib/api/internal.ts",
+        "src/app/api/internal/risk-recalculate/route.ts",
+        "src/app/api/internal/notifications-dispatch/route.ts"
+      ],
+      "note": "内部認証、batch_runs保存、業務5処理の入口。定期登録の修正はREL-41。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-15",
+      "title": "案件終了180日後の削除・匿名化",
+      "category": "基盤",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計6-12/13-1",
+      "screens": [],
+      "evidence": [
+        "src/app/api/internal/case-purge/route.ts"
+      ],
+      "note": "DB/Storageの削除・プロフィール匿名化経路がある。失敗時の扱い改善はGAP-11。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-16",
+      "title": "レート制限/通知上限の古い窓を掃除",
+      "category": "基盤",
+      "phase": "2",
+      "status": "main",
+      "design": "基本設計6-12",
+      "screens": [],
+      "evidence": [
+        "src/app/api/internal/rate-limit-cleanup/route.ts"
+      ],
+      "note": "日次で7日/62日基準、batch_runsに記録。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-17",
+      "title": "AI入力最小化・JSON検証・プロンプト版管理",
+      "category": "基盤",
+      "phase": "3",
+      "status": "main",
+      "design": "基本設計7-2/7-4/7-6",
+      "screens": [],
+      "evidence": [
+        "src/lib/ai/schemas.ts",
+        "src/lib/ai/assist.ts",
+        "supabase/migrations/20260828001700_ai_prompts_seed.sql",
+        "worker/ai-worker.ts"
+      ],
+      "note": "Zodで検証、用途別モデル/プロンプトをDB管理。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-18",
+      "title": "AIジョブの滞留回収・心拍・手動縮退",
+      "category": "基盤",
+      "phase": "3",
+      "status": "main",
+      "design": "基本設計7-1/7-3",
+      "screens": [],
+      "evidence": [
+        "src/app/api/internal/ai-job-reclaim/route.ts",
+        "src/app/api/ai/status/route.ts",
+        "src/components/ai/AiNotice.tsx"
+      ],
+      "note": "心拍10分で利用不可。コア操作は継続。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-19",
+      "title": "AI入出力30日・メタデータ90日の保持",
+      "category": "基盤",
+      "phase": "3",
+      "status": "main",
+      "design": "基本設計7-4/13-1",
+      "screens": [],
+      "evidence": [
+        "supabase/migrations/20260828001900_ai_job_retention.sql",
+        "tests/db/ai-jobs.test.ts"
+      ],
+      "note": "案件削除バッチに相乗りする。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "BASE-20",
+      "title": "スマートフォン/PCの共通UI・印刷CSS",
+      "category": "基盤",
+      "phase": "1/2",
+      "status": "main",
+      "design": "基本設計4章/8-4",
+      "screens": [],
+      "evidence": [
+        "src/app/globals.css",
+        "src/components/couple/CoupleNav.tsx",
+        "docs/screenshots/12-mobile-couple-mypage.png"
+      ],
+      "note": "レスポンシブ部品・状態/エラー表示・印刷スタイル。実端末全機種検証とは別。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "GAP-01",
+      "title": "式場詳細・編集UIとPATCH API",
+      "category": "実装不足",
+      "phase": "2",
+      "status": "review",
+      "design": "基本設計4-3 S02/6-5",
+      "screens": [],
+      "evidence": [
+        "src/app/(staff)/venues/page.tsx",
+        "src/app/api/venues/route.ts",
+        "src/app/(staff)/venues/[venueId]/page.tsx",
+        "src/app/(staff)/venues/[venueId]/VenueEditForm.tsx",
+        "src/app/api/venues/[venueId]/route.ts",
+        "tests/e2e/venue-edit.spec.ts",
+        "docs/動作確認_式場編集.md"
+      ],
+      "note": "PR #66で式場詳細・編集フォーム・PATCH API・一覧への導線を実装。system_adminとRLSで認可し、名称・代表メール・利用状態を更新する。ローカル自動検証とビルド済みサーバーの保存を確認済み。2026-10-09にPC/スマートフォン寸法Chromeで通し確認済み。ユーザーの指示で次の実装へ再開。",
+      "next": "ユーザー自身の使い勝手評価は未記録。依存監査の修正・CIの残る確認・PRレビューを経てmainへ反映する。",
+      "issues": [
+        54
+      ],
+      "prs": [
+        66
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "GAP-02",
+      "title": "PWAホーム画面追加の完成",
+      "category": "実装不足",
+      "phase": "1/2",
+      "status": "review",
+      "design": "基本設計2-2/8-4",
+      "screens": [],
+      "evidence": [
+        "public/manifest.webmanifest",
+        "src/app/layout.tsx",
+        "next.config.ts",
+        "package.json",
+        "public/sw.js",
+        "src/components/PwaRegistration.tsx",
+        "tests/e2e/pwa-performance.spec.ts"
+      ],
+      "note": "ホーム画面用のアイコン・SW登録・機微情報非保持を実装。Chrome PC/小画面のPWA検証とオフライン非保持を確認。",
+      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "issues": [
+        71
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "GAP-03",
+      "title": "容量・利用状況の日次集計",
+      "category": "実装不足",
+      "phase": "2",
+      "status": "review",
+      "design": "基本設計6-12/8-3/10章",
+      "screens": [],
+      "evidence": [
+        "src/app/(staff)/system/page.tsx",
+        "src/lib/api/internal.ts",
+        "src/lib/monitoring/service.ts",
+        "supabase/migrations/20261009000100_usage_snapshots.sql",
+        "tests/db/monitoring.test.ts"
+      ],
+      "note": "日次のDB/全Storage容量・利用件数を保存しS03へ表示。未設定・未取得・古い集計を正常値と扱わない。",
+      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "issues": [
+        72
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "GAP-04",
+      "title": "障害条件の監視・アラート",
+      "category": "実装不足",
+      "phase": "2",
+      "status": "review",
+      "design": "基本設計10章",
+      "screens": [],
+      "evidence": [
+        ".github/workflows/keepalive.yml",
+        "src/app/(staff)/system/page.tsx",
+        "supabase/migrations/20261009000200_system_monitoring.sql"
+      ],
+      "note": "6種の監視、1時間の再通知抑制、回復記録、S03共有通知、Keepalive連続2失敗を実装。外部宛先への実送信は行わない。",
+      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "issues": [
+        73
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "GAP-03"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "GAP-05",
+      "title": "API/画面の性能ログ",
+      "category": "実装不足",
+      "phase": "2",
+      "status": "review",
+      "design": "基本設計8-1/10章",
+      "screens": [],
+      "evidence": [
+        "src/lib/api/route.ts",
+        "src/lib/observability/performance.ts",
+        "tests/e2e/performance-load.spec.ts"
+      ],
+      "note": "API所要時間/成否と画面Web Vitalsを静的ルート名で記録。300案件30同時の負荷試験をCIローカル専用で追加。",
+      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "issues": [
+        74
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "GAP-06",
+      "title": "API Routesの同一Origin検証",
+      "category": "実装不足",
+      "phase": "1/2",
+      "status": "review",
+      "design": "基本設計9章 CSRF",
+      "screens": [],
+      "evidence": [
+        "src/lib/api/route.ts",
+        "src/lib/api/origin.ts",
+        "src/lib/api/internal.ts",
+        "src/app/api/line/webhook/route.ts",
+        "tests/unit/api-origin.test.ts",
+        "tests/e2e/api-origin.spec.ts",
+        "docs/実装計画_API送信元検証.md"
+      ],
+      "note": "PR #68で共通routeの既定保護として全28更新APIに同一Origin検証を適用。内部cron5本はwrapperの共有secret認証、LINEWebhookはraw body署名認証を維持。本文・認証・DBより前の拒否とJSON/multipartの通常送信を検証済み。",
+      "next": "PR #66に依存するPR #68のCI・レビューを確認し、依存順でmainへ反映する。実機Safariは未確認。",
+      "issues": [
+        54
+      ],
+      "prs": [
+        68
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "GAP-07",
+      "title": "監査ログの対象操作を揃える",
+      "category": "実装不足",
+      "phase": "2",
+      "status": "review",
+      "design": "基本設計9-1/10章",
+      "screens": [],
+      "evidence": [
+        "supabase/migrations/20260828000400_functions.sql",
+        "src/app/api/admin/users/[userId]/route.ts",
+        "src/app/(staff)/templates/[templateId]/page.tsx",
+        "tests/db/audit.test.ts",
+        "tests/unit/password-auth.test.ts",
+        "src/lib/services/audit-deadline.ts"
+      ],
+      "note": "管理変更はDB同一transactionで監査。認証イベントは専用RPCへ限定し、汎用RPCのauth.*偽造を拒否。認証監査通信は2秒で中断し認証結果を維持。",
+      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "issues": [
+        75
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "GAP-08",
+      "title": "監査ログの2年経過分を削除",
+      "category": "実装不足",
+      "phase": "2",
+      "status": "review",
+      "design": "基本設計9-1",
+      "screens": [],
+      "evidence": [
+        "src/app/api/internal/case-purge/route.ts",
+        "src/app/api/internal/rate-limit-cleanup/route.ts",
+        "supabase/migrations/20261009000400_audit_retention.sql",
+        "tests/unit/audit-retention-route.test.ts"
+      ],
+      "note": "UTCで2暦年を過ぎた監査だけを専用RPCで整理。境界・権限・実行記録を検証。共有データの削除実行なし。",
+      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "issues": [
+        76
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "GAP-09",
+      "title": "Dependabot/ Renovateの週次更新",
+      "category": "実装不足",
+      "phase": "開発",
+      "status": "review",
+      "design": "基本設計12-2",
+      "screens": [],
+      "evidence": [
+        ".github/workflows/ci.yml",
+        "package-lock.json",
+        ".github/dependabot.yml"
+      ],
+      "note": "npm/Actionsの週次Dependabotを追加。自動マージせずCIとレビューを通す。",
+      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "issues": [
+        77
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "GAP-10",
+      "title": "コード整形ルールのCI適用",
+      "category": "実装不足",
+      "phase": "開発",
+      "status": "review",
+      "design": "基本設計12章 コード規約",
+      "screens": [],
+      "evidence": [
+        "eslint.config.mjs",
+        "package.json",
+        ".prettierrc.json",
+        ".editorconfig",
+        ".gitattributes",
+        "vitest.coverage.config.ts"
+      ],
+      "note": "Prettier/EditorConfig/LF、整形CI、主要3モジュールbranch100%ゲートを追加。",
+      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "issues": [
+        78
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "GAP-11",
+      "title": "削除・匿名化バッチの失敗を正しく記録",
+      "category": "実装不足",
+      "phase": "2",
+      "status": "review",
+      "design": "基本設計6-12/9章",
+      "screens": [],
+      "evidence": [
+        "src/app/api/internal/case-purge/route.ts",
+        "src/lib/batches/case-purge.ts",
+        "src/lib/api/internal.ts",
+        "tests/unit/case-purge.test.ts",
+        "tests/unit/internal-batch.test.ts",
+        "docs/実装計画_削除バッチと依存更新.md"
+      ],
+      "note": "PR70で全操作エラーを検出し、Storage失敗時のメタ保持・部分成功/失敗工程記録・HTTP500・全ページ取得を実装。180日境界、各DB/通信失敗、再実行、201件超、記録失敗を模擬SDKで検証。削除済み実体は再計上しない。",
+      "next": "PR70の最新CI・レビューを確認して依存順にmainへ反映する。実案件では削除試験をしない。大量運用の実行時間・再開位置と全PII消去方針は別設計。",
+      "issues": [
+        69
+      ],
+      "prs": [
+        70
+      ],
+      "dependsOn": [
+        "BASE-15"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-42",
+      "title": "異常API本文でもHTTP状態と項目エラーを保持",
+      "category": "改善",
+      "phase": "改善",
+      "status": "review",
+      "design": "Issue#42",
+      "screens": [],
+      "evidence": [
+        "src/lib/api/client.ts",
+        "tests/unit/api-client.test.ts"
+      ],
+      "note": "HTML/不正JSON/null、プロトタイプ衝突を検証。",
+      "next": "PR #46をレビューしmainへ反映。",
+      "issues": [
+        42
+      ],
+      "prs": [
+        46
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-43",
+      "title": "一覧11画面と利用者APIのページ番号検証",
+      "category": "改善",
+      "phase": "改善",
+      "status": "review",
+      "design": "Issue#43",
+      "screens": [],
+      "evidence": [
+        "src/lib/pagination.ts",
+        "tests/unit/pagination.test.ts"
+      ],
+      "note": "形式/重複/offset上限を共通解析。",
+      "next": "PR #46をレビューしmainへ反映。",
+      "issues": [
+        43
+      ],
+      "prs": [
+        46
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-47",
+      "title": "依存関係の脆弱性を解消",
+      "category": "改善",
+      "phase": "改善",
+      "status": "review",
+      "design": "Issue#47",
+      "screens": [],
+      "evidence": [
+        "package.json",
+        "package-lock.json",
+        "docs/依存関係の脆弱性対応.md"
+      ],
+      "note": "PR70でNext.js/eslint-config-next15.5.27、sharp0.35.5へ更新。10/9の監査は全重大度0件。lint互換層と99ルールを維持し負例5件成功。初回CIのsecurity/Secret scanも成功。",
+      "next": "PR70の最終CIを確認し、PR46以降の依存順でmainへ反映する。脆弱性の追加公開に応じて継続監査する。",
+      "issues": [
+        47
+      ],
+      "prs": [
+        46,
+        70
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-44",
+      "title": "CSV期間フォーム・JST境界・日付検証",
+      "category": "改善",
+      "phase": "改善",
+      "status": "review",
+      "design": "Issue#44",
+      "screens": [],
+      "evidence": [
+        "src/lib/notification-log-export.ts",
+        "src/app/(staff)/system/NotificationLogExportForm.tsx"
+      ],
+      "note": "実在日/期間/重複とJSTの終了翌日未満。",
+      "next": "PR #48をレビューしmainへ反映。",
+      "issues": [
+        44
+      ],
+      "prs": [
+        48
+      ],
+      "dependsOn": [
+        "FIX-42",
+        "FIX-47"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-45",
+      "title": "通知CSVをkeysetで分割取得",
+      "category": "改善",
+      "phase": "改善",
+      "status": "review",
+      "design": "Issue#45",
+      "screens": [],
+      "evidence": [
+        "src/lib/services/notification-log-export.ts",
+        "tests/e2e/notification-log-export.spec.ts"
+      ],
+      "note": "1,000件制限・同時刻・マイクロ秒・上限/超過/途中失敗。",
+      "next": "PR #48をレビューしmainへ反映。",
+      "issues": [
+        45
+      ],
+      "prs": [
+        48
+      ],
+      "dependsOn": [
+        "FIX-42",
+        "FIX-47"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-49",
+      "title": "OTP自動送信とE2E再クリックの競合解消",
+      "category": "改善",
+      "phase": "改善",
+      "status": "review",
+      "design": "Issue#49",
+      "screens": [],
+      "evidence": [
+        "tests/e2e/helpers/flows.ts"
+      ],
+      "note": "6桁入力後の自動送信による遷移を待つ。CI44 E2E成功。",
+      "next": "PR #48をレビューしmainへ反映。",
+      "issues": [
+        49
+      ],
+      "prs": [
+        48
+      ],
+      "dependsOn": [
+        "FIX-42",
+        "FIX-47"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "REL-41",
+      "title": "本番で動く定期処理の登録関数",
+      "category": "リリース",
+      "phase": "2",
+      "status": "review",
+      "design": "6-12 / Issue14",
+      "screens": [],
+      "evidence": [
+        "supabase/migrations/20260828001400_scheduled_jobs.sql"
+      ],
+      "note": "PR41にregister_scheduled_jobs()と2テストあり、CI全成功。現在のブランチ/mainには含まれない。",
+      "next": "PR41をレビュー/マージし追加migrationを適用、公開URL変更時に再登録。",
+      "issues": [
+        14
+      ],
+      "prs": [
+        41
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-01",
+      "title": "発表・検証用Supabase/DB/seed",
+      "category": "運用",
+      "phase": "運用",
+      "status": "environment",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        "supabase/seed.sql",
+        "docs/DB更新手順_20261009.md"
+      ],
+      "note": "CIローカルでは全migration適用。共有Supabaseは新2テーブルがPGRST205で未反映。",
+      "next": "DB更新手順の6migrationを対象projectへ適用し新アプリ確認。",
+      "issues": [
+        14
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-02",
+      "title": "認証/通知メール用ドメイン・SPF/DKIM",
+      "category": "運用",
+      "phase": "将来運用",
+      "status": "conditional",
+      "design": "基本設計8章/12章 / Issue17",
+      "screens": [],
+      "evidence": [
+        ".env.example"
+      ],
+      "note": "Issue17 open、完了コメントなし。ドメイン購入/検証済みと判断できない。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。担当がドメイン/Resend検証記録と外部宛の到達証拠を残す。",
+      "issues": [
+        17
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "future",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-03",
+      "title": "デモ用認証・通知メールの接続",
+      "category": "運用",
+      "phase": "運用",
+      "status": "prepared",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        "src/lib/notify/mailer.ts",
+        "docs/メンバー向けデモと運用手順.md",
+        "tests/e2e/core-flow.spec.ts"
+      ],
+      "note": "学校デモはMailpitを標準とし、外部メール実送信を必須にしない。CIにOTP/招待の実通信試験あり。",
+      "next": "利用するデモPCでMailpitのコード/リンクをメンバーが確認する。",
+      "issues": [
+        14
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-04",
+      "title": "Authメールの6桁Token・Redirect URL",
+      "category": "運用",
+      "phase": "運用",
+      "status": "prepared",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        "supabase/templates/magic_link.html",
+        "supabase/config.toml",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "ローカルAuthのToken/127.0.0.1戻り先とCIの認証導線を用意。",
+      "next": "共有接続を使う場合は学校担当がSite URL/Redirect URLを照合する。",
+      "issues": [
+        14
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "OPS-03"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-05",
+      "title": "デモURL・接続範囲・公開設定の確認",
+      "category": "運用",
+      "phase": "運用",
+      "status": "prepared",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        "README.md",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "確認用URLはloopback。学校デモ手順と接続範囲の確認欄を用意。",
+      "next": "学校当日のPC/ネットワークで接続し、他端末へ共有する場合だけURLを確定する。",
+      "issues": [
+        14
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-06",
+      "title": "デモ環境の定期処理登録・動作記録",
+      "category": "運用",
+      "phase": "運用",
+      "status": "prepared",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        "supabase/migrations/20260828001400_scheduled_jobs.sql",
+        "supabase/migrations/20261009000600_register_observability_jobs.sql",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "8定期処理の登録関数と内部認証を統合。SQL適用で自動登録/実削除は行わない。",
+      "next": "共有公開先で継続実行を採用するときに登録と稼働記録を残す。ローカルデモでは安全な対象だけ手動実行。",
+      "issues": [
+        14
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "REL-41",
+        "OPS-05"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-07",
+      "title": "LINE実チャネル・Webhook・紐付け・送信",
+      "category": "運用",
+      "phase": "運用",
+      "status": "prepared",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        "src/app/api/line/webhook/route.ts",
+        "src/lib/notify/line.ts",
+        "docs/メンバー向けデモと運用手順.md",
+        "tests/unit/line.test.ts"
+      ],
+      "note": "校内の既定デモは実LINE送信を使わず、模擬SDK/署名試験と通常ブラウザーで説明する。",
+      "next": "実接続を採用する場合のみ、チャネル担当/端末/送信範囲を合意して別途記録。",
+      "issues": [
+        14
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "OPS-05"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-08",
+      "title": "デモ環境の変数・URL・内部認証の一致",
+      "category": "運用",
+      "phase": "運用",
+      "status": "recorded",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        ".env.example",
+        "scripts/check-environment.mts",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "設定7項目の形式/有無を秘密値非出力で確認。容量上限2項目は未設定。接続・secret一致を実証した結果とは分ける。",
+      "next": "共有DB更新後に接続と内部集計を確認。容量上限は契約実値を担当者が設定。",
+      "issues": [
+        14
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "OPS-05"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-09",
+      "title": "漏洩パスワード保護とプラン判断",
+      "category": "運用",
+      "phase": "将来運用",
+      "status": "conditional",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        "src/lib/validation.ts"
+      ],
+      "note": "9/8コメントではSupabase Freeが402、設定不可と報告。12文字規約はコードにある。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。Supabaseの実契約で利用可否を再確認し、導入または代替方針を記録。",
+      "issues": [
+        14
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "future",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-10",
+      "title": "検証用private Storageの権限確認",
+      "category": "運用",
+      "phase": "運用",
+      "status": "recorded",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        "supabase/config.toml"
+      ],
+      "note": "9/8記録でcase-files/Public off。実環境のRLS/署名URLは今回未再確認。",
+      "next": "匿名ファイルでupload/download/権限外拒否を確認。",
+      "issues": [
+        14
+      ],
+      "prs": [],
+      "dependsOn": [
+        "OPS-01"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-11",
+      "title": "デモ・テスト環境の識別と再現",
+      "category": "運用",
+      "phase": "運用",
+      "status": "review",
+      "design": "基本設計8章/12章 / Issue24",
+      "screens": [],
+      "evidence": [
+        ".env.example",
+        "docs/環境の使い分け.md"
+      ],
+      "note": "PR67の模擬seed/分離手順を統合。対象取り違えをAuth変更前に拒否する修正とDB/CLI試験を追加。",
+      "next": "最終CIとmain反映。メンバーPCで再現する。",
+      "issues": [
+        24
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "OPS-01"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-12",
+      "title": "Keepaliveの公開URL設定・到達確認",
+      "category": "運用",
+      "phase": "将来運用",
+      "status": "conditional",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        ".github/workflows/keepalive.yml",
+        "src/app/api/health/route.ts"
+      ],
+      "note": "コードあり。APP_BASE_URL空なら実行スキップ。実際にpingしているかの証拠なし。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。Actions変数と実行ログを確認し、空設定/SSO転送を成功扱いしない。",
+      "issues": [
+        14
+      ],
+      "prs": [],
+      "dependsOn": [
+        "OPS-05"
+      ],
+      "requiresAi": false,
+      "scope": "future",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-13",
+      "title": "system_adminの初期作成",
+      "category": "運用",
+      "phase": "運用",
+      "status": "recorded",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        "scripts/bootstrap-system-admin.mts"
+      ],
+      "note": "PR31マージ済み。9/8の本番コメントにsystem_admin1名作成済み。",
+      "next": "選んだデモ環境の初回設定/ログイン/S03到達を確認。",
+      "issues": [
+        14
+      ],
+      "prs": [],
+      "dependsOn": [
+        "OPS-03"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-14",
+      "title": "ai_workerの接続権限・資格情報",
+      "category": "運用",
+      "phase": "運用",
+      "status": "prepared",
+      "design": "基本設計8章/12章 / Issue22",
+      "screens": [],
+      "evidence": [
+        "supabase/migrations/20260828001600_ai_job_queue.sql",
+        "worker/ai-worker.ts",
+        "tests/e2e/helpers/ai-worker.ts",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "専用ai_workerの直接テーブル操作拒否・claim/completeを試験するCI模擬ワーカーを用意。Service Roleを配布しない。",
+      "next": "実モデルを動かすPCを採用する場合だけ接続資格情報を担当者が設定/保管。",
+      "issues": [
+        22
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "OPS-01"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-15",
+      "title": "ワーカー/Ollamaの起動・自動再起動",
+      "category": "運用",
+      "phase": "将来運用",
+      "status": "conditional",
+      "design": "基本設計8章/12章 / Issue22",
+      "screens": [],
+      "evidence": [
+        "worker/ai-worker.ts"
+      ],
+      "note": "手動実行スクリプトあり。サービス/タスクスケジューラ設定・再起動復帰記録なし。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。稼働機で自動起動/終了後の再起動を設定し、PC再起動でも復帰を確認。",
+      "issues": [
+        22
+      ],
+      "prs": [],
+      "dependsOn": [
+        "OPS-14",
+        "OPS-17"
+      ],
+      "requiresAi": false,
+      "scope": "future",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-16",
+      "title": "AIデモの起動・停止・手動操作手順",
+      "category": "運用",
+      "phase": "運用",
+      "status": "prepared",
+      "design": "基本設計8章/12章 / Issue22",
+      "screens": [],
+      "evidence": [
+        "TASKS.md",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "起動/終了、心拍10分、停止時手動、再開、人の採用の手順を用意。",
+      "next": "担当者が当日のPCで手順を一周して記録する。",
+      "issues": [
+        22
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "OPS-14",
+        "OPS-17"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-17",
+      "title": "AIデモ用機器・モデル・接続経路",
+      "category": "運用",
+      "phase": "運用",
+      "status": "manual",
+      "design": "基本設計8章/12章 / Issue22",
+      "screens": [],
+      "evidence": [
+        "worker/ai-worker.ts",
+        ".env.example",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "既定/設定例のモデルと必要な確認項目を手順化。実モデルをこの作業で推論したとは扱わない。",
+      "next": "学校で使用可能な機器/モデル/持込条件を担当者が確定する。",
+      "issues": [
+        22
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-18",
+      "title": "模擬データでAIキュー→採用・停止時操作を確認",
+      "category": "運用",
+      "phase": "運用",
+      "status": "review",
+      "design": "基本設計8章/12章 / Issue22",
+      "screens": [],
+      "evidence": [
+        "TASKS.md",
+        "worker/ai-worker.ts",
+        "tests/e2e/ai-workflow.spec.ts"
+      ],
+      "note": "UI依頼→専用worker RPCの模擬出力→人の採用→コメント欄反映をE2Eへ追加。実LLM品質評価とは別。",
+      "next": "CIで正規専用roleと停止/復帰を確認しmain反映。",
+      "issues": [
+        22
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "OPS-14",
+        "OPS-17"
+      ],
+      "requiresAi": true,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-19",
+      "title": "DBバックアップの定期取得",
+      "category": "運用",
+      "phase": "将来運用",
+      "status": "conditional",
+      "design": "基本設計8章/12章 / Issue20",
+      "screens": [],
+      "evidence": [
+        "src/lib/api/internal.ts"
+      ],
+      "note": "backupの実行種別枠のみ。pg_dump/スケジュール/実行記録の仕組みなし。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。週次/実証日次、暗号化校内保管、失敗通知、batch_runsを実装。",
+      "issues": [
+        20
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "future",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-20",
+      "title": "Storageバックアップの同期",
+      "category": "運用",
+      "phase": "将来運用",
+      "status": "conditional",
+      "design": "基本設計8章/12章 / Issue20",
+      "screens": [],
+      "evidence": [
+        "src/app/api/files/upload/route.ts"
+      ],
+      "note": "提出ファイルはDB dumpに含まれず、同期処理なし。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。DBとの対応を維持したStorage同期と保管/整合性検査を実装。",
+      "issues": [
+        20
+      ],
+      "prs": [],
+      "dependsOn": [
+        "OPS-19"
+      ],
+      "requiresAi": false,
+      "scope": "future",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-21",
+      "title": "空環境へのリストア訓練",
+      "category": "運用",
+      "phase": "将来運用",
+      "status": "conditional",
+      "design": "基本設計8章/12章 / Issue20",
+      "screens": [],
+      "evidence": [
+        "supabase/migrations/20260828000200_core_tables.sql"
+      ],
+      "note": "復元手順/所要時間/DBとファイル照合の実施記録なし。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。模擬データを空環境へ復元、RLS/主要フローを検証し日時・担当・時間を記録。",
+      "issues": [
+        20
+      ],
+      "prs": [],
+      "dependsOn": [
+        "OPS-19",
+        "OPS-20"
+      ],
+      "requiresAi": false,
+      "scope": "future",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-22",
+      "title": "秘密値の保管・ローテーション・離脱時失効",
+      "category": "運用",
+      "phase": "運用",
+      "status": "prepared",
+      "design": "基本設計8章/12章 / Issue22",
+      "screens": [],
+      "evidence": [
+        ".env.example",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "秘密値を含まない保管・キー更新・暗号化鍵移行注意・離脱時失効の手順と台帳項目を作成。",
+      "next": "チームが責任者/秘密情報共有方法を決めて非公開管理欄へ記入。",
+      "issues": [
+        22
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-23",
+      "title": "障害対応・デプロイロールバック手順",
+      "category": "運用",
+      "phase": "将来運用",
+      "status": "conditional",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        "README.md"
+      ],
+      "note": "設計の障害別方針はある。実環境の操作手順/訓練記録なし。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。Vercel/DB/Auth/メール停止の切り分けとロールバック/告知を整理。",
+      "issues": [
+        14
+      ],
+      "prs": [],
+      "dependsOn": [
+        "OPS-05",
+        "OPS-21"
+      ],
+      "requiresAi": false,
+      "scope": "future",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-24",
+      "title": "実証時のVercel利用条件・費用判断",
+      "category": "運用",
+      "phase": "将来運用",
+      "status": "conditional",
+      "design": "基本設計8章/12章 / Issue25",
+      "screens": [],
+      "evidence": [
+        "TASKS.md"
+      ],
+      "note": "Issue25 open、判断記録なし。過去Issue内の料金説明は最新価格の根拠にしない。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。今回の実証用途と最新条件を確認し、プラン/費用/担当/理由を記録。",
+      "issues": [
+        25
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "future",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-25",
+      "title": "学校デモの招待→登録→提出→確認",
+      "category": "運用",
+      "phase": "運用",
+      "status": "review",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        "tests/e2e/core-flow.spec.ts",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "模擬メールを使うコア通しE2Eと10分の役割別デモ手順を用意。",
+      "next": "最終CIとメンバーによる当日の環境試用。",
+      "issues": [
+        14
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "OPS-03",
+        "OPS-04",
+        "OPS-05",
+        "OPS-07",
+        "OPS-10"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPS-26",
+      "title": "定期処理の翌日成功・障害時検知",
+      "category": "運用",
+      "phase": "将来運用",
+      "status": "conditional",
+      "design": "基本設計8章/12章 / Issue14",
+      "screens": [],
+      "evidence": [
+        "src/app/(staff)/system/page.tsx"
+      ],
+      "note": "登録済みの記録と実行成功は別。各ジョブの最新成功日時は未取得。 本番運用は現在予定なし。学校の月別成果物には含めない。",
+      "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。5ジョブのbatch_runs/cron結果を確認し失敗時の検知も試す。",
+      "issues": [
+        14
+      ],
+      "prs": [],
+      "dependsOn": [
+        "OPS-06",
+        "GAP-04"
+      ],
+      "requiresAi": false,
+      "scope": "future",
+      "kind": "work_item"
+    },
+    {
+      "id": "QA-01",
+      "title": "ユニット・DB/RLS検査とCIゲート",
+      "category": "検証",
+      "phase": "検証",
+      "status": "main",
+      "design": "基本設計11章/12-2",
+      "screens": [],
+      "evidence": [
+        ".github/workflows/ci.yml",
+        "tests/db/rls.test.ts",
+        "tests/unit/risk.test.ts"
+      ],
+      "note": "仕組みはmain。PR48のCIでは466成功+実PG用12skip、専用ジョブで実PG12成功。",
+      "next": "改変時に同じCIを通し最新run/件数を更新。",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "QA-02",
+      "title": "実PostgreSQLの並行性検査",
+      "category": "検証",
+      "phase": "検証",
+      "status": "main",
+      "design": "基本設計11章/12-2",
+      "screens": [],
+      "evidence": [
+        "tests/db/concurrency.test.ts",
+        ".github/workflows/ci.yml"
+      ],
+      "note": "原子的招待消費・rate limit・採番・最新提出等を別接続で検証。最新CI12件成功。",
+      "next": "",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "QA-03",
+      "title": "主要導線・権限・AI停止のE2E",
+      "category": "検証",
+      "phase": "検証",
+      "status": "main",
+      "design": "基本設計11章/12-2",
+      "screens": [],
+      "evidence": [
+        "tests/e2e/core-flow.spec.ts",
+        "tests/e2e/permissions.spec.ts",
+        "tests/e2e/ai-availability.spec.ts"
+      ],
+      "note": "PR39でmain反映。Desktop Chrome/モバイルWebKit、既存24件。PR48でCSV20件追加し計44成功。",
+      "next": "Issue19を現状へ更新。最後の負例実施記録はQA-04。",
+      "issues": [
+        19
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "QA-04",
+      "title": "意図した退行でE2Eが赤くなる確認",
+      "category": "検証",
+      "phase": "検証",
+      "status": "recorded",
+      "design": "基本設計11章/12-2",
+      "screens": [],
+      "evidence": [
+        "tests/e2e/README.md",
+        "docs/検証/自走完了_20261009.md"
+      ],
+      "note": "隔離プロキシでSW応答をno-storeからpublicへ変えると既存E2Eが該当assertで失敗、通常サーバーに戻して12件成功。",
+      "next": "対象版を更新した場合は必要な負例を再実行。",
+      "issues": [
+        19
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "QA-05",
+      "title": "依存監査・シークレットスキャン",
+      "category": "検証",
+      "phase": "検証",
+      "status": "main",
+      "design": "基本設計11章/12-2",
+      "screens": [],
+      "evidence": [
+        ".github/workflows/ci.yml"
+      ],
+      "note": "検査はmain。現在の監査0件はPR46/48の依存更新による。security/Secret scan成功。",
+      "next": "FIX-47のmain反映後もゲートを維持。",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "QA-06",
+      "title": "300案件・30同時・初回3秒の性能測定",
+      "category": "検証",
+      "phase": "検証",
+      "status": "review",
+      "design": "基本設計11章/12-2",
+      "screens": [],
+      "evidence": [
+        "tests/unit/risk.test.ts",
+        "src/lib/services/cases.ts",
+        "tests/e2e/performance-load.spec.ts"
+      ],
+      "note": "3式場300案件/2400宿題/30別セッションのローカル専用試験を追加。ブラウザー内表示markと試験側待機を分離。",
+      "next": "CI実測値と条件/3秒超件数を証拠へ反映。",
+      "issues": [],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "GAP-05"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "QA-07",
+      "title": "iOS/Android/タブレット/LINE内ブラウザ確認",
+      "category": "検証",
+      "phase": "検証",
+      "status": "manual",
+      "design": "基本設計11章/12-2",
+      "screens": [],
+      "evidence": [
+        "playwright.config.ts",
+        "docs/screenshots/",
+        "docs/テスト/テスト仕様書_校内デモ.xlsx"
+      ],
+      "note": "実端末の環境/操作/証拠欄を試験ブックへ用意。エミュレーションは実端末の代替実績にしない。",
+      "next": "メンバー所有のiOS/Android/タブレット/LINE内ブラウザーで試用し記録。",
+      "issues": [],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "QA-08",
+      "title": "アクセシビリティと操作エラーの確認",
+      "category": "検証",
+      "phase": "検証",
+      "status": "recorded",
+      "design": "基本設計11章/12-2",
+      "screens": [],
+      "evidence": [
+        "src/components/ui/ErrorSummary.tsx",
+        "src/app/globals.css",
+        "tests/unit/accessibility-colors.test.ts",
+        "tests/e2e/accessibility.spec.ts"
+      ],
+      "note": "文字4.5:1・境界3:1、キーボード順/フォーカス/項目エラー/小画面を自動検証。実スクリーンリーダーは別確認。",
+      "next": "人の読み上げ/実機の操作感を試験票へ記入。",
+      "issues": [],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "QA-09",
+      "title": "主要ロジックの分岐網羅100%の測定",
+      "category": "検証",
+      "phase": "検証",
+      "status": "review",
+      "design": "基本設計11章/12-2",
+      "screens": [],
+      "evidence": [
+        "vitest.config.ts",
+        "tests/unit/risk.test.ts",
+        "tests/unit/schedule.test.ts",
+        "vitest.coverage.config.ts",
+        "tests/unit/session.test.ts"
+      ],
+      "note": "risk/schedule/sessionの分岐100%を実測しCIで閾値を維持。タイブレーク・不正パラメータ・認可拒否を追加。",
+      "next": "最終CIのcoverage artifactを確認しmain反映。",
+      "issues": [],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "EVAL-01",
+      "title": "工数削減の測定手順・タイムログ",
+      "category": "実証評価",
+      "phase": "4",
+      "status": "prepared",
+      "design": "要件10章",
+      "screens": [],
+      "evidence": [
+        "docs/にこまる_要件定義書_完成版.docx",
+        "docs/テスト/テスト仕様書_校内デモ.xlsx",
+        "docs/テスト/README.md"
+      ],
+      "note": "評価計画・匿名の記録欄・分母0/未入力の扱いを編集可能ブックへ用意。工数/検知率/人の判断/使いやすさ/AI品質を分ける。実測効果は未記入。",
+      "next": "メンバーが対象版/環境/役割を確定し模擬評価を実施、結果と改善を記入。",
+      "issues": [
+        21
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
+    },
+    {
+      "id": "EVAL-02",
+      "title": "提出漏れの検知率・期限遵守率",
+      "category": "実証評価",
+      "phase": "4",
+      "status": "prepared",
+      "design": "要件10章",
+      "screens": [],
+      "evidence": [
+        "tests/e2e/core-flow.spec.ts",
+        "docs/テスト/テスト仕様書_校内デモ.xlsx",
+        "docs/テスト/README.md"
+      ],
+      "note": "評価計画・匿名の記録欄・分母0/未入力の扱いを編集可能ブックへ用意。工数/検知率/人の判断/使いやすさ/AI品質を分ける。実測効果は未記入。",
+      "next": "メンバーが対象版/環境/役割を確定し模擬評価を実施、結果と改善を記入。",
+      "issues": [
+        21
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
+    },
+    {
+      "id": "EVAL-03",
+      "title": "リスク判定とプランナー判断の比較",
+      "category": "実証評価",
+      "phase": "4",
+      "status": "prepared",
+      "design": "要件10章",
+      "screens": [],
+      "evidence": [
+        "src/lib/services/risk.ts",
+        "docs/テスト/テスト仕様書_校内デモ.xlsx",
+        "docs/テスト/README.md"
+      ],
+      "note": "評価計画・匿名の記録欄・分母0/未入力の扱いを編集可能ブックへ用意。工数/検知率/人の判断/使いやすさ/AI品質を分ける。実測効果は未記入。",
+      "next": "メンバーが対象版/環境/役割を確定し模擬評価を実施、結果と改善を記入。",
+      "issues": [
+        21
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
+    },
+    {
+      "id": "EVAL-04",
+      "title": "coupleの使いやすさ・アンケート",
+      "category": "実証評価",
+      "phase": "4",
+      "status": "prepared",
+      "design": "要件10章",
+      "screens": [],
+      "evidence": [
+        "docs/screenshots/",
+        "docs/テスト/テスト仕様書_校内デモ.xlsx",
+        "docs/テスト/README.md"
+      ],
+      "note": "評価計画・匿名の記録欄・分母0/未入力の扱いを編集可能ブックへ用意。工数/検知率/人の判断/使いやすさ/AI品質を分ける。実測効果は未記入。",
+      "next": "メンバーが対象版/環境/役割を確定し模擬評価を実施、結果と改善を記入。",
+      "issues": [
+        21
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
+    },
+    {
+      "id": "EVAL-05",
+      "title": "AI品質・採用率・誤検知率の評価",
+      "category": "実証評価",
+      "phase": "4",
+      "status": "prepared",
+      "design": "要件10章/基本設計7-6",
+      "screens": [],
+      "evidence": [
+        "src/lib/ai/schemas.ts",
+        "supabase/migrations/20260828001800_ai_assist.sql",
+        "docs/テスト/テスト仕様書_校内デモ.xlsx",
+        "docs/テスト/README.md"
+      ],
+      "note": "評価計画・匿名の記録欄・分母0/未入力の扱いを編集可能ブックへ用意。工数/検知率/人の判断/使いやすさ/AI品質を分ける。実測効果は未記入。",
+      "next": "メンバーが対象版/環境/役割を確定し模擬評価を実施、結果と改善を記入。",
+      "issues": [
+        21
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "active",
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
+    },
+    {
+      "id": "EVAL-06",
+      "title": "発表デモの利用手順・役割別説明",
+      "category": "実証評価",
+      "phase": "4",
+      "status": "prepared",
+      "design": "要件10章",
+      "screens": [],
+      "evidence": [
+        "docs/開発のはじめかた.md",
+        "docs/テスト/テスト仕様書_校内デモ.xlsx",
+        "docs/テスト/README.md",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "評価計画・匿名の記録欄・分母0/未入力の扱いを編集可能ブックへ用意。工数/検知率/人の判断/使いやすさ/AI品質を分ける。実測効果は未記入。",
+      "next": "メンバーが対象版/環境/役割を確定し模擬評価を実施、結果と改善を記入。",
+      "issues": [
+        21
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
+    },
+    {
+      "id": "EVAL-07",
+      "title": "校内の模擬評価準備・担当・データ",
+      "category": "実証評価",
+      "phase": "4",
+      "status": "prepared",
+      "design": "要件4章/10章/基本設計1-3",
+      "screens": [],
+      "evidence": [
+        "TASKS.md",
+        "docs/テスト/テスト仕様書_校内デモ.xlsx",
+        "docs/テスト/README.md"
+      ],
+      "note": "評価計画・匿名の記録欄・分母0/未入力の扱いを編集可能ブックへ用意。工数/検知率/人の判断/使いやすさ/AI品質を分ける。実測効果は未記入。",
+      "next": "メンバーが対象版/環境/役割を確定し模擬評価を実施、結果と改善を記入。",
+      "issues": [
+        21
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "OPS-25",
+        "EVAL-01",
+        "EVAL-02",
+        "EVAL-03",
+        "EVAL-04",
+        "EVAL-05",
+        "EVAL-06"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31"
+    },
+    {
+      "id": "EVAL-08",
+      "title": "学校内評価の結果・改善・成果まとめ",
+      "category": "実証評価",
+      "phase": "4",
+      "status": "prepared",
+      "design": "要件4章/10章",
+      "screens": [],
+      "evidence": [
+        "docs/にこまる_要件定義書_完成版.docx",
+        "docs/テスト/テスト仕様書_校内デモ.xlsx",
+        "docs/テスト/README.md"
+      ],
+      "note": "評価計画・匿名の記録欄・分母0/未入力の扱いを編集可能ブックへ用意。工数/検知率/人の判断/使いやすさ/AI品質を分ける。実測効果は未記入。",
+      "next": "メンバーが対象版/環境/役割を確定し模擬評価を実施、結果と改善を記入。",
+      "issues": [
+        21
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "EVAL-07"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "ownerMode": "メンバー（手順・模擬データを使った校内評価）",
+      "workMode": "Agent AI不要",
+      "targetMonth": "2027-01",
+      "latestBy": "2027-01-31"
+    },
+    {
+      "id": "TEAM-01",
+      "title": "mainのPR運用・保護設定",
+      "category": "チーム",
+      "phase": "開発",
+      "status": "recorded",
+      "design": "Issue26",
+      "screens": [],
+      "evidence": [
+        ".githooks/pre-push",
+        "docs/開発のはじめかた.md"
+      ],
+      "note": "Issue26はclosed。現時点のGitHub保護設定そのものは未再確認。",
+      "next": "管理者が保護/必須CI設定を読み取り確認し記録。",
+      "issues": [
+        26
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "TEAM-02",
+      "title": "Issue/PRテンプレートの実表示確認",
+      "category": "チーム",
+      "phase": "開発",
+      "status": "prepared",
+      "design": "Issue27",
+      "screens": [],
+      "evidence": [
+        ".github/pull_request_template.md",
+        ".github/ISSUE_TEMPLATE/task.md",
+        ".github/ISSUE_TEMPLATE/bug.md"
+      ],
+      "note": "タスク/不具合のIssueテンプレートと、AIなし操作・対象版/未実施欄付きPRテンプレートを作成。",
+      "next": "main反映後のGitHub作成画面でメンバーが初期表示を確認。",
+      "issues": [
+        27
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "TEAM-03",
+      "title": "画面スクリーンショットとREADME",
+      "category": "チーム",
+      "phase": "開発",
+      "status": "main",
+      "design": "Issue28",
+      "screens": [],
+      "evidence": [
+        "docs/screenshots/",
+        "README.md"
+      ],
+      "note": "PR38マージ済み、Issue28 closed。PC/スマホの模擬画像あり。",
+      "next": "",
+      "issues": [
+        28
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "TEAM-04",
+      "title": "チームの用語集",
+      "category": "チーム",
+      "phase": "開発",
+      "status": "main",
+      "design": "Issue29",
+      "screens": [],
+      "evidence": [
+        "docs/用語集.md"
+      ],
+      "note": "PR32マージ済み、Issue29 closed。",
+      "next": "",
+      "issues": [
+        29
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "TEAM-05",
+      "title": "SourceTreeガイドの残項目・試用",
+      "category": "チーム",
+      "phase": "開発",
+      "status": "manual",
+      "design": "Issue33",
+      "screens": [],
+      "evidence": [
+        "docs/sourcetree-guide.md",
+        "docs/images/",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "既存SourceTreeガイドと役割別手順を用意。初学者本人の一周試用は記録なし。",
+      "next": "メンバーがブランチ作成→変更→commit→PRを試し、相違点を記録。",
+      "issues": [
+        33
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "TEAM-06",
+      "title": "ガント・Epic・タスク台帳の進捗同期",
+      "category": "チーム",
+      "phase": "開発",
+      "status": "prepared",
+      "design": "Issue23",
+      "screens": [],
+      "evidence": [
+        "TASKS.md",
+        "docs/AIに依存しない開発タスク.md",
+        "docs/WBS/作業計画と実績.xlsx"
+      ],
+      "note": "月別31作業のWBSにIssue/証拠/実績/期限差/担当欄を対応。集計台帳の正本はJSON。",
+      "next": "本人の実績と正式担当を記入し、月別Epicへ同期。",
+      "issues": [
+        23
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "EXT-01",
+      "title": "FAQの採用範囲・無回答条件の合意",
+      "category": "拡張",
+      "phase": "3拡張",
+      "status": "conditional",
+      "design": "基本設計13章",
+      "screens": [],
+      "evidence": [
+        "docs/BridalHub_基本設計書.docx"
+      ],
+      "note": "未合意なら採用しない、実証開始まで判断保留。 今回の学校成果物は対象外。校内模擬評価のみでは着手条件を満たさない。",
+      "next": "実式場での実証を別途計画した場合に、FAQの採用範囲と無回答条件を合意する。",
+      "issues": [
+        22
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "conditional",
+      "kind": "work_item"
+    },
+    {
+      "id": "EXT-02",
+      "title": "venue_knowledge・埋め込みモデル・投入担当",
+      "category": "拡張",
+      "phase": "3拡張",
+      "status": "conditional",
+      "design": "基本設計7-5/13章",
+      "screens": [],
+      "evidence": [
+        "docs/BridalHub_基本設計書.docx"
+      ],
+      "note": "32テーブル設計中のvenue_knowledgeは未作成。データ/モデル担当も保留。",
+      "next": "FAQ採用後にモデル/次元/索引とナレッジ責任者を決める。",
+      "issues": [
+        22
+      ],
+      "prs": [],
+      "dependsOn": [
+        "EXT-01"
+      ],
+      "requiresAi": true,
+      "scope": "conditional",
+      "kind": "work_item"
+    },
+    {
+      "id": "EXT-03",
+      "title": "優先度タグ・実証アンケート分類の拡張",
+      "category": "拡張",
+      "phase": "3拡張",
+      "status": "conditional",
+      "design": "基本設計7-5",
+      "screens": [],
+      "evidence": [
+        "src/lib/ai/schemas.ts"
+      ],
+      "note": "9-1流用オプションとして記載。専用UI/評価/集計の実装なし。 今回の学校成果物は対象外。校内模擬評価のみでは着手条件を満たさない。",
+      "next": "実式場での実証を別途計画し必要性を確認した場合に、分類・人の確認・集計導線を追加。",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": true,
+      "scope": "conditional",
+      "kind": "work_item"
+    },
+    {
+      "id": "DOC-50",
+      "title": "実装に対応する詳細設計図",
+      "category": "制作成果物",
+      "phase": "制作",
+      "status": "prepared",
+      "design": "Issue50",
+      "screens": [],
+      "evidence": [
+        "docs/BridalHub_基本設計書.docx",
+        "README.md",
+        "docs/詳細設計/README.md",
+        "docs/詳細設計/詳細設計図.pdf"
+      ],
+      "note": "49機能/31画面・33テーブル・API/RPC/RLSの対応、Mermaid13原本、SVG12図、PDF12ページを作成し全頁確認。",
+      "next": "メンバーが元DOCX/実画面と照合しIssue50へレビュー記録。",
+      "issues": [
+        50
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-10",
+      "latestBy": "2026-10-31",
+      "ownerMode": "実装担当（雛形）＋メンバー（手動で図の確認・整形）",
+      "workMode": "Codex使用可・手動作業も可"
+    },
+    {
+      "id": "DOC-51",
+      "title": "中間発表PowerPoint・発表原稿",
+      "category": "制作成果物",
+      "phase": "制作",
+      "status": "prepared",
+      "design": "Issue51",
+      "screens": [],
+      "evidence": [
+        "docs/BridalHub_基本設計書.docx",
+        "README.md",
+        "docs/発表/中間発表/README.md"
+      ],
+      "note": "編集可能12枚PPTX、PDF、約9分の原稿、再生成ソースを作成し全頁確認。検証数値は最終台帳に合わせる。",
+      "next": "学校の指定時間/様式へ調整し担当者がリハーサル。",
+      "issues": [
+        51
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "DOC-50",
+        "TEAM-03"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-10",
+      "latestBy": "2026-10-31",
+      "ownerMode": "メンバー（PowerPoint・原稿を手作業で作成）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "OPT-01",
+      "title": "リスクルールの編集画面",
+      "category": "追加候補",
+      "phase": "追加候補",
+      "status": "conditional",
+      "design": "基本設計13章",
+      "screens": [],
+      "evidence": [
+        "docs/BridalHub_基本設計書.docx"
+      ],
+      "note": "DB登録で運用する既定方針。画面からのルール編集は採用範囲確認待ち。",
+      "next": "必要性/編集可能範囲を決めた後、adminの画面・監査・再計算を追加。",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "conditional",
+      "kind": "work_item"
+    },
+    {
+      "id": "OPT-02",
+      "title": "サーバー生成PDF・Storageへの保存",
+      "category": "追加候補",
+      "phase": "追加候補",
+      "status": "conditional",
+      "design": "基本設計6-11",
+      "screens": [],
+      "evidence": [
+        "docs/BridalHub_基本設計書.docx"
+      ],
+      "note": "準備シートの印刷CSS/ブラウザPDF保存は実装済み。専用生成API・保存は印刷で足りない場合の追加。",
+      "next": "必要なら生成/保存、planner_only、短命URL、Vercel制約を検証。",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "conditional",
+      "kind": "work_item"
+    },
+    {
+      "id": "QA-10",
+      "title": "LIFF連携の技術検証・採用判断",
+      "category": "検証",
+      "phase": "2",
+      "status": "manual",
+      "design": "要件4章/基本設計1-2・2-2",
+      "screens": [],
+      "evidence": [
+        "docs/BridalHub_基本設計書.docx",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "通常URL/OTPを基本にしLIFF専用追加は未採用。LINE内ブラウザーの実機確認票を用意。",
+      "next": "実機でOTP/ファイル/画面遷移を確認し、必要性が示された場合だけ採用判断。",
+      "issues": [],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "SCHOOL-CODE-OCT",
+      "title": "優先修正を反映し月次ソースコードを確定する",
+      "category": "学校成果物",
+      "phase": "2026-10",
+      "status": "review",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md",
+        "docs/動作確認_式場編集.md",
+        "docs/実装計画_API送信元検証.md",
+        "docs/実装計画_削除バッチと依存更新.md",
+        "docs/検証/自走完了_20261009.md"
+      ],
+      "note": "既存8PRと残実装8項目をPR79に統合。10月版の検証・資料・引継ぎを前倒しで準備。",
+      "next": "最終CI・main反映・共有DB更新後に学校チームで確認。",
+      "issues": [
+        54
+      ],
+      "prs": [
+        66,
+        68,
+        70,
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-10",
+      "latestBy": "2026-10-31",
+      "ownerMode": "ユーザー（Codex使用可）／手動実装できるメンバー",
+      "workMode": "Codex使用可・手動実装も可"
+    },
+    {
+      "id": "SCHOOL-CODE-NOV",
+      "title": "継続製造と中間発表時点のコードを確定する",
+      "category": "学校成果物",
+      "phase": "2026-11",
+      "status": "prepared",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md",
+        "docs/テスト/README.md",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "現時点のコード・自動検証・試験仕様・再現手順を前倒しで用意。将来月の実施/最終判定を済んだことにはしない。",
+      "next": "対象月の変更と対象版を確定し、必要な回帰試験・本人確認・結果記録を行う。",
+      "issues": [
+        55
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "SCHOOL-CODE-OCT",
+        "SCHOOL-TEST-TECH"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-11",
+      "latestBy": "2026-11-30",
+      "ownerMode": "ユーザー（Codex使用可）／手動実装できるメンバー",
+      "workMode": "Codex使用可・手動実装も可"
+    },
+    {
+      "id": "SCHOOL-TEST-TECH",
+      "title": "テスト技法を選定し主要機能のケースを設計する",
+      "category": "学校成果物",
+      "phase": "2026-11",
+      "status": "prepared",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md",
+        "docs/テスト/テスト仕様書_校内デモ.xlsx"
+      ],
+      "note": "正常/異常・境界・状態遷移・権限を111ケースの仕様と実コードの試験へ対応。",
+      "next": "学校の指定技法と照合しメンバーが説明できるか確認。",
+      "issues": [
+        56
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-11",
+      "latestBy": "2026-11-30",
+      "ownerMode": "メンバー（手作業で担当可能）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-AWS",
+      "title": "AWSの学校要件を確認し演習・構成検証を記録する",
+      "category": "学校成果物",
+      "phase": "2026-11",
+      "status": "manual",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md",
+        "docs/AWS演習の準備.md",
+        "aws/school-storage-template.json"
+      ],
+      "note": "学校要件確認表・S3非公開構成の演習素材・検証/後片付けを用意。JSON検査のみ。AWSリソースは作成していない。",
+      "next": "学校の到達目標/アカウント/予算/指定サービスを確認後、担当者が演習結果を記入。",
+      "issues": [
+        57
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-11",
+      "latestBy": "2026-11-30",
+      "ownerMode": "メンバー（学校教材/演習手順で担当可能）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-MID-EVENT",
+      "title": "中間発表・デモを実施し質疑と改善点を記録する",
+      "category": "学校成果物",
+      "phase": "2026-11",
+      "status": "manual",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md",
+        "docs/発表/最終発表/質疑記録表.md"
+      ],
+      "note": "資料・原稿・デモ手順と質疑記録欄を準備。発表自体の実施は未記録。",
+      "next": "学校の指定日に発表/デモを行い、使用版・質疑・講評・改善点を記録。",
+      "issues": [
+        58
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "DOC-51"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-11",
+      "latestBy": "2026-11-30",
+      "ownerMode": "メンバー/チーム共同（発表・デモ・記録を分担）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-TEST-SPEC",
+      "title": "テスト仕様書を作成し機能・ケース・期待結果を対応付ける",
+      "category": "学校成果物",
+      "phase": "2026-12",
+      "status": "prepared",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md",
+        "docs/テスト/テスト仕様書_校内デモ.xlsx"
+      ],
+      "note": "編集可能Excel111ケースと機能対応/評価計画/記録欄を作成。数式/全シート表示を確認。",
+      "next": "別メンバーが手順通り1ケース実施し、学校の形式へ合わせる。",
+      "issues": [
+        59
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "SCHOOL-CODE-NOV",
+        "SCHOOL-TEST-TECH"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31",
+      "ownerMode": "メンバー（手作業で担当可能）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-TESTS-DEC",
+      "title": "テストを実施しエビデンスと不具合票を残す",
+      "category": "学校成果物",
+      "phase": "2026-12",
+      "status": "prepared",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md",
+        "docs/テスト/README.md",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "現時点のコード・自動検証・試験仕様・再現手順を前倒しで用意。将来月の実施/最終判定を済んだことにはしない。",
+      "next": "対象月の変更と対象版を確定し、必要な回帰試験・本人確認・結果記録を行う。",
+      "issues": [
+        60
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "SCHOOL-TEST-SPEC"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2026-12",
+      "latestBy": "2026-12-31",
+      "ownerMode": "メンバー（画面操作/既存コマンドで担当可能）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-TESTS-JAN",
+      "title": "最終回帰テストとエビデンスを確定する",
+      "category": "学校成果物",
+      "phase": "2027-01",
+      "status": "prepared",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md",
+        "docs/テスト/README.md",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "現時点のコード・自動検証・試験仕様・再現手順を前倒しで用意。将来月の実施/最終判定を済んだことにはしない。",
+      "next": "対象月の変更と対象版を確定し、必要な回帰試験・本人確認・結果記録を行う。",
+      "issues": [
+        61
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "SCHOOL-TESTS-DEC"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2027-01",
+      "latestBy": "2027-01-31",
+      "ownerMode": "メンバー（試験実施）＋ユーザー/実装担当（不具合修正）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-FINAL-MATERIAL",
+      "title": "最終発表・デモ用の資料と原稿を作成する",
+      "category": "学校成果物",
+      "phase": "2027-01",
+      "status": "prepared",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md",
+        "docs/発表/最終発表/README.md"
+      ],
+      "note": "中間版の編集素材と最終発表準備・質疑/評価まとめ欄を作成。",
+      "next": "1月までに実測値/使用版/質疑を反映し最終資料を確定。",
+      "issues": [
+        62
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "SCHOOL-TESTS-DEC"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2027-01",
+      "latestBy": "2027-01-31",
+      "ownerMode": "メンバー（PowerPoint・原稿・画面記録を手作業で作成）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-FINAL-CODE",
+      "title": "最終ソースコードと再現手順を確定する",
+      "category": "学校成果物",
+      "phase": "2027-01",
+      "status": "prepared",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md",
+        "docs/テスト/README.md",
+        "docs/メンバー向けデモと運用手順.md"
+      ],
+      "note": "現時点のコード・自動検証・試験仕様・再現手順を前倒しで用意。将来月の実施/最終判定を済んだことにはしない。",
+      "next": "対象月の変更と対象版を確定し、必要な回帰試験・本人確認・結果記録を行う。",
+      "issues": [
+        63
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "SCHOOL-TESTS-JAN"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2027-01",
+      "latestBy": "2027-01-31",
+      "ownerMode": "ユーザー（Codex使用可）／手動実装できるメンバー",
+      "workMode": "Codex使用可・手動実装も可"
+    },
+    {
+      "id": "SCHOOL-FINAL-EVENT",
+      "title": "学校の最終発表・デモを実施し結果を記録する",
+      "category": "学校成果物",
+      "phase": "2027-02",
+      "status": "manual",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md",
+        "docs/発表/最終発表/質疑記録表.md"
+      ],
+      "note": "資料・原稿・デモ手順と質疑記録欄を準備。発表自体の実施は未記録。",
+      "next": "学校の指定日に発表/デモを行い、使用版・質疑・講評・改善点を記録。",
+      "issues": [
+        64
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [
+        "SCHOOL-FINAL-MATERIAL",
+        "SCHOOL-FINAL-CODE"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2027-02",
+      "latestBy": "2027-02-28",
+      "ownerMode": "チーム共同（発表/デモ/記録を分担）",
+      "workMode": "Agent AI不要"
+    },
+    {
+      "id": "SCHOOL-WBS",
+      "title": "作業実績が書かれたWBSを完成する",
+      "category": "学校成果物",
+      "phase": "2027-02",
+      "status": "manual",
+      "design": "ユーザー指定の学校スケジュール（2026-10-08）",
+      "screens": [],
+      "evidence": [
+        "docs/学校制作スケジュール.md",
+        "docs/WBS/作業計画と実績.xlsx",
+        "docs/WBS/README.md"
+      ],
+      "note": "10〜2月31作業のWBSを作成。確認できるgit根拠だけ入力し、本人の工数/担当/未実施の実績は空欄。",
+      "next": "各メンバーが実績を記入し、2月の発表後に最終提出版を確定。",
+      "issues": [
+        65
+      ],
+      "prs": [
+        79
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item",
+      "targetMonth": "2027-02",
+      "latestBy": "2027-02-28",
+      "ownerMode": "メンバー（記録担当）＋全員（実績入力）",
+      "workMode": "Agent AI不要"
+    }
+  ],
+  "schoolSchedule": {
+    "epic": 53,
+    "period": "対象は2026年10月〜2027年2月。前倒し可、後ろ倒し不可。登録上の月末は各月成果物の最遅目安で、学校が別途示す具体的な提出日・発表日があれば、その早い期限を優先する。",
+    "scope": "2月の本番は学校の最終発表・デモ。アプリの本番運用開始・実利用者のデータを預かる運用・常時稼働・商用移行は今回の予定に含めない。デモ/検証は匿名化・模擬データで行う。",
+    "roles": "担当区分は作業開始時の目安。ユーザーはCodexで実装/自動化/雛形を準備できる。他メンバーの作業はAgent AIの契約を前提にせず、手順・入力素材・既存の例を使って手動で完了できる。手動実装できるメンバーがコードを担当することも可能。実担当者はチームで決める。",
+    "months": [
+      {
+        "month": "2026-10",
+        "latestBy": "2026-10-31",
+        "activities": "製造・発表資料作成",
+        "deliverables": "ソースコード・発表資料・詳細設計図",
+        "issues": [
+          54,
+          50,
+          51
+        ],
+        "milestone": 1,
+        "milestoneUrl": "https://github.com/ryuki-moro/Nicomaru/milestone/1"
+      },
+      {
+        "month": "2026-11",
+        "latestBy": "2026-11-30",
+        "activities": "製造・テスト技法・中間発表・AWS",
+        "deliverables": "ソースコード・技法/発表/AWSの記録",
+        "issues": [
+          55,
+          56,
+          57,
+          58
+        ],
+        "milestone": 2,
+        "milestoneUrl": "https://github.com/ryuki-moro/Nicomaru/milestone/2"
+      },
+      {
+        "month": "2026-12",
+        "latestBy": "2026-12-31",
+        "activities": "製造・テスト仕様書作成・テスト",
+        "deliverables": "修正コード・テスト仕様書・エビデンス",
+        "issues": [
+          59,
+          60
+        ],
+        "milestone": 3,
+        "milestoneUrl": "https://github.com/ryuki-moro/Nicomaru/milestone/3"
+      },
+      {
+        "month": "2027-01",
+        "latestBy": "2027-01-31",
+        "activities": "テスト・最終発表用資料作成",
+        "deliverables": "確定テスト仕様書・エビデンス・最終コード・発表資料",
+        "issues": [
+          61,
+          62,
+          63
+        ],
+        "milestone": 4,
+        "milestoneUrl": "https://github.com/ryuki-moro/Nicomaru/milestone/4"
+      },
+      {
+        "month": "2027-02",
+        "latestBy": "2027-02-28",
+        "activities": "学校の最終発表・デモ・まとめ",
+        "deliverables": "発表/デモの記録・作業実績付きWBS",
+        "issues": [
+          64,
+          65
+        ],
+        "milestone": 5,
+        "milestoneUrl": "https://github.com/ryuki-moro/Nicomaru/milestone/5"
+      }
+    ]
+  },
+  "currentPlan": [
+    "PR #79へ既存PR群と残実装を統合。最終CI・4観点レビュー・資料検査の証拠を確認してmain反映する。",
+    "共有Supabaseへ追加6migrationを適用し、最新アプリでログインとS03を確認する。手順と一括SQLを用意済み。",
+    "詳細設計・PowerPoint・111ケースの試験仕様・WBS・評価票をメンバーがレビューする。学校の指定時間/形式へ合わせる。",
+    "実端末・リハーサル・校内評価・本人の工数を記録する。2月は学校発表でありアプリの本番運用開始ではない。"
+  ]
+}

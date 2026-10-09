@@ -9,6 +9,7 @@
  *     API 層はこの状態を 403（FORBIDDEN）として扱い、再ログインを促す（6-3-4）。
  */
 import { redirect } from 'next/navigation';
+import { cache } from 'react';
 
 import { isStaff, type Role } from '@/lib/constants';
 import { forbidden, unauthenticated } from '@/lib/errors';
@@ -34,9 +35,7 @@ export interface AppUser {
  *   active    … 通常
  */
 export type ResolvedUser =
-  | { state: 'anonymous' }
-  | { state: 'inactive' }
-  | { state: 'active'; user: AppUser };
+  { state: 'anonymous' } | { state: 'inactive' } | { state: 'active'; user: AppUser };
 
 /**
  * セッションを1回だけ解決する。
@@ -46,7 +45,9 @@ export type ResolvedUser =
  * その getAppUser() の先頭でも同じ getUser() を呼んでいたため、
  * 401 と 403 を区別するためだけに全 Route Handler で往復が1回余計に走っていた。
  */
-export async function resolveAppUser(): Promise<ResolvedUser> {
+// React.cacheは同じRSC requestのlayout/page間だけで共有し、次requestで破棄される。
+// プロセス全体・Cookie値キーの共有キャッシュへ変更しない（別利用者への漏洩を防ぐ）。
+export const resolveAppUser = cache(async (): Promise<ResolvedUser> => {
   const supabase = await createSupabaseServerClient();
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user) return { state: 'anonymous' };
@@ -70,7 +71,7 @@ export async function resolveAppUser(): Promise<ResolvedUser> {
       email: data.email,
     },
   };
-}
+});
 
 /** ログイン中の利用者を返す。未ログイン・非 active なら null。 */
 export async function getAppUser(): Promise<AppUser | null> {
@@ -121,7 +122,7 @@ export function landingPathFor(role: Role): string {
  * 画面（Server Component）から呼ぶ入口（4-2／4-3）。
  *
  * 未ログインは /login、権限が足りなければそのロールの着地点（4-2）へ送る。
- * 着地点が無い（couple が staff 画面を開いたなど）場合は P04 の 403 へ送る。
+ * 各ロールの着地点は landingPathFor に集約する。
  *
  * (staff)/layout.tsx が「!user → /login」を守っているのに、
  * 配下の画面が同じ判定を書き直していたため、書き方が画面ごとに割れていた
@@ -135,9 +136,7 @@ export async function requirePageUser(...roles: Role[]): Promise<AppUser> {
 
   const { user } = resolved;
   if (roles.length > 0 && !roles.includes(user.role)) {
-    const landing = landingPathFor(user.role);
-    // 自分の着地点が今いる画面と同じなら無限リダイレクトになるので P04 へ倒す
-    redirect(landing === '/' ? '/error?code=403' : landing);
+    redirect(landingPathFor(user.role));
   }
   return user;
 }

@@ -37,9 +37,7 @@ export function ClassificationPanel({ initialJob }: { initialJob: AiJobView | nu
   const labels = selected ?? output?.labels ?? [];
 
   function toggle(label: ClassificationLabel) {
-    setSelected(
-      labels.includes(label) ? labels.filter((l) => l !== label) : [...labels, label],
-    );
+    setSelected(labels.includes(label) ? labels.filter((l) => l !== label) : [...labels, label]);
   }
 
   async function review(decision: 'confirmed' | 'discarded') {
@@ -98,14 +96,18 @@ export function ClassificationPanel({ initialJob }: { initialJob: AiJobView | nu
               // （ここで自由に書き換えられると、何を根拠に確認したのかが残らない）。
               if (!editable) {
                 return on ? (
-                  <span key={label} className="badge-neutral">{label}</span>
+                  <span key={label} className="badge-neutral">
+                    {label}
+                  </span>
                 ) : null;
               }
               return (
                 <label
                   key={label}
                   className={`badge cursor-pointer border ${
-                    on ? 'border-primary bg-info-bg text-link' : 'border-border-light text-text-secondary'
+                    on
+                      ? 'border-primary bg-info-bg text-link'
+                      : 'border-border-light text-text-secondary'
                   }`}
                 >
                   <input

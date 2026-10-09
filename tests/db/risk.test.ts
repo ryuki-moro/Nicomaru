@@ -38,8 +38,13 @@ const saveSql = 'select save_risk_snapshot($1, $2, $3, $4, $5::jsonb)';
 describe('save_risk_snapshot（6-8）', () => {
   it('planner は自担当案件の結果を保存できる', async () => {
     await db.asUser(fx.planner.authUserId, async () => {
-      const r = await db.query<{ save_risk_snapshot: string }>(
-        saveSql, [fx.caseId, 55, 'high', null, JSON.stringify([{ conditionKey: 'task_overdue' }])]);
+      const r = await db.query<{ save_risk_snapshot: string }>(saveSql, [
+        fx.caseId,
+        55,
+        'high',
+        null,
+        JSON.stringify([{ conditionKey: 'task_overdue' }]),
+      ]);
       expect(r.rows[0].save_risk_snapshot).toBeTruthy();
     });
   });
@@ -53,12 +58,17 @@ describe('save_risk_snapshot（6-8）', () => {
     const current = await db.asOwner(() =>
       db.query<{ n: number }>(
         'select count(*)::int as n from risk_score_snapshots where case_id = $1 and is_current',
-        [fx.caseId]));
+        [fx.caseId],
+      ),
+    );
     expect(current.rows[0].n).toBe(1);
 
     const history = await db.asOwner(() =>
       db.query<{ n: number }>(
-        'select count(*)::int as n from risk_score_snapshots where case_id = $1', [fx.caseId]));
+        'select count(*)::int as n from risk_score_snapshots where case_id = $1',
+        [fx.caseId],
+      ),
+    );
     // 履歴は残る（6-8「算出結果は risk_score_snapshots に保存」）
     expect(history.rows[0].n).toBeGreaterThan(1);
   });
@@ -66,28 +76,33 @@ describe('save_risk_snapshot（6-8）', () => {
   it('couple は保存できない（リスクは planner／admin 向けの情報）', async () => {
     await db.asUser(fx.couple.authUserId, async () => {
       const code = await errcodeOf(() =>
-        db.query(saveSql, [fx.caseId, 90, 'high', null, JSON.stringify([])]));
+        db.query(saveSql, [fx.caseId, 90, 'high', null, JSON.stringify([])]),
+      );
       expect(code).toBe('42501');
     });
   });
 
   it('couple は算出結果を参照できない', async () => {
     const rows = await db.asUser(fx.couple.authUserId, () =>
-      db.query('select id from risk_score_snapshots'));
+      db.query('select id from risk_score_snapshots'),
+    );
     expect(rows.rows).toHaveLength(0);
   });
 
   it('planner は自担当案件の算出結果を参照できる', async () => {
     const rows = await db.asUser(fx.planner.authUserId, () =>
-      db.query('select id from risk_score_snapshots where case_id = $1 and is_current',
-        [fx.caseId]));
+      db.query('select id from risk_score_snapshots where case_id = $1 and is_current', [
+        fx.caseId,
+      ]),
+    );
     expect(rows.rows).toHaveLength(1);
   });
 
   it('他式場の案件には保存できない', async () => {
     await db.asUser(fx.planner.authUserId, async () => {
       const code = await errcodeOf(() =>
-        db.query(saveSql, [fx.otherCaseId, 50, 'high', null, JSON.stringify([])]));
+        db.query(saveSql, [fx.otherCaseId, 50, 'high', null, JSON.stringify([])]),
+      );
       expect(code).toBe('42501');
     });
   });
@@ -95,7 +110,8 @@ describe('save_risk_snapshot（6-8）', () => {
   it('アーカイブ済み案件には保存できない', async () => {
     await db.asUser(fx.admin.authUserId, async () => {
       const code = await errcodeOf(() =>
-        db.query(saveSql, [fx.archivedCaseId, 50, 'high', null, JSON.stringify([])]));
+        db.query(saveSql, [fx.archivedCaseId, 50, 'high', null, JSON.stringify([])]),
+      );
       expect(code).toBe('42501');
     });
   });
@@ -103,7 +119,8 @@ describe('save_risk_snapshot（6-8）', () => {
   it('スコアの値域は DB 側でも縛られる（0〜100）', async () => {
     await db.asUser(fx.planner.authUserId, async () => {
       const code = await errcodeOf(() =>
-        db.query(saveSql, [fx.caseId, 120, 'high', null, JSON.stringify([])]));
+        db.query(saveSql, [fx.caseId, 120, 'high', null, JSON.stringify([])]),
+      );
       expect(code).toBe('23514');
     });
   });
@@ -114,12 +131,15 @@ describe('batch_runs（6-12 実行記録）', () => {
     await db.asOwner(() =>
       db.query(
         `insert into batch_runs (job_type, target_count, http_status)
-         values ('risk_recalculate', 3, 200)`));
+         values ('risk_recalculate', 3, 200)`,
+      ),
+    );
   });
 
   it('system_admin は実行記録を参照できる', async () => {
     const rows = await db.asUser(fx.systemAdmin.authUserId, () =>
-      db.query('select id, job_type from batch_runs'));
+      db.query('select id, job_type from batch_runs'),
+    );
     expect(rows.rows).toHaveLength(1);
   });
 
@@ -133,7 +153,8 @@ describe('batch_runs（6-12 実行記録）', () => {
   it('authenticated からは書き込めない（内部処理に限る）', async () => {
     await db.asUser(fx.systemAdmin.authUserId, async () => {
       const code = await errcodeOf(() =>
-        db.query(`insert into batch_runs (job_type) values ('risk_recalculate')`));
+        db.query(`insert into batch_runs (job_type) values ('risk_recalculate')`),
+      );
       expect(code).toBe('42501');
     });
   });
@@ -141,7 +162,8 @@ describe('batch_runs（6-12 実行記録）', () => {
   it('job_type は 6-12 の一覧に無い値を受け付けない', async () => {
     await db.asOwner(async () => {
       const code = await errcodeOf(() =>
-        db.query(`insert into batch_runs (job_type) values ('unknown_job')`));
+        db.query(`insert into batch_runs (job_type) values ('unknown_job')`),
+      );
       expect(code).toBe('23514');
     });
   });

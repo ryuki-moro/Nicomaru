@@ -23,7 +23,9 @@ export const GET = route(async (request: Request) => {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from('notifications')
-    .select('id, case_id, channel, notification_type, title, body, status, sent_at, read_at, created_at')
+    .select(
+      'id, case_id, channel, notification_type, title, body, status, sent_at, read_at, created_at',
+    )
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
     .range(offset, offset + LIST_PAGE_SIZE);

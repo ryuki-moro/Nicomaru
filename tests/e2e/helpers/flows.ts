@@ -51,10 +51,14 @@ export async function createCase(page: Page, input: CaseInput): Promise<CreatedC
   await page.getByLabel('主連絡先（必須）').selectOption(input.primaryContact);
   await page.getByLabel('連絡先（メール・必須）').fill(input.contactEmail);
   await page.getByLabel('連絡起点（必須）').selectOption('email');
-  await page.getByLabel('プラン種別（必須）').selectOption({ label: input.planTypeName ?? '少人数婚' });
+  await page
+    .getByLabel('プラン種別（必須）')
+    .selectOption({ label: input.planTypeName ?? '少人数婚' });
   await page.getByRole('button', { name: '登録する' }).click();
 
-  await expect(page.getByRole('heading', { name: '案件を登録しました' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: '案件を登録しました' })).toBeVisible({
+    timeout: 20_000,
+  });
 
   const codeText = await page.getByText(/案件番号は .+ です。/).textContent();
   const caseCode = codeText?.match(/案件番号は (.+?) です。/)?.[1];
@@ -97,7 +101,11 @@ export async function reviewLatestSubmission(
 
 // ------------------------------------------------------------------ 新郎新婦側
 
-async function fillRegistration(page: Page, inviteUrl: string, who: { email: string; name: string }) {
+async function fillRegistration(
+  page: Page,
+  inviteUrl: string,
+  who: { email: string; name: string },
+) {
   await page.goto(toPath(inviteUrl));
   await expect(page.getByRole('heading', { name: 'はじめての設定' })).toBeVisible();
   await page.getByLabel('メールアドレス').fill(who.email);
@@ -140,7 +148,7 @@ export async function registerPartnerWithOtp(
   const code = await waitForOtpCode(who.email, { after: requestedAt });
   await page.getByLabel('ワンタイムコード 1桁目').click();
   await page.keyboard.type(code);
-  await page.getByRole('button', { name: '確認してマイページへ' }).click();
+  // 6桁入力時のonCompleteが本人確認を送信する。ボタンの再クリックと競合させない（#49）。
   await page.waitForURL(/\/mypage$/, { timeout: 20_000 });
   return page;
 }

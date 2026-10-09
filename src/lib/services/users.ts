@@ -20,7 +20,10 @@ export const MANAGED_ROLES: readonly Role[] = ['planner', 'admin'];
  * 条件式を差し替えられる。値として意味を持つ記号を落としてから埋め込む。
  */
 export function sanitizeKeyword(raw: string | undefined | null): string {
-  return (raw ?? '').replace(/[,()"\\*%]/g, ' ').trim().slice(0, 100);
+  return (raw ?? '')
+    .replace(/[,()"\\*%]/g, ' ')
+    .trim()
+    .slice(0, 100);
 }
 
 export interface UserProfileRow {
