@@ -1,5 +1,6 @@
 import { hmacHash, normalizeEmail } from '@/lib/crypto';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+import { awaitAudit } from './audit-deadline';
 
 /** 認証失敗そのものの応答を維持し、監査障害の詳細やPIIをログに出さない。 */
 export async function recordAuthenticationFailure(
@@ -8,11 +9,12 @@ export async function recordAuthenticationFailure(
 ): Promise<void> {
   try {
     const admin = createSupabaseAdminClient('audit.auth-event');
-    const result = await admin.rpc('record_auth_failure', {
-      p_account_hash: hmacHash(`auth-failure|${normalizeEmail(email)}`),
-      p_method: method,
-    });
-    if (result.error) throw new Error();
+    await awaitAudit(
+      admin.rpc('record_auth_failure', {
+        p_account_hash: hmacHash(`auth-failure|${normalizeEmail(email)}`),
+        p_method: method,
+      }),
+    );
   } catch {
     console.warn('[audit] 認証失敗の監査記録を保存できませんでした');
   }
@@ -20,10 +22,9 @@ export async function recordAuthenticationFailure(
 
 export async function recordPasswordResetRequest(): Promise<void> {
   try {
-    const result = await createSupabaseAdminClient('audit.auth-event').rpc(
-      'record_password_reset_request',
+    await awaitAudit(
+      createSupabaseAdminClient('audit.auth-event').rpc('record_password_reset_request'),
     );
-    if (result.error) throw new Error();
   } catch {
     console.warn('[audit] パスワード再設定要求の監査記録を保存できませんでした');
   }

@@ -7,6 +7,7 @@ import {
   unprocessable,
 } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { awaitAudit } from '@/lib/services/audit-deadline';
 import { passwordUpdateSchema } from '@/lib/validation';
 import { parsePasswordBody } from '../password-body';
 
@@ -39,8 +40,7 @@ export const POST = route(async (request) => {
   }
   // Auth更新は確定済み。監査障害を更新失敗と返して再送させない。
   try {
-    const audit = await supabase.rpc('audit_password_changed');
-    if (audit.error) throw new Error();
+    await awaitAudit(supabase.rpc('audit_password_changed'));
   } catch {
     console.warn('[audit] パスワード更新の監査記録を保存できませんでした');
   }

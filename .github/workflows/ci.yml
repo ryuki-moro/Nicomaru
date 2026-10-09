@@ -108,6 +108,11 @@ jobs:
       - name: Start local Supabase
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
 
+      # このCIだけの使い捨てDB。公開用migrationには管理者メンバーシップを追加しない。
+      # 専用ロールへSET ROLEした後、E2E内でテーブル直接アクセス拒否も確認する。
+      - name: Allow fixture connection to assume AI worker role
+        run: docker exec supabase_db_Nicomaru psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c 'GRANT ai_worker TO postgres;'
+
       # ローカルスタックの接続情報を以降のステップへ渡す。
       # 鍵はローカル専用の既知の値で、外部には接続できない。
       - name: Export local Supabase settings
@@ -138,12 +143,14 @@ jobs:
 
       # NEXT_PUBLIC_* はビルド時にクライアントへ埋め込まれるため、接続情報を書き出した後にビルドする
       - name: Build
+        id: e2e-build
         run: npm run build
 
       - name: E2E tests
         run: npm run test:e2e
 
       - name: 300 cases and 30 concurrent users
+        if: ${{ !cancelled() && steps.e2e-build.outcome == 'success' }}
         run: npx playwright test performance-load --project=chromium --output=performance-results
         env:
           E2E_RUN_PERFORMANCE: '1'

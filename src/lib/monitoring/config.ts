@@ -24,7 +24,7 @@ const DEFAULT_JOBS = [
 
 export function monitoredJobs(value = process.env.MONITOR_ENABLED_JOBS): Record<string, number> {
   const jobs =
-    value === undefined
+    value === undefined || value.trim() === ''
       ? DEFAULT_JOBS
       : value
           .split(',')

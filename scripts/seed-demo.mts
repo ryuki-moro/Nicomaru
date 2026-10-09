@@ -28,6 +28,7 @@ import { todayInJst } from '../src/lib/format';
 import { pgDemoDb } from './demo/pgDb';
 import { DEMO_CASES, DEMO_PLANNER } from './demo/scenario';
 import { resetDemo, seedDemo, type DemoAuth } from './demo/seed';
+import { assertDemoAppTarget, assertDemoProjectTargets } from './demo/targets';
 
 // ------------------------------------------------------------------ 設定の読み込み
 
@@ -90,6 +91,12 @@ const targets = [
   { name: 'Supabase', url: supabaseUrl },
   { name: 'データベース', url: databaseUrl },
 ];
+try {
+  assertDemoProjectTargets(supabaseUrl, databaseUrl);
+  assertDemoAppTarget(appBaseUrl, remote);
+} catch (error) {
+  die((error as Error).message);
+}
 const nonLocal = targets.filter((t) => !isLocalHost(t.url));
 
 if (nonLocal.length > 0 && !remote) {
@@ -170,17 +177,21 @@ try {
 
 const db = pgDemoDb(client);
 
-// Auth（API）と DB が同じ環境か確かめる。違うと user_profiles の外部キーで落ちる
-const plannerAuthId = await demoAuth.ensureUser(DEMO_PLANNER.email, {
-  displayName: DEMO_PLANNER.displayName,
-  password: plannerPassword,
-});
-const sameProject = await client.query('select 1 from auth.users where id = $1', [plannerAuthId]);
-if (sameProject.rows.length === 0) {
+// URL照合に加えて、既存プランナーがいればUUIDも読取だけで照合する。
+// 初回の空Authでも、この確認のためにユーザーを作成したりpasswordを変えたりしない。
+try {
+  const existingPlannerId = await findUserId(admin, DEMO_PLANNER.email);
+  if (existingPlannerId) {
+    const sameProject = await client.query('select 1 from auth.users where id = $1', [
+      existingPlannerId,
+    ]);
+    if (sameProject.rows.length === 0) {
+      throw new Error('Auth と DB の既存利用者が一致しません。同じプロジェクトに揃えてください');
+    }
+  }
+} catch (error) {
   await client.end();
-  die(
-    'NEXT_PUBLIC_SUPABASE_URL と DEMO_DATABASE_URL が別の環境を指しています。同じプロジェクトに揃えてください。',
-  );
+  die(`接続先を確認できませんでした（Auth は変更していません）: ${(error as Error).message}`);
 }
 
 let result;
@@ -196,7 +207,10 @@ try {
 } catch (error) {
   await client.query('rollback').catch(() => {});
   await client.end();
-  die(`模擬データを入れられませんでした（何も変更していません）: ${(error as Error).message}`);
+  die(
+    `模擬データを入れられませんでした（案件などのDB変更はロールバックしました。` +
+      `Auth のユーザー作成・パスワード変更は残る場合があります）: ${(error as Error).message}`,
+  );
 }
 await client.end();
 

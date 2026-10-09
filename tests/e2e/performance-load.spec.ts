@@ -12,6 +12,7 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { encryptPii } from '../../src/lib/crypto';
 import { adminClient } from './helpers/admin';
 import { e2eEnv, futureDate, hasE2eEnv, uniqueEmail } from './helpers/env';
+import { FIRST_SCREEN_MARK, installFirstScreenMark } from './helpers/first-screen-mark';
 
 function local(url: string): boolean {
   try {
@@ -213,6 +214,12 @@ test('300案件・30同時利用者で初回表示と一覧取得を測定する
         locale: 'ja-JP',
       });
       contexts.push(context);
+      await context.addInitScript(installFirstScreenMark, {
+        pathname: account.role === 'planner' ? '/dashboard' : '/mypage',
+        heading: account.role === 'planner' ? 'ダッシュボード' : '次にやること',
+        markName: FIRST_SCREEN_MARK,
+        timeoutMs: 30_000,
+      });
       await context.addCookies(
         [...jar].map(([name, value]) => ({ name, value, url: new URL(appUrl).origin })),
       );
@@ -231,16 +238,21 @@ test('300案件・30同時利用者で初回表示と一覧取得を測定する
             exact: true,
           }),
         ).toBeVisible();
-        const timing = await page.evaluate(() => {
+        await page.waitForFunction(
+          (markName) => performance.getEntriesByName(markName, 'mark').length === 1,
+          FIRST_SCREEN_MARK,
+          { timeout: 30_000 },
+        );
+        const timing = await page.evaluate((markName) => {
           const navigation = performance.getEntriesByType(
             'navigation',
           )[0] as PerformanceNavigationTiming;
           return {
-            firstScreenMs: performance.now(),
+            firstScreenMs: performance.getEntriesByName(markName, 'mark')[0].startTime,
             responseEndMs: navigation.responseEnd,
             domContentLoadedMs: navigation.domContentLoadedEventEnd,
           };
-        });
+        }, FIRST_SCREEN_MARK);
         return { screen: path, elapsedMs: performance.now() - started, ...timing };
       }),
     );
@@ -278,7 +290,7 @@ test('300案件・30同時利用者で初回表示と一覧取得を測定する
       caseList: summary(lists),
       samples: firstScreens,
       interpretation:
-        '認証を済ませた空キャッシュの30ブラウザによる初回表示。ブラウザCPUとSSR/DBを同じ実行環境で共有するため、3秒未達時はresponseEndとDOM表示との差・実行環境のCPUを分けて確認する。商用SLAや実端末の測定結果ではない。',
+        '認証を済ませた空キャッシュの30ブラウザによる初回表示。firstScreenMsはブラウザ内で対象見出しの表示を連続する描画フレームで確認したmarkの時刻で、LCPや操作準備完了ではない。elapsedMsはPlaywrightの確認・通信待ちも含む上限時間。ブラウザCPUとSSR/DBは同じ実行環境を共有する。監視/日次集計の併走、商用SLA、実端末性能は測定していない。',
     };
     const filename = testInfo.outputPath('performance-300cases-30users.json');
     await writeFile(filename, JSON.stringify(report, null, 2));

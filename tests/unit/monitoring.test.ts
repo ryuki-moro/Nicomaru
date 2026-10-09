@@ -22,8 +22,19 @@ describe('監視設定', () => {
       usage_rollup: 86400,
       ai_job_reclaim: 600,
     });
-    expect(monitoredJobs('')).toEqual({});
     expect(() => monitoredJobs('unknown')).toThrow();
+  });
+  it.each(['', '   ', '\t'])('env例の空欄 %j では標準7ジョブの監視を維持する', (value) => {
+    vi.stubEnv('MONITOR_ENABLED_JOBS', value);
+    expect(monitoredJobs()).toEqual({
+      risk_recalculate: 86400,
+      notifications_dispatch: 86400,
+      case_purge: 86400,
+      rate_limit_cleanup: 86400,
+      usage_rollup: 86400,
+      audit_log_purge: 86400,
+      ai_job_reclaim: 600,
+    });
   });
 });
 

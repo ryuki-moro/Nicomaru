@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   recordOtp: vi.fn(),
   clearOtp: vi.fn(),
   invalidated: vi.fn(),
+  auditSignal: vi.fn(),
 }));
 vi.mock('@/lib/supabase/server', () => ({ createSupabaseServerClient: mocks.server }));
 vi.mock('@/lib/supabase/admin', () => ({
@@ -56,7 +57,15 @@ beforeEach(() => {
   vi.stubEnv('PII_HMAC_KEY', Buffer.alloc(32, 8).toString('base64'));
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});
-  mocks.admin.mockReturnValue({ rpc: mocks.adminRpc });
+  const builder =
+    (rpc: typeof mocks.rpc) =>
+    (...args: unknown[]) => ({
+      abortSignal: (signal: AbortSignal) => {
+        mocks.auditSignal(signal);
+        return rpc(...args);
+      },
+    });
+  mocks.admin.mockReturnValue({ rpc: builder(mocks.adminRpc) });
   mocks.adminRpc.mockResolvedValue({ data: 1, error: null });
   mocks.signIn.mockResolvedValue({ data: { user: { id: 'auth-id' } }, error: null });
   mocks.getUser.mockResolvedValue({ data: { user: { id: 'auth-id' } }, error: null });
@@ -77,16 +86,28 @@ beforeEach(() => {
       resetPasswordForEmail: mocks.resetPassword,
       verifyOtp: mocks.verifyOtp,
     },
-    rpc: mocks.rpc,
+    rpc: builder(mocks.rpc),
     from: () => ({ select: () => ({ eq: () => ({ maybeSingle: mocks.profile }) }) }),
   });
 });
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
 });
 
 describe('パスワードログイン', () => {
+  it('監査が応答しなくても2秒で中断し認証失敗の401を返す', async () => {
+    vi.useFakeTimers();
+    mocks.signIn.mockResolvedValue({ data: { user: null }, error: { status: 400 } });
+    mocks.adminRpc.mockImplementation(() => new Promise(() => {}));
+    const pending = login(request('password-login', { email: EMAIL, password: PASSWORD }));
+    await vi.advanceTimersByTimeAsync(2_001);
+    expect((await pending).status).toBe(401);
+    expect(mocks.auditSignal.mock.calls[0][0].aborted).toBe(true);
+    expect(mocks.signIn).toHaveBeenCalledTimes(1);
+    assertNoPrivateLogs();
+  });
   it('同一Originとレート制限を通して本人セッションを発行する', async () => {
     const req = request('password-login', { email: EMAIL, password: PASSWORD });
     const response = await login(req);
@@ -168,6 +189,18 @@ describe('パスワードログイン', () => {
 });
 
 describe('パスワード更新', () => {
+  it('更新後の監査が停滞しても2秒で中断しAuth更新を再試行させない', async () => {
+    vi.useFakeTimers();
+    mocks.rpc.mockImplementation(() => new Promise(() => {}));
+    const pending = updatePassword(
+      request('password-update', { password: PASSWORD, passwordConfirm: PASSWORD }),
+    );
+    await vi.advanceTimersByTimeAsync(2_001);
+    expect((await pending).status).toBe(204);
+    expect(mocks.auditSignal.mock.calls[0][0].aborted).toBe(true);
+    expect(mocks.updateUser).toHaveBeenCalledTimes(1);
+    assertNoPrivateLogs();
+  });
   const body = { password: PASSWORD, passwordConfirm: PASSWORD };
   it.each(['active', 'invited'])('%sのstaff本人だけ更新して監査を完了まで待つ', async (status) => {
     mocks.profile.mockResolvedValue({ data: { role: 'planner', status }, error: null });
