@@ -7,6 +7,8 @@ import { adminClient } from './helpers/admin';
 import { e2eEnv, hasE2eEnv, uniqueEmail } from './helpers/env';
 import { loginAsPlanner } from './helpers/flows';
 
+test.use({ serviceWorkers: 'block' });
+
 function canUseFixtureDatabase(): boolean {
   if (!hasE2eEnv) return false;
   try {

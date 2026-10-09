@@ -124,6 +124,7 @@ jobs:
             echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON"
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE"
             echo "E2E_SUPABASE_SERVICE_ROLE_KEY=$SERVICE"
+            echo "E2E_AI_DATABASE_URL=$(value DB_URL)"
             echo "E2E_MAIL_URL=${MAIL_URL:-http://127.0.0.1:54324}"
             echo "PII_ENCRYPTION_KEY=$(openssl rand -base64 32)"
             echo "PII_HMAC_KEY=$(openssl rand -base64 32)"

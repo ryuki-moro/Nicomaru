@@ -41,6 +41,29 @@ async function audits() {
 }
 
 describe('管理操作の監査', () => {
+  it.each(['couple', 'planner', 'systemAdmin', 'suspendedPlanner'] as const)(
+    '%s は汎用RPCで認証失敗の警告を偽造できない',
+    async (role) => {
+      await expect(
+        db.asUser(fx[role].authUserId, () =>
+          db.query(
+            "select log_audit('auth.login_failures', 'auth', null, '{\"count\":10}'::jsonb)",
+          ),
+        ),
+      ).rejects.toMatchObject({ code: '42501' });
+      expect(await audits()).toHaveLength(0);
+    },
+  );
+
+  it('プロフィールのないJWTでもactor=nullの認証失敗を作成できない', async () => {
+    await expect(
+      db.asUser('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', () =>
+        db.query("select log_audit('auth.login_failures', 'auth', null, '{}'::jsonb)"),
+      ),
+    ).rejects.toMatchObject({ code: '42501' });
+    expect(await audits()).toHaveLength(0);
+  });
+
   it('テンプレート更新は同じtransactionで実行者と変更列だけを記録する', async () => {
     await db.asUser(fx.admin.authUserId, () =>
       db.query(

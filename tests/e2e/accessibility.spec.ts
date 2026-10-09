@@ -1,6 +1,9 @@
 /** 実メール・Auth要求を止め、主要ログイン導線をキーボードで検証する。 */
 import { expect, test } from '@playwright/test';
 
+// 通信差し替えがSW経由で回避されないよう、この模擬試験だけ登録を止める。
+test.use({ serviceWorkers: 'block' });
+
 test.beforeEach(async ({ page }) => {
   await page.route(/\/auth\/v1\//, (route) => route.abort());
   await page.route('**/api/auth/**', (route) => route.abort());
@@ -32,7 +35,9 @@ test('ログインのラベル・Tab順・フォーカス・項目エラーを�
   const submit = page.getByRole('button', { name: 'ログインリンクを送信', exact: true });
   await expect(submit).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('alert')).toContainText('入力内容をご確認ください');
+  await expect(
+    page.getByRole('alert').filter({ hasText: '入力内容をご確認ください' }),
+  ).toBeVisible();
   await expect(email).toHaveAttribute('aria-invalid', 'true');
   await expect(email).toHaveAccessibleDescription('メールアドレスを確認してください');
   const box = await submit.boundingBox();

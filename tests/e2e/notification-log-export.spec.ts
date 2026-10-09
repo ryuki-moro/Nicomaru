@@ -9,6 +9,7 @@ import { e2eEnv, hasE2eEnv, PLANNER_PASSWORD, uniqueEmail, VENUE_ID } from './he
 import { loginAsPlanner } from './helpers/flows';
 
 const EXPORT_PATH = '/api/system/notification-logs.csv';
+test.use({ serviceWorkers: 'block' });
 const EXPORT_ROUTE = '**/api/system/notification-logs.csv*';
 const EXPORT_DAY = '2001-02-03';
 const CSV_HEADER = '日時,式場,案件番号,チャネル,種別,送信結果,プロバイダ側メッセージID';

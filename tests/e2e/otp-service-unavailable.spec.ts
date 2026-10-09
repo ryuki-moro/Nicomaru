@@ -1,6 +1,8 @@
 /** OTP の通信障害からの再操作。送信 API は全件差し替え、実メール・DB は操作しない。 */
 import { expect, test } from '@playwright/test';
 
+test.use({ serviceWorkers: 'block' });
+
 const UNAVAILABLE = '現在、認証サービスに接続できません。少し待ってからもう一度お試しください';
 
 test('認証サービスの接続失敗後、入力を保持してログインリンクの送信をやり直せる', async ({

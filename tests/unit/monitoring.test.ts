@@ -31,16 +31,12 @@ describe('内部バッチの集計と監視', () => {
   it('容量の設定をRPCへ渡し、集計対象の本文は記録しない', async () => {
     vi.stubEnv('DB_CAPACITY_LIMIT_BYTES', '100');
     vi.stubEnv('STORAGE_CAPACITY_LIMIT_BYTES', '');
-    const rpc = vi
-      .fn()
-      .mockReturnValue({
-        single: vi
-          .fn()
-          .mockResolvedValue({
-            data: { measured_on: '2026-10-09', secret: 'not-logged' },
-            error: null,
-          }),
-      });
+    const rpc = vi.fn().mockReturnValue({
+      single: vi.fn().mockResolvedValue({
+        data: { measured_on: '2026-10-09', secret: 'not-logged' },
+        error: null,
+      }),
+    });
     expect(await collectUsage({ rpc } as unknown as SupabaseClient)).toEqual({
       targetCount: 1,
       detail: { measuredOn: '2026-10-09' },
@@ -52,24 +48,20 @@ describe('内部バッチの集計と監視', () => {
   });
   it('集計・記録失敗を成功扱いせず、上流エラーの個人情報を露出しない', async () => {
     const failed = { data: null, error: { message: 'sensitive-data' } };
-    const rpc = vi
-      .fn()
-      .mockReturnValue({
-        single: vi.fn().mockResolvedValue(failed),
-        then: (resolve: (value: unknown) => void) => resolve(failed),
-      });
+    const rpc = vi.fn().mockReturnValue({
+      single: vi.fn().mockResolvedValue(failed),
+      then: (resolve: (value: unknown) => void) => resolve(failed),
+    });
     const admin = { rpc } as unknown as SupabaseClient;
     await expect(collectUsage(admin)).rejects.toThrow('容量・利用状況の集計を保存できませんでした');
     await expect(monitorSystem(admin)).rejects.toThrow('監視結果を保存できませんでした');
   });
   it('内部通知の新規・解消件数を実行記録へ返す', async () => {
     vi.stubEnv('MONITOR_ENABLED_JOBS', 'usage_rollup');
-    const rpc = vi
-      .fn()
-      .mockResolvedValue({
-        data: [{ active_count: 2, published_count: 1, resolved_count: 3 }],
-        error: null,
-      });
+    const rpc = vi.fn().mockResolvedValue({
+      data: [{ active_count: 2, published_count: 1, resolved_count: 3 }],
+      error: null,
+    });
     expect(await monitorSystem({ rpc } as unknown as SupabaseClient)).toEqual({
       targetCount: 2,
       detail: { published: 1, resolved: 3, channel: 'system_admin_in_app' },
