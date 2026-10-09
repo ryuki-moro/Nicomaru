@@ -6,7 +6,7 @@ import { FlatCompat } from '@eslint/eslintrc';
 const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta.url)) });
 
 const config = [
-  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts'] },
+  { ignores: ['.next/**', '.next-dev-admin/**', 'node_modules/**', 'next-env.d.ts', 'Nicomaru/**', 'Nicomaru-1/**'] },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
     // 6-3-5 / 12-2「Service Role 誤用防止」:
