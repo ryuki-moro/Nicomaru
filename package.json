@@ -28,7 +28,7 @@
     "progress:check": "node scripts/render-progress.mjs --check"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.12.5",
+    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.112.4",
     "next": "15.5.27",
     "react": "^19.2.0",
@@ -49,11 +49,11 @@
     "@vitest/coverage-v8": "4.1.11",
     "eslint": "^9.39.0",
     "eslint-config-next": "15.5.27",
-    "pg": "^8.23.0",
-    "postcss": "^8.5.23",
+    "pg": "^8.23.1",
+    "postcss": "^8.5.29",
     "prettier": "3.9.9",
     "tailwindcss": "4.3.3",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
   },
