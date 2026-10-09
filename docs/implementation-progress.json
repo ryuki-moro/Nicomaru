@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-09T02:54:16.105Z",
+  "updatedAt": "2026-10-09T03:26:51.207Z",
   "repository": "ryuki-moro/Nicomaru",
-  "mainCommit": "cc575f9a567fd2efbb785c032069ec689bcb5812",
-  "implementationCommit": "ad96179d30fc1e1f2075d226b689b7c40503aa9f",
+  "mainCommit": "214b041d6965bd335d596b5791b261a5671696a2",
+  "implementationCommit": "c6048b2acef8449d4bf99d80ce32880ae98ae46b",
   "statusLabels": {
     "main": "mainに実装",
     "review": "マージ待ち",
@@ -25,122 +25,147 @@
     "2026-10-08 ユーザー指定の学校スケジュール・Agent AI利用条件・本番運用予定なし",
     "2026-10-09 実装再開・GAP-06全28更新API/内部5件/Webhookの検証、PR66/68とmainの再確認",
     "2026-10-09 GAP-11/Issue47修正、失敗注入52件・全649件・Chrome28件、PR70 CIのverify/実PG/security成功を確認",
-    "2026-10-09 PR79へ残実装8項目/既存8PRを統合。詳細設計・発表PPTX/PDF・試験仕様Excel・WBS・評価/引継ぎを作成。人の実施と共有DB更新を区別。"
+    "2026-10-09 PR79へ残実装8項目/既存8PRを統合。詳細設計・発表PPTX/PDF・試験仕様Excel・WBS・評価/引継ぎを作成。人の実施と共有DB更新を区別。",
+    "2026-10-09 最終CI・4観点レビュー・実PG/ブラウザー/負荷の実行結果を確認してPR79をmainへ統合。完成したコードと人の実施/環境反映待ちを分離。"
   ],
   "ci": {
-    "run": 37406449671,
-    "date": "2026-10-06",
-    "url": "https://github.com/ryuki-moro/Nicomaru/actions/runs/37406449671",
-    "unitRlsPassed": 466,
-    "pgSkippedInUnit": 12,
-    "realPgPassed": 12,
-    "e2ePassed": 44,
+    "run": 37878283145,
+    "date": "2026-10-09",
+    "url": "https://github.com/ryuki-moro/Nicomaru/actions/runs/37878283145",
+    "unitRlsPassed": 834,
+    "pgSkippedInUnit": 15,
+    "realPgPassed": 15,
+    "e2ePassed": 84,
     "security": "success",
     "verify": "success",
     "auditVulnerabilities": 0,
-    "note": "PR48の1cfb7d9。実PostgreSQL12件は別ジョブ。mainの結果ではない。"
+    "note": "PR79 c6048b2。実PG15件は別ジョブ。E2Eの負荷用2skipは別のChromium負荷試験1件で実行。risk/schedule/sessionの分岐網羅100%。mainへmerge commit 214b041で統合。負荷の3秒目標は検証記録の実測値/条件を参照。"
   },
   "pullRequests": [
     {
       "number": 41,
       "title": "#14: 定期処理の登録を register_scheduled_jobs() にする（本番で一度も動いていなかった）",
-      "state": "open",
+      "state": "closed",
       "base": "main",
       "head": "15e549b603d97f1f88dad40353e7f07a6f5e568e",
-      "url": "https://github.com/ryuki-moro/Nicomaru/pull/41"
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/41",
+      "draft": false,
+      "merged": true,
+      "mergeCommit": "214b041d6965bd335d596b5791b261a5671696a2",
+      "checkSummary": "PR79で履歴を保持してmainへ統合。c6048b2のCI run 37878283145: 全ジョブ成功。834単体/DB、実PG15、E2E84、負荷1成功。共有DB・実機/人の実施は別項目。"
     },
     {
       "number": 46,
       "title": "APIエラー・一覧取得の安定化と依存関係の脆弱性修正",
-      "state": "open",
+      "state": "closed",
       "base": "main",
       "head": "d8f8ce2f0e1851f5c3613a4ca7f46944664bbfee",
-      "url": "https://github.com/ryuki-moro/Nicomaru/pull/46"
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/46",
+      "draft": false,
+      "merged": true,
+      "mergeCommit": "214b041d6965bd335d596b5791b261a5671696a2",
+      "checkSummary": "PR79で履歴を保持してmainへ統合。c6048b2のCI run 37878283145: 全ジョブ成功。834単体/DB、実PG15、E2E84、負荷1成功。共有DB・実機/人の実施は別項目。"
     },
     {
       "number": 48,
       "title": "通知ログCSVの期間指定・分割取得を追加しE2Eを安定化",
-      "state": "open",
+      "state": "closed",
       "base": "codex/non-ai-core-reliability",
       "head": "1cfb7d9c338bd99a4a7c213389f3ee3001b6d611",
-      "url": "https://github.com/ryuki-moro/Nicomaru/pull/48"
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/48",
+      "draft": false,
+      "merged": false,
+      "integratedVia": 79,
+      "integrationCommit": "214b041d6965bd335d596b5791b261a5671696a2",
+      "checkSummary": "PR79で履歴を保持してmainへ統合。c6048b2のCI run 37878283145: 全ジョブ成功。834単体/DB、実PG15、E2E84、負荷1成功。共有DB・実機/人の実施は別項目。"
     },
     {
       "number": 66,
       "title": "式場編集と確認用ログインを実装し、認証DBの接続障害に対応する",
-      "state": "open",
+      "state": "closed",
       "draft": true,
       "base": "codex/implementation-progress",
       "head": "303e874f84587fcfde4e99b8952ca4ba08c45bb7",
       "url": "https://github.com/ryuki-moro/Nicomaru/pull/66",
-      "checkSummary": "2026-10-09にPC/スマートフォン寸法Chromeの式場編集16件・認証再操作2件が成功。ユーザーの実装再開指示あり。303e874のCI run 37866134420は確認時点でverify/concurrency-db成功、security失敗、E2E進行中。ユーザー自身の使い勝手評価と実WebKitは未確認。"
+      "checkSummary": "PR79で履歴を保持してmainへ統合。c6048b2のCI run 37878283145: 全ジョブ成功。834単体/DB、実PG15、E2E84、負荷1成功。共有DB・実機/人の実施は別項目。",
+      "merged": false,
+      "integratedVia": 79,
+      "integrationCommit": "214b041d6965bd335d596b5791b261a5671696a2"
     },
     {
       "number": 68,
       "title": "ブラウザー向け更新API28件に同一Origin検証を適用する",
-      "state": "open",
+      "state": "closed",
       "draft": true,
       "base": "codex/venue-edit-checkpoint",
       "head": "73a9b9f8a412e66b923a021ec0518999b8cba67a",
       "url": "https://github.com/ryuki-moro/Nicomaru/pull/68",
-      "checkSummary": "CI run 37867691442: verify/実PG/E2E成功、securityはNext.js/sharp依存監査で失敗。依存更新は後続PR70で対応。ローカル597件・Chrome E2E28件成功。"
+      "checkSummary": "PR79で履歴を保持してmainへ統合。c6048b2のCI run 37878283145: 全ジョブ成功。834単体/DB、実PG15、E2E84、負荷1成功。共有DB・実機/人の実施は別項目。",
+      "merged": false,
+      "integratedVia": 79,
+      "integrationCommit": "214b041d6965bd335d596b5791b261a5671696a2"
     },
     {
       "number": 70,
       "title": "削除バッチの失敗・再実行を修正し、Next.jsとsharpの脆弱性に対応する",
-      "state": "open",
+      "state": "closed",
       "draft": true,
       "base": "codex/api-origin-guard",
-      "head": "579d7d908d2a18e9f29c79dd8c75743c722baf61",
+      "head": "a464caa5acdd40ee8cd220fa2322cc3db1cfd117",
       "url": "https://github.com/ryuki-moro/Nicomaru/pull/70",
-      "checkSummary": "2026-10-09: 全649件成功/実PG専用12skip、うち新規失敗注入52件。Chrome E2E28件、lint/型/build成功、依存監査0件。初回99c1e6fのCI run 37870541948はverify/実PG/security（Secret scan含む）成功、E2E進行中。579d7d9では削除済み実体の件数重複計上を修正し52件再成功。最新CIはPR70を参照。"
+      "checkSummary": "PR79で履歴を保持してmainへ統合。c6048b2のCI run 37878283145: 全ジョブ成功。834単体/DB、実PG15、E2E84、負荷1成功。共有DB・実機/人の実施は別項目。",
+      "merged": false,
+      "integratedVia": 79,
+      "integrationCommit": "214b041d6965bd335d596b5791b261a5671696a2"
     },
     {
       "number": 79,
       "title": "学校デモの残実装・検証・成果物を統合する",
-      "state": "open",
-      "draft": true,
+      "state": "closed",
+      "draft": false,
       "base": "main",
-      "head": "ad96179d30fc1e1f2075d226b689b7c40503aa9f",
+      "head": "c6048b2acef8449d4bf99d80ce32880ae98ae46b",
       "url": "https://github.com/ryuki-moro/Nicomaru/pull/79",
-      "checkSummary": "統合検証中。各CIの対象commitを区別して検証記録へ保存。"
+      "checkSummary": "PR79で履歴を保持してmainへ統合。c6048b2のCI run 37878283145: 全ジョブ成功。834単体/DB、実PG15、E2E84、負荷1成功。共有DB・実機/人の実施は別項目。",
+      "merged": true,
+      "mergeCommit": "214b041d6965bd335d596b5791b261a5671696a2"
     }
   ],
   "issues": [
     {
       "number": 49,
       "title": "OTPの自動送信後にE2Eが確認ボタンを待ち続ける競合を解消する",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/49"
     },
     {
       "number": 47,
       "title": "CIで検出された既存依存の脆弱性を解消し、security検査を通す",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/47"
     },
     {
       "number": 45,
       "title": "通知ログCSVがSupabaseの1,000件上限で欠落しないように分割取得する",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/45"
     },
     {
       "number": 44,
       "title": "通知ログCSVの期間を画面で指定し、終了日の全件を日本時間で出力する",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/44"
     },
     {
       "number": 43,
       "title": "一覧画面のページ番号を共通検証し、小数・無限大・巨大値による取得エラーを防ぐ",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/43"
     },
     {
       "number": 42,
       "title": "APIがHTML・不正JSONを返しても、ログイン・権限エラーの画面遷移を維持する",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/42"
     },
     {
@@ -182,7 +207,7 @@
     {
       "number": 24,
       "title": "デモ・テスト用環境を分離し、模擬データで再現する",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/24"
     },
     {
@@ -212,7 +237,7 @@
     {
       "number": 19,
       "title": "通しで動くかを自動で確かめる仕組みを作る（E2Eテスト）",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/19"
     },
     {
@@ -416,56 +441,56 @@
     {
       "number": 69,
       "title": "削除バッチの部分失敗を記録し、未削除ファイルを再処理できるようにする（GAP-11）",
-      "state": "open",
+      "state": "closed",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/69"
     },
     {
       "number": 71,
       "title": "PWAのホーム画面追加と機微データ非保持を完成する（GAP-02）",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/71",
-      "state": "open"
+      "state": "closed"
     },
     {
       "number": 72,
       "title": "DB・Storage容量と利用件数を日次集計し管理画面に表示する（GAP-03）",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/72",
-      "state": "open"
+      "state": "closed"
     },
     {
       "number": 73,
       "title": "6種類の障害監視・再通知抑制・回復記録を実装する（GAP-04）",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/73",
-      "state": "open"
+      "state": "closed"
     },
     {
       "number": 74,
       "title": "個人情報を含まないAPI・画面性能ログを記録する（GAP-05）",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/74",
-      "state": "open"
+      "state": "closed"
     },
     {
       "number": 75,
       "title": "管理操作・権限変更・認証イベントの監査対象を揃える（GAP-07）",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/75",
-      "state": "open"
+      "state": "closed"
     },
     {
       "number": 76,
       "title": "2暦年を過ぎた監査ログを専用バッチで整理する（GAP-08）",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/76",
-      "state": "open"
+      "state": "closed"
     },
     {
       "number": 77,
       "title": "依存パッケージとActionsの週次更新PRを自動化する（GAP-09）",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/77",
-      "state": "open"
+      "state": "closed"
     },
     {
       "number": 78,
       "title": "共通のコード整形とコア分岐網羅をCIで検査する（GAP-10）",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/78",
-      "state": "open"
+      "state": "closed"
     }
   ],
   "nextOrder": [
@@ -687,15 +712,15 @@
       "id": "S02",
       "title": "式場登録/編集",
       "file": "src/app/(staff)/venues/[venueId]/page.tsx",
-      "status": "review",
-      "note": "式場編集を統合PR79に実装。共有DB反映と実端末確認は別項目。"
+      "status": "main",
+      "note": "式場編集をPR79でmainへ反映。共有DB反映と実端末確認は別項目。"
     },
     {
       "id": "S03",
       "title": "利用状況/ログ",
       "file": "src/app/(staff)/system/page.tsx",
-      "status": "review",
-      "note": "容量/監視/CSVを統合PR79に実装。共有DB反映と実端末確認は別項目。"
+      "status": "main",
+      "note": "容量/監視/CSVをPR79でmainへ反映。共有DB反映と実端末確認は別項目。"
     }
   ],
   "tasks": [
@@ -1511,7 +1536,7 @@
       "title": "利用者・式場の変更",
       "category": "機能",
       "phase": "1/2",
-      "status": "review",
+      "status": "main",
       "design": "基本設計3-2 / 8-3",
       "screens": [
         "U03",
@@ -1525,10 +1550,11 @@
         "src/app/(staff)/venues/[venueId]/VenueEditForm.tsx",
         "src/app/api/venues/[venueId]/route.ts",
         "tests/e2e/venue-edit.spec.ts",
-        "docs/動作確認_式場編集.md"
+        "docs/動作確認_式場編集.md",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "式場編集を既存PR66から統合。system_admin/RLS、更新/権限/エラー再試行を検証。",
-      "next": "PR79のmain反映。人の使い勝手は実機試験票へ記録。",
+      "note": "式場編集を既存PR66から統合。system_admin/RLS、更新/権限/エラー再試行を検証。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         54
       ],
@@ -1569,7 +1595,7 @@
       "title": "システム利用状況・通知ログ・CSV",
       "category": "機能",
       "phase": "2",
-      "status": "review",
+      "status": "main",
       "design": "基本設計3-2 / 8-5",
       "screens": [
         "S03"
@@ -1577,10 +1603,11 @@
       "evidence": [
         "src/app/(staff)/system/page.tsx",
         "src/app/api/system/notification-logs.csv/route.ts",
-        "src/app/(staff)/system/MonitoringSummary.tsx"
+        "src/app/(staff)/system/MonitoringSummary.tsx",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "S03の容量・集計日時・監視通知と、CSV期間/全件分割を統合版に実装。",
-      "next": "PR79のmain反映と共有DB更新。",
+      "note": "S03の容量・集計日時・監視通知と、CSV期間/全件分割を統合版に実装。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [],
       "prs": [
         79
@@ -1860,7 +1887,7 @@
         "supabase/migrations/20260828000200_core_tables.sql",
         "supabase/seed.sql"
       ],
-      "note": "publicテーブル31種、mainのSQL22本。PR48で索引1本、PR41の別関数は未反映。",
+      "note": "public33テーブル、30本のmigration、RLS59件、アプリ関数55件を隔離DBで照合。PR79でmainへ統合。共有DB反映はOPS-01で別管理。",
       "next": "",
       "issues": [],
       "prs": [],
@@ -2284,7 +2311,7 @@
       "title": "式場詳細・編集UIとPATCH API",
       "category": "実装不足",
       "phase": "2",
-      "status": "review",
+      "status": "main",
       "design": "基本設計4-3 S02/6-5",
       "screens": [],
       "evidence": [
@@ -2294,15 +2321,17 @@
         "src/app/(staff)/venues/[venueId]/VenueEditForm.tsx",
         "src/app/api/venues/[venueId]/route.ts",
         "tests/e2e/venue-edit.spec.ts",
-        "docs/動作確認_式場編集.md"
+        "docs/動作確認_式場編集.md",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "PR #66で式場詳細・編集フォーム・PATCH API・一覧への導線を実装。system_adminとRLSで認可し、名称・代表メール・利用状態を更新する。ローカル自動検証とビルド済みサーバーの保存を確認済み。2026-10-09にPC/スマートフォン寸法Chromeで通し確認済み。ユーザーの指示で次の実装へ再開。",
-      "next": "ユーザー自身の使い勝手評価は未記録。依存監査の修正・CIの残る確認・PRレビューを経てmainへ反映する。",
+      "note": "PR #66で式場詳細・編集フォーム・PATCH API・一覧への導線を実装。system_adminとRLSで認可し、名称・代表メール・利用状態を更新する。ローカル自動検証とビルド済みサーバーの保存を確認済み。2026-10-09にPC/スマートフォン寸法Chromeで通し確認済み。ユーザーの指示で次の実装へ再開。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         54
       ],
       "prs": [
-        66
+        66,
+        79
       ],
       "dependsOn": [],
       "requiresAi": false,
@@ -2314,7 +2343,7 @@
       "title": "PWAホーム画面追加の完成",
       "category": "実装不足",
       "phase": "1/2",
-      "status": "review",
+      "status": "main",
       "design": "基本設計2-2/8-4",
       "screens": [],
       "evidence": [
@@ -2324,10 +2353,11 @@
         "package.json",
         "public/sw.js",
         "src/components/PwaRegistration.tsx",
-        "tests/e2e/pwa-performance.spec.ts"
+        "tests/e2e/pwa-performance.spec.ts",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "ホーム画面用のアイコン・SW登録・機微情報非保持を実装。Chrome PC/小画面のPWA検証とオフライン非保持を確認。",
-      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "note": "ホーム画面用のアイコン・SW登録・機微情報非保持を実装。Chrome PC/小画面のPWA検証とオフライン非保持を確認。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         71
       ],
@@ -2344,7 +2374,7 @@
       "title": "容量・利用状況の日次集計",
       "category": "実装不足",
       "phase": "2",
-      "status": "review",
+      "status": "main",
       "design": "基本設計6-12/8-3/10章",
       "screens": [],
       "evidence": [
@@ -2352,10 +2382,11 @@
         "src/lib/api/internal.ts",
         "src/lib/monitoring/service.ts",
         "supabase/migrations/20261009000100_usage_snapshots.sql",
-        "tests/db/monitoring.test.ts"
+        "tests/db/monitoring.test.ts",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "日次のDB/全Storage容量・利用件数を保存しS03へ表示。未設定・未取得・古い集計を正常値と扱わない。",
-      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "note": "日次のDB/全Storage容量・利用件数を保存しS03へ表示。未設定・未取得・古い集計を正常値と扱わない。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         72
       ],
@@ -2372,16 +2403,17 @@
       "title": "障害条件の監視・アラート",
       "category": "実装不足",
       "phase": "2",
-      "status": "review",
+      "status": "main",
       "design": "基本設計10章",
       "screens": [],
       "evidence": [
         ".github/workflows/keepalive.yml",
         "src/app/(staff)/system/page.tsx",
-        "supabase/migrations/20261009000200_system_monitoring.sql"
+        "supabase/migrations/20261009000200_system_monitoring.sql",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "6種の監視、1時間の再通知抑制、回復記録、S03共有通知、Keepalive連続2失敗を実装。外部宛先への実送信は行わない。",
-      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "note": "6種の監視、1時間の再通知抑制、回復記録、S03共有通知、Keepalive連続2失敗を実装。外部宛先への実送信は行わない。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         73
       ],
@@ -2400,16 +2432,17 @@
       "title": "API/画面の性能ログ",
       "category": "実装不足",
       "phase": "2",
-      "status": "review",
+      "status": "main",
       "design": "基本設計8-1/10章",
       "screens": [],
       "evidence": [
         "src/lib/api/route.ts",
         "src/lib/observability/performance.ts",
-        "tests/e2e/performance-load.spec.ts"
+        "tests/e2e/performance-load.spec.ts",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "API所要時間/成否と画面Web Vitalsを静的ルート名で記録。300案件30同時の負荷試験をCIローカル専用で追加。",
-      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "note": "API所要時間/成否と画面Web Vitalsを静的ルート名で記録。300案件30同時の負荷試験をCIローカル専用で追加。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         74
       ],
@@ -2426,7 +2459,7 @@
       "title": "API Routesの同一Origin検証",
       "category": "実装不足",
       "phase": "1/2",
-      "status": "review",
+      "status": "main",
       "design": "基本設計9章 CSRF",
       "screens": [],
       "evidence": [
@@ -2436,15 +2469,17 @@
         "src/app/api/line/webhook/route.ts",
         "tests/unit/api-origin.test.ts",
         "tests/e2e/api-origin.spec.ts",
-        "docs/実装計画_API送信元検証.md"
+        "docs/実装計画_API送信元検証.md",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "PR #68で共通routeの既定保護として全28更新APIに同一Origin検証を適用。内部cron5本はwrapperの共有secret認証、LINEWebhookはraw body署名認証を維持。本文・認証・DBより前の拒否とJSON/multipartの通常送信を検証済み。",
-      "next": "PR #66に依存するPR #68のCI・レビューを確認し、依存順でmainへ反映する。実機Safariは未確認。",
+      "note": "PR #68で共通routeの既定保護として全28更新APIに同一Origin検証を適用。内部cron5本はwrapperの共有secret認証、LINEWebhookはraw body署名認証を維持。本文・認証・DBより前の拒否とJSON/multipartの通常送信を検証済み。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         54
       ],
       "prs": [
-        68
+        68,
+        79
       ],
       "dependsOn": [],
       "requiresAi": false,
@@ -2456,7 +2491,7 @@
       "title": "監査ログの対象操作を揃える",
       "category": "実装不足",
       "phase": "2",
-      "status": "review",
+      "status": "main",
       "design": "基本設計9-1/10章",
       "screens": [],
       "evidence": [
@@ -2465,10 +2500,11 @@
         "src/app/(staff)/templates/[templateId]/page.tsx",
         "tests/db/audit.test.ts",
         "tests/unit/password-auth.test.ts",
-        "src/lib/services/audit-deadline.ts"
+        "src/lib/services/audit-deadline.ts",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "管理変更はDB同一transactionで監査。認証イベントは専用RPCへ限定し、汎用RPCのauth.*偽造を拒否。認証監査通信は2秒で中断し認証結果を維持。",
-      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "note": "管理変更はDB同一transactionで監査。認証イベントは専用RPCへ限定し、汎用RPCのauth.*偽造を拒否。認証監査通信は2秒で中断し認証結果を維持。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         75
       ],
@@ -2485,17 +2521,18 @@
       "title": "監査ログの2年経過分を削除",
       "category": "実装不足",
       "phase": "2",
-      "status": "review",
+      "status": "main",
       "design": "基本設計9-1",
       "screens": [],
       "evidence": [
         "src/app/api/internal/case-purge/route.ts",
         "src/app/api/internal/rate-limit-cleanup/route.ts",
         "supabase/migrations/20261009000400_audit_retention.sql",
-        "tests/unit/audit-retention-route.test.ts"
+        "tests/unit/audit-retention-route.test.ts",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "UTCで2暦年を過ぎた監査だけを専用RPCで整理。境界・権限・実行記録を検証。共有データの削除実行なし。",
-      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "note": "UTCで2暦年を過ぎた監査だけを専用RPCで整理。境界・権限・実行記録を検証。共有データの削除実行なし。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         76
       ],
@@ -2512,16 +2549,17 @@
       "title": "Dependabot/ Renovateの週次更新",
       "category": "実装不足",
       "phase": "開発",
-      "status": "review",
+      "status": "main",
       "design": "基本設計12-2",
       "screens": [],
       "evidence": [
         ".github/workflows/ci.yml",
         "package-lock.json",
-        ".github/dependabot.yml"
+        ".github/dependabot.yml",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "npm/Actionsの週次Dependabotを追加。自動マージせずCIとレビューを通す。",
-      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "note": "npm/Actionsの週次Dependabotを追加。自動マージせずCIとレビューを通す。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         77
       ],
@@ -2538,7 +2576,7 @@
       "title": "コード整形ルールのCI適用",
       "category": "実装不足",
       "phase": "開発",
-      "status": "review",
+      "status": "main",
       "design": "基本設計12章 コード規約",
       "screens": [],
       "evidence": [
@@ -2547,10 +2585,11 @@
         ".prettierrc.json",
         ".editorconfig",
         ".gitattributes",
-        "vitest.coverage.config.ts"
+        "vitest.coverage.config.ts",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "Prettier/EditorConfig/LF、整形CI、主要3モジュールbranch100%ゲートを追加。",
-      "next": "統合PRの最終CIとmain反映。環境設定・実機確認は関連項目で管理。",
+      "note": "Prettier/EditorConfig/LF、整形CI、主要3モジュールbranch100%ゲートを追加。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         78
       ],
@@ -2567,7 +2606,7 @@
       "title": "削除・匿名化バッチの失敗を正しく記録",
       "category": "実装不足",
       "phase": "2",
-      "status": "review",
+      "status": "main",
       "design": "基本設計6-12/9章",
       "screens": [],
       "evidence": [
@@ -2576,15 +2615,17 @@
         "src/lib/api/internal.ts",
         "tests/unit/case-purge.test.ts",
         "tests/unit/internal-batch.test.ts",
-        "docs/実装計画_削除バッチと依存更新.md"
+        "docs/実装計画_削除バッチと依存更新.md",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "PR70で全操作エラーを検出し、Storage失敗時のメタ保持・部分成功/失敗工程記録・HTTP500・全ページ取得を実装。180日境界、各DB/通信失敗、再実行、201件超、記録失敗を模擬SDKで検証。削除済み実体は再計上しない。",
-      "next": "PR70の最新CI・レビューを確認して依存順にmainへ反映する。実案件では削除試験をしない。大量運用の実行時間・再開位置と全PII消去方針は別設計。",
+      "note": "PR70で全操作エラーを検出し、Storage失敗時のメタ保持・部分成功/失敗工程記録・HTTP500・全ページ取得を実装。180日境界、各DB/通信失敗、再実行、201件超、記録失敗を模擬SDKで検証。削除済み実体は再計上しない。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         69
       ],
       "prs": [
-        70
+        70,
+        79
       ],
       "dependsOn": [
         "BASE-15"
@@ -2598,20 +2639,22 @@
       "title": "異常API本文でもHTTP状態と項目エラーを保持",
       "category": "改善",
       "phase": "改善",
-      "status": "review",
+      "status": "main",
       "design": "Issue#42",
       "screens": [],
       "evidence": [
         "src/lib/api/client.ts",
-        "tests/unit/api-client.test.ts"
+        "tests/unit/api-client.test.ts",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "HTML/不正JSON/null、プロトタイプ衝突を検証。",
-      "next": "PR #46をレビューしmainへ反映。",
+      "note": "HTML/不正JSON/null、プロトタイプ衝突を検証。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         42
       ],
       "prs": [
-        46
+        46,
+        79
       ],
       "dependsOn": [],
       "requiresAi": false,
@@ -2623,20 +2666,22 @@
       "title": "一覧11画面と利用者APIのページ番号検証",
       "category": "改善",
       "phase": "改善",
-      "status": "review",
+      "status": "main",
       "design": "Issue#43",
       "screens": [],
       "evidence": [
         "src/lib/pagination.ts",
-        "tests/unit/pagination.test.ts"
+        "tests/unit/pagination.test.ts",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "形式/重複/offset上限を共通解析。",
-      "next": "PR #46をレビューしmainへ反映。",
+      "note": "形式/重複/offset上限を共通解析。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         43
       ],
       "prs": [
-        46
+        46,
+        79
       ],
       "dependsOn": [],
       "requiresAi": false,
@@ -2648,22 +2693,24 @@
       "title": "依存関係の脆弱性を解消",
       "category": "改善",
       "phase": "改善",
-      "status": "review",
+      "status": "main",
       "design": "Issue#47",
       "screens": [],
       "evidence": [
         "package.json",
         "package-lock.json",
-        "docs/依存関係の脆弱性対応.md"
+        "docs/依存関係の脆弱性対応.md",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "PR70でNext.js/eslint-config-next15.5.27、sharp0.35.5へ更新。10/9の監査は全重大度0件。lint互換層と99ルールを維持し負例5件成功。初回CIのsecurity/Secret scanも成功。",
-      "next": "PR70の最終CIを確認し、PR46以降の依存順でmainへ反映する。脆弱性の追加公開に応じて継続監査する。",
+      "note": "PR70でNext.js/eslint-config-next15.5.27、sharp0.35.5へ更新。10/9の監査は全重大度0件。lint互換層と99ルールを維持し負例5件成功。初回CIのsecurity/Secret scanも成功。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         47
       ],
       "prs": [
         46,
-        70
+        70,
+        79
       ],
       "dependsOn": [],
       "requiresAi": false,
@@ -2675,20 +2722,22 @@
       "title": "CSV期間フォーム・JST境界・日付検証",
       "category": "改善",
       "phase": "改善",
-      "status": "review",
+      "status": "main",
       "design": "Issue#44",
       "screens": [],
       "evidence": [
         "src/lib/notification-log-export.ts",
-        "src/app/(staff)/system/NotificationLogExportForm.tsx"
+        "src/app/(staff)/system/NotificationLogExportForm.tsx",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "実在日/期間/重複とJSTの終了翌日未満。",
-      "next": "PR #48をレビューしmainへ反映。",
+      "note": "実在日/期間/重複とJSTの終了翌日未満。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         44
       ],
       "prs": [
-        48
+        48,
+        79
       ],
       "dependsOn": [
         "FIX-42",
@@ -2703,20 +2752,22 @@
       "title": "通知CSVをkeysetで分割取得",
       "category": "改善",
       "phase": "改善",
-      "status": "review",
+      "status": "main",
       "design": "Issue#45",
       "screens": [],
       "evidence": [
         "src/lib/services/notification-log-export.ts",
-        "tests/e2e/notification-log-export.spec.ts"
+        "tests/e2e/notification-log-export.spec.ts",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "1,000件制限・同時刻・マイクロ秒・上限/超過/途中失敗。",
-      "next": "PR #48をレビューしmainへ反映。",
+      "note": "1,000件制限・同時刻・マイクロ秒・上限/超過/途中失敗。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         45
       ],
       "prs": [
-        48
+        48,
+        79
       ],
       "dependsOn": [
         "FIX-42",
@@ -2731,19 +2782,21 @@
       "title": "OTP自動送信とE2E再クリックの競合解消",
       "category": "改善",
       "phase": "改善",
-      "status": "review",
+      "status": "main",
       "design": "Issue#49",
       "screens": [],
       "evidence": [
-        "tests/e2e/helpers/flows.ts"
+        "tests/e2e/helpers/flows.ts",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "6桁入力後の自動送信による遷移を待つ。CI44 E2E成功。",
-      "next": "PR #48をレビューしmainへ反映。",
+      "note": "6桁入力後の自動送信による遷移を待つ。CI44 E2E成功。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         49
       ],
       "prs": [
-        48
+        48,
+        79
       ],
       "dependsOn": [
         "FIX-42",
@@ -2758,19 +2811,21 @@
       "title": "本番で動く定期処理の登録関数",
       "category": "リリース",
       "phase": "2",
-      "status": "review",
+      "status": "main",
       "design": "6-12 / Issue14",
       "screens": [],
       "evidence": [
-        "supabase/migrations/20260828001400_scheduled_jobs.sql"
+        "supabase/migrations/20260828001400_scheduled_jobs.sql",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "PR41にregister_scheduled_jobs()と2テストあり、CI全成功。現在のブランチ/mainには含まれない。",
-      "next": "PR41をレビュー/マージし追加migrationを適用、公開URL変更時に再登録。",
+      "note": "PR41にregister_scheduled_jobs()と2テストあり、CI全成功。現在のブランチ/mainには含まれない。 PR79でmainへ反映し統合CIを確認。",
+      "next": "",
       "issues": [
         14
       ],
       "prs": [
-        41
+        41,
+        79
       ],
       "dependsOn": [],
       "requiresAi": false,
@@ -3040,15 +3095,16 @@
       "title": "デモ・テスト環境の識別と再現",
       "category": "運用",
       "phase": "運用",
-      "status": "review",
+      "status": "recorded",
       "design": "基本設計8章/12章 / Issue24",
       "screens": [],
       "evidence": [
         ".env.example",
-        "docs/環境の使い分け.md"
+        "docs/環境の使い分け.md",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "PR67の模擬seed/分離手順を統合。対象取り違えをAuth変更前に拒否する修正とDB/CLI試験を追加。",
-      "next": "最終CIとmain反映。メンバーPCで再現する。",
+      "note": "PR67の模擬seed/分離手順を統合。対象取り違えをAuth変更前に拒否する修正とDB/CLI試験を追加。 最終CIで実行記録あり。docs/検証/自走完了_20261009.mdを参照。",
+      "next": "メンバーPC・学校デモの当日環境で手順を実施し結果を記録。",
       "issues": [
         24
       ],
@@ -3224,16 +3280,17 @@
       "title": "模擬データでAIキュー→採用・停止時操作を確認",
       "category": "運用",
       "phase": "運用",
-      "status": "review",
+      "status": "recorded",
       "design": "基本設計8章/12章 / Issue22",
       "screens": [],
       "evidence": [
         "TASKS.md",
         "worker/ai-worker.ts",
-        "tests/e2e/ai-workflow.spec.ts"
+        "tests/e2e/ai-workflow.spec.ts",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "UI依頼→専用worker RPCの模擬出力→人の採用→コメント欄反映をE2Eへ追加。実LLM品質評価とは別。",
-      "next": "CIで正規専用roleと停止/復帰を確認しmain反映。",
+      "note": "UI依頼→専用worker RPCの模擬出力→人の採用→コメント欄反映をE2Eへ追加。実LLM品質評価とは別。 最終CIで実行記録あり。docs/検証/自走完了_20261009.mdを参照。",
+      "next": "実LLMの出力品質とメンバーPCでの起動/停止を確認。推論はこのCIの対象外。",
       "issues": [
         22
       ],
@@ -3396,15 +3453,16 @@
       "title": "学校デモの招待→登録→提出→確認",
       "category": "運用",
       "phase": "運用",
-      "status": "review",
+      "status": "recorded",
       "design": "基本設計8章/12章 / Issue14",
       "screens": [],
       "evidence": [
         "tests/e2e/core-flow.spec.ts",
-        "docs/メンバー向けデモと運用手順.md"
+        "docs/メンバー向けデモと運用手順.md",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "模擬メールを使うコア通しE2Eと10分の役割別デモ手順を用意。",
-      "next": "最終CIとメンバーによる当日の環境試用。",
+      "note": "模擬メールを使うコア通しE2Eと10分の役割別デモ手順を用意。 最終CIで実行記録あり。docs/検証/自走完了_20261009.mdを参照。",
+      "next": "メンバーPC・学校デモの当日環境で手順を実施し結果を記録。",
       "issues": [
         14
       ],
@@ -3564,17 +3622,21 @@
       "title": "300案件・30同時・初回3秒の性能測定",
       "category": "検証",
       "phase": "検証",
-      "status": "review",
+      "status": "recorded",
       "design": "基本設計11章/12-2",
       "screens": [],
       "evidence": [
         "tests/unit/risk.test.ts",
         "src/lib/services/cases.ts",
-        "tests/e2e/performance-load.spec.ts"
+        "tests/e2e/performance-load.spec.ts",
+        "docs/検証/自走完了_20261009.md",
+        "docs/検証/performance-37878283145.json"
       ],
-      "note": "3式場300案件/2400宿題/30別セッションのローカル専用試験を追加。ブラウザー内表示markと試験側待機を分離。",
-      "next": "CI実測値と条件/3秒超件数を証拠へ反映。",
-      "issues": [],
+      "note": "run37878283145: 300案件/30同時の表示・専用fixture清掃成功。4CPUでブラウザー/SSR/DB同居、dashboard p955989ms・mypage5287msは3秒未達、一覧833ms。JSONと条件を検証記録へ保存。",
+      "next": "負荷生成端末とアプリ/DBを分け、実機で同時数・回線・cold/warm条件を揃えて再測定。初回3秒目標の受入は未達。",
+      "issues": [
+        60
+      ],
       "prs": [
         79
       ],
@@ -3639,7 +3701,7 @@
       "title": "主要ロジックの分岐網羅100%の測定",
       "category": "検証",
       "phase": "検証",
-      "status": "review",
+      "status": "recorded",
       "design": "基本設計11章/12-2",
       "screens": [],
       "evidence": [
@@ -3647,10 +3709,11 @@
         "tests/unit/risk.test.ts",
         "tests/unit/schedule.test.ts",
         "vitest.coverage.config.ts",
-        "tests/unit/session.test.ts"
+        "tests/unit/session.test.ts",
+        "docs/検証/自走完了_20261009.md"
       ],
-      "note": "risk/schedule/sessionの分岐100%を実測しCIで閾値を維持。タイブレーク・不正パラメータ・認可拒否を追加。",
-      "next": "最終CIのcoverage artifactを確認しmain反映。",
+      "note": "risk/schedule/sessionの分岐100%を実測しCIで閾値を維持。タイブレーク・不正パラメータ・認可拒否を追加。 最終CIで実行記録あり。docs/検証/自走完了_20261009.mdを参照。",
+      "next": "主要3モジュールの100%をCIで維持。全体品質/実端末の合格とは分ける。",
       "issues": [],
       "prs": [
         79
@@ -4256,7 +4319,7 @@
       "title": "優先修正を反映し月次ソースコードを確定する",
       "category": "学校成果物",
       "phase": "2026-10",
-      "status": "review",
+      "status": "prepared",
       "design": "ユーザー指定の学校スケジュール（2026-10-08）",
       "screens": [],
       "evidence": [
@@ -4266,8 +4329,8 @@
         "docs/実装計画_削除バッチと依存更新.md",
         "docs/検証/自走完了_20261009.md"
       ],
-      "note": "既存8PRと残実装8項目をPR79に統合。10月版の検証・資料・引継ぎを前倒しで準備。",
-      "next": "最終CI・main反映・共有DB更新後に学校チームで確認。",
+      "note": "既存8PRと残実装8項目をPR79に統合。10月版の検証・資料・引継ぎを前倒しで準備。 PR79でmain統合と自動検証を完了。",
+      "next": "共有DBへ追加定義を反映し、本人/チームで学校デモの操作を確認。",
       "issues": [
         54
       ],
@@ -4329,9 +4392,10 @@
       "screens": [],
       "evidence": [
         "docs/学校制作スケジュール.md",
-        "docs/テスト/テスト仕様書_校内デモ.xlsx"
+        "docs/テスト/テスト仕様書_校内デモ.xlsx",
+        "docs/テスト/テスト技法・観点.md"
       ],
-      "note": "正常/異常・境界・状態遷移・権限を111ケースの仕様と実コードの試験へ対応。",
+      "note": "111ケースの試験仕様と、技法・選定理由・境界入力/期待結果・自動試験の対応表を作成。",
       "next": "学校の指定技法と照合しメンバーが説明できるか確認。",
       "issues": [
         56
@@ -4704,9 +4768,9 @@
     ]
   },
   "currentPlan": [
-    "PR #79へ既存PR群と残実装を統合。最終CI・4観点レビュー・資料検査の証拠を確認してmain反映する。",
-    "共有Supabaseへ追加6migrationを適用し、最新アプリでログインとS03を確認する。手順と一括SQLを用意済み。",
-    "詳細設計・PowerPoint・111ケースの試験仕様・WBS・評価票をメンバーがレビューする。学校の指定時間/形式へ合わせる。",
-    "実端末・リハーサル・校内評価・本人の工数を記録する。2月は学校発表でありアプリの本番運用開始ではない。"
+    "自走可能な実装・自動検証・資料作成はPR79でmain反映済み。数値と対象版は下記CI・検証記録を参照。",
+    "共有Supabaseへ追加6migrationを適用し、最新アプリでログインとS03を確認する。適用用SQLと手順は準備済み。",
+    "詳細設計・PowerPoint・111ケースの試験仕様・WBS・評価票をメンバーがレビューする。Agent AIは不要。学校指定時間/形式と正式な分担を確定する。",
+    "実端末・他メンバー試用・リハーサル・校内評価・本人の工数を記録する。2月は学校発表。将来の本番運用や条件付きAI拡張は必須残作業に含めない。"
   ]
 }

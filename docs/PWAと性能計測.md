@@ -74,6 +74,6 @@ npx playwright test performance-load --project=chromium
 
 根拠は[W3C WCAG 2.2 文字コントラストの解説](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)。`tests/unit/accessibility-colors.test.ts` は相対輝度から比率を計算し、白・通常背景・入力背景、状態バナー、主ボタンのhover合成色、入力境界を検査する。色の検査は画面全体のWCAG適合認証や実機読み上げ試験を意味しない。
 
-# テスト用通信差し替えとService Worker
+## テスト用通信差し替えとService Worker
 
 Playwrightの通信差し替えを使う4仕様では`serviceWorkers: 'block'`を指定する。WebKitでSW経由の要求が差し替えを通らなかったため、模擬503/HTML応答/通信断を確実に注入する目的で範囲を限定している。実アプリのSWは無効化せず、PWA専用試験とコアフローでは登録した状態を検証する。[Playwrightの公式説明](https://playwright.dev/docs/network#missing-network-events-and-service-workers)に基づく。

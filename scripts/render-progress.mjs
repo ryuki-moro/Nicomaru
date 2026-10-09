@@ -193,7 +193,7 @@ const lines = [
   '| --- | --- | --- |',
   ...data.pullRequests.map(
     (p) =>
-      `| ${prLink(p.number)} ${p.title} | ${p.base} → \`${p.head.slice(0, 7)}\` | ${p.state}${p.draft ? '（draft）' : ''}。${p.checkSummary ?? '検証結果はPRのChecksを参照'} |`,
+      `| ${prLink(p.number)} ${p.title} | ${p.base} → \`${p.head.slice(0, 7)}\` | ${p.merged ? 'merged' : p.integratedVia ? `PR #${p.integratedVia}でmain統合済み・closed` : p.state}${p.draft && p.state === 'open' ? '（draft）' : ''}。${p.checkSummary ?? '検証結果はPRのChecksを参照'} |`,
   ),
   '',
   `${data.ci.label ?? '記録済み'}の[CI run ${data.ci.run}](${data.ci.url})（${data.ci.date}）: ユニット/RLS **${data.ci.unitRlsPassed}成功**、同じ集計の実PG用${data.ci.pgSkippedInUnit}件はskip。別ジョブで**実PostgreSQL ${data.ci.realPgPassed}成功**。**E2E ${data.ci.e2ePassed}成功**。verify: ${data.ci.verify}、security: ${data.ci.security}、依存監査: ${data.ci.auditVulnerabilities}件。${data.ci.note ?? ''}`,
