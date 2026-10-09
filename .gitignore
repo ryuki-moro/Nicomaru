@@ -21,6 +21,8 @@ next-env.d.ts
 coverage/
 playwright-report/
 test-results/
+performance-results/
+performance-report/
 .vitest/
 
 # Supabase ローカル

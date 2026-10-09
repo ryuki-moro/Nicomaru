@@ -94,18 +94,24 @@ const nonLocal = targets.filter((t) => !isLocalHost(t.url));
 
 if (nonLocal.length > 0 && !remote) {
   die(
-    `接続先がローカルではありません: ${nonLocal.map((t) => `${t.name}=${new URL(t.url).hostname}`).join(', ')}\n`
-    + '  共有デモ環境に入れるときは --remote を付けてください（docs/環境の使い分け.md）。',
+    `接続先がローカルではありません: ${nonLocal.map((t) => `${t.name}=${new URL(t.url).hostname}`).join(', ')}\n` +
+      '  共有デモ環境に入れるときは --remote を付けてください（docs/環境の使い分け.md）。',
   );
 }
 if (remote && nonLocal.length !== targets.length) {
   // Auth と DB が別の環境を指していると、作ったユーザーが DB に無い状態になる
-  die('--remote のときは NEXT_PUBLIC_SUPABASE_URL と DEMO_DATABASE_URL の両方を共有デモ環境に向けてください。');
+  die(
+    '--remote のときは NEXT_PUBLIC_SUPABASE_URL と DEMO_DATABASE_URL の両方を共有デモ環境に向けてください。',
+  );
 }
 
-const plannerPassword = process.env.DEMO_PLANNER_PASSWORD
-  || (remote ? die('共有デモ環境では DEMO_PLANNER_PASSWORD を指定してください（リポジトリに書かない）') : LOCAL_PLANNER_PASSWORD);
-if (plannerPassword.length < 12) die('DEMO_PLANNER_PASSWORD は12文字以上にしてください（プランナーのパスワード規約）');
+const plannerPassword =
+  process.env.DEMO_PLANNER_PASSWORD ||
+  (remote
+    ? die('共有デモ環境では DEMO_PLANNER_PASSWORD を指定してください（リポジトリに書かない）')
+    : LOCAL_PLANNER_PASSWORD);
+if (plannerPassword.length < 12)
+  die('DEMO_PLANNER_PASSWORD は12文字以上にしてください（プランナーのパスワード規約）');
 
 console.log(`\n  接続先: ${remote ? '共有デモ環境' : 'ローカル'}（${new URL(supabaseUrl).host}）`);
 
@@ -155,8 +161,10 @@ try {
   await client.connect();
 } catch (error) {
   die(
-    `データベースに接続できません: ${(error as Error).message}\n`
-    + (remote ? '  DEMO_DATABASE_URL を確認してください。' : '  `npx supabase start` を実行してから、もう一度試してください。'),
+    `データベースに接続できません: ${(error as Error).message}\n` +
+      (remote
+        ? '  DEMO_DATABASE_URL を確認してください。'
+        : '  `npx supabase start` を実行してから、もう一度試してください。'),
   );
 }
 
@@ -170,7 +178,9 @@ const plannerAuthId = await demoAuth.ensureUser(DEMO_PLANNER.email, {
 const sameProject = await client.query('select 1 from auth.users where id = $1', [plannerAuthId]);
 if (sameProject.rows.length === 0) {
   await client.end();
-  die('NEXT_PUBLIC_SUPABASE_URL と DEMO_DATABASE_URL が別の環境を指しています。同じプロジェクトに揃えてください。');
+  die(
+    'NEXT_PUBLIC_SUPABASE_URL と DEMO_DATABASE_URL が別の環境を指しています。同じプロジェクトに揃えてください。',
+  );
 }
 
 let result;
@@ -208,7 +218,8 @@ async function recalculateRisk(): Promise<string> {
   }
 }
 
-const riskMessage = result.created.length > 0 ? await recalculateRisk() : '新しい案件が無いので省略しました';
+const riskMessage =
+  result.created.length > 0 ? await recalculateRisk() : '新しい案件が無いので省略しました';
 
 // ------------------------------------------------------------------ 結果の表示
 
@@ -242,7 +253,9 @@ console.log(`  リスクの再計算: ${riskMessage}`);
 if (wantsLoginLinks) {
   console.log('');
   console.log('  ── 新郎新婦のログイン用リンク（1回きり・1時間で失効） ──');
-  const emails = DEMO_CASES.flatMap((c) => [c.groom, c.bride]).filter((p) => p.registered).map((p) => p.email);
+  const emails = DEMO_CASES.flatMap((c) => [c.groom, c.bride])
+    .filter((p) => p.registered)
+    .map((p) => p.email);
   for (const email of emails) {
     const { data, error } = await admin.auth.admin.generateLink({
       type: 'magiclink',
@@ -250,7 +263,9 @@ if (wantsLoginLinks) {
       options: { redirectTo: `${appBaseUrl.replace(/\/+$/, '')}/login` },
     });
     console.log(`    ${email}`);
-    console.log(`      ${error ? `発行できませんでした: ${error.message}` : data.properties.action_link}`);
+    console.log(
+      `      ${error ? `発行できませんでした: ${error.message}` : data.properties.action_link}`,
+    );
   }
 } else if (!remote) {
   console.log('  新郎新婦としてログインするときは、ログイン画面でメールアドレスを入れ、');

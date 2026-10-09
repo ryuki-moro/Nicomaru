@@ -25,16 +25,19 @@ const venue = await db.query(`select id from venues where code = 'BRIDAL01'`);
 const venueId = venue.rows[0].id as string;
 
 const auth = await db.query(
-  `insert into auth.users (email) values ('e2e-planner@example.test') returning id`);
+  `insert into auth.users (email) values ('e2e-planner@example.test') returning id`,
+);
 const profile = await db.query(
   `insert into user_profiles (auth_user_id, venue_id, role, display_name, email)
    values ($1, $2, 'planner', '幸地', 'e2e-planner@example.test') returning id`,
-  [auth.rows[0].id, venueId]);
+  [auth.rows[0].id, venueId],
+);
 
 const wcase = await db.query(
   `insert into wedding_cases (venue_id, primary_planner_id, case_code, wedding_date)
    values ($1, $2, 'BRIDAL01-2026-E2E1', current_date + 90) returning id`,
-  [venueId, profile.rows[0].id]);
+  [venueId, profile.rows[0].id],
+);
 
 // 7-2 のコア4種別すべてを1本で通す。
 // 種別ごとにプロンプトも出力スキーマも違うので、1つ通っても他は通らない。
@@ -45,18 +48,21 @@ const jobs: { type: string; text: string }[] = [
   },
   {
     type: 'task_extraction',
-    text: '9/3 打ち合わせ。BGMは新婦が候補を出す。引き出物はカタログAで内定、'
-      + '最終確定は次回。招待客リストは親族分がまだ未確定とのこと。',
+    text:
+      '9/3 打ち合わせ。BGMは新婦が候補を出す。引き出物はカタログAで内定、' +
+      '最終確定は次回。招待客リストは親族分がまだ未確定とのこと。',
   },
   {
     type: 'draft',
-    text: '宿題: 招待客リストの提出\n状況: 提出内容に直していただきたい点があります\n'
-      + '伝えたいこと: 郵便番号が3件抜けているので、そこだけ足してほしい',
+    text:
+      '宿題: 招待客リストの提出\n状況: 提出内容に直していただきたい点があります\n' +
+      '伝えたいこと: 郵便番号が3件抜けているので、そこだけ足してほしい',
   },
   {
     type: 'defect_check',
-    text: '氏名,住所\n1,渡辺 一郎,東京都港区1-2-3\n2,渡邊 花子様,東京都港区一丁目二番三号\n'
-      + '3,鈴木 三郎,大阪府大阪市北区4-5-6',
+    text:
+      '氏名,住所\n1,渡辺 一郎,東京都港区1-2-3\n2,渡邊 花子様,東京都港区一丁目二番三号\n' +
+      '3,鈴木 三郎,大阪府大阪市北区4-5-6',
   },
 ];
 
@@ -70,10 +76,16 @@ for (const job of jobs) {
   ids.push(inserted.rows[0].id as string);
 }
 
-console.log(JSON.stringify({
-  workerUrl: url.replace(/\/\/[^@]+@/, '//ai_worker:worker_local@'),
-  adminUrl: url,
-  jobIds: ids,
-}, null, 2));
+console.log(
+  JSON.stringify(
+    {
+      workerUrl: url.replace(/\/\/[^@]+@/, '//ai_worker:worker_local@'),
+      adminUrl: url,
+      jobIds: ids,
+    },
+    null,
+    2,
+  ),
+);
 
 await db.end();

@@ -1,8 +1,8 @@
 ---
 name: タスク
 about: やることを登録する
-title: "[TASK] "
-labels: "type: task"
+title: '[TASK] '
+labels: 'type: task'
 ---
 
 ## これは何をするIssue？
@@ -11,7 +11,7 @@ labels: "type: task"
 
 ## やること
 
-- [ ] 
+- [ ]
 
 ## 終わったと言える条件
 

@@ -296,7 +296,10 @@ async function applySubmissions(
       ),
     );
     const row = task.rows[0];
-    if (!row) throw new Error(`${demo.key}: 宿題「${item.template}」が割り当てられていません（プラン種別を確認）`);
+    if (!row)
+      throw new Error(
+        `${demo.key}: 宿題「${item.template}」が割り当てられていません（プラン種別を確認）`,
+      );
 
     // POST /api/tasks/{taskId}/submit と同じ。text_value は暗号化して渡す（13-1）
     const submitted = await db.asUser(coupleAuthId, () =>
@@ -337,7 +340,11 @@ export async function resetDemo(db: DemoDb): Promise<number> {
   });
 }
 
-export async function seedDemo(db: DemoDb, auth: DemoAuth, options: SeedOptions): Promise<SeedResult> {
+export async function seedDemo(
+  db: DemoDb,
+  auth: DemoAuth,
+  options: SeedOptions,
+): Promise<SeedResult> {
   const plannerAuthId = await auth.ensureUser(DEMO_PLANNER.email, {
     displayName: DEMO_PLANNER.displayName,
     password: options.plannerPassword,
@@ -392,7 +399,10 @@ export async function seedDemo(db: DemoDb, auth: DemoAuth, options: SeedOptions)
     }
 
     if (demo.submissions.length > 0) {
-      if (!coupleAuthId) throw new Error(`${demo.key}: 提出するには新郎新婦のどちらかが登録済みである必要があります`);
+      if (!coupleAuthId)
+        throw new Error(
+          `${demo.key}: 提出するには新郎新婦のどちらかが登録済みである必要があります`,
+        );
       await applySubmissions(db, demo, caseId, coupleAuthId, plannerAuthId);
     }
 

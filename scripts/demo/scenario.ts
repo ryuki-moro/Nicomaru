@@ -122,7 +122,8 @@ export const DEMO_CASES: readonly DemoCase[] = [
         template: 'BGMリクエスト',
         result: 'needs_fix',
         text: '入場：おまかせ',
-        feedback: '入場・歓談・退場それぞれのご希望を教えてください。曲名が未定なら雰囲気だけでも大丈夫です。',
+        feedback:
+          '入場・歓談・退場それぞれのご希望を教えてください。曲名が未定なら雰囲気だけでも大丈夫です。',
       },
       { template: '料理コースの選択', result: 'submitted', selected: 'グレードアップ' },
       { template: '引き出物の選択', result: 'confirmed', selected: 'カタログギフトA' },
@@ -176,8 +177,5 @@ export const DEMO_CASES: readonly DemoCase[] = [
 
 /** すべてのデモ用メールアドレス（作り直しのときに Auth ユーザーを消す対象） */
 export function demoEmails(): string[] {
-  return [
-    DEMO_PLANNER.email,
-    ...DEMO_CASES.flatMap((c) => [c.groom.email, c.bride.email]),
-  ];
+  return [DEMO_PLANNER.email, ...DEMO_CASES.flatMap((c) => [c.groom.email, c.bride.email])];
 }

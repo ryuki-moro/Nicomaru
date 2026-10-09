@@ -21,7 +21,11 @@
     "worker:ai": "tsx worker/ai-worker.ts",
     "bootstrap:admin": "tsx scripts/bootstrap-system-admin.mts",
     "demo:seed": "tsx scripts/seed-demo.mts",
-    "demo:reset": "tsx scripts/seed-demo.mts --reset"
+    "demo:reset": "tsx scripts/seed-demo.mts --reset",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:coverage": "vitest run --config vitest.coverage.config.ts",
+    "progress:check": "node scripts/render-progress.mjs --check"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
@@ -32,20 +36,22 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@eslint/compat": "^2.0.0",
     "@next/eslint-plugin-next": "14.2.35",
-    "@electric-sql/pglite": "^0.5.8",
     "@playwright/test": "^1.56.0",
+    "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^22.15.0",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@tailwindcss/postcss": "4.3.3",
     "@vitejs/plugin-react": "^5.0.0",
+    "@vitest/coverage-v8": "4.1.11",
     "eslint": "^9.39.0",
     "eslint-config-next": "15.5.27",
     "pg": "^8.23.0",
     "postcss": "^8.5.23",
+    "prettier": "3.9.9",
     "tailwindcss": "4.3.3",
     "tsx": "^4.23.12",
     "typescript": "^5.9.3",
