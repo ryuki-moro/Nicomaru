@@ -119,7 +119,11 @@ export function PlanTypeForm({ mode, initial, templates, save }: Props) {
       localErrors.assignments = '宿題テンプレートを1件以上選択してください';
     }
 
-    const rows: { taskTemplateId: string; displayOrder: number; dueOffsetDaysOverride: number | null }[] = [];
+    const rows: {
+      taskTemplateId: string;
+      displayOrder: number;
+      dueOffsetDaysOverride: number | null;
+    }[] = [];
     for (const template of selected) {
       const state = assignments[template.id];
       const rowOrder = parseOptionalInt(state.displayOrder);
@@ -292,7 +296,9 @@ export function PlanTypeForm({ mode, initial, templates, save }: Props) {
                           type="checkbox"
                           aria-label={`${template.name} を割り当てる`}
                           checked={state?.selected ?? false}
-                          onChange={(e) => patchAssignment(template.id, { selected: e.target.checked })}
+                          onChange={(e) =>
+                            patchAssignment(template.id, { selected: e.target.checked })
+                          }
                         />
                       </td>
                       <td>
@@ -310,7 +316,9 @@ export function PlanTypeForm({ mode, initial, templates, save }: Props) {
                           aria-label={`${template.name} の表示順`}
                           disabled={!state?.selected}
                           value={state?.displayOrder ?? ''}
-                          onChange={(e) => patchAssignment(template.id, { displayOrder: e.target.value })}
+                          onChange={(e) =>
+                            patchAssignment(template.id, { displayOrder: e.target.value })
+                          }
                         />
                       </td>
                       <td>
@@ -324,7 +332,9 @@ export function PlanTypeForm({ mode, initial, templates, save }: Props) {
                           aria-label={`${template.name} の逆算日数の上書き`}
                           disabled={!state?.selected}
                           value={state?.override ?? ''}
-                          onChange={(e) => patchAssignment(template.id, { override: e.target.value })}
+                          onChange={(e) =>
+                            patchAssignment(template.id, { override: e.target.value })
+                          }
                         />
                       </td>
                     </tr>

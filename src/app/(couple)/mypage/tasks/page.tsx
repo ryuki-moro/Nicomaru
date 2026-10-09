@@ -96,15 +96,17 @@ export default async function TaskListPage({
         </div>
       ) : tasks.length === 0 ? (
         <EmptyState
-          message={page > 1 ? 'これ以上の宿題はありません。' : 'このタブに表示する宿題はありません。'}
+          message={
+            page > 1 ? 'これ以上の宿題はありません。' : 'このタブに表示する宿題はありません。'
+          }
         />
       ) : (
         <ul className="flex flex-col gap-[10px]">
           {tasks.map((task) => {
             const dueSoon =
-              task.status !== 'confirmed'
-              && task.status !== 'waived'
-              && daysBetween(task.due_date, today) <= DUE_SOON_DAYS;
+              task.status !== 'confirmed' &&
+              task.status !== 'waived' &&
+              daysBetween(task.due_date, today) <= DUE_SOON_DAYS;
             return (
               <li key={task.id}>
                 <Link href={`/mypage/tasks/${task.id}`} className="card flex items-center gap-3">

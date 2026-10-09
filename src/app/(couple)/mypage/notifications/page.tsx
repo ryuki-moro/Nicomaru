@@ -74,9 +74,7 @@ export default async function NotificationsPage({ searchParams }: Props) {
         </div>
       )}
 
-      {!error && visible.length === 0 && (
-        <EmptyState message="いまお知らせはありません。" />
-      )}
+      {!error && visible.length === 0 && <EmptyState message="いまお知らせはありません。" />}
 
       <ul className="space-y-3">
         {visible.map((item) => {
@@ -89,7 +87,10 @@ export default async function NotificationsPage({ searchParams }: Props) {
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-base text-text-primary">{item.title}</span>
                   {item.read_at === null && (
-                    <span className="mt-1 inline-block size-2 shrink-0 rounded-full bg-danger" aria-label="未読" />
+                    <span
+                      className="mt-1 inline-block size-2 shrink-0 rounded-full bg-danger"
+                      aria-label="未読"
+                    />
                   )}
                 </div>
                 <p className="mt-1 text-label text-text-secondary">{item.body}</p>
@@ -110,7 +111,9 @@ export default async function NotificationsPage({ searchParams }: Props) {
             <Link href={`/mypage/notifications?page=${page - 1}`} className="btn-ghost">
               前のページ
             </Link>
-          ) : <span />}
+          ) : (
+            <span />
+          )}
           {hasNext && (
             <Link href={`/mypage/notifications?page=${page + 1}`} className="btn-ghost">
               次のページ

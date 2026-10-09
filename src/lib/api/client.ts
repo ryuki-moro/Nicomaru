@@ -34,15 +34,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function normalizeErrorBody(value: unknown): ApiErrorBody {
   const error = isRecord(value) ? value : {};
   return {
-    code: typeof error.code === 'string' && ERROR_CODES.has(error.code as ErrorCode)
-      ? error.code as ErrorCode
-      : 'INTERNAL_ERROR',
-    message: typeof error.message === 'string' && error.message.trim() !== ''
-      ? error.message
-      : COMMUNICATION_ERROR_MESSAGE,
+    code:
+      typeof error.code === 'string' && ERROR_CODES.has(error.code as ErrorCode)
+        ? (error.code as ErrorCode)
+        : 'INTERNAL_ERROR',
+    message:
+      typeof error.message === 'string' && error.message.trim() !== ''
+        ? error.message
+        : COMMUNICATION_ERROR_MESSAGE,
     details: Array.isArray(error.details)
-      ? error.details.filter((detail): detail is ErrorDetail =>
-        isRecord(detail) && typeof detail.field === 'string' && typeof detail.reason === 'string')
+      ? error.details.filter(
+          (detail): detail is ErrorDetail =>
+            isRecord(detail) &&
+            typeof detail.field === 'string' &&
+            typeof detail.reason === 'string',
+        )
       : [],
   };
 }
@@ -50,7 +56,10 @@ function normalizeErrorBody(value: unknown): ApiErrorBody {
 export class ApiCallError extends Error {
   readonly body: ApiErrorBody;
 
-  constructor(body: unknown, readonly status: number) {
+  constructor(
+    body: unknown,
+    readonly status: number,
+  ) {
     const normalizedBody = normalizeErrorBody(body);
     super(normalizedBody.message);
     this.body = normalizedBody;

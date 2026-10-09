@@ -51,7 +51,10 @@ export const POST = route(async (request: Request) => {
   const check = checkNotificationText(rendered.body);
   if (!check.ok) {
     throw badRequest(
-      check.violations.map((v) => ({ field: 'message', reason: `${v.reason}（「${v.matched}」）` })),
+      check.violations.map((v) => ({
+        field: 'message',
+        reason: `${v.reason}（「${v.matched}」）`,
+      })),
       '通知文面に見直したい表現があります',
     );
   }
@@ -71,19 +74,24 @@ export const POST = route(async (request: Request) => {
   const admin = createSupabaseAdminClient('cron.notifications-dispatch');
   const row = await admin
     .from('notifications')
-    .select('id, venue_id, case_id, recipient_user_id, channel, notification_type, title, body, status')
+    .select(
+      'id, venue_id, case_id, recipient_user_id, channel, notification_type, title, body, status',
+    )
     .eq('id', created.data as string)
     .single();
   if (row.error) throw fromPostgresError(row.error);
 
   const result = await dispatchNotification(admin, row.data as unknown as NotificationRow);
 
-  return ok({
-    notificationId: result.notificationId,
-    channel: result.channel,
-    delivered: result.delivered,
-    // 6-9「上限到達時はメールへ切り替えて送信し、切替をログに残す」。画面にも理由を出す
-    switchedFrom: result.switchedFrom ?? null,
-    reason: result.reason ?? null,
-  }, 201);
+  return ok(
+    {
+      notificationId: result.notificationId,
+      channel: result.channel,
+      delivered: result.delivered,
+      // 6-9「上限到達時はメールへ切り替えて送信し、切替をログに残す」。画面にも理由を出す
+      switchedFrom: result.switchedFrom ?? null,
+      reason: result.reason ?? null,
+    },
+    201,
+  );
 });

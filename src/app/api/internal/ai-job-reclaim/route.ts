@@ -23,23 +23,28 @@ const STALE_MINUTES = 30;
 const MAX_ATTEMPTS = 3;
 
 // 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
-export const POST = route(async () => {
-  const admin = createSupabaseAdminClient('cron.ai-job-reclaim');
+export const POST = route(
+  async () => {
+    const admin = createSupabaseAdminClient('cron.ai-job-reclaim');
 
-  const outcome = await runBatch(admin, 'ai_job_reclaim', async () => {
-    const { data, error } = await admin.rpc('reclaim_stalled_ai_jobs', {
-      p_stale_minutes: STALE_MINUTES,
-      p_max_attempts: MAX_ATTEMPTS,
+    const outcome = await runBatch(admin, 'ai_job_reclaim', async () => {
+      const { data, error } = await admin.rpc('reclaim_stalled_ai_jobs', {
+        p_stale_minutes: STALE_MINUTES,
+        p_max_attempts: MAX_ATTEMPTS,
+      });
+      if (error) throw new Error(error.message);
+
+      const row = (Array.isArray(data) ? data[0] : data) as {
+        requeued: number;
+        failed: number;
+      } | null;
+      const requeued = row?.requeued ?? 0;
+      const failed = row?.failed ?? 0;
+
+      return { targetCount: requeued + failed, detail: { requeued, failed } };
     });
-    if (error) throw new Error(error.message);
 
-    const row = (Array.isArray(data) ? data[0] : data) as
-      { requeued: number; failed: number } | null;
-    const requeued = row?.requeued ?? 0;
-    const failed = row?.failed ?? 0;
-
-    return { targetCount: requeued + failed, detail: { requeued, failed } };
-  });
-
-  return ok({ processed: outcome.targetCount, ...outcome.detail });
-}, { source: 'internal-cron' });
+    return ok({ processed: outcome.targetCount, ...outcome.detail });
+  },
+  { source: 'internal-cron' },
+);

@@ -73,7 +73,10 @@ export function PasswordForms({ mode }: { mode: Mode }) {
       if (!linkError) {
         if (authCode) await supabase.auth.exchangeCodeForSession(authCode);
         else if (accessToken && refreshToken) {
-          await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+          await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
         }
       }
 
@@ -108,8 +111,8 @@ export function PasswordForms({ mode }: { mode: Mode }) {
       await api.post('/api/auth/password-reset', { email });
       // 送信有無で応答を変えないため、画面の文言も「送った場合は届く」という形にする
       setNotice(
-        `${email} にご登録がある場合、再設定用のリンクをお送りしました。`
-        + 'メールをご確認ください。',
+        `${email} にご登録がある場合、再設定用のリンクをお送りしました。` +
+          'メールをご確認ください。',
       );
     } catch (cause) {
       if (cause instanceof ApiCallError) {
@@ -138,19 +141,8 @@ export function PasswordForms({ mode }: { mode: Mode }) {
 
     setPending(true);
     const supabase = createSupabaseBrowserClient();
-    const { error: updateError } = await supabase.auth.updateUser({ password: parsed.data.password });
-
-    if (updateError) {
-      setPending(false);
-      setError(
-        updateError.code === 'weak_password'
-          ? 'このパスワードは安全に使えないことが分かっています。別のパスワードをご入力ください'
-          : 'パスワードを変更できませんでした。リンクの有効期限が切れている可能性があります',
-      );
-      return;
-    }
-
     try {
+      await api.post('/api/auth/password-update', parsed.data);
       if (mode === 'invite') {
         // 初回設定の完了を user_profiles.status へ反映する（6-3-1）。
         // これを行わないと current_app_user() が0行を返し続け、恒久的にログインできない。
@@ -161,7 +153,7 @@ export function PasswordForms({ mode }: { mode: Mode }) {
       setError(
         cause instanceof ApiCallError
           ? cause.message
-          : 'アカウントの有効化に失敗しました。管理者にお問い合わせください',
+          : 'パスワード設定を完了できませんでした。時間をおいてお試しください',
       );
       return;
     }
@@ -223,9 +215,10 @@ export function PasswordForms({ mode }: { mode: Mode }) {
                 placeholder="you@example.com"
                 value={email}
                 aria-invalid={fieldErrors.email ? true : undefined}
+                aria-describedby={fieldErrors.email ? 'reset-email-error' : undefined}
                 onChange={(event) => setEmail(event.target.value)}
               />
-              <FieldError message={fieldErrors.email} />
+              <FieldError id="reset-email-error" message={fieldErrors.email} />
             </div>
             <button type="submit" className="btn-primary" disabled={pending}>
               再設定リンクを送信
@@ -253,9 +246,10 @@ export function PasswordForms({ mode }: { mode: Mode }) {
                 disabled={pending}
                 value={password}
                 aria-invalid={fieldErrors.password ? true : undefined}
+                aria-describedby={fieldErrors.password ? 'new-password-error' : undefined}
                 onChange={(event) => setPassword(event.target.value)}
               />
-              <FieldError message={fieldErrors.password} />
+              <FieldError id="new-password-error" message={fieldErrors.password} />
             </div>
 
             <div>
@@ -271,9 +265,12 @@ export function PasswordForms({ mode }: { mode: Mode }) {
                 disabled={pending}
                 value={passwordConfirm}
                 aria-invalid={fieldErrors.passwordConfirm ? true : undefined}
+                aria-describedby={
+                  fieldErrors.passwordConfirm ? 'new-password-confirm-error' : undefined
+                }
                 onChange={(event) => setPasswordConfirm(event.target.value)}
               />
-              <FieldError message={fieldErrors.passwordConfirm} />
+              <FieldError id="new-password-confirm-error" message={fieldErrors.passwordConfirm} />
             </div>
 
             <button type="submit" className="btn-primary" disabled={pending}>

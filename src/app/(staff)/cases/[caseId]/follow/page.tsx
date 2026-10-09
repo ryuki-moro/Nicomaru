@@ -97,7 +97,7 @@ export default async function FollowLogPage({
   const hasNext = fetched.length > LIST_PAGE_SIZE;
   const logs = fetched.slice(0, LIST_PAGE_SIZE);
   const pageHref = (target: number) =>
-    (target > 1 ? `/cases/${caseId}/follow?page=${target}` : `/cases/${caseId}/follow`);
+    target > 1 ? `/cases/${caseId}/follow?page=${target}` : `/cases/${caseId}/follow`;
 
   // user_profiles の select ポリシーは「本人または同式場の admin」に限られるため、
   // planner が他プランナーの表示名を引くと 0 行になる。埋め込みではなく別クエリにして
@@ -160,9 +160,7 @@ export default async function FollowLogPage({
         {logs.length === 0 ? (
           <div className="mt-2">
             <EmptyState
-              message={
-                page > 1 ? 'これ以上の記録はありません。' : 'まだフォロー記録はありません。'
-              }
+              message={page > 1 ? 'これ以上の記録はありません。' : 'まだフォロー記録はありません。'}
             />
           </div>
         ) : (

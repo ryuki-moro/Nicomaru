@@ -28,8 +28,8 @@ export const PATCH = route<[RouteContext]>(async (request, context) => {
     .eq('id', venueId)
     .select('id, name, code, contact_email, active, updated_at')
     .maybeSingle();
-  if (error) throw error.code === '22P02'
-    ? notFound('式場が見つかりません') : fromPostgresError(error);
+  if (error)
+    throw error.code === '22P02' ? notFound('式場が見つかりません') : fromPostgresError(error);
   if (!data) throw notFound('式場が見つかりません');
 
   // 実行者はRPC内のauth.uid()から解決。氏名・メールの値は監査ログへ複製しない。

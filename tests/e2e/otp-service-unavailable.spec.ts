@@ -3,7 +3,9 @@ import { expect, test } from '@playwright/test';
 
 const UNAVAILABLE = '現在、認証サービスに接続できません。少し待ってからもう一度お試しください';
 
-test('認証サービスの接続失敗後、入力を保持してログインリンクの送信をやり直せる', async ({ page }) => {
+test('認証サービスの接続失敗後、入力を保持してログインリンクの送信をやり直せる', async ({
+  page,
+}) => {
   const email = 'otp-retry@example.invalid';
   const submittedEmails: string[] = [];
   const unexpectedAuthRequests: string[] = [];
@@ -23,7 +25,9 @@ test('認証サービスの接続失敗後、入力を保持してログイン�
       await route.fulfill({
         status: 503,
         contentType: 'application/json',
-        body: JSON.stringify({ error: { code: 'SERVICE_UNAVAILABLE', message: UNAVAILABLE, details: [] } }),
+        body: JSON.stringify({
+          error: { code: 'SERVICE_UNAVAILABLE', message: UNAVAILABLE, details: [] },
+        }),
       });
       return;
     }
@@ -50,7 +54,9 @@ test('認証サービスの接続失敗後、入力を保持してログイン�
 
   await expect(codeInput).toBeVisible();
   await expect(codeInput.getByRole('textbox')).toHaveCount(6);
-  await expect(page.getByRole('status')).toContainText(`${email} 宛にログインリンクと6桁のコードをお送りしました。`);
+  await expect(page.getByRole('status')).toContainText(
+    `${email} 宛にログインリンクと6桁のコードをお送りしました。`,
+  );
   await expect(failureAlert).toHaveCount(0);
   await expect(emailInput).toHaveValue(email);
   await expect(emailInput).toBeDisabled();

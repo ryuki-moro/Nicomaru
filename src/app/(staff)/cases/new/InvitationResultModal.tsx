@@ -48,8 +48,6 @@ interface Props {
   assignError: string | null;
 }
 
-
-
 export function InvitationResultModal({
   caseId,
   caseCode,
@@ -81,10 +79,9 @@ export function InvitationResultModal({
     if (busyId) return;
     setBusyId(id);
     try {
-      const result = await api.post<SendResponse>(
-        `/api/cases/${caseId}/invitations/${id}/send`,
-        { channel },
-      );
+      const result = await api.post<SendResponse>(`/api/cases/${caseId}/invitations/${id}/send`, {
+        channel,
+      });
       setItems((prev) =>
         prev.map((item) =>
           item.id === id
@@ -97,8 +94,8 @@ export function InvitationResultModal({
                 channel,
                 note: result.delivered
                   ? `${CONTACT_CHANNEL_LABEL[channel]}で送信しました。`
-                  : (result.skippedReason ?? '送信は行われませんでした。')
-                    + ' 新しいURLを発行しましたので、表示中のURLをお使いください。',
+                  : (result.skippedReason ?? '送信は行われませんでした。') +
+                    ' 新しいURLを発行しましたので、表示中のURLをお使いください。',
               }
             : item,
         ),

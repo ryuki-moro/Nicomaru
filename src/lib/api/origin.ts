@@ -16,11 +16,14 @@ export function requireSameOrigin(request: Request): void {
   }
 
   // Origin は scheme + host + port のみ。null・パス・資格情報・複数Originも拒否する。
-  if (!['http:', 'https:'].includes(supplied.protocol)
-    || !['http:', 'https:'].includes(expected.protocol)
-    || expected.username !== '' || expected.password !== ''
-    || supplied.origin !== origin
-    || supplied.origin !== expected.origin) {
+  if (
+    !['http:', 'https:'].includes(supplied.protocol) ||
+    !['http:', 'https:'].includes(expected.protocol) ||
+    expected.username !== '' ||
+    expected.password !== '' ||
+    supplied.origin !== origin ||
+    supplied.origin !== expected.origin
+  ) {
     throw forbidden('この送信元からの更新は許可されていません');
   }
 }

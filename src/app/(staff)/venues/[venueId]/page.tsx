@@ -49,9 +49,15 @@ export default async function VenueEditPage({ params }: { params: Promise<{ venu
     <div className="space-y-4">
       <nav aria-label="パンくず">
         <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li><Link href="/venues" className="text-link hover:underline">式場一覧</Link></li>
+          <li>
+            <Link href="/venues" className="text-link hover:underline">
+              式場一覧
+            </Link>
+          </li>
           <li aria-hidden>/</li>
-          <li aria-current="page" className="min-w-0 max-w-full break-all">{venue?.name ?? '式場の詳細・変更'}</li>
+          <li aria-current="page" className="min-w-0 max-w-full break-all">
+            {venue?.name ?? '式場の詳細・変更'}
+          </li>
         </ol>
       </nav>
 
@@ -63,16 +69,22 @@ export default async function VenueEditPage({ params }: { params: Promise<{ venu
             式場情報を取得できませんでした。時間をおいて再読み込みしてください。
           </p>
           <div className="flex flex-wrap gap-3">
-            <a href={`/venues/${venueId}`} className="btn-primary w-auto px-5 text-center">再読み込み</a>
-            <Link href="/venues" className="btn-secondary w-auto px-5 text-center">式場一覧へ戻る</Link>
+            <a href={`/venues/${venueId}`} className="btn-primary w-auto px-5 text-center">
+              再読み込み
+            </a>
+            <Link href="/venues" className="btn-secondary w-auto px-5 text-center">
+              式場一覧へ戻る
+            </Link>
           </div>
         </div>
-      ) : venue && (
-        <VenueEditForm
-          venueId={venue.id}
-          code={venue.code}
-          initial={{ name: venue.name, contactEmail: venue.contact_email, active: venue.active }}
-        />
+      ) : (
+        venue && (
+          <VenueEditForm
+            venueId={venue.id}
+            code={venue.code}
+            initial={{ name: venue.name, contactEmail: venue.contact_email, active: venue.active }}
+          />
+        )
       )}
     </div>
   );

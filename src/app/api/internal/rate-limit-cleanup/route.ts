@@ -24,37 +24,41 @@ const RETENTION_DAYS = 7;
 const QUOTA_RETENTION_DAYS = 62;
 
 // 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
-export const POST = route(async () => {
-  const admin = createSupabaseAdminClient('auth.rate-limit');
-  const day = 24 * 60 * 60 * 1000;
+export const POST = route(
+  async () => {
+    const admin = createSupabaseAdminClient('auth.rate-limit');
+    const day = 24 * 60 * 60 * 1000;
 
-  const outcome = await runBatch(admin, 'rate_limit_cleanup', async () => {
-    const rateCutoff = new Date(Date.now() - RETENTION_DAYS * day).toISOString();
-    const rate = await admin
-      .from('auth_rate_limits')
-      .delete()
-      .lt('window_start', rateCutoff)
-      .select('id');
-    if (rate.error) throw new Error(rate.error.message);
+    const outcome = await runBatch(admin, 'rate_limit_cleanup', async () => {
+      const rateCutoff = new Date(Date.now() - RETENTION_DAYS * day).toISOString();
+      const rate = await admin
+        .from('auth_rate_limits')
+        .delete()
+        .lt('window_start', rateCutoff)
+        .select('id');
+      if (rate.error) throw new Error(rate.error.message);
 
-    const quotaCutoff = new Date(Date.now() - QUOTA_RETENTION_DAYS * day)
-      .toISOString().slice(0, 10);
-    const quota = await admin
-      .from('notification_quota_counters')
-      .delete()
-      .lt('window_start', quotaCutoff)
-      .select('id');
-    if (quota.error) throw new Error(quota.error.message);
+      const quotaCutoff = new Date(Date.now() - QUOTA_RETENTION_DAYS * day)
+        .toISOString()
+        .slice(0, 10);
+      const quota = await admin
+        .from('notification_quota_counters')
+        .delete()
+        .lt('window_start', quotaCutoff)
+        .select('id');
+      if (quota.error) throw new Error(quota.error.message);
 
-    const removed = (rate.data ?? []).length + (quota.data ?? []).length;
-    return {
-      targetCount: removed,
-      detail: {
-        authRateLimits: (rate.data ?? []).length,
-        notificationQuota: (quota.data ?? []).length,
-      },
-    };
-  });
+      const removed = (rate.data ?? []).length + (quota.data ?? []).length;
+      return {
+        targetCount: removed,
+        detail: {
+          authRateLimits: (rate.data ?? []).length,
+          notificationQuota: (quota.data ?? []).length,
+        },
+      };
+    });
 
-  return ok({ removed: outcome.targetCount });
-}, { source: 'internal-cron' });
+    return ok({ removed: outcome.targetCount });
+  },
+  { source: 'internal-cron' },
+);

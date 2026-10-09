@@ -29,7 +29,6 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { reviewSubmissionSchema } from '@/lib/validation';
 import { isUuid } from '@/lib/uuid';
 
-
 /** review_submission() の戻り。 */
 interface ReviewResult {
   submission_id: string;
@@ -68,8 +67,8 @@ export const POST = route(
       direction: 'outbound',
       source: 'review',
       summary:
-        `宿題「${result.task_title}」を${REVIEW_STATUS_LABEL[input.decision]}にしました`
-        + (input.decision === 'needs_fix' && input.comment ? `：${input.comment}` : ''),
+        `宿題「${result.task_title}」を${REVIEW_STATUS_LABEL[input.decision]}にしました` +
+        (input.decision === 'needs_fix' && input.comment ? `：${input.comment}` : ''),
     });
 
     return ok({

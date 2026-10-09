@@ -34,9 +34,7 @@ export interface AppUser {
  *   active    … 通常
  */
 export type ResolvedUser =
-  | { state: 'anonymous' }
-  | { state: 'inactive' }
-  | { state: 'active'; user: AppUser };
+  { state: 'anonymous' } | { state: 'inactive' } | { state: 'active'; user: AppUser };
 
 /**
  * セッションを1回だけ解決する。
@@ -121,7 +119,7 @@ export function landingPathFor(role: Role): string {
  * 画面（Server Component）から呼ぶ入口（4-2／4-3）。
  *
  * 未ログインは /login、権限が足りなければそのロールの着地点（4-2）へ送る。
- * 着地点が無い（couple が staff 画面を開いたなど）場合は P04 の 403 へ送る。
+ * 各ロールの着地点は landingPathFor に集約する。
  *
  * (staff)/layout.tsx が「!user → /login」を守っているのに、
  * 配下の画面が同じ判定を書き直していたため、書き方が画面ごとに割れていた
@@ -135,9 +133,7 @@ export async function requirePageUser(...roles: Role[]): Promise<AppUser> {
 
   const { user } = resolved;
   if (roles.length > 0 && !roles.includes(user.role)) {
-    const landing = landingPathFor(user.role);
-    // 自分の着地点が今いる画面と同じなら無限リダイレクトになるので P04 へ倒す
-    redirect(landing === '/' ? '/error?code=403' : landing);
+    redirect(landingPathFor(user.role));
   }
   return user;
 }

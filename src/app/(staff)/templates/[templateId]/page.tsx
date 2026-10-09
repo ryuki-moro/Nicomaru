@@ -14,11 +14,7 @@ import { notFound, redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
 import { getAppUser, landingPathFor } from '@/lib/auth/session';
-import {
-  type AllowedFileType,
-  type Importance,
-  type SubmissionFormat,
-} from '@/lib/constants';
+import { type AllowedFileType, type Importance, type SubmissionFormat } from '@/lib/constants';
 import { fromPostgresError } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { taskTemplateSchema, toErrorDetails } from '@/lib/validation';
@@ -89,18 +85,19 @@ async function saveTemplate(templateId: string, values: unknown): Promise<SaveTe
   };
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = templateId === 'new'
-    ? await supabase
-      .from('task_templates')
-      .insert({ ...row, venue_id: user.venueId })
-      .select('id')
-      .single()
-    : await supabase
-      .from('task_templates')
-      .update(row)
-      .eq('id', templateId)
-      .select('id')
-      .single();
+  const { data, error } =
+    templateId === 'new'
+      ? await supabase
+          .from('task_templates')
+          .insert({ ...row, venue_id: user.venueId })
+          .select('id')
+          .single()
+      : await supabase
+          .from('task_templates')
+          .update(row)
+          .eq('id', templateId)
+          .select('id')
+          .single();
 
   if (error) return mapWriteError(error);
 
@@ -129,7 +126,9 @@ export default async function TemplateEditPage({
     const { data, error } = await supabase
       .from('task_templates')
       // 文字列連結にすると PostgREST の型推論が効かなくなるため、1つのリテラルで書く
-      .select('id, name, description, submission_format, allowed_file_types, default_options, due_offset_days, importance, is_required, active')
+      .select(
+        'id, name, description, submission_format, allowed_file_types, default_options, due_offset_days, importance, is_required, active',
+      )
       .eq('id', templateId)
       .maybeSingle();
 

@@ -70,16 +70,16 @@ export function UserForm({ roleLabel, fixedVenueName, venueOptions }: Props) {
 
     setSaving(true);
     try {
-      const response = await api.post<{ user: { displayName: string; email: string }; mailDelivered: boolean }>(
-        '/api/admin/users',
-        {
-          displayName,
-          email,
-          phone: phone.trim() === '' ? null : phone,
-          // admin が呼ぶ場合はサーバー側で無視され、呼び出し元の venue_id に固定される
-          ...(needsVenueChoice ? { venueId } : {}),
-        },
-      );
+      const response = await api.post<{
+        user: { displayName: string; email: string };
+        mailDelivered: boolean;
+      }>('/api/admin/users', {
+        displayName,
+        email,
+        phone: phone.trim() === '' ? null : phone,
+        // admin が呼ぶ場合はサーバー側で無視され、呼び出し元の venue_id に固定される
+        ...(needsVenueChoice ? { venueId } : {}),
+      });
       setCreated({
         displayName: response.user.displayName,
         email: response.user.email,

@@ -16,11 +16,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import {
-  AI_OUTPUT_SCHEMAS,
-  type AiJobType,
-  type AiOutput,
-} from '@/lib/ai/schemas';
+import { AI_OUTPUT_SCHEMAS, type AiJobType, type AiOutput } from '@/lib/ai/schemas';
 
 /** ai_jobs の状態（5-3 の CHECK と一致）。 */
 export type AiJobStatus = 'queued' | 'processing' | 'done' | 'failed' | 'confirmed' | 'discarded';
@@ -41,8 +37,8 @@ export interface AiJobRow {
 
 /** 画面・APIが select する列。reviewed_output を落とすと採用済みの修正が見えなくなる。 */
 export const AI_JOB_COLUMNS =
-  'id, case_id, related_task_id, job_type, status, output, reviewed_output,'
-  + ' error_message, created_at, finished_at';
+  'id, case_id, related_task_id, job_type, status, output, reviewed_output,' +
+  ' error_message, created_at, finished_at';
 
 /** 生成待ち・生成中。画面は「依頼中」と出す。 */
 export const AI_JOB_PENDING: readonly AiJobStatus[] = ['queued', 'processing'];

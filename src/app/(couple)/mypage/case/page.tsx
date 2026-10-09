@@ -151,9 +151,7 @@ export default async function CoupleCasePage() {
       <section className="card flex items-center justify-between gap-3">
         <span className="text-label text-text-secondary">宿題の進みぐあい</span>
         <span className="text-title font-bold text-text-primary">
-          {total === 0
-            ? '準備中'
-            : `${done} / ${total} 件（${Math.round((done / total) * 100)}%）`}
+          {total === 0 ? '準備中' : `${done} / ${total} 件（${Math.round((done / total) * 100)}%）`}
         </span>
       </section>
 

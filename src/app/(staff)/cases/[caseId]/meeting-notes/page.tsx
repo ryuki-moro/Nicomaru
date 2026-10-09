@@ -20,12 +20,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
 import { TaskProposalPanel } from './TaskProposalPanel';
-import {
-  AI_JOB_COLUMNS,
-  fetchAiAssistStatus,
-  trimForAi,
-  type AiJobRow,
-} from '@/lib/ai/assist';
+import { AI_JOB_COLUMNS, fetchAiAssistStatus, trimForAi, type AiJobRow } from '@/lib/ai/assist';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { INPUT_LIMITS, isStaff } from '@/lib/constants';
 import { formatDate, formatDateTime, todayInJst } from '@/lib/format';
@@ -119,16 +114,21 @@ export default async function MeetingNotesPage({
     .maybeSingle();
   if (!caseResult.data) redirect('/error?code=404');
   const target = caseResult.data as {
-    id: string; case_code: string; wedding_date: string; archived_at: string | null;
+    id: string;
+    case_code: string;
+    wedding_date: string;
+    archived_at: string | null;
   };
 
   const [notes, jobs, aiStatus] = await Promise.all([
-    supabase.from('meeting_notes')
+    supabase
+      .from('meeting_notes')
       .select('id, meeting_date, participants, body, created_at, user_profiles ( display_name )')
       .eq('case_id', caseId)
       .order('created_at', { ascending: false })
       .limit(10),
-    supabase.from('ai_jobs')
+    supabase
+      .from('ai_jobs')
       .select(AI_JOB_COLUMNS)
       .eq('case_id', caseId)
       .eq('job_type', 'task_extraction')
@@ -146,7 +146,11 @@ export default async function MeetingNotesPage({
     <div className="space-y-5">
       <nav aria-label="パンくず">
         <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li><Link href="/cases" className="text-link hover:underline">案件一覧</Link></li>
+          <li>
+            <Link href="/cases" className="text-link hover:underline">
+              案件一覧
+            </Link>
+          </li>
           <li aria-hidden>/</li>
           <li>
             <Link href={`/cases/${caseId}`} className="text-link hover:underline">
@@ -177,7 +181,9 @@ export default async function MeetingNotesPage({
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="field-label" htmlFor="meetingDate">打ち合わせ日</label>
+                <label className="field-label" htmlFor="meetingDate">
+                  打ち合わせ日
+                </label>
                 <input
                   id="meetingDate"
                   name="meetingDate"
@@ -187,7 +193,9 @@ export default async function MeetingNotesPage({
                 />
               </div>
               <div>
-                <label className="field-label" htmlFor="participants">参加者</label>
+                <label className="field-label" htmlFor="participants">
+                  参加者
+                </label>
                 <input
                   id="participants"
                   name="participants"
@@ -200,7 +208,9 @@ export default async function MeetingNotesPage({
             </div>
 
             <div>
-              <label className="field-label" htmlFor="body">メモ（必須）</label>
+              <label className="field-label" htmlFor="body">
+                メモ（必須）
+              </label>
               <textarea
                 id="body"
                 name="body"
@@ -212,7 +222,9 @@ export default async function MeetingNotesPage({
               />
             </div>
 
-            <button type="submit" className="btn-primary sm:w-48">記録して案を作る</button>
+            <button type="submit" className="btn-primary sm:w-48">
+              記録して案を作る
+            </button>
           </form>
         </section>
       )}
@@ -233,7 +245,9 @@ export default async function MeetingNotesPage({
             {noteRows.map((note) => (
               <li key={note.id} className="border-b border-border-light pb-3 last:border-b-0">
                 <p className="text-caption text-text-muted">
-                  {note.meeting_date ? formatDate(note.meeting_date) : formatDateTime(note.created_at)}
+                  {note.meeting_date
+                    ? formatDate(note.meeting_date)
+                    : formatDateTime(note.created_at)}
                   {note.participants && ` ／ ${note.participants}`}
                   {note.user_profiles && ` ／ ${note.user_profiles.display_name}`}
                 </p>

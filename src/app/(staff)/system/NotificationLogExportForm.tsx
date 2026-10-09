@@ -63,9 +63,11 @@ export function NotificationLogExportForm() {
         // ブラウザがダウンロードを開始してから、不要になったURLを解放する。
         window.setTimeout(() => URL.revokeObjectURL(url), 0);
       }
-      setNotice(response.headers.get('x-truncated') === 'true'
-        ? '対象が10,000件を超えたため、最新10,000件を出力しました。すべて取得する場合は期間を絞って再度出力してください。'
-        : 'CSVのダウンロードを開始しました。');
+      setNotice(
+        response.headers.get('x-truncated') === 'true'
+          ? '対象が10,000件を超えたため、最新10,000件を出力しました。すべて取得する場合は期間を絞って再度出力してください。'
+          : 'CSVのダウンロードを開始しました。',
+      );
     } catch (error) {
       handleApiError(error, router, { onSummary: setSummary, onFieldErrors: setFieldErrors });
     } finally {
@@ -91,7 +93,9 @@ export function NotificationLogExportForm() {
       <ErrorSummary message={summary} />
       <fieldset disabled={busy} className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label htmlFor="notification-log-from" className="field-label">開始日（任意）</label>
+          <label htmlFor="notification-log-from" className="field-label">
+            開始日（任意）
+          </label>
           <input
             id="notification-log-from"
             name="from"
@@ -102,10 +106,14 @@ export function NotificationLogExportForm() {
             aria-invalid={fieldErrors.from ? true : undefined}
             aria-describedby="notification-log-period-help notification-log-from-error"
           />
-          <div id="notification-log-from-error"><FieldError message={fieldErrors.from} /></div>
+          <div id="notification-log-from-error">
+            <FieldError message={fieldErrors.from} />
+          </div>
         </div>
         <div>
-          <label htmlFor="notification-log-to" className="field-label">終了日（任意）</label>
+          <label htmlFor="notification-log-to" className="field-label">
+            終了日（任意）
+          </label>
           <input
             id="notification-log-to"
             name="to"
@@ -116,13 +124,19 @@ export function NotificationLogExportForm() {
             aria-invalid={fieldErrors.to ? true : undefined}
             aria-describedby="notification-log-period-help notification-log-to-error"
           />
-          <div id="notification-log-to-error"><FieldError message={fieldErrors.to} /></div>
+          <div id="notification-log-to-error">
+            <FieldError message={fieldErrors.to} />
+          </div>
         </div>
       </fieldset>
       <button type="submit" className="btn-secondary w-auto" disabled={busy}>
         {busy ? '取得中…' : 'ログをCSV出力'}
       </button>
-      {notice && <p role="status" className="banner-info">{notice}</p>}
+      {notice && (
+        <p role="status" className="banner-info">
+          {notice}
+        </p>
+      )}
     </form>
   );
 }

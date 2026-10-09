@@ -31,13 +31,16 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 export const runtime = 'nodejs';
 
 // 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
-export const POST = route(async () => {
-  const admin = createSupabaseAdminClient('cron.case-purge');
-  const outcome = await runBatch(admin, 'case_purge', () => purgeCases(admin));
-  return ok({
-    purged: outcome.targetCount,
-    filesRemoved: outcome.detail?.filesRemoved,
-    aiPayloadsCleared: outcome.detail?.aiPayloadsCleared,
-    aiRowsDeleted: outcome.detail?.aiRowsDeleted,
-  });
-}, { source: 'internal-cron' });
+export const POST = route(
+  async () => {
+    const admin = createSupabaseAdminClient('cron.case-purge');
+    const outcome = await runBatch(admin, 'case_purge', () => purgeCases(admin));
+    return ok({
+      purged: outcome.targetCount,
+      filesRemoved: outcome.detail?.filesRemoved,
+      aiPayloadsCleared: outcome.detail?.aiPayloadsCleared,
+      aiRowsDeleted: outcome.detail?.aiRowsDeleted,
+    });
+  },
+  { source: 'internal-cron' },
+);

@@ -16,7 +16,6 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { followLogSchema } from '@/lib/validation';
 import { isUuid } from '@/lib/uuid';
 
-
 const SELECT_COLUMNS = 'id, case_id, planner_id, method, note, followed_at, created_at';
 
 /** RLS（follow_logs_all）は accessible_case_ids() を条件に持つため、範囲外の案件は 0 行になる。 */

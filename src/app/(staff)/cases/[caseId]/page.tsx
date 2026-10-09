@@ -39,8 +39,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-const CASE_SELECT =
-  `id, case_code, wedding_date, wedding_time, contact_channel, status, guest_count,
+const CASE_SELECT = `id, case_code, wedding_date, wedding_time, contact_channel, status, guest_count,
    venue_room, plan_type_id, archived_at,
    plan_types ( name ),
    user_profiles ( display_name ),
@@ -86,11 +85,7 @@ interface CaseRow {
   }[];
 }
 
-export default async function CaseDetailPage({
-  params,
-}: {
-  params: Promise<{ caseId: string }>;
-}) {
+export default async function CaseDetailPage({ params }: { params: Promise<{ caseId: string }> }) {
   const user = await requirePageUser();
 
   const { caseId } = await params;
@@ -153,9 +148,9 @@ export default async function CaseDetailPage({
     // 一覧の既定並び順は ORDER BY due_date, display_order, id（4-3）
     .sort(
       (a, b) =>
-        a.due_date.localeCompare(b.due_date)
-        || a.display_order - b.display_order
-        || a.id.localeCompare(b.id),
+        a.due_date.localeCompare(b.due_date) ||
+        a.display_order - b.display_order ||
+        a.id.localeCompare(b.id),
     )
     .map((task) => ({
       id: task.id,
@@ -194,7 +189,10 @@ export default async function CaseDetailPage({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="section-head">
-          {partners.map((partner) => partner.fullName).filter(Boolean).join('・') || '案件詳細'}
+          {partners
+            .map((partner) => partner.fullName)
+            .filter(Boolean)
+            .join('・') || '案件詳細'}
         </h1>
         <div className="flex flex-wrap gap-2">
           {!archived && (
@@ -209,7 +207,10 @@ export default async function CaseDetailPage({
             </Link>
           )}
           {!archived && (
-            <Link href={`/cases/${row.id}/follow`} className="btn-secondary w-auto px-5 text-center">
+            <Link
+              href={`/cases/${row.id}/follow`}
+              className="btn-secondary w-auto px-5 text-center"
+            >
               フォロー記録
             </Link>
           )}
@@ -224,7 +225,10 @@ export default async function CaseDetailPage({
             </Link>
           )}
           {isAdmin && !archived && (
-            <Link href={`/cases/${row.id}/archive`} className="btn-secondary w-auto px-5 text-center">
+            <Link
+              href={`/cases/${row.id}/archive`}
+              className="btn-secondary w-auto px-5 text-center"
+            >
               アーカイブ
             </Link>
           )}

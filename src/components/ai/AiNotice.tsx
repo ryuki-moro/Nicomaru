@@ -50,7 +50,13 @@ export function AiHeading({
  * 「使えない」だけでなく「手でやれば済む」ことまで書く。
  * AI が落ちていても業務が止まらないことが 7-1 の趣旨のため。
  */
-export function AiUnavailable({ lastSeenAt, fallback }: { lastSeenAt: string | null; fallback: string }) {
+export function AiUnavailable({
+  lastSeenAt,
+  fallback,
+}: {
+  lastSeenAt: string | null;
+  fallback: string;
+}) {
   return (
     <div className="banner-info">
       <div>

@@ -12,7 +12,13 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { decryptPii } from '@/lib/crypto';
 
 import { DEMO_CASES, demoEmails } from '../../scripts/demo/scenario';
-import { addDays, resetDemo, seedDemo, type DemoAuth, type SeedResult } from '../../scripts/demo/seed';
+import {
+  addDays,
+  resetDemo,
+  seedDemo,
+  type DemoAuth,
+  type SeedResult,
+} from '../../scripts/demo/seed';
 import { TestDb } from './harness';
 
 const TODAY = '2026-11-01';
@@ -26,7 +32,10 @@ function stubAuth(target: TestDb): DemoAuth {
   return {
     async ensureUser(email) {
       return target.asOwner(async () => {
-        const found = await target.query<{ id: string }>('select id from auth.users where email = $1', [email]);
+        const found = await target.query<{ id: string }>(
+          'select id from auth.users where email = $1',
+          [email],
+        );
         if (found.rows[0]) return found.rows[0].id;
         const created = await target.query<{ id: string }>(
           'insert into auth.users (email) values ($1) returning id',
@@ -42,7 +51,9 @@ const options = { plannerPassword: 'unused-in-test', today: TODAY, appBaseUrl: B
 
 async function caseIdOf(key: string): Promise<string> {
   const res = await db.asOwner(() =>
-    db.query<{ id: string }>('select id from wedding_cases where notes like $1', [`[demo:${key}]%`]),
+    db.query<{ id: string }>('select id from wedding_cases where notes like $1', [
+      `[demo:${key}]%`,
+    ]),
   );
   return res.rows[0].id;
 }
@@ -99,7 +110,9 @@ describe('模擬データの中身', () => {
   it('未登録の側には招待URLが返り、登録済みの側には返らない', () => {
     const demo01 = first.created.find((c) => c.key === 'demo-01')!;
     expect(demo01.pendingInviteUrls.map((u) => u.partnerRole)).toEqual(['groom']);
-    expect(demo01.pendingInviteUrls[0].url).toMatch(new RegExp(`^${BASE_URL}/register/[A-Za-z0-9_-]+$`));
+    expect(demo01.pendingInviteUrls[0].url).toMatch(
+      new RegExp(`^${BASE_URL}/register/[A-Za-z0-9_-]+$`),
+    );
     const demo05 = first.created.find((c) => c.key === 'demo-05')!;
     expect(demo05.pendingInviteUrls).toHaveLength(2);
     expect(demo05.registeredEmails).toEqual([]);
@@ -143,7 +156,9 @@ describe('デモで見せる状態', () => {
 
   it('新郎新婦は自分の案件だけを見られる（RLS がそのまま効いている）', async () => {
     const auth = await db.asOwner(() =>
-      db.query<{ id: string }>('select id from auth.users where email = $1', [DEMO_CASES[1].groom.email]),
+      db.query<{ id: string }>('select id from auth.users where email = $1', [
+        DEMO_CASES[1].groom.email,
+      ]),
     );
     const visible = await db.asUser(auth.rows[0].id, () =>
       db.query<{ notes: string | null; id: string }>('select id from wedding_cases'),
@@ -175,13 +190,19 @@ describe('作り直し', () => {
     );
     expect(remaining.rows).toHaveLength(1);
 
-    const users = await db.asOwner(() => db.query<{ n: number }>('select count(*)::int as n from auth.users'));
+    const users = await db.asOwner(() =>
+      db.query<{ n: number }>('select count(*)::int as n from auth.users'),
+    );
     const recreated = await seedDemo(db, stubAuth(db), { ...options, today: '2026-12-01' });
     expect(recreated.created).toHaveLength(DEMO_CASES.length);
-    expect(recreated.created[0].weddingDate).toBe(addDays('2026-12-01', DEMO_CASES[0].daysUntilWedding));
+    expect(recreated.created[0].weddingDate).toBe(
+      addDays('2026-12-01', DEMO_CASES[0].daysUntilWedding),
+    );
 
     // アカウントは使い回すので増えない
-    const usersAfter = await db.asOwner(() => db.query<{ n: number }>('select count(*)::int as n from auth.users'));
+    const usersAfter = await db.asOwner(() =>
+      db.query<{ n: number }>('select count(*)::int as n from auth.users'),
+    );
     expect(usersAfter.rows[0].n).toBe(users.rows[0].n);
   });
 });

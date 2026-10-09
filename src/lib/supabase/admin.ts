@@ -14,13 +14,13 @@ import { createAuthRateLimitFetch } from './auth-rate-limit-fetch';
 /** 表6-4 に列挙された使用箇所と、そのときAPI層で担保すべき権限検証。 */
 export const SERVICE_ROLE_USE_CASES = {
   'auth.initial-register':
-    'case_invitations の token_hash 照合と expires_at／used_at／revoked_at／purpose／max_uses チェックを必須実施。'
-    + 'recipient_email が設定された招待は入力メールとの一致も必須。検証と消費は単一 UPDATE ... RETURNING（6-6-1）',
+    'case_invitations の token_hash 照合と expires_at／used_at／revoked_at／purpose／max_uses チェックを必須実施。' +
+    'recipient_email が設定された招待は入力メールとの一致も必須。検証と消費は単一 UPDATE ... RETURNING（6-6-1）',
   'auth.rate-limit':
     'auth_rate_limits は authenticated から直接参照させないため、判定関数の呼び出しにのみ用いる（付録A）',
   'admin.users':
-    '呼び出し元JWTの role が admin／system_admin であることを検証。venue_id は呼び出し元の値に固定し、'
-    + 'role は U02 の自動設定規則に従う（任意指定を受け付けない）',
+    '呼び出し元JWTの role が admin／system_admin であることを検証。venue_id は呼び出し元の値に固定し、' +
+    'role は U02 の自動設定規則に従う（任意指定を受け付けない）',
   'admin.venues':
     "呼び出し元JWTの role が system_admin であることを検証。作成する role は 'admin' に固定する",
   'audit.auth-event':
@@ -30,21 +30,26 @@ export const SERVICE_ROLE_USE_CASES = {
   'cron.notifications-dispatch':
     '内部呼び出し認証（INTERNAL_CRON_SECRET）で起動元を検証。venue_id／case_id 単位でループする',
   'cron.case-purge':
-    '内部呼び出し認証（INTERNAL_CRON_SECRET）で起動元を検証。'
-    + 'archived_at が保持期間を超えた案件のみを対象とし、対象外の案件には触れない（6-11）',
+    '内部呼び出し認証（INTERNAL_CRON_SECRET）で起動元を検証。' +
+    'archived_at が保持期間を超えた案件のみを対象とし、対象外の案件には触れない（6-11）',
+  'cron.usage-rollup':
+    '内部共有secret認証後に日次の容量・件数集計RPCのみ実行する。個人情報本文は取得しない',
+  'cron.monitoring': '内部共有secret認証後に障害条件を集計し、system_admin専用のアラートを記録する',
+  'cron.audit-log-purge':
+    '内部共有secret認証後に固定2年保持の監査整理RPCのみ実行する。任意の保持期限を受け取らない',
   'cron.ai-job-reclaim':
-    '内部呼び出し認証（INTERNAL_CRON_SECRET）で起動元を検証。'
-    + '滞留ジョブの回収と、保持期間を過ぎたAIジョブ入出力の削除にのみ用いる（7-3／7-4）',
+    '内部呼び出し認証（INTERNAL_CRON_SECRET）で起動元を検証。' +
+    '滞留ジョブの回収と、保持期間を過ぎたAIジョブ入出力の削除にのみ用いる（7-3／7-4）',
   'line.link':
-    'LINE連携の nonce 発行。呼び出し元JWTの role が couple であることを検証し、'
-    + '自案件に限る。平文の nonce は応答でのみ返し保存しない（6-10）',
+    'LINE連携の nonce 発行。呼び出し元JWTの role が couple であることを検証し、' +
+    '自案件に限る。平文の nonce は応答でのみ返し保存しない（6-10）',
   'setup.bootstrap-system-admin':
-    'system_admin 初期アカウントの作成（12章 (b)）。CLI から手で1回だけ実行する。'
-    + '呼び出し元のJWTが無いため、既に system_admin が存在する場合は作成せず中止することで'
-    + '二重作成を防ぐ。パスワードは扱わず、初回設定リンクの発行に留める（6-3-1）',
+    'system_admin 初期アカウントの作成（12章 (b)）。CLI から手で1回だけ実行する。' +
+    '呼び出し元のJWTが無いため、既に system_admin が存在する場合は作成せず中止することで' +
+    '二重作成を防ぐ。パスワードは扱わず、初回設定リンクの発行に留める（6-3-1）',
   'line.webhook':
-    'LINE からの Webhook。署名検証（raw body）を通過したリクエストのみ。'
-    + '受信イベントIDの重複排除と、連携完了の書き込みに限る（6-10）',
+    'LINE からの Webhook。署名検証（raw body）を通過したリクエストのみ。' +
+    '受信イベントIDの重複排除と、連携完了の書き込みに限る（6-10）',
 } as const;
 
 export type ServiceRoleUseCase = keyof typeof SERVICE_ROLE_USE_CASES;
@@ -58,8 +63,8 @@ let cachedRateLimit: SupabaseClient | null = null;
 export function createSupabaseAdminClient(useCase: ServiceRoleUseCase): SupabaseClient {
   if (!(useCase in SERVICE_ROLE_USE_CASES)) {
     throw new Error(
-      `Service Role の使用範囲表（6-3-5 表6-4）にない用途です: ${useCase}。`
-      + '新規使用は設計書の表を更新したうえで本モジュールへ追加すること。',
+      `Service Role の使用範囲表（6-3-5 表6-4）にない用途です: ${useCase}。` +
+        '新規使用は設計書の表を更新したうえで本モジュールへ追加すること。',
     );
   }
 

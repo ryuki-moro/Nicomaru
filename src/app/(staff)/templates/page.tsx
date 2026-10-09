@@ -180,9 +180,7 @@ export default async function TemplateListPage({
                       >
                         {template.name}
                       </Link>
-                      {!template.is_required && (
-                        <span className="ml-2 badge-neutral">任意</span>
-                      )}
+                      {!template.is_required && <span className="ml-2 badge-neutral">任意</span>}
                     </td>
                     <td className={planNames.length === 0 ? 'text-text-muted' : undefined}>
                       {planNames.length === 0 ? '未割当' : planNames.join('／')}

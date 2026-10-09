@@ -9,31 +9,59 @@ import { calculateRisk, type RiskRule, type RiskTask } from '@/lib/services/risk
 /** seed（supabase/seed.sql）と同じ実値のルールセット。 */
 const RULES: RiskRule[] = [
   {
-    id: 'r-important', name: '挙式30日以内で重要宿題が未提出',
-    conditionKey: 'important_task_overdue', level: 'high', scoreDelta: 30, priority: 40,
-    params: { within_days: 30 }, description: '挙式日が近く、重要な宿題が未提出です', active: true,
+    id: 'r-important',
+    name: '挙式30日以内で重要宿題が未提出',
+    conditionKey: 'important_task_overdue',
+    level: 'high',
+    scoreDelta: 30,
+    priority: 40,
+    params: { within_days: 30 },
+    description: '挙式日が近く、重要な宿題が未提出です',
+    active: true,
   },
   {
-    id: 'r-overdue', name: '期限超過の未提出宿題がある',
-    conditionKey: 'task_overdue', level: 'high', scoreDelta: 40, priority: 30,
-    params: {}, description: '提出期限を過ぎた宿題があります', active: true,
+    id: 'r-overdue',
+    name: '期限超過の未提出宿題がある',
+    conditionKey: 'task_overdue',
+    level: 'high',
+    scoreDelta: 40,
+    priority: 30,
+    params: {},
+    description: '提出期限を過ぎた宿題があります',
+    active: true,
   },
   {
-    id: 'r-inactive', name: '7日以上やり取りが無く未完了あり',
-    conditionKey: 'no_activity_days', level: 'caution', scoreDelta: 20, priority: 20,
-    params: { no_activity_days: 7 }, description: '最後のやり取りから日数が経っています', active: true,
+    id: 'r-inactive',
+    name: '7日以上やり取りが無く未完了あり',
+    conditionKey: 'no_activity_days',
+    level: 'caution',
+    scoreDelta: 20,
+    priority: 20,
+    params: { no_activity_days: 7 },
+    description: '最後のやり取りから日数が経っています',
+    active: true,
   },
   {
-    id: 'r-needsfix', name: '不備ありの宿題がある',
-    conditionKey: 'needs_fix_exists', level: 'caution', scoreDelta: 15, priority: 10,
-    params: {}, description: '再提出をお願いしている宿題があります', active: true,
+    id: 'r-needsfix',
+    name: '不備ありの宿題がある',
+    conditionKey: 'needs_fix_exists',
+    level: 'caution',
+    scoreDelta: 15,
+    priority: 10,
+    params: {},
+    description: '再提出をお願いしている宿題があります',
+    active: true,
   },
 ];
 
 const TODAY = '2026-09-15';
 
 const task = (over: Partial<RiskTask> = {}): RiskTask => ({
-  id: 't1', status: 'confirmed', importance: 'normal', dueDate: '2026-12-01', ...over,
+  id: 't1',
+  status: 'confirmed',
+  importance: 'normal',
+  dueDate: '2026-12-01',
+  ...over,
 });
 
 const input = (over: Partial<Parameters<typeof calculateRisk>[0]> = {}) => ({
@@ -80,7 +108,10 @@ describe('important_task_overdue（挙式30日以内 × 重要宿題が未提出
 
   it('normal の宿題では成立しない（「重要宿題」は important 以上）', () => {
     const result = calculateRisk(
-      input({ weddingDate: '2026-10-01', tasks: [task({ status: 'not_started', importance: 'normal' })] }),
+      input({
+        weddingDate: '2026-10-01',
+        tasks: [task({ status: 'not_started', importance: 'normal' })],
+      }),
       RULES,
     );
     expect(result.reasons.map((r) => r.conditionKey)).not.toContain('important_task_overdue');
@@ -88,7 +119,10 @@ describe('important_task_overdue（挙式30日以内 × 重要宿題が未提出
 
   it('critical も重要宿題として扱う', () => {
     const result = calculateRisk(
-      input({ weddingDate: '2026-10-01', tasks: [task({ status: 'not_started', importance: 'critical' })] }),
+      input({
+        weddingDate: '2026-10-01',
+        tasks: [task({ status: 'not_started', importance: 'critical' })],
+      }),
       RULES,
     );
     expect(result.reasons.map((r) => r.conditionKey)).toContain('important_task_overdue');
@@ -96,7 +130,10 @@ describe('important_task_overdue（挙式30日以内 × 重要宿題が未提出
 
   it('waived は未提出に数えない', () => {
     const result = calculateRisk(
-      input({ weddingDate: '2026-10-01', tasks: [task({ status: 'waived', importance: 'critical' })] }),
+      input({
+        weddingDate: '2026-10-01',
+        tasks: [task({ status: 'waived', importance: 'critical' })],
+      }),
       RULES,
     );
     expect(result.reasons).toHaveLength(0);
@@ -104,9 +141,13 @@ describe('important_task_overdue（挙式30日以内 × 重要宿題が未提出
 
   it('params.within_days を変えると閾値が変わる（コードに直書きしない）', () => {
     const rules = RULES.map((r) =>
-      r.id === 'r-important' ? { ...r, params: { within_days: 90 } } : r);
+      r.id === 'r-important' ? { ...r, params: { within_days: 90 } } : r,
+    );
     const result = calculateRisk(
-      input({ weddingDate: '2026-11-01', tasks: [task({ status: 'not_started', importance: 'important' })] }),
+      input({
+        weddingDate: '2026-11-01',
+        tasks: [task({ status: 'not_started', importance: 'important' })],
+      }),
       rules,
     );
     expect(result.reasons.map((r) => r.conditionKey)).toContain('important_task_overdue');
@@ -201,7 +242,10 @@ describe('needs_fix_exists（不備あり）', () => {
 describe('スコアの合成（6-8 の算出式）', () => {
   it('成立ルールの score_delta を合計する', () => {
     const result = calculateRisk(
-      input({ tasks: [task({ status: 'needs_fix', dueDate: '2026-09-01' })], lastActivityAt: TODAY }),
+      input({
+        tasks: [task({ status: 'needs_fix', dueDate: '2026-09-01' })],
+        lastActivityAt: TODAY,
+      }),
       RULES,
     );
     // task_overdue(40) + needs_fix_exists(15)
@@ -255,24 +299,66 @@ describe('スコアの合成（6-8 の算出式）', () => {
       }),
       RULES,
     );
-    expect(result.reasons.map((r) => r.conditionKey).sort()).toEqual(
-      ['important_task_overdue', 'needs_fix_exists', 'no_activity_days', 'task_overdue'],
-    );
+    expect(result.reasons.map((r) => r.conditionKey).sort()).toEqual([
+      'important_task_overdue',
+      'needs_fix_exists',
+      'no_activity_days',
+      'task_overdue',
+    ]);
   });
 });
 
 describe('ルールの取り扱い', () => {
+  it.each([
+    {},
+    { within_days: '30' },
+    { within_days: Number.NaN },
+    { within_days: Number.POSITIVE_INFINITY },
+  ])('未設定/不正閾値 %j は標準の30日に戻す', (params) => {
+    const rules = [{ ...RULES[0], params }];
+    const tasks = [task({ status: 'not_started', importance: 'important' })];
+    expect(calculateRisk(input({ weddingDate: '2026-10-15', tasks }), rules).primaryRuleId).toBe(
+      'r-important',
+    );
+    expect(
+      calculateRisk(input({ weddingDate: '2026-10-16', tasks }), rules).primaryRuleId,
+    ).toBeNull();
+  });
+
+  it('同じ優先度では高いレベル、同レベルではID昇順で代表ルールを選ぶ', () => {
+    const rules: RiskRule[] = [
+      { ...RULES[3], id: 'b-high', level: 'high', priority: 10 },
+      { ...RULES[3], id: 'c-low', level: 'low', priority: 10 },
+      { ...RULES[3], id: 'a-high', level: 'high', priority: 10 },
+    ];
+    for (const ordered of [rules, [...rules].reverse()]) {
+      expect(
+        calculateRisk(input({ tasks: [task({ status: 'needs_fix' })] }), ordered).primaryRuleId,
+      ).toBe('a-high');
+    }
+  });
+
   it('active=false のルールは評価しない', () => {
     const rules = RULES.map((r) => ({ ...r, active: false }));
-    expect(calculateRisk(input({ tasks: [task({ status: 'needs_fix' })] }), rules).reasons)
-      .toHaveLength(0);
+    expect(
+      calculateRisk(input({ tasks: [task({ status: 'needs_fix' })] }), rules).reasons,
+    ).toHaveLength(0);
   });
 
   it('対応表に無い condition_key は無視する（実装前のルール追加で落ちない）', () => {
     const rules: RiskRule[] = [
       ...RULES,
-      { id: 'r-future', name: '将来のルール', conditionKey: 'not_implemented_yet',
-        level: 'high', scoreDelta: 99, priority: 99, params: {}, description: null, active: true },
+      {
+        id: 'r-future',
+        name: '将来のルール',
+        conditionKey: 'not_implemented_yet',
+        level: 'high',
+        scoreDelta: 99,
+        priority: 99,
+        params: {},
+        description: null,
+        active: true,
+      },
     ];
     const result = calculateRisk(input({ tasks: [task({ status: 'needs_fix' })] }), rules);
     expect(result.scoreValue).toBe(15);
@@ -280,6 +366,8 @@ describe('ルールの取り扱い', () => {
   });
 
   it('ルールが1件も無ければ low', () => {
-    expect(calculateRisk(input({ tasks: [task({ status: 'needs_fix' })] }), []).scoreLevel).toBe('low');
+    expect(calculateRisk(input({ tasks: [task({ status: 'needs_fix' })] }), []).scoreLevel).toBe(
+      'low',
+    );
   });
 });

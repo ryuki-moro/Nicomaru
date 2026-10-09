@@ -14,7 +14,8 @@ class PurgeStepError extends Error {
 }
 
 async function step<T extends { error: unknown }>(
-  stage: string, execute: () => PromiseLike<T>,
+  stage: string,
+  execute: () => PromiseLike<T>,
 ): Promise<T> {
   try {
     const result = await execute();
@@ -45,19 +46,26 @@ export async function purgeCases(admin: SupabaseClient): Promise<BatchOutcome> {
     let fileCursor: string | undefined;
     for (;;) {
       const files = await step('storage_files.select', () => {
-        let query = admin.from('storage_files').select('id, bucket, object_path')
-          .eq('case_id', caseId).order('id').limit(PAGE_SIZE);
+        let query = admin
+          .from('storage_files')
+          .select('id, bucket, object_path')
+          .eq('case_id', caseId)
+          .order('id')
+          .limit(PAGE_SIZE);
         if (fileCursor) query = query.gt('id', fileCursor);
         return query;
       });
       const rows = (files.data ?? []) as { id: string; bucket: string; object_path: string }[];
       if (!rows.length) break;
       for (const file of rows) {
-        const removed = await step('storage.remove', () => admin.storage.from(file.bucket).remove([file.object_path]));
+        const removed = await step('storage.remove', () =>
+          admin.storage.from(file.bucket).remove([file.object_path]),
+        );
         // 前回実体だけ削除済みなら空配列。再実行で同じ実体を重複計上しない。
         filesRemoved += removed.data?.length ?? 0;
-        await step('storage_files.delete', () => admin.from('storage_files').delete()
-          .eq('case_id', caseId).eq('id', file.id));
+        await step('storage_files.delete', () =>
+          admin.from('storage_files').delete().eq('case_id', caseId).eq('id', file.id),
+        );
       }
       fileCursor = rows[rows.length - 1].id;
     }
@@ -65,38 +73,75 @@ export async function purgeCases(admin: SupabaseClient): Promise<BatchOutcome> {
     let taskCursor: string | undefined;
     for (;;) {
       const tasks = await step('case_tasks.select', () => {
-        let query = admin.from('case_tasks').select('id').eq('case_id', caseId)
-          .order('id').limit(PAGE_SIZE);
+        let query = admin
+          .from('case_tasks')
+          .select('id')
+          .eq('case_id', caseId)
+          .order('id')
+          .limit(PAGE_SIZE);
         if (taskCursor) query = query.gt('id', taskCursor);
         return query;
       });
       const rows = (tasks.data ?? []) as { id: string }[];
       if (!rows.length) break;
-      await step('task_submissions.delete', () => admin.from('task_submissions').delete()
-        .in('case_task_id', rows.map((task) => task.id)));
+      await step('task_submissions.delete', () =>
+        admin
+          .from('task_submissions')
+          .delete()
+          .in(
+            'case_task_id',
+            rows.map((task) => task.id),
+          ),
+      );
       taskCursor = rows[rows.length - 1].id;
     }
 
     for (const table of [
-      'case_guests', 'communication_logs', 'meeting_notes', 'ai_jobs', 'meeting_sheets', 'follow_logs',
+      'case_guests',
+      'communication_logs',
+      'meeting_notes',
+      'ai_jobs',
+      'meeting_sheets',
+      'follow_logs',
     ]) {
       await step(`${table}.delete`, () => admin.from(table).delete().eq('case_id', caseId));
     }
-    await step('couple_profiles.update', () => admin.from('couple_profiles').update({
-      full_name: '（削除済み）', kana: null, email: null, email_hash: null,
-      phone: null, address: null, memo: null,
-    }).eq('case_id', caseId));
-    await step('case_invitations.update', () => admin.from('case_invitations').update({
-      recipient_email: null, recipient_email_hash: null,
-    }).eq('case_id', caseId));
+    await step('couple_profiles.update', () =>
+      admin
+        .from('couple_profiles')
+        .update({
+          full_name: '（削除済み）',
+          kana: null,
+          email: null,
+          email_hash: null,
+          phone: null,
+          address: null,
+          memo: null,
+        })
+        .eq('case_id', caseId),
+    );
+    await step('case_invitations.update', () =>
+      admin
+        .from('case_invitations')
+        .update({
+          recipient_email: null,
+          recipient_email_hash: null,
+        })
+        .eq('case_id', caseId),
+    );
   }
 
   let caseCursor: string | undefined;
   try {
     for (;;) {
       const targets = await step('wedding_cases.select', () => {
-        let query = admin.from('wedding_cases').select('id').not('archived_at', 'is', null)
-          .lt('archived_at', cutoff).order('id').limit(PAGE_SIZE);
+        let query = admin
+          .from('wedding_cases')
+          .select('id')
+          .not('archived_at', 'is', null)
+          .lt('archived_at', cutoff)
+          .order('id')
+          .limit(PAGE_SIZE);
         if (caseCursor) query = query.gt('id', caseCursor);
         return query;
       });
@@ -109,7 +154,10 @@ export async function purgeCases(admin: SupabaseClient): Promise<BatchOutcome> {
         } catch (error) {
           failedCount += 1;
           if (failures.length < MAX_FAILURE_DETAILS) {
-            failures.push({ caseId: target.id, stage: error instanceof PurgeStepError ? error.stage : 'unknown' });
+            failures.push({
+              caseId: target.id,
+              stage: error instanceof PurgeStepError ? error.stage : 'unknown',
+            });
           }
         }
       }
@@ -122,9 +170,12 @@ export async function purgeCases(admin: SupabaseClient): Promise<BatchOutcome> {
 
   // AI保持期間は案件と独立。案件側が一部失敗しても整理を試み、結果を別に記録する。
   try {
-    const ai = await step('ai_retention', () => admin.rpc('purge_ai_job_payloads', {
-      p_payload_days: 30, p_row_days: 90,
-    }));
+    const ai = await step('ai_retention', () =>
+      admin.rpc('purge_ai_job_payloads', {
+        p_payload_days: 30,
+        p_row_days: 90,
+      }),
+    );
     const row = (ai.data as { payloads_cleared: number; rows_deleted: number }[] | null)?.[0];
     if (!row) throw new Error();
     aiPayloadsCleared = row.payloads_cleared;
@@ -137,12 +188,21 @@ export async function purgeCases(admin: SupabaseClient): Promise<BatchOutcome> {
   const outcome: BatchOutcome = {
     targetCount: purged,
     detail: {
-      filesRemoved, retentionDays: RETENTION_DAYS, aiPayloadsCleared, aiRowsDeleted,
-      failedCount, failures, targetScanFailed, aiRetentionSucceeded,
+      filesRemoved,
+      retentionDays: RETENTION_DAYS,
+      aiPayloadsCleared,
+      aiRowsDeleted,
+      failedCount,
+      failures,
+      targetScanFailed,
+      aiRetentionSucceeded,
     },
   };
   if (failedCount || targetScanFailed || !aiRetentionSucceeded) {
-    throw new BatchFailure('削除バッチの一部処理に失敗しました。実行記録のdetailを確認してください', outcome);
+    throw new BatchFailure(
+      '削除バッチの一部処理に失敗しました。実行記録のdetailを確認してください',
+      outcome,
+    );
   }
   return outcome;
 }

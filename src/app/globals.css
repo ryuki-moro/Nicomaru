@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @config "../../tailwind.config.ts";
 
 /*
@@ -45,9 +45,9 @@
   }
 
   .field {
-    @apply w-full rounded-field border border-border-light bg-surface px-3 py-[10px]
+    @apply w-full rounded-field border border-border-mid bg-surface px-3 py-[10px]
            text-label text-text-primary placeholder:text-text-muted
-           focus:border-primary focus:outline-hidden;
+           focus:border-primary;
   }
 
   .field-error {
@@ -63,10 +63,18 @@
     @apply inline-flex items-center rounded-badge px-[11px] py-1 text-caption;
   }
 
-  .badge-neutral { @apply bg-bg text-text-secondary; }
-  .badge-success { @apply bg-success-bg text-success-text; }
-  .badge-warning { @apply bg-warning-bg text-warning-text; }
-  .badge-danger  { @apply bg-danger-bg text-danger; }
+  .badge-neutral {
+    @apply bg-bg text-text-secondary;
+  }
+  .badge-success {
+    @apply bg-success-bg text-success-text;
+  }
+  .badge-warning {
+    @apply bg-warning-bg text-warning-text;
+  }
+  .badge-danger {
+    @apply bg-danger-bg text-danger;
+  }
 
   /* ---- カード（design_guide 5.7 / 5.9） ---- */
   .card {

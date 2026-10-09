@@ -17,7 +17,12 @@ import { useState } from 'react';
 import { DraftAssist } from '@/app/(staff)/submissions/[submissionId]/DraftAssist';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { ApiCallError, api, handleApiError } from '@/lib/api/client';
-import { INPUT_LIMITS, REVIEW_DECISIONS, REVIEW_STATUS_LABEL, type ReviewDecision } from '@/lib/constants';
+import {
+  INPUT_LIMITS,
+  REVIEW_DECISIONS,
+  REVIEW_STATUS_LABEL,
+  type ReviewDecision,
+} from '@/lib/constants';
 
 interface Props {
   submissionId: string;
@@ -31,7 +36,12 @@ interface Props {
 }
 
 export function ReviewForm({
-  submissionId, caseId, taskId, taskTitle, aiAvailable, lastSeenAt,
+  submissionId,
+  caseId,
+  taskId,
+  taskTitle,
+  aiAvailable,
+  lastSeenAt,
 }: Props) {
   const router = useRouter();
   const [decision, setDecision] = useState<ReviewDecision | null>(null);
@@ -151,13 +161,7 @@ export function ReviewForm({
  * 提出ファイルのダウンロード（6-5 表6-6 /api/files/{fileId}/download）。
  * 署名付きURLは TTL 60秒・都度発行のため、ページに URL を焼き込まずクリック時に取得する。
  */
-export function SubmissionFileLink({
-  fileId,
-  fileName,
-}: {
-  fileId: string;
-  fileName: string;
-}) {
+export function SubmissionFileLink({ fileId, fileName }: { fileId: string; fileName: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

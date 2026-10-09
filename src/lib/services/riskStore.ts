@@ -153,8 +153,9 @@ export async function collectRiskInput(
     .select('id, status, importance, due_date, last_submitted_at')
     .eq('case_id', caseId);
   if (tasksResult.error) throw fromPostgresError(tasksResult.error);
-  const taskRows = (tasksResult.data ?? []) as unknown as
-    (TaskRow & { last_submitted_at: string | null })[];
+  const taskRows = (tasksResult.data ?? []) as unknown as (TaskRow & {
+    last_submitted_at: string | null;
+  })[];
 
   // 「submitted だが未レビューの一時保存しか無い」宿題は未提出として扱う（6-7／表6-9）。
   // draft は planner から見えないので、判定は最新提出の review_status で行う。
@@ -172,11 +173,12 @@ export async function collectRiskInput(
     }
   }
 
-  const lastSubmitted = taskRows
-    .map((t) => t.last_submitted_at)
-    .filter((v): v is string => v !== null)
-    .sort()
-    .at(-1) ?? null;
+  const lastSubmitted =
+    taskRows
+      .map((t) => t.last_submitted_at)
+      .filter((v): v is string => v !== null)
+      .sort()
+      .at(-1) ?? null;
 
   return {
     venueId: target.venue_id,

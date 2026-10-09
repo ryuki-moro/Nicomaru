@@ -20,6 +20,7 @@ import type { Role } from '@/lib/constants';
 import { forbidden, unprocessable } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { otpVerifySchema } from '@/lib/validation';
+import { recordAuthenticationFailure } from '@/lib/services/audit';
 
 import {
   clearOtpVerifyFailures,
@@ -39,6 +40,7 @@ export const POST = route(async (request) => {
   // 失効を伝えるのは推測の手掛かりにならず（コードの正誤を明かさない）、
   // 「何度入れても通らない」まま放置するより再送へ導ける。
   if (await isOtpCodeInvalidated(body.email)) {
+    await recordAuthenticationFailure(body.email, 'otp');
     throw unprocessable('ワンタイムコードは無効になりました', [
       { field: 'code', reason: 'お手数ですが、コードを送信し直してください' },
     ]);
@@ -55,6 +57,9 @@ export const POST = route(async (request) => {
 
   if (error || !data.user) {
     await recordOtpVerifyFailure(body.email);
+    if (!error || (error.status && error.status < 500)) {
+      await recordAuthenticationFailure(body.email, 'otp');
+    }
     // コード誤り・期限切れ・使用済みを区別せず一律で返す（推測の手掛かりを与えない）
     throw unprocessable('ワンタイムコードが正しくないか、有効期限が切れています', [
       { field: 'code', reason: 'メールに記載のコードをもう一度ご確認ください' },

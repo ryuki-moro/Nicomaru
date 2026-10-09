@@ -22,8 +22,13 @@ import { createServerClient } from '@supabase/ssr';
  * 実際の認証は各ハンドラの requireInternalCall() が行う。
  */
 const PUBLIC_PREFIXES = [
-  '/login', '/register', '/password', '/error',
-  '/api/auth', '/api/internal', '/api/health',
+  '/login',
+  '/register',
+  '/password',
+  '/error',
+  '/api/auth',
+  '/api/internal',
+  '/api/health',
 ];
 
 export async function middleware(request: NextRequest) {
@@ -86,5 +91,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\.(?:svg|png|jpg|webp)$).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw[.]js$|.*\.(?:svg|png|jpg|webp)$).*)',
+  ],
 };

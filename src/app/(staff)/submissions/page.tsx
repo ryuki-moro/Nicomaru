@@ -57,9 +57,9 @@ export default async function SubmissionsPage({
   const { data, error, count } = await supabase
     .from('task_submissions')
     .select(
-      'id, submitted_at,'
-      + ' case_tasks!inner ( id, title, due_date, case_id, status,'
-      + ' wedding_cases!inner ( id, case_code, wedding_date ) )',
+      'id, submitted_at,' +
+        ' case_tasks!inner ( id, title, due_date, case_id, status,' +
+        ' wedding_cases!inner ( id, case_code, wedding_date ) )',
       { count: 'exact' },
     )
     .eq('review_status', 'submitted')
@@ -94,7 +94,11 @@ export default async function SubmissionsPage({
       // 主連絡先を先頭に置く（K03「主連絡先」）
       coupleNames.set(
         profile.case_id,
-        current ? (profile.is_primary_contact ? `${name}・${current}` : `${current}・${name}`) : name,
+        current
+          ? profile.is_primary_contact
+            ? `${name}・${current}`
+            : `${current}・${name}`
+          : name,
       );
     }
   }

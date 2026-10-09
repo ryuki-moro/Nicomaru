@@ -47,7 +47,7 @@ export const POST = route(async (request) => {
 
   // 表4-19 の自動設定規則。画面の入力ではなく呼び出し元のロールで決める
   const role: Role = actor.role === 'admin' ? 'planner' : 'admin';
-  const venueId = actor.role === 'admin' ? actor.venueId : input.venueId ?? null;
+  const venueId = actor.role === 'admin' ? actor.venueId : (input.venueId ?? null);
   if (!venueId) {
     throw unprocessable('所属式場が特定できません', [
       { field: 'venueId', reason: '登録先の式場を指定してください' },
@@ -96,7 +96,13 @@ export const POST = route(async (request) => {
     throw fromPostgresError(error);
   }
 
-  const createdRow = created as { id: string; display_name: string; email: string; role: Role; status: UserStatus };
+  const createdRow = created as {
+    id: string;
+    display_name: string;
+    email: string;
+    role: Role;
+    status: UserStatus;
+  };
 
   const { data: venue } = await supabase
     .from('venues')

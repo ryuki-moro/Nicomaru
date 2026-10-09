@@ -38,27 +38,33 @@ describe('未ログイン時のログイン先', () => {
   it('公開URLが未設定ならリクエストURLを使う', async () => {
     const response = await middleware(new NextRequest('https://preview.example.test/venues'));
 
-    expect(response.headers.get('location')).toBe('https://preview.example.test/login?next=%2Fvenues');
+    expect(response.headers.get('location')).toBe(
+      'https://preview.example.test/login?next=%2Fvenues',
+    );
   });
 
   it('Host・転送ヘッダーで設定済みのログイン先を変更できない', async () => {
     vi.stubEnv('APP_BASE_URL', 'https://app.example.test');
-    const response = await middleware(new NextRequest('http://internal.test/venues', {
-      headers: {
-        host: 'evil.example.test',
-        'x-forwarded-host': 'evil.example.test',
-        'x-forwarded-proto': 'https',
-      },
-    }));
+    const response = await middleware(
+      new NextRequest('http://internal.test/venues', {
+        headers: {
+          host: 'evil.example.test',
+          'x-forwarded-host': 'evil.example.test',
+          'x-forwarded-proto': 'https',
+        },
+      }),
+    );
 
     expect(response.headers.get('location')).toBe('https://app.example.test/login?next=%2Fvenues');
   });
 
   it('保護パスをnextにエンコードし、元のクエリを引き継がない', async () => {
     vi.stubEnv('APP_BASE_URL', 'https://app.example.test');
-    const response = await middleware(new NextRequest(
-      'https://app.example.test/venues/%2F%2Fevil.example.test?next=https://evil.example.test&token=private',
-    ));
+    const response = await middleware(
+      new NextRequest(
+        'https://app.example.test/venues/%2F%2Fevil.example.test?next=https://evil.example.test&token=private',
+      ),
+    );
     const target = new URL(response.headers.get('location')!);
 
     expect(target.origin).toBe('https://app.example.test');
@@ -81,22 +87,28 @@ describe('未ログイン時のログイン先', () => {
 
       expect(response.status).toBe(500);
       expect(response.headers.has('location')).toBe(false);
-      expect(await response.text()).toBe('ログイン先の設定に問題があります。管理者にお問い合わせください。');
+      expect(await response.text()).toBe(
+        'ログイン先の設定に問題があります。管理者にお問い合わせください。',
+      );
     },
   );
 });
 
 describe('ログイン先へ転送しない経路', () => {
-  it.each(['/login', '/password', '/register', '/error', '/api/auth/otp-request', '/api/venues/id'])(
-    '公開画面・API %s の処理はそのまま継続する',
-    async (path) => {
-      vi.stubEnv('APP_BASE_URL', 'http://127.0.0.1:3000');
-      const response = await middleware(new NextRequest(`http://127.0.0.1:3000${path}`));
+  it.each([
+    '/login',
+    '/password',
+    '/register',
+    '/error',
+    '/api/auth/otp-request',
+    '/api/venues/id',
+  ])('公開画面・API %s の処理はそのまま継続する', async (path) => {
+    vi.stubEnv('APP_BASE_URL', 'http://127.0.0.1:3000');
+    const response = await middleware(new NextRequest(`http://127.0.0.1:3000${path}`));
 
-      expect(response.status).toBe(200);
-      expect(response.headers.has('location')).toBe(false);
-    },
-  );
+    expect(response.status).toBe(200);
+    expect(response.headers.has('location')).toBe(false);
+  });
 
   it('認証済み利用者は保護画面へ進める', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'user-id' } } });

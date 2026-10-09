@@ -9,6 +9,7 @@ import type { z } from 'zod';
 
 import { ApiError, badRequest } from '@/lib/errors';
 import { toErrorDetails } from '@/lib/validation';
+import { recordApiPerformance } from '@/lib/observability/performance';
 
 import { requireInternalCall } from './internal';
 import { requireSameOrigin } from './origin';
@@ -52,17 +53,29 @@ export function route<Args extends unknown[]>(
   options: RouteOptions = {},
 ) {
   return async (request: Request, ...args: Args): Promise<Response> => {
+    const startedAt = Date.now();
+    const startedMono = performance.now();
+    let status = 500;
     try {
       if (options.source === 'internal-cron') {
         requireInternalCall(request);
       } else if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
         requireSameOrigin(request);
       }
-      return await handler(request, ...args);
+      const response = await handler(request, ...args);
+      status = response.status;
+      return response;
     } catch (error) {
-      if (error instanceof ApiError) return error.toResponse();
-      console.error('[api] unhandled error', error);
-      return new ApiError('INTERNAL_ERROR').toResponse();
+      const response =
+        error instanceof ApiError
+          ? error.toResponse()
+          : new ApiError('INTERNAL_ERROR').toResponse();
+      status = response.status;
+      // DB等の例外本文にはPIIが含まれ得る。共通ログに原文を渡さない。
+      if (!(error instanceof ApiError)) console.error('[api] unhandled error');
+      return response;
+    } finally {
+      recordApiPerformance(request, startedAt, startedMono, status);
     }
   };
 }

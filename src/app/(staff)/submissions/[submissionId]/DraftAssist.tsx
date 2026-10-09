@@ -37,7 +37,14 @@ interface Props {
 }
 
 export function DraftAssist({
-  caseId, taskId, taskTitle, decision, memo, aiAvailable, lastSeenAt, onAdopt,
+  caseId,
+  taskId,
+  taskTitle,
+  decision,
+  memo,
+  aiAvailable,
+  lastSeenAt,
+  onAdopt,
 }: Props) {
   const { job, track, setJob, timedOut } = useAiJob(null);
   const [pending, setPending] = useState(false);
@@ -47,9 +54,10 @@ export function DraftAssist({
     setError(null);
     setPending(true);
     try {
-      const situation = decision === 'needs_fix'
-        ? '提出内容に直していただきたい点があります'
-        : '提出内容を確認しました';
+      const situation =
+        decision === 'needs_fix'
+          ? '提出内容に直していただきたい点があります'
+          : '提出内容を確認しました';
       const created = await api.post<{ id: string }>('/api/ai/jobs', {
         caseId,
         jobType: 'draft',
@@ -60,7 +68,11 @@ export function DraftAssist({
         },
       });
       track({
-        id: created.id, status: 'queued', output: null, reviewed_output: null, error_message: null,
+        id: created.id,
+        status: 'queued',
+        output: null,
+        reviewed_output: null,
+        error_message: null,
       });
     } catch (cause) {
       setError(

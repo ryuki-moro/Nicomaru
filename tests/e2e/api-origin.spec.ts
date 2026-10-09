@@ -13,7 +13,9 @@ const protectedPaths = ['/api/cases', '/api/auth/otp-request', '/api/files/uploa
 test.use({ storageState: { cookies: [], origins: [] } });
 test.skip(!hasAuthEnv, 'Supabaseの公開接続設定がないため未認証APIの確認をスキップ');
 
-test('ブラウザーのJSON・multipart POSTはOriginを自動送信し、既存の入力・認証検証へ進む', async ({ page }) => {
+test('ブラウザーのJSON・multipart POSTはOriginを自動送信し、既存の入力・認証検証へ進む', async ({
+  page,
+}) => {
   await page.goto('/login');
   const expectedOrigin = new URL(page.url()).origin;
   const cases = [
@@ -23,8 +25,9 @@ test('ブラウザーのJSON・multipart POSTはOriginを自動送信し、既�
   ];
 
   for (const item of cases) {
-    const outgoingPromise = page.waitForRequest((request) =>
-      new URL(request.url()).pathname === item.path && request.method() === 'POST');
+    const outgoingPromise = page.waitForRequest(
+      (request) => new URL(request.url()).pathname === item.path && request.method() === 'POST',
+    );
     const response = await page.evaluate(async ({ path, multipart }) => {
       // Originは設定しない。通常のブラウザーfetchが付ける値をサーバーで検証する。
       const result = await fetch(path, {
@@ -48,7 +51,9 @@ test('ブラウザーのJSON・multipart POSTはOriginを自動送信し、既�
 });
 
 for (const origin of [undefined, 'https://foreign-origin.example.invalid']) {
-  test(`${origin ? '別Origin' : 'Origin欠落'}の更新APIは認証・入力検証より先に403`, async ({ page }) => {
+  test(`${origin ? '別Origin' : 'Origin欠落'}の更新APIは認証・入力検証より先に403`, async ({
+    page,
+  }) => {
     for (const path of protectedPaths) {
       const response = await page.request.post(path, {
         // APIRequestContextはブラウザー外なので、Originの欠落も再現できる。
@@ -61,7 +66,9 @@ for (const origin of [undefined, 'https://foreign-origin.example.invalid']) {
   });
 }
 
-test('内部cronはOriginなしでも共有secretの認証へ進み、欠落secretを401で拒否する', async ({ page }) => {
+test('内部cronはOriginなしでも共有secretの認証へ進み、欠落secretを401で拒否する', async ({
+  page,
+}) => {
   // secretは一切付けない。削除・送信を含むバッチ本体は実行しない。
   const response = await page.request.post('/api/internal/rate-limit-cleanup', { data: {} });
   expect(response.status()).toBe(401);

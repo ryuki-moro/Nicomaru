@@ -28,8 +28,8 @@ export function CoupleNav() {
     >
       <ul className="mx-auto flex max-w-phone">
         {ITEMS.map((item) => {
-          const active = pathname === item.href
-            || (item.href !== '/mypage' && pathname.startsWith(item.href));
+          const active =
+            pathname === item.href || (item.href !== '/mypage' && pathname.startsWith(item.href));
           return (
             <li key={item.href} className="flex-1">
               <Link

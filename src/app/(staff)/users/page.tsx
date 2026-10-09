@@ -61,7 +61,9 @@ export default async function UserListPage({
   const showVenue = user.role === 'system_admin';
   const venueNames = new Map<string, string>();
   if (showVenue && profiles.length > 0) {
-    const venueIds = [...new Set(profiles.map((p) => p.venue_id).filter((v): v is string => v != null))];
+    const venueIds = [
+      ...new Set(profiles.map((p) => p.venue_id).filter((v): v is string => v != null)),
+    ];
     if (venueIds.length > 0) {
       const { data: venues } = await supabase.from('venues').select('id, name').in('id', venueIds);
       for (const venue of (venues ?? []) as { id: string; name: string }[]) {
@@ -76,7 +78,7 @@ export default async function UserListPage({
     email: profile.email,
     role: profile.role,
     status: profile.status,
-    venueName: profile.venue_id ? venueNames.get(profile.venue_id) ?? null : null,
+    venueName: profile.venue_id ? (venueNames.get(profile.venue_id) ?? null) : null,
   }));
 
   return (

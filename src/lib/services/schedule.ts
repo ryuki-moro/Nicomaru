@@ -212,16 +212,17 @@ export function previewPlanChange(
 
 // --------------------------------------------------------------- 表示用の集計
 /** M01「次にやること」（最大3件。ORDER BY due_date, display_order, id）。 */
-export function nextActions<T extends { status: TaskStatus; dueDate: IsoDate; displayOrder: number; id: string }>(
-  tasks: readonly T[],
-  limit = 3,
-): T[] {
+export function nextActions<
+  T extends { status: TaskStatus; dueDate: IsoDate; displayOrder: number; id: string },
+>(tasks: readonly T[], limit = 3): T[] {
   return [...tasks]
     .filter((t) => INCOMPLETE_TASK_STATUSES.includes(t.status))
-    .sort((a, b) =>
-      a.dueDate.localeCompare(b.dueDate)
-      || a.displayOrder - b.displayOrder
-      || a.id.localeCompare(b.id))
+    .sort(
+      (a, b) =>
+        a.dueDate.localeCompare(b.dueDate) ||
+        a.displayOrder - b.displayOrder ||
+        a.id.localeCompare(b.id),
+    )
     .slice(0, limit);
 }
 

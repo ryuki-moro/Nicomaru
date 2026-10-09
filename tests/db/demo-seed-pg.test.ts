@@ -22,7 +22,10 @@ describe.skipIf(!hasRealPg)('模擬データの投入（実PostgreSQL）', () =>
 
   const auth: DemoAuth = {
     async ensureUser(email) {
-      const found = await client.query<{ id: string }>('select id from auth.users where email = $1', [email]);
+      const found = await client.query<{ id: string }>(
+        'select id from auth.users where email = $1',
+        [email],
+      );
       if (found.rows[0]) return found.rows[0].id;
       const created = await client.query<{ id: string }>(
         'insert into auth.users (email) values ($1) returning id',
@@ -32,7 +35,11 @@ describe.skipIf(!hasRealPg)('模擬データの投入（実PostgreSQL）', () =>
     },
   };
 
-  const options = { plannerPassword: 'unused', today: '2026-11-01', appBaseUrl: 'http://127.0.0.1:3000' };
+  const options = {
+    plannerPassword: 'unused',
+    today: '2026-11-01',
+    appBaseUrl: 'http://127.0.0.1:3000',
+  };
 
   beforeAll(async () => {
     process.env.PII_ENCRYPTION_KEY = randomBytes(32).toString('base64');

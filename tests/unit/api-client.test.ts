@@ -38,7 +38,9 @@ describe('api の正常応答と通信例外', () => {
 
     await expect(api.get('/api/example')).resolves.toEqual({ id: 'example' });
     expect(fetchMock).toHaveBeenCalledWith('/api/example', {
-      method: 'GET', headers: undefined, body: undefined,
+      method: 'GET',
+      headers: undefined,
+      body: undefined,
     });
   });
 
@@ -69,7 +71,9 @@ describe('api の正常応答と通信例外', () => {
 
     await api.del('/api/example');
     expect(fetchMock).toHaveBeenCalledWith('/api/example', {
-      method: 'DELETE', headers: undefined, body: undefined,
+      method: 'DELETE',
+      headers: undefined,
+      body: undefined,
     });
   });
 
@@ -108,9 +112,16 @@ describe('api の正常応答と通信例外', () => {
 describe('非OK応答の正規化', () => {
   it('503の一時障害コードを維持し、再操作の案内を画面に表示する', async () => {
     const message = '認証サービスに接続できませんでした。時間をおいて再度お試しください';
-    const error = await responseError(503, JSON.stringify({ error: {
-      code: 'SERVICE_UNAVAILABLE', message, details: [],
-    } }));
+    const error = await responseError(
+      503,
+      JSON.stringify({
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message,
+          details: [],
+        },
+      }),
+    );
     expect(error.body.code).toBe('SERVICE_UNAVAILABLE');
     expect(error.status).toBe(503);
     const { router, handlers } = errorHandlers();
@@ -120,9 +131,17 @@ describe('非OK応答の正規化', () => {
   });
 
   it.each([
-    '', '<html>Server error</html>', '{broken', 'null', '[]', '{}',
-    '{"error":null}', '{"error":"unexpected"}', '{"error":{}}',
-    '{"error":{"message":42}}', '{"error":{"message":"   "}}',
+    '',
+    '<html>Server error</html>',
+    '{broken',
+    'null',
+    '[]',
+    '{}',
+    '{"error":null}',
+    '{"error":"unexpected"}',
+    '{"error":{}}',
+    '{"error":{"message":42}}',
+    '{"error":{"message":"   "}}',
   ])('不正な本文でも status と共通メッセージを持つ (%s)', async (body) => {
     const error = await responseError(500, body);
 
@@ -130,7 +149,9 @@ describe('非OK応答の正規化', () => {
     expect(error.name).toBe('ApiCallError');
     expect(error.message).toBe(COMMUNICATION_ERROR_MESSAGE);
     expect(error.body).toEqual({
-      code: 'INTERNAL_ERROR', message: COMMUNICATION_ERROR_MESSAGE, details: [],
+      code: 'INTERNAL_ERROR',
+      message: COMMUNICATION_ERROR_MESSAGE,
+      details: [],
     });
     expect(error.fieldErrors).toEqual({});
   });
@@ -150,27 +171,49 @@ describe('非OK応答の正規化', () => {
     expect(error.status).toBe(status);
     expect(error.body).toEqual(body);
     expect(error.fieldErrors).toEqual({
-      title: '宿題名を入力してください', dueDate: '期限を入力してください',
+      title: '宿題名を入力してください',
+      dueDate: '期限を入力してください',
     });
   });
 
-  it.each([undefined, null, false, 'invalid', {}])('配列ではない details を空にする (%s)', async (details) => {
-    const error = await responseError(400, JSON.stringify({
-      error: { code: 'VALIDATION_ERROR', message: '入力エラー', details },
-    }));
+  it.each([undefined, null, false, 'invalid', {}])(
+    '配列ではない details を空にする (%s)',
+    async (details) => {
+      const error = await responseError(
+        400,
+        JSON.stringify({
+          error: { code: 'VALIDATION_ERROR', message: '入力エラー', details },
+        }),
+      );
 
-    expect(error.message).toBe('入力エラー');
-    expect(error.body.details).toEqual([]);
-    expect(error.fieldErrors).toEqual({});
-  });
+      expect(error.message).toBe('入力エラー');
+      expect(error.body.details).toEqual([]);
+      expect(error.fieldErrors).toEqual({});
+    },
+  );
 
   it('details の不正な要素だけを除去する', async () => {
     const valid = { field: 'title', reason: '必須です' };
-    const error = await responseError(422, JSON.stringify({ error: {
-      code: 'UNPROCESSABLE', message: '入力エラー',
-      details: [null, false, 'invalid', [], {}, { field: 'title' },
-        { field: 1, reason: 'invalid' }, { field: 'title', reason: null }, valid],
-    } }));
+    const error = await responseError(
+      422,
+      JSON.stringify({
+        error: {
+          code: 'UNPROCESSABLE',
+          message: '入力エラー',
+          details: [
+            null,
+            false,
+            'invalid',
+            [],
+            {},
+            { field: 'title' },
+            { field: 1, reason: 'invalid' },
+            { field: 'title', reason: null },
+            valid,
+          ],
+        },
+      }),
+    );
 
     expect(error.body.details).toEqual([valid]);
     const { router, handlers } = errorHandlers();
@@ -179,10 +222,16 @@ describe('非OK応答の正規化', () => {
   });
 
   it('不正な code でも正規の message と details を維持する', async () => {
-    const error = await responseError(409, JSON.stringify({ error: {
-      code: 'unexpected', message: '競合しました',
-      details: [{ field: 'title', reason: '更新済みです' }],
-    } }));
+    const error = await responseError(
+      409,
+      JSON.stringify({
+        error: {
+          code: 'unexpected',
+          message: '競合しました',
+          details: [{ field: 'title', reason: '更新済みです' }],
+        },
+      }),
+    );
 
     expect(error.body.code).toBe('INTERNAL_ERROR');
     expect(error.message).toBe('競合しました');
@@ -197,12 +246,17 @@ describe('非OK応答の正規化', () => {
 
   it('継承プロパティと同名の項目も先頭文言を保持し、prototype を変えない', () => {
     const fields = ['__proto__', 'constructor', 'toString', 'hasOwnProperty'];
-    const error = new ApiCallError({
-      code: 'VALIDATION_ERROR', message: '入力エラー',
-      details: fields.flatMap((field) => [
-        { field, reason: '先頭のエラー' }, { field, reason: '後のエラー' },
-      ]),
-    }, 400);
+    const error = new ApiCallError(
+      {
+        code: 'VALIDATION_ERROR',
+        message: '入力エラー',
+        details: fields.flatMap((field) => [
+          { field, reason: '先頭のエラー' },
+          { field, reason: '後のエラー' },
+        ]),
+      },
+      400,
+    );
     const fieldErrors = error.fieldErrors;
 
     expect(Object.getPrototypeOf(fieldErrors)).toBe(Object.prototype);
@@ -247,10 +301,14 @@ describe('handleApiError の分岐', () => {
   });
 
   it.each([400, 422, 409, 500])('通常エラーは文言と項目エラーを表示する (%i)', (status) => {
-    const error = new ApiCallError({
-      code: 'VALIDATION_ERROR', message: '入力内容を確認してください',
-      details: [{ field: 'title', reason: '必須です' }],
-    }, status);
+    const error = new ApiCallError(
+      {
+        code: 'VALIDATION_ERROR',
+        message: '入力内容を確認してください',
+        details: [{ field: 'title', reason: '必須です' }],
+      },
+      status,
+    );
     const { router, handlers } = errorHandlers();
 
     expect(handleApiError(error, router, handlers)).toBe(false);
@@ -259,14 +317,17 @@ describe('handleApiError の分岐', () => {
     expect(router.push).not.toHaveBeenCalled();
   });
 
-  it.each([new Error('unexpected'), null, undefined, 'unexpected'])('一般例外は共通文言で項目エラーを消す (%s)', (error) => {
-    const { router, handlers } = errorHandlers();
+  it.each([new Error('unexpected'), null, undefined, 'unexpected'])(
+    '一般例外は共通文言で項目エラーを消す (%s)',
+    (error) => {
+      const { router, handlers } = errorHandlers();
 
-    expect(handleApiError(error, router, handlers)).toBe(false);
-    expect(handlers.onSummary).toHaveBeenCalledWith(COMMUNICATION_ERROR_MESSAGE);
-    expect(handlers.onFieldErrors).toHaveBeenCalledWith({});
-    expect(router.push).not.toHaveBeenCalled();
-  });
+      expect(handleApiError(error, router, handlers)).toBe(false);
+      expect(handlers.onSummary).toHaveBeenCalledWith(COMMUNICATION_ERROR_MESSAGE);
+      expect(handlers.onFieldErrors).toHaveBeenCalledWith({});
+      expect(router.push).not.toHaveBeenCalled();
+    },
+  );
 
   it('項目エラーハンドラが省略されても処理できる', () => {
     const { router, handlers } = errorHandlers();

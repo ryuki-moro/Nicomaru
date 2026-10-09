@@ -10,6 +10,7 @@
 import { noContent, parseBody, route } from '@/lib/api/route';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { passwordResetRequestSchema } from '@/lib/validation';
+import { recordPasswordResetRequest } from '@/lib/services/audit';
 
 import { appBaseUrl, enforceAuthRateLimit } from '../shared';
 
@@ -29,6 +30,8 @@ export const POST = route(async (request) => {
   if (error) {
     console.error('[auth] password-reset failed', { code: error.code, status: error.status });
   }
+
+  await recordPasswordResetRequest();
 
   return noContent();
 });

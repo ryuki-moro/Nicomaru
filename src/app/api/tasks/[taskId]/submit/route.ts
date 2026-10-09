@@ -59,7 +59,6 @@ import { isUuid } from '@/lib/uuid';
 // node:crypto と暗号化（13-1）を使うため Edge ではなく Node ランタイムで動かす
 export const runtime = 'nodejs';
 
-
 interface CaseTaskRow {
   id: string;
   case_id: string;
@@ -106,7 +105,11 @@ async function removeOrphanFile(supabase: SupabaseClient, fileId: string): Promi
   // 実体 → メタの順に消す。逆順だと実体だけが残り、案件単位の自動削除（6-11）からも漏れる。
   const removed = await supabase.storage.from(file.bucket).remove([file.object_path]);
   if (removed.error) {
-    console.warn('[submit] Storage 上の実体を削除できませんでした', file.object_path, removed.error);
+    console.warn(
+      '[submit] Storage 上の実体を削除できませんでした',
+      file.object_path,
+      removed.error,
+    );
     return;
   }
   const deleted = await supabase.from('storage_files').delete().eq('id', file.id).select('id');

@@ -28,16 +28,30 @@ import { NOTIFICATION_TYPES } from '@/lib/notify/templates';
  * faq_answer は couple 向けで専用API（/api/ai/faq）からしか投入させない（7-3）。
  */
 const AI_CORE_JOB_TYPES_FOR_STAFF = [
-  'classification', 'draft', 'defect_check', 'task_extraction',
-  'reschedule_plan', 'handover_summary', 'template_draft', 'translation',
+  'classification',
+  'draft',
+  'defect_check',
+  'task_extraction',
+  'reschedule_plan',
+  'handover_summary',
+  'template_draft',
+  'translation',
 ] as const;
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付の形式が正しくありません');
 const shortText = z.string().trim().min(1, '入力してください').max(INPUT_LIMITS.shortText);
 const optionalTextArea = z.string().trim().max(INPUT_LIMITS.textArea).optional().nullable();
-const email = z.string().trim().toLowerCase().email('メールアドレスの形式が正しくありません')
+const email = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .email('メールアドレスの形式が正しくありません')
   .max(255);
-const phone = z.string().trim().regex(/^[0-9-]*$/, '数字とハイフンのみで入力してください').max(30);
+const phone = z
+  .string()
+  .trim()
+  .regex(/^[0-9-]*$/, '数字とハイフンのみで入力してください')
+  .max(30);
 
 /**
  * 今日以降の日付か（K03「過去日付不可」表4-14）。
@@ -56,7 +70,10 @@ export const otpRequestSchema = z.object({
 
 export const otpVerifySchema = z.object({
   email,
-  code: z.string().trim().regex(/^\d{6}$/, '6桁の数字を入力してください'),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, '6桁の数字を入力してください'),
 });
 
 export const passwordLoginSchema = z.object({
@@ -68,7 +85,9 @@ export const passwordResetRequestSchema = z.object({ email });
 
 export const passwordUpdateSchema = z
   .object({
-    password: z.string().min(PASSWORD_MIN_LENGTH, `${PASSWORD_MIN_LENGTH}文字以上で入力してください`),
+    password: z
+      .string()
+      .min(PASSWORD_MIN_LENGTH, `${PASSWORD_MIN_LENGTH}文字以上で入力してください`),
     passwordConfirm: z.string(),
   })
   .refine((v) => v.password === v.passwordConfirm, {
@@ -87,7 +106,11 @@ export const initialRegisterSchema = z.object({
 // ------------------------------------------------------------------ 案件（K03／K04）
 export const caseCreateSchema = z.object({
   weddingDate: isoDate.refine(notPastDate, '過去の日付は指定できません'),
-  weddingTime: z.string().regex(/^\d{2}:\d{2}$/).optional().nullable(),
+  weddingTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .optional()
+    .nullable(),
   groomName: shortText,
   brideName: shortText,
   contactEmail: email,
@@ -107,9 +130,11 @@ export const caseUpdateSchema = caseCreateSchema.partial().extend({
 });
 
 // ------------------------------------------------------------- 宿題（K02／T02）
-const optionsSchema = z.object({
-  choices: z.array(z.string().trim().min(1).max(INPUT_LIMITS.shortText)).optional(),
-}).passthrough();
+const optionsSchema = z
+  .object({
+    choices: z.array(z.string().trim().min(1).max(INPUT_LIMITS.shortText)).optional(),
+  })
+  .passthrough();
 
 export const caseTaskCreateSchema = z
   .object({
@@ -124,12 +149,18 @@ export const caseTaskCreateSchema = z
   })
   .superRefine((v, ctx) => {
     if (v.submissionFormat === 'file' && v.allowedFileTypes.length === 0) {
-      ctx.addIssue({ code: 'custom', path: ['allowedFileTypes'],
-        message: '受入ファイル形式を1つ以上選択してください' });
+      ctx.addIssue({
+        code: 'custom',
+        path: ['allowedFileTypes'],
+        message: '受入ファイル形式を1つ以上選択してください',
+      });
     }
     if (v.submissionFormat === 'select' && (v.options.choices ?? []).length === 0) {
-      ctx.addIssue({ code: 'custom', path: ['options'],
-        message: '選択肢を1つ以上入力してください' });
+      ctx.addIssue({
+        code: 'custom',
+        path: ['options'],
+        message: '選択肢を1つ以上入力してください',
+      });
     }
   });
 
@@ -156,12 +187,18 @@ export const taskTemplateSchema = z
   })
   .superRefine((v, ctx) => {
     if (v.submissionFormat === 'file' && v.allowedFileTypes.length === 0) {
-      ctx.addIssue({ code: 'custom', path: ['allowedFileTypes'],
-        message: '受入ファイル形式を1つ以上選択してください' });
+      ctx.addIssue({
+        code: 'custom',
+        path: ['allowedFileTypes'],
+        message: '受入ファイル形式を1つ以上選択してください',
+      });
     }
     if (v.submissionFormat === 'select' && (v.defaultOptions.choices ?? []).length === 0) {
-      ctx.addIssue({ code: 'custom', path: ['defaultOptions'],
-        message: '選択肢を1つ以上入力してください' });
+      ctx.addIssue({
+        code: 'custom',
+        path: ['defaultOptions'],
+        message: '選択肢を1つ以上入力してください',
+      });
     }
   });
 
@@ -177,8 +214,10 @@ export const planTypeSchema = z
     active: z.boolean().default(true),
   })
   .refine(
-    (v) => v.defaultGuestCountMax == null || v.defaultGuestCountMin == null
-      || v.defaultGuestCountMax >= v.defaultGuestCountMin,
+    (v) =>
+      v.defaultGuestCountMax == null ||
+      v.defaultGuestCountMin == null ||
+      v.defaultGuestCountMax >= v.defaultGuestCountMin,
     { message: '上限は下限以上で入力してください', path: ['defaultGuestCountMax'] },
   );
 
@@ -202,8 +241,7 @@ export const reviewSubmissionSchema = z
   })
   .superRefine((v, ctx) => {
     if (v.decision === 'needs_fix' && !v.comment) {
-      ctx.addIssue({ code: 'custom', path: ['comment'],
-        message: '不備の内容を入力してください' });
+      ctx.addIssue({ code: 'custom', path: ['comment'], message: '不備の内容を入力してください' });
     }
   });
 
@@ -264,7 +302,12 @@ export const planTaskTemplateAssignmentSchema = z.object({
   taskTemplateId: z.string().uuid(),
   displayOrder: z.number().int().min(0, '0以上の整数で入力してください').default(0),
   /** 未指定なら task_templates.due_offset_days をそのまま使う（6-6-2） */
-  dueOffsetDaysOverride: z.number().int().min(0, '0以上の整数で入力してください').nullable().optional(),
+  dueOffsetDaysOverride: z
+    .number()
+    .int()
+    .min(0, '0以上の整数で入力してください')
+    .nullable()
+    .optional(),
 });
 
 /** T03 プラン種別の保存（表4-18）。planTypeSchema の taskTemplateIds を割当明細へ拡張したもの。 */
@@ -272,16 +315,29 @@ export const planTypeSaveSchema = z
   .object({
     name: z.string().trim().min(1, '入力してください').max(INPUT_LIMITS.shortText),
     description: z.string().trim().max(INPUT_LIMITS.templateDescription).optional().nullable(),
-    defaultGuestCountMin: z.number().int().min(0, '0以上の整数で入力してください').optional().nullable(),
-    defaultGuestCountMax: z.number().int().min(0, '0以上の整数で入力してください').optional().nullable(),
-    assignments: z.array(planTaskTemplateAssignmentSchema)
+    defaultGuestCountMin: z
+      .number()
+      .int()
+      .min(0, '0以上の整数で入力してください')
+      .optional()
+      .nullable(),
+    defaultGuestCountMax: z
+      .number()
+      .int()
+      .min(0, '0以上の整数で入力してください')
+      .optional()
+      .nullable(),
+    assignments: z
+      .array(planTaskTemplateAssignmentSchema)
       .min(1, '宿題テンプレートを1件以上選択してください'),
     displayOrder: z.number().int().min(0, '0以上の整数で入力してください').default(0),
     active: z.boolean().default(true),
   })
   .refine(
-    (v) => v.defaultGuestCountMax == null || v.defaultGuestCountMin == null
-      || v.defaultGuestCountMax >= v.defaultGuestCountMin,
+    (v) =>
+      v.defaultGuestCountMax == null ||
+      v.defaultGuestCountMin == null ||
+      v.defaultGuestCountMax >= v.defaultGuestCountMin,
     { message: '上限は下限以上で入力してください', path: ['defaultGuestCountMax'] },
   )
   .refine(
@@ -332,8 +388,11 @@ export const notificationSendSchema = z
   })
   .superRefine((v, ctx) => {
     if (v.notificationType === 'needs_fix' && !v.comment) {
-      ctx.addIssue({ code: 'custom', path: ['comment'],
-        message: 'ご確認いただきたい内容を入力してください' });
+      ctx.addIssue({
+        code: 'custom',
+        path: ['comment'],
+        message: 'ご確認いただきたい内容を入力してください',
+      });
     }
     if (v.notificationType === 'info' && !v.message) {
       ctx.addIssue({ code: 'custom', path: ['message'], message: '本文を入力してください' });
@@ -344,7 +403,10 @@ export const notificationSendSchema = z
 export const venueCreateSchema = z.object({
   name: shortText,
   /** 5-7: 英大文字＋数字、4〜10字。全式場で一意 */
-  code: z.string().trim().regex(/^[A-Z0-9]{4,10}$/, '英大文字と数字で4〜10字で入力してください'),
+  code: z
+    .string()
+    .trim()
+    .regex(/^[A-Z0-9]{4,10}$/, '英大文字と数字で4〜10字で入力してください'),
   contactEmail: email.optional().nullable(),
   /** 新規登録時のみ必須。式場管理者アカウントを同時に作る */
   adminName: shortText.optional(),
@@ -352,11 +414,13 @@ export const venueCreateSchema = z.object({
   active: z.boolean().default(true),
 });
 
-export const venueUpdateSchema = z.object({
-  name: shortText.optional(),
-  contactEmail: email.optional().nullable(),
-  active: z.boolean().optional(),
-}).strict()
+export const venueUpdateSchema = z
+  .object({
+    name: shortText.optional(),
+    contactEmail: email.optional().nullable(),
+    active: z.boolean().optional(),
+  })
+  .strict()
   .refine((value) => Object.values(value).some((item) => item !== undefined), {
     message: '更新する項目を指定してください',
   });

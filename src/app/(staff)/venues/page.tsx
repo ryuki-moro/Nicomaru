@@ -48,7 +48,9 @@ export default async function VenueListPage({ searchParams }: Props) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from('venues')
-    .select('id, name, code, contact_email, active, created_at, user_profiles ( display_name, role, status )')
+    .select(
+      'id, name, code, contact_email, active, created_at, user_profiles ( display_name, role, status )',
+    )
     .order('code', { ascending: true })
     .range(offset, offset + LIST_PAGE_SIZE);
 
@@ -121,9 +123,17 @@ export default async function VenueListPage({ searchParams }: Props) {
       {(page > 1 || hasNext) && (
         <div className="flex items-center justify-between">
           {page > 1 ? (
-            <Link href={linkTo(page - 1)} className="btn-ghost">前のページ</Link>
-          ) : <span />}
-          {hasNext && <Link href={linkTo(page + 1)} className="btn-ghost">次のページ</Link>}
+            <Link href={linkTo(page - 1)} className="btn-ghost">
+              前のページ
+            </Link>
+          ) : (
+            <span />
+          )}
+          {hasNext && (
+            <Link href={linkTo(page + 1)} className="btn-ghost">
+              次のページ
+            </Link>
+          )}
         </div>
       )}
     </div>

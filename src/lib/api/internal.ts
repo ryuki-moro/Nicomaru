@@ -23,6 +23,8 @@ export type BatchJobType =
   | 'case_purge'
   | 'health_check'
   | 'usage_rollup'
+  | 'monitoring'
+  | 'audit_log_purge'
   | 'backup'
   | 'rate_limit_cleanup';
 
@@ -41,7 +43,10 @@ export interface BatchOutcome {
 
 /** 部分的に完了した処理を、成功件数を失わず失敗として記録する。 */
 export class BatchFailure extends Error {
-  constructor(message: string, readonly outcome: BatchOutcome) {
+  constructor(
+    message: string,
+    readonly outcome: BatchOutcome,
+  ) {
     super(message);
     this.name = 'BatchFailure';
   }
@@ -75,10 +80,15 @@ export async function runBatch(
 
   const finish = async (patch: Record<string, unknown>) => {
     try {
-      const saved = await admin.from('batch_runs').update({
-        finished_at: new Date().toISOString(),
-        ...patch,
-      }).eq('id', runId).select('id').single();
+      const saved = await admin
+        .from('batch_runs')
+        .update({
+          finished_at: new Date().toISOString(),
+          ...patch,
+        })
+        .eq('id', runId)
+        .select('id')
+        .single();
       if (saved.error || !saved.data?.id) throw new Error();
     } catch {
       throw new Error('バッチの終了記録を保存できませんでした');
@@ -93,10 +103,12 @@ export async function runBatch(
       await finish({
         http_status: 500,
         error_message: error instanceof Error ? error.message : String(error),
-        ...(error instanceof BatchFailure ? {
-          target_count: error.outcome.targetCount,
-          detail: error.outcome.detail ?? {},
-        } : {}),
+        ...(error instanceof BatchFailure
+          ? {
+              target_count: error.outcome.targetCount,
+              detail: error.outcome.detail ?? {},
+            }
+          : {}),
       });
     } catch {
       // 元の処理失敗を置き換えない。上流のレスポンス本文や個人情報はログへ出さない。

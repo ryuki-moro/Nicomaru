@@ -9,7 +9,8 @@ import {
 } from '@/lib/services/notification-log-export';
 
 const { requireRole, createServerClient } = vi.hoisted(() => ({
-  requireRole: vi.fn(), createServerClient: vi.fn(),
+  requireRole: vi.fn(),
+  createServerClient: vi.fn(),
 }));
 vi.mock('@/lib/auth/session', () => ({ requireRole }));
 vi.mock('@/lib/supabase/server', () => ({ createSupabaseServerClient: createServerClient }));
@@ -22,10 +23,13 @@ beforeEach(() => {
 function makeRows(count: number, time = '2026-10-06T00:00:00.123456+00:00') {
   return Array.from({ length: count }, (_, index): NotificationLogExportRow => ({
     id: `00000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, '0')}`,
-    provider: 'email', status: 'success', provider_message_id: `message-${index + 1}`,
+    provider: 'email',
+    status: 'success',
+    provider_message_id: `message-${index + 1}`,
     created_at: time,
     notifications: {
-      notification_type: 'info', venues: { name: 'テスト式場' },
+      notification_type: 'info',
+      venues: { name: 'テスト式場' },
       wedding_cases: { case_code: 'TEST-2026-0001' },
     },
   }));
@@ -35,23 +39,30 @@ function makeRows(count: number, time = '2026-10-06T00:00:00.123456+00:00') {
 function micros(value: string): bigint {
   const match = /^(.*T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/.exec(value);
   if (!match) throw new Error(`テスト日時を解釈できません: ${value}`);
-  return BigInt(Date.parse(`${match[1]}${match[3]}`)) * 1000n
-    + BigInt((match[2] ?? '').padEnd(6, '0'));
+  return (
+    BigInt(Date.parse(`${match[1]}${match[3]}`)) * 1000n + BigInt((match[2] ?? '').padEnd(6, '0'))
+  );
 }
 
-function databaseMock(initial: NotificationLogExportRow[], options: {
-  cap?: number;
-  failAt?: number;
-  beforeRead?: (requestNumber: number, rows: NotificationLogExportRow[]) => void;
-} = {}) {
+function databaseMock(
+  initial: NotificationLogExportRow[],
+  options: {
+    cap?: number;
+    failAt?: number;
+    beforeRead?: (requestNumber: number, rows: NotificationLogExportRow[]) => void;
+  } = {},
+) {
   const store = [...initial];
   const requests: URL[] = [];
   const fetchMock: typeof fetch = async (input) => {
-    const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
+    const url = new URL(
+      typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
+    );
     requests.push(url);
     if (requests.length === options.failAt) {
       return new Response(JSON.stringify({ code: 'XX000', message: '途中のDB障害' }), {
-        status: 500, headers: { 'content-type': 'application/json' },
+        status: 500,
+        headers: { 'content-type': 'application/json' },
       });
     }
     options.beforeRead?.(requests.length, store);
@@ -60,24 +71,34 @@ function databaseMock(initial: NotificationLogExportRow[], options: {
       const separator = filter.indexOf('.');
       const operator = filter.slice(0, separator);
       const boundary = micros(filter.slice(separator + 1));
-      rows = rows.filter((row) => operator === 'gte'
-        ? micros(row.created_at) >= boundary
-        : micros(row.created_at) < boundary);
+      rows = rows.filter((row) =>
+        operator === 'gte' ? micros(row.created_at) >= boundary : micros(row.created_at) < boundary,
+      );
     }
     const cursorFilter = url.searchParams.get('or');
     if (cursorFilter) {
       // 実SDKが送るquoted PostgREST条件を読む。URLエンコードもSDK経由で検証する。
-      const match = /^\(created_at\.lt\.("(?:[^"\\]|\\.)*"),and\(created_at\.eq\.("(?:[^"\\]|\\.)*"),id\.lt\.("(?:[^"\\]|\\.)*")\)\)$/.exec(cursorFilter);
+      const match =
+        /^\(created_at\.lt\.("(?:[^"\\]|\\.)*"),and\(created_at\.eq\.("(?:[^"\\]|\\.)*"),id\.lt\.("(?:[^"\\]|\\.)*")\)\)$/.exec(
+          cursorFilter,
+        );
       if (!match) throw new Error(`カーソル条件が不正です: ${cursorFilter}`);
       const time = JSON.parse(match[1]) as string;
       expect(JSON.parse(match[2])).toBe(time);
       const id = JSON.parse(match[3]) as string;
-      rows = rows.filter((row) => micros(row.created_at) < micros(time)
-        || (micros(row.created_at) === micros(time) && row.id < id));
+      rows = rows.filter(
+        (row) =>
+          micros(row.created_at) < micros(time) ||
+          (micros(row.created_at) === micros(time) && row.id < id),
+      );
     }
-    rows.sort((a, b) => micros(a.created_at) === micros(b.created_at)
-      ? b.id.localeCompare(a.id)
-      : micros(a.created_at) > micros(b.created_at) ? -1 : 1);
+    rows.sort((a, b) =>
+      micros(a.created_at) === micros(b.created_at)
+        ? b.id.localeCompare(a.id)
+        : micros(a.created_at) > micros(b.created_at)
+          ? -1
+          : 1,
+    );
     const limit = Number(url.searchParams.get('limit'));
     expect(limit).toBeGreaterThan(0);
     expect(limit).toBeLessThanOrEqual(1000);
@@ -95,7 +116,8 @@ function databaseMock(initial: NotificationLogExportRow[], options: {
   return { client, requests };
 }
 
-const request = (query = '') => new Request(`http://app.test/api/system/notification-logs.csv${query}`);
+const request = (query = '') =>
+  new Request(`http://app.test/api/system/notification-logs.csv${query}`);
 
 describe('通知ログCSVの分割取得', () => {
   it('同時刻の1,001行を上限1,000件のAPIから重複なく全件読む', async () => {
@@ -126,10 +148,12 @@ describe('通知ログCSVの分割取得', () => {
     const initial = makeRows(1500);
     const { client } = databaseMock(initial, {
       beforeRead(number, rows) {
-        if (number === 2) rows.push({
-          ...makeRows(1, '2026-10-06T00:00:01+00:00')[0],
-          id: 'ffffffff-ffff-4fff-8fff-ffffffffffff', provider_message_id: 'new-head',
-        });
+        if (number === 2)
+          rows.push({
+            ...makeRows(1, '2026-10-06T00:00:01+00:00')[0],
+            id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+            provider_message_id: 'new-head',
+          });
       },
     });
     const rows = await loadNotificationLogsForExport(client);
@@ -168,9 +192,13 @@ describe('通知ログCSV API', () => {
   it('同日指定はJSTの開始以上・翌日開始未満を出力する', async () => {
     const rows = makeRows(4);
     [
-      '2026-10-05T14:59:59.999999Z', '2026-10-05T15:00:00Z',
-      '2026-10-06T14:59:59.999999Z', '2026-10-06T15:00:00Z',
-    ].forEach((time, index) => { rows[index].created_at = time; });
+      '2026-10-05T14:59:59.999999Z',
+      '2026-10-05T15:00:00Z',
+      '2026-10-06T14:59:59.999999Z',
+      '2026-10-06T15:00:00Z',
+    ].forEach((time, index) => {
+      rows[index].created_at = time;
+    });
     const { requests } = databaseMock(rows);
     const response = await GET(request('?from=2026-10-06&to=2026-10-06'));
     const csv = await response.text();
@@ -179,13 +207,16 @@ describe('通知ログCSV API', () => {
     expect(csv).toContain('message-3');
     expect(csv).not.toContain('message-1');
     expect(csv).not.toContain('message-4');
-    for (const url of requests) expect(url.searchParams.getAll('created_at')).toEqual([
-      'gte.2026-10-06T00:00:00+09:00', 'lt.2026-10-07T00:00:00+09:00',
-    ]);
+    for (const url of requests)
+      expect(url.searchParams.getAll('created_at')).toEqual([
+        'gte.2026-10-06T00:00:00+09:00',
+        'lt.2026-10-07T00:00:00+09:00',
+      ]);
   });
 
   it.each([
-    ['?from=2026-02-30', 'from'], ['?to=0000-01-01', 'to'],
+    ['?from=2026-02-30', 'from'],
+    ['?to=0000-01-01', 'to'],
     ['?from=2026-10-07&to=2026-10-06', 'to'],
     ['?from=2026-10-06&from=2026-10-06', 'from'],
   ])('不正な期間%sはDB取得前に項目別400', async (query, field) => {
@@ -193,12 +224,15 @@ describe('通知ログCSV API', () => {
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.error.code).toBe('VALIDATION_ERROR');
-    expect(body.error.details).toEqual(expect.arrayContaining([expect.objectContaining({ field })]));
+    expect(body.error.details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field })]),
+    );
     expect(createServerClient).not.toHaveBeenCalled();
   });
 
   it.each([
-    [unauthenticated(), 401], [forbidden(), 403],
+    [unauthenticated(), 401],
+    [forbidden(), 403],
   ])('権限エラーは期間検証とDB取得より先に返す (%s)', async (error, status) => {
     requireRole.mockRejectedValueOnce(error);
     const response = await GET(request('?from=invalid'));
@@ -218,10 +252,16 @@ describe('通知ログCSV API', () => {
 
   it('取得列とCSVは個人情報・内部カーソルを含めず、数式をエスケープする', async () => {
     const row = makeRows(1)[0];
-    const fixture = { ...row, response_json: { secret: '秘密の応答' }, notifications: {
-      ...row.notifications!, body: '秘密の本文', full_name: '秘密の氏名',
-      venues: { name: '=HYPERLINK("evil")' },
-    } };
+    const fixture = {
+      ...row,
+      response_json: { secret: '秘密の応答' },
+      notifications: {
+        ...row.notifications!,
+        body: '秘密の本文',
+        full_name: '秘密の氏名',
+        venues: { name: '=HYPERLINK("evil")' },
+      },
+    };
     const { requests } = databaseMock([fixture]);
     const response = await GET(request());
     const csv = await response.text();

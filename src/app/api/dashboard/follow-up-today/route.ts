@@ -65,8 +65,11 @@ export const GET = route(async () => {
       .select(COUPLE_PROFILE_COLUMNS)
       .in('case_id', caseIds);
     if (profiles.error) throw fromPostgresError(profiles.error);
-    for (const p of (profiles.data ?? []) as unknown as
-      { case_id: string; full_name: string; is_primary_contact: boolean }[]) {
+    for (const p of (profiles.data ?? []) as unknown as {
+      case_id: string;
+      full_name: string;
+      is_primary_contact: boolean;
+    }[]) {
       const list = nameByCase.get(p.case_id) ?? [];
       // 主連絡先を先頭に出す（K01 の表示順と揃える）
       if (p.is_primary_contact) list.unshift(readPii(p.full_name));
@@ -93,11 +96,13 @@ export const GET = route(async () => {
       isMine: row.wedding_cases?.primary_planner_id === user.id,
     }))
     // リスクの高い順 → スコアの大きい順 → 挙式日が近い順。同着は case_id で決定的にする。
-    .sort((a, b) =>
-      RISK_LEVEL_RANK[b.scoreLevel] - RISK_LEVEL_RANK[a.scoreLevel]
-      || b.scoreValue - a.scoreValue
-      || (a.weddingDate ?? '9999-12-31').localeCompare(b.weddingDate ?? '9999-12-31')
-      || a.caseId.localeCompare(b.caseId))
+    .sort(
+      (a, b) =>
+        RISK_LEVEL_RANK[b.scoreLevel] - RISK_LEVEL_RANK[a.scoreLevel] ||
+        b.scoreValue - a.scoreValue ||
+        (a.weddingDate ?? '9999-12-31').localeCompare(b.weddingDate ?? '9999-12-31') ||
+        a.caseId.localeCompare(b.caseId),
+    )
     .slice(0, LIMIT);
 
   return ok({ items });

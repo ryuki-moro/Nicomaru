@@ -20,12 +20,17 @@ function rateLimitError(
   status: number,
 ): ApiError {
   // SDK の details / message には URL 等が含まれるため、そのまま記録しない。
-  const code = error.code && /^(?:[0-9A-Z]{5}|PGRST\d{3})$/.test(error.code)
-    ? error.code : status === 0 ? 'TRANSPORT_ERROR' : 'DATABASE_ERROR';
+  const code =
+    error.code && /^(?:[0-9A-Z]{5}|PGRST\d{3})$/.test(error.code)
+      ? error.code
+      : status === 0
+        ? 'TRANSPORT_ERROR'
+        : 'DATABASE_ERROR';
   console.warn('[auth.rate-limit] RPC failed', { operation, status, code });
   // status 0 は PostgREST SDK が fetch 例外を応答に変換したもの。
   return [0, 502, 503, 504].includes(status)
-    ? new ApiError('SERVICE_UNAVAILABLE') : fromPostgresError(error);
+    ? new ApiError('SERVICE_UNAVAILABLE')
+    : fromPostgresError(error);
 }
 
 /**

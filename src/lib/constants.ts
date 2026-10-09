@@ -33,7 +33,13 @@ export const USER_STATUS_LABEL: Record<UserStatus, string> = {
 };
 
 // -------------------------------------------------------------- 宿題の状態
-export const TASK_STATUSES = ['not_started', 'submitted', 'needs_fix', 'confirmed', 'waived'] as const;
+export const TASK_STATUSES = [
+  'not_started',
+  'submitted',
+  'needs_fix',
+  'confirmed',
+  'waived',
+] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
 export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
@@ -53,7 +59,11 @@ export const TASK_FILTER_TABS = [
   { key: 'needs_fix', label: '不備あり', statuses: ['needs_fix'] },
   { key: 'confirmed', label: '確認済', statuses: ['confirmed'] },
   { key: 'waived', label: '対応不要', statuses: ['waived'] },
-] as const satisfies readonly { key: string; label: string; statuses: readonly TaskStatus[] | null }[];
+] as const satisfies readonly {
+  key: string;
+  label: string;
+  statuses: readonly TaskStatus[] | null;
+}[];
 
 /** 「すべて」タブで除外する状態。 */
 export const TASK_STATUSES_EXCLUDED_FROM_ALL: readonly TaskStatus[] = ['waived'];
@@ -61,8 +71,11 @@ export const TASK_STATUSES_EXCLUDED_FROM_ALL: readonly TaskStatus[] = ['waived']
 /** 6-8 のリスク算出で「未提出」とみなす状態（6-6-2 の期限再計算の母集合と同一）。 */
 export const UNSUBMITTED_TASK_STATUSES: readonly TaskStatus[] = ['not_started', 'needs_fix'];
 /** 「未完了」= confirmed／waived 以外。 */
-export const INCOMPLETE_TASK_STATUSES: readonly TaskStatus[] =
-  ['not_started', 'submitted', 'needs_fix'];
+export const INCOMPLETE_TASK_STATUSES: readonly TaskStatus[] = [
+  'not_started',
+  'submitted',
+  'needs_fix',
+];
 
 // ------------------------------------------------------------ 提出の確認状態
 export const REVIEW_STATUSES = ['draft', 'submitted', 'needs_fix', 'confirmed'] as const;
@@ -237,6 +250,7 @@ export const RATE_LIMITS = {
   otp_verify_failure: { windowSeconds: OTP.ttlSeconds, max: OTP.verifyFailuresBeforeInvalidation },
   initial_register: { windowSeconds: 3600, max: 10 },
   password_reset: { windowSeconds: 3600, max: 10 },
+  password_login: { windowSeconds: 3600, max: 20 },
 } as const;
 
 /** 一覧画面の既定表示件数（4-3 一覧画面共通）。 */
@@ -255,8 +269,10 @@ export const COUPLE_PROFILE_COLUMNS =
  * 文字列で持つと呼び出し側が .order() を3段書き直すことになり単一ソースにならないため、
  * クエリへ適用する関数として公開する。
  */
-export function applyTaskOrder<T extends {
-  order: (column: string, options?: { ascending?: boolean }) => T;
-}>(query: T): T {
+export function applyTaskOrder<
+  T extends {
+    order: (column: string, options?: { ascending?: boolean }) => T;
+  },
+>(query: T): T {
   return query.order('due_date').order('display_order').order('id');
 }

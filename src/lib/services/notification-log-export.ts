@@ -36,7 +36,8 @@ export async function loadNotificationLogsForExport(
   let cursor: NotificationLogExportRow | undefined;
 
   while (rows.length < CSV_MAX_ROWS + 1) {
-    let query = supabase.from('notification_logs')
+    let query = supabase
+      .from('notification_logs')
       .select(EXPORT_COLUMNS)
       .order('created_at', { ascending: false })
       .order('id', { ascending: false })

@@ -53,13 +53,15 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
 
   const output = adoptedOutput('task_extraction', job);
   // 生成結果を編集可能な形へ写す。ジョブが差し替わったら作り直す。
-  const rows: Proposal[] = proposals ?? (output?.tasks ?? []).map((task) => ({
-    title: task.title,
-    description: task.description,
-    dueHint: task.due_hint,
-    dueDate: '',
-    registered: false,
-  }));
+  const rows: Proposal[] =
+    proposals ??
+    (output?.tasks ?? []).map((task) => ({
+      title: task.title,
+      description: task.description,
+      dueHint: task.due_hint,
+      dueDate: '',
+      registered: false,
+    }));
 
   function update(index: number, patch: Partial<Proposal>) {
     setProposals(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -152,16 +154,16 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
 
       <ErrorSummary message={summary} />
 
-      {(job?.status === 'done' || job?.status === 'confirmed') && (
-        rows.length === 0 ? (
-          <p className="text-label text-text-primary">
-            宿題にあたる内容は見つかりませんでした。
-          </p>
+      {(job?.status === 'done' || job?.status === 'confirmed') &&
+        (rows.length === 0 ? (
+          <p className="text-label text-text-primary">宿題にあたる内容は見つかりませんでした。</p>
         ) : (
           <ul className="space-y-3">
             {rows.map((row, index) => (
               <li key={index} className="rounded-card border border-border-light px-3 py-3">
-                <label className="field-label" htmlFor={`proposal-title-${index}`}>宿題名</label>
+                <label className="field-label" htmlFor={`proposal-title-${index}`}>
+                  宿題名
+                </label>
                 <input
                   id={`proposal-title-${index}`}
                   className="field"
@@ -171,7 +173,9 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
                   onChange={(e) => update(index, { title: e.target.value })}
                 />
 
-                <label className="field-label mt-2" htmlFor={`proposal-desc-${index}`}>説明</label>
+                <label className="field-label mt-2" htmlFor={`proposal-desc-${index}`}>
+                  説明
+                </label>
                 <textarea
                   id={`proposal-desc-${index}`}
                   className="field"
@@ -213,8 +217,7 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
               </li>
             ))}
           </ul>
-        )
-      )}
+        ))}
 
       {job?.status === 'done' && (
         <div className="mt-3 flex flex-wrap gap-3">

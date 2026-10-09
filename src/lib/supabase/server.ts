@@ -22,24 +22,20 @@ function env(name: string): string {
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
 
-  return createServerClient(
-    env('NEXT_PUBLIC_SUPABASE_URL'),
-    env('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet) => {
-          try {
-            for (const { name, value, options } of cookiesToSet) {
-              cookieStore.set(name, value, options as CookieOptions);
-            }
-          } catch {
-            // Server Component からは Cookie を書けない。middleware 側で更新されるため無視する。
+  return createServerClient(env('NEXT_PUBLIC_SUPABASE_URL'), env('NEXT_PUBLIC_SUPABASE_ANON_KEY'), {
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll: (cookiesToSet) => {
+        try {
+          for (const { name, value, options } of cookiesToSet) {
+            cookieStore.set(name, value, options as CookieOptions);
           }
-        },
+        } catch {
+          // Server Component からは Cookie を書けない。middleware 側で更新されるため無視する。
+        }
       },
     },
-  );
+  });
 }
 
 /**

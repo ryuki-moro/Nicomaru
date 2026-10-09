@@ -120,33 +120,36 @@ async function requestSheetDraft(formData: FormData) {
   const today = todayInJst();
 
   const [tasks, comms] = await Promise.all([
-    supabase.from('case_tasks')
+    supabase
+      .from('case_tasks')
       .select('title, due_date, status')
       .eq('case_id', caseId)
       .in('status', INCOMPLETE_TASK_STATUSES as unknown as string[])
       .order('due_date')
       .limit(20),
-    supabase.from('communication_logs')
+    supabase
+      .from('communication_logs')
       .select('summary, occurred_at')
       .eq('case_id', caseId)
       .order('occurred_at', { ascending: false })
       .limit(10),
   ]);
 
-  const pendingLines = ((tasks.data ?? []) as { title: string; due_date: string; status: TaskStatus }[])
-    .map((t) => `・${t.title}（期限 ${formatDate(t.due_date.slice(0, 10))}／`
-      + `${TASK_STATUS_LABEL[t.status]}）`);
-  const commLines = ((comms.data ?? []) as { summary: string; occurred_at: string }[])
-    .map((c) => `・${formatDate(c.occurred_at.slice(0, 10))} ${c.summary}`);
+  const pendingLines = (
+    (tasks.data ?? []) as { title: string; due_date: string; status: TaskStatus }[]
+  ).map(
+    (t) =>
+      `・${t.title}（期限 ${formatDate(t.due_date.slice(0, 10))}／` +
+      `${TASK_STATUS_LABEL[t.status]}）`,
+  );
+  const commLines = ((comms.data ?? []) as { summary: string; occurred_at: string }[]).map(
+    (c) => `・${formatDate(c.occurred_at.slice(0, 10))} ${c.summary}`,
+  );
 
   const text = [
     `本日: ${formatDate(today)}`,
-    pendingLines.length > 0
-      ? `未提出の宿題:\n${pendingLines.join('\n')}`
-      : '未提出の宿題: なし',
-    commLines.length > 0
-      ? `直近の連絡:\n${commLines.join('\n')}`
-      : '直近の連絡: なし',
+    pendingLines.length > 0 ? `未提出の宿題:\n${pendingLines.join('\n')}` : '未提出の宿題: なし',
+    commLines.length > 0 ? `直近の連絡:\n${commLines.join('\n')}` : '直近の連絡: なし',
   ].join('\n\n');
 
   const { error } = await supabase.rpc('enqueue_ai_job', {
@@ -173,7 +176,9 @@ export default async function MeetingSheetPage({
 
   const caseResult = await supabase
     .from('wedding_cases')
-    .select('id, case_code, wedding_date, venue_room, guest_count, plan_types ( name ), user_profiles ( display_name )')
+    .select(
+      'id, case_code, wedding_date, venue_room, guest_count, plan_types ( name ), user_profiles ( display_name )',
+    )
     .eq('id', caseId)
     .maybeSingle();
   if (!caseResult.data) redirect('/error?code=404');
@@ -189,29 +194,36 @@ export default async function MeetingSheetPage({
 
   const [profiles, tasks, follows, comms, sheets] = await Promise.all([
     supabase.from('couple_profiles').select(COUPLE_PROFILE_COLUMNS).eq('case_id', caseId),
-    supabase.from('case_tasks')
+    supabase
+      .from('case_tasks')
       .select('id, title, due_date, status, display_order')
       .eq('case_id', caseId)
-      .order('due_date').order('display_order').order('id'),
-    supabase.from('follow_logs')
+      .order('due_date')
+      .order('display_order')
+      .order('id'),
+    supabase
+      .from('follow_logs')
       .select('id, method, note, followed_at, user_profiles ( display_name )')
       .eq('case_id', caseId)
       .order('followed_at', { ascending: false })
       .limit(10),
-    supabase.from('communication_logs')
+    supabase
+      .from('communication_logs')
       .select('id, channel, direction, source, summary, occurred_at')
       .eq('case_id', caseId)
       .order('occurred_at', { ascending: false })
       .limit(15),
-    supabase.from('meeting_sheets')
+    supabase
+      .from('meeting_sheets')
       .select('id, generated_at')
       .eq('case_id', caseId)
       .order('generated_at', { ascending: false })
       .limit(1),
   ]);
 
-  const coupleName = ((profiles.data ?? []) as unknown as
-    { full_name: string; is_primary_contact: boolean }[])
+  const coupleName = (
+    (profiles.data ?? []) as unknown as { full_name: string; is_primary_contact: boolean }[]
+  )
     .slice()
     .sort((a, b) => Number(b.is_primary_contact) - Number(a.is_primary_contact))
     .map((p) => readPii(p.full_name))
@@ -222,7 +234,8 @@ export default async function MeetingSheetPage({
   // （宿題ごとの下書きは 9-3 で、そちらは related_task_id を持つ）。
   const [aiStatus, draftJobs] = await Promise.all([
     fetchAiAssistStatus(supabase),
-    supabase.from('ai_jobs')
+    supabase
+      .from('ai_jobs')
       .select(AI_JOB_COLUMNS)
       .eq('case_id', caseId)
       .eq('job_type', 'draft')
@@ -231,9 +244,7 @@ export default async function MeetingSheetPage({
       .limit(1),
   ]);
   const draftJob = ((draftJobs.data ?? []) as unknown as AiJobRow[])[0] ?? null;
-  const sheetDraft = draftJob?.status === 'confirmed'
-    ? adoptedOutput('draft', draftJob)
-    : null;
+  const sheetDraft = draftJob?.status === 'confirmed' ? adoptedOutput('draft', draftJob) : null;
 
   const taskRows = (tasks.data ?? []) as unknown as TaskRow[];
   const done = taskRows.filter((t) => !INCOMPLETE_TASK_STATUSES.includes(t.status));
@@ -256,7 +267,11 @@ export default async function MeetingSheetPage({
       <div className="no-print space-y-4">
         <nav aria-label="パンくず">
           <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-            <li><Link href="/cases" className="text-link hover:underline">案件一覧</Link></li>
+            <li>
+              <Link href="/cases" className="text-link hover:underline">
+                案件一覧
+              </Link>
+            </li>
             <li aria-hidden>/</li>
             <li>
               <Link href={`/cases/${caseId}`} className="text-link hover:underline">
@@ -293,14 +308,14 @@ export default async function MeetingSheetPage({
           initialJob={draftJob}
           aiAvailable={aiStatus.available}
           lastSeenAt={aiStatus.lastSeenAt}
-          requestSlot={(
+          requestSlot={
             <form action={requestSheetDraft}>
               <input type="hidden" name="caseId" value={caseId} />
               <button type="submit" className="btn-secondary w-auto px-5">
                 AIに要点の下書きを頼む
               </button>
             </form>
-          )}
+          }
         />
       </div>
 
@@ -312,7 +327,10 @@ export default async function MeetingSheetPage({
           </h2>
           <dl className="mt-2 grid grid-cols-2 gap-1 text-label sm:grid-cols-4">
             <Item label="案件番号" value={target.case_code} />
-            <Item label="挙式日" value={`${formatDateJp(target.wedding_date.slice(0, 10))}（あと${daysBetween(target.wedding_date.slice(0, 10), today)}日）`} />
+            <Item
+              label="挙式日"
+              value={`${formatDateJp(target.wedding_date.slice(0, 10))}（あと${daysBetween(target.wedding_date.slice(0, 10), today)}日）`}
+            />
             <Item label="プラン" value={target.plan_types?.name ?? '未設定'} />
             <Item label="担当" value={target.user_profiles?.display_name ?? '—'} />
             <Item label="会場" value={target.venue_room ?? '—'} />

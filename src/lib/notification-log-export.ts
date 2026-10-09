@@ -4,20 +4,23 @@ import { z } from 'zod';
 import { badRequest } from '@/lib/errors';
 import { toErrorDetails } from '@/lib/validation';
 
-const calendarDate = z.iso.date({ error: '実在する日付をYYYY-MM-DDで指定してください' })
+const calendarDate = z.iso
+  .date({ error: '実在する日付をYYYY-MM-DDで指定してください' })
   .refine((value) => !value.startsWith('0000-'), '西暦1年以降の日付を指定してください');
 const optionalDate = z.preprocess(
-  (value) => value === null || value === '' ? undefined : value,
+  (value) => (value === null || value === '' ? undefined : value),
   calendarDate.optional(),
 );
 
-export const notificationLogExportSchema = z.object({
-  from: optionalDate,
-  to: optionalDate,
-}).refine(({ from, to }) => !from || !to || from <= to, {
-  path: ['to'],
-  message: '終了日は開始日以降の日付を指定してください',
-});
+export const notificationLogExportSchema = z
+  .object({
+    from: optionalDate,
+    to: optionalDate,
+  })
+  .refine(({ from, to }) => !from || !to || from <= to, {
+    path: ['to'],
+    message: '終了日は開始日以降の日付を指定してください',
+  });
 
 export type NotificationLogPeriod = z.infer<typeof notificationLogExportSchema>;
 

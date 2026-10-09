@@ -22,32 +22,35 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 export const runtime = 'nodejs';
 
 // 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
-export const POST = route(async () => {
-  // 表6-4「/api/cases/{caseId}/risk/recalculate（定期処理）｜使用する（内部バッチ）」
-  const admin = createSupabaseAdminClient('cron.risk-recalculate');
+export const POST = route(
+  async () => {
+    // 表6-4「/api/cases/{caseId}/risk/recalculate（定期処理）｜使用する（内部バッチ）」
+    const admin = createSupabaseAdminClient('cron.risk-recalculate');
 
-  const failures: { caseId: string; message: string }[] = [];
+    const failures: { caseId: string; message: string }[] = [];
 
-  const outcome = await runBatch(admin, 'risk_recalculate', async () => {
-    const processed = await forEachActiveCase(admin, async (caseId) => {
-      try {
-        await recalculateCaseRisk(admin, caseId, persistViaServiceRole(admin, caseId));
-      } catch (error) {
-        // 自動リトライはしない（6-12）。件数と理由だけ残して次の案件へ進む。
-        failures.push({
-          caseId,
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
+    const outcome = await runBatch(admin, 'risk_recalculate', async () => {
+      const processed = await forEachActiveCase(admin, async (caseId) => {
+        try {
+          await recalculateCaseRisk(admin, caseId, persistViaServiceRole(admin, caseId));
+        } catch (error) {
+          // 自動リトライはしない（6-12）。件数と理由だけ残して次の案件へ進む。
+          failures.push({
+            caseId,
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      });
+      return {
+        targetCount: processed,
+        detail: { failed: failures.length, failures: failures.slice(0, 20) },
+      };
     });
-    return {
-      targetCount: processed,
-      detail: { failed: failures.length, failures: failures.slice(0, 20) },
-    };
-  });
 
-  return ok({
-    processed: outcome.targetCount,
-    failed: failures.length,
-  });
-}, { source: 'internal-cron' });
+    return ok({
+      processed: outcome.targetCount,
+      failed: failures.length,
+    });
+  },
+  { source: 'internal-cron' },
+);
