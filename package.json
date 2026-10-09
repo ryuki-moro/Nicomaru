@@ -39,7 +39,7 @@
     "@electric-sql/pglite": "^0.5.8",
     "@eslint/compat": "^2.0.0",
     "@next/eslint-plugin-next": "14.2.35",
-    "@playwright/test": "^1.56.0",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^22.15.0",
     "@types/pg": "^8.23.1",
