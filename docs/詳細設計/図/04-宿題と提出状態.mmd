@@ -1,0 +1,14 @@
+flowchart TD
+  n["not_started<br/>未着手"]
+  s["submitted<br/>確認待ち"]
+  c["confirmed<br/>プランナーが確認"]
+  f["needs_fix<br/>不備コメント → 再提出"]
+  w["waived<br/>staffが対応不要にする"]
+  draft["task_submissions: draft<br/>一時保存は本人単位。相手の提出を妨げない"]
+  versions["提出バージョンを追加<br/>draft / submitted / needs_fix / confirmed<br/>最新提出ポインタをRPCで競合制御"]
+  n -->|"提出"| s
+  s -->|"確認"| c
+  s -->|"不備"| f
+  f -->|"再提出"| s
+  n -->|"免除"| w
+  draft -->|"提出として確定"| versions

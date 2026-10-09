@@ -1,0 +1,39 @@
+erDiagram
+  ai_jobs {
+    uuid id PK
+    uuid case_id FK
+    uuid confirmed_by FK
+    uuid prompt_template_id FK
+    uuid related_task_id FK
+    uuid venue_id FK
+  }
+  ai_prompt_templates {
+    uuid id PK
+    uuid venue_id FK
+  }
+  ai_worker_heartbeats {
+    character_varying worker_name PK
+  }
+  audit_logs {
+    uuid id PK
+    uuid actor_user_id FK
+  }
+  auth_rate_limits {
+    uuid id PK
+  }
+  batch_runs {
+    uuid id PK
+  }
+  usage_snapshots {
+    date measured_on PK
+  }
+  system_alerts {
+    text alert_key PK
+  }
+  wedding_cases |o--o{ ai_jobs : "case_id"
+  user_profiles |o--o{ ai_jobs : "confirmed_by"
+  ai_prompt_templates |o--o{ ai_jobs : "prompt_template_id"
+  case_tasks |o--o{ ai_jobs : "related_task_id"
+  venues ||--o{ ai_jobs : "venue_id"
+  venues |o--o{ ai_prompt_templates : "venue_id"
+  user_profiles |o--o{ audit_logs : "actor_user_id"

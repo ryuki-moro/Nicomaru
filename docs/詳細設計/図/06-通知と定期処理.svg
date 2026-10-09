@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850" role="img">
+<title>06  通知の選択・送信結果と定期処理</title>
+<style>text{font-family:Meiryo,"Noto Sans JP",sans-serif}</style>
+<rect x="0" y="0" width="1200" height="850" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="36" y="43" font-size="27" fill="#993556">06  通知の選択・送信結果と定期処理</text>
+<text x="36" y="77" font-size="13" fill="#5F5E5A">上限判定はDBで原子的に予約。失敗と未送信を「送信済み」にしない。</text>
+<polyline points="36,94 1164,94" fill="none" stroke="#D3D1C7" stroke-width="1.5"/>
+<text x="36" y="823" font-size="11" fill="#5F5E5A">にこまる | 実装連動の詳細設計 | 2026-10-09 | 学校発表・模擬データ用</text>
+<text x="1120" y="823" font-size="12" fill="#5F5E5A">06</text>
+<polyline points="320,195.0 382.5,195.0 382.5,195.0 445,195.0" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="445,195.0 436.8959760788259,198.91468980700108 436.8959760788259,191.08531019299892" fill="#89857B"/>
+<rect x="377.5" y="178.0" width="54.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="382.5" y="193.0" font-size="11" fill="#5F5E5A">外部通知</text>
+<polyline points="760,195.0 820.0,195.0 820.0,195.0 880,195.0" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="880,195.0 871.8959760788259,198.91468980700108 871.8959760788259,191.08531019299892" fill="#89857B"/>
+<rect x="815.0" y="178.0" width="54.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="820.0" y="193.0" font-size="11" fill="#5F5E5A">条件一致</text>
+<polyline points="602.5,250 602.5,307.5 602.5,307.5 602.5,365" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="602.5,365 598.5853101929989,356.8959760788259 606.4146898070011,356.8959760788259" fill="#89857B"/>
+<rect x="597.5" y="290.5" width="65.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="602.5" y="305.5" font-size="11" fill="#5F5E5A">条件不一致</text>
+<polyline points="1020.0,250 1020.0,307.5 1020.0,307.5 1020.0,365" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="1020.0,365 1016.0853101929989,356.8959760788259 1023.9146898070011,356.8959760788259" fill="#89857B"/>
+<rect x="1015.0" y="290.5" width="32.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="1020.0" y="305.5" font-size="11" fill="#5F5E5A">結果</text>
+<polyline points="760,420.0 820.0,420.0 820.0,420.0 880,420.0" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="880,420.0 871.8959760788259,423.9146898070011 871.8959760788259,416.0853101929989" fill="#89857B"/>
+<rect x="815.0" y="403.0" width="32.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="820.0" y="418.0" font-size="11" fill="#5F5E5A">結果</text>
+<polyline points="355,647.5 400.0,647.5 400.0,647.5 445,647.5" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="445,647.5 436.8959760788259,651.4146898070011 436.8959760788259,643.5853101929989" fill="#89857B"/>
+<rect x="395.0" y="630.5" width="54.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="400.0" y="645.5" font-size="11" fill="#5F5E5A">定期実行</text>
+<polyline points="760,647.5 820.0,647.5 820.0,647.5 880,647.5" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="880,647.5 871.8959760788259,651.4146898070011 871.8959760788259,643.5853101929989" fill="#89857B"/>
+<rect x="815.0" y="630.5" width="32.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="820.0" y="645.5" font-size="11" fill="#5F5E5A">記録</text>
+<rect x="40" y="140" width="280" height="110" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="54" y="166" font-size="17" fill="#993556">notifications: queued</text>
+<text x="54" y="192" font-size="14" fill="#2C2C2A">新規通知 / 日次リマインド</text>
+<text x="54" y="212" font-size="14" fill="#2C2C2A">アプリ内通知は外部送信なし</text>
+<rect x="445" y="140" width="315" height="110" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="459" y="166" font-size="17" fill="#993556">チャネル選択</text>
+<text x="459" y="192" font-size="14" fill="#2C2C2A">LINE紐付け + overdue / needs_fix</text>
+<text x="459" y="212" font-size="14" fill="#2C2C2A">案件あり + claim_line_quota成功</text>
+<rect x="880" y="140" width="280" height="110" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="894" y="166" font-size="17" fill="#993556">LINE送信</text>
+<text x="894" y="192" font-size="14" fill="#2C2C2A">送信枠内の重要通知</text>
+<rect x="445" y="365" width="315" height="110" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="459" y="391" font-size="17" fill="#993556">メールへ代替</text>
+<text x="459" y="417" font-size="14" fill="#2C2C2A">未紐付け / 上限 / 対象外</text>
+<text x="459" y="437" font-size="14" fill="#2C2C2A">Resend構成と送信結果を確認</text>
+<rect x="880" y="365" width="280" height="110" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="894" y="391" font-size="17" fill="#993556">sent / failed</text>
+<text x="894" y="417" font-size="14" fill="#2C2C2A">notification_logsに結果</text>
+<text x="894" y="437" font-size="14" fill="#2C2C2A">switch reasonを残す</text>
+<rect x="40" y="590" width="315" height="115" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="54" y="616" font-size="17" fill="#993556">定期登録</text>
+<text x="54" y="642" font-size="14" fill="#2C2C2A">register_scheduled_jobs</text>
+<text x="54" y="662" font-size="14" fill="#2C2C2A">アプリURL更新で登録し直す</text>
+<rect x="445" y="590" width="315" height="115" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="459" y="616" font-size="17" fill="#993556">内部API認証</text>
+<text x="459" y="642" font-size="14" fill="#2C2C2A">x-internal-cron-secret必須</text>
+<text x="459" y="662" font-size="14" fill="#2C2C2A">ユーザーCookieに依存しない</text>
+<rect x="880" y="590" width="280" height="115" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="894" y="616" font-size="17" fill="#993556">batch_runs / system_alerts</text>
+<text x="894" y="642" font-size="14" fill="#2C2C2A">開始・終了・件数・失敗段階</text>
+<text x="894" y="662" font-size="14" fill="#2C2C2A">監視条件の重複/復旧を管理</text>
+<text x="40" y="755" font-size="13" fill="#2C2C2A">通知の送信失敗は記録し運用で再操作。LINEプロバイダ障害を無条件にメール再送する設計ではない。</text>
+</svg>

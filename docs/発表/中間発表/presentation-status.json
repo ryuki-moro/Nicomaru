@@ -1,0 +1,13 @@
+{
+  "asOf": "2026-10-09",
+  "referencePr": 70,
+  "verifiedCommit": "579d7d908d2a18e9f29c79dd8c75743c722baf61",
+  "unitPassed": 649,
+  "browserPassed": 28,
+  "auditVulnerabilities": 0,
+  "verificationLabel": "PR #70 の記録済み検証",
+  "currentIntegrationStatus": "今回の追加機能は統合検証中",
+  "mainStatus": "mainへの反映状態は発表前に進捗台帳と照合",
+  "humanEvaluationStatus": "実端末・性能・使い勝手の評価は未実施",
+  "source": "docs/implementation-progress.json の PR #70 checkSummary。全体CI欄は別の過去実行のため混同しない。"
+}
