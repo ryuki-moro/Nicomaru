@@ -56,6 +56,8 @@ npx playwright test performance-load --project=chromium
 
 結果はPlaywrightの添付 `performance-300cases-30users.json`。p50/p95/max、3秒超の件数、サーバー応答完了と画面表示までの時間を保存する。所要時間未達を隠して「3秒以内」とは判定しない。テストの合否は画面/APIの正常表示とfixture清掃を対象とし、3秒目標の達否は添付内の `over3Seconds` で確認する。ブラウザCPUとSSR/DBが同じCIホストを共有する条件を必ず併記し、ネットワーク込みの実端末性能とは分ける。
 
+`firstScreenMs` は文書開始前に設定したMutationObserverで対象見出しを検知し、連続する描画フレームで画面内に表示されていることを確認して記録するブラウザ内のmark時刻。LCPや全操作の準備完了を表す値ではない。Playwrightの確認・通信待ちを含む上限時間は `elapsedMs` として別に保存する。監視・日次集計の併走負荷はこの測定に含まない。観測は成功時・ページ離脱時・30秒の期限到達時に解除する。
+
 測定は既存demo seedを再利用しない。固定IDを持つ共同デモデータを300件へ増やしたり削除したりすることを避け、実行ごとのUUIDを持つ専用fixtureを作る。終了時は失敗した場合も当該IDのみを清掃する。Auth Admin APIは確認メールを送らない。
 
 実端末の読み上げ、LINE内ブラウザ、Safariのホーム画面追加、実回線の初回表示は本人の端末で確認し、QA-07/QA-08の手動記録へ残す。
@@ -65,3 +67,7 @@ npx playwright test performance-load --project=chromium
 従来の補助文字色は白背景で2.13:1、主ボタンとエラー文字は約3.93:1だった。通常サイズの文字に4.5:1以上を確保するため、`text-muted` を `#6F6B62`、`primary` を `#B53B65`、`danger` を `#B53035` に変更する。操作欄の境界は `border-mid: #89857B` を使用し、背景との3:1を確保する。装飾用の薄いカード境界は対象を分ける。
 
 根拠は[W3C WCAG 2.2 文字コントラストの解説](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)。`tests/unit/accessibility-colors.test.ts` は相対輝度から比率を計算し、白・通常背景・入力背景、状態バナー、主ボタンのhover合成色、入力境界を検査する。色の検査は画面全体のWCAG適合認証や実機読み上げ試験を意味しない。
+
+# テスト用通信差し替えとService Worker
+
+Playwrightの通信差し替えを使う4仕様では`serviceWorkers: 'block'`を指定する。WebKitでSW経由の要求が差し替えを通らなかったため、模擬503/HTML応答/通信断を確実に注入する目的で範囲を限定している。実アプリのSWは無効化せず、PWA専用試験とコアフローでは登録した状態を検証する。[Playwrightの公式説明](https://playwright.dev/docs/network#missing-network-events-and-service-workers)に基づく。
