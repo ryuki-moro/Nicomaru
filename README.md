@@ -32,7 +32,7 @@
 | 実装 | コア44機能中main42件、マージ待ち1件（式場編集）、一部実装1件（容量集計）。共通/運用要件に残作業 |
 | 改善・定期処理修正 | PR #41・#46・#48が未マージ。改善6件と登録関数をmain反映待ち |
 | 検証 | PR #48のCIで単体/RLS466・実PG12・E2E44成功、監査0件（2026-10-06）。mainの件数とは区別 |
-| 式場編集 | [PR #66](https://github.com/ryuki-moro/Nicomaru/pull/66)はdraft。ローカル520件成功・実PG用12件skip、式場編集E2E14件成功、lint/型/build成功。実装commit `04d9e26`のCIはverify/実PG成功、依存監査失敗・Secret scanはskip・E2E進行中。台帳更新後headのCIは確認待ち。ユーザーの[動作確認待ち](docs/動作確認_式場編集.md)で実装を停止 |
+| 式場編集・更新API保護 | [PR #66](https://github.com/ryuki-moro/Nicomaru/pull/66)の式場編集をブラウザーで確認し、2026-10-09に実装再開。[PR #68](https://github.com/ryuki-moro/Nicomaru/pull/68)でOrigin検証を全28更新APIへ適用。ローカル597件成功・実PG用12件skip、Chrome E2E28件成功、lint/型/build成功。GitHub CIと依存監査は別判定。[実装・検証記録](docs/実装計画_API送信元検証.md) |
 | デモ・検証環境 | 9/8の構築・デプロイ・5cron登録記録あり。学校デモで使う設定/到達/主要導線は確認待ち。本番運用は現在予定なし |
 | 学校成果物 | [#53 月別成果物Epic](https://github.com/ryuki-moro/Nicomaru/issues/53)で10月〜翌2月を管理。詳細設計/中間資料・テスト技法/AWS・仕様書/証拠・最終コード/資料・発表/WBS |
 

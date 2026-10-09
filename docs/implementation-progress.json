@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-08T01:58:00.828Z",
+  "updatedAt": "2026-10-09T00:59:08.295Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "cc575f9a567fd2efbb785c032069ec689bcb5812",
-  "implementationCommit": "04d9e26ec209b6c19d792c90ff9249bafebbc23e",
+  "implementationCommit": "3f0284169f55c263354a3266441c23d0a4c01000",
   "statusLabels": {
     "main": "mainに実装",
     "review": "マージ待ち",
@@ -19,7 +19,8 @@
     "docs/BridalHub_基本設計書.docx Version1.6",
     "mainのコード・現作業ブランチ",
     "2026-10-08 GitHub Issue/PR/コメント/CI読み取り",
-    "2026-10-08 ユーザー指定の学校スケジュール・Agent AI利用条件・本番運用予定なし"
+    "2026-10-08 ユーザー指定の学校スケジュール・Agent AI利用条件・本番運用予定なし",
+    "2026-10-09 実装再開・GAP-06全28更新API/内部5件/Webhookの検証、PR66/68とmainの再確認"
   ],
   "ci": {
     "run": 37406449671,
@@ -61,13 +62,23 @@
     },
     {
       "number": 66,
-      "title": "式場の詳細・編集を実装し、手動で動作確認できる状態にする",
+      "title": "式場編集と確認用ログインを実装し、認証DBの接続障害に対応する",
       "state": "open",
       "draft": true,
       "base": "codex/implementation-progress",
-      "head": "04d9e26ec209b6c19d792c90ff9249bafebbc23e",
+      "head": "303e874f84587fcfde4e99b8952ca4ba08c45bb7",
       "url": "https://github.com/ryuki-moro/Nicomaru/pull/66",
-      "checkSummary": "ローカルの単体/SQL・RLS 520件成功、実PostgreSQL用12件skip。式場編集E2E 14件成功（PC Chrome 7・スマートフォン寸法Chrome 7）。lint・型・build成功、ビルド済みサーバーで保存200を確認。実装commit 04d9e26のCI run 37715092140はverify/concurrency-db成功、securityのDependency audit失敗（Next.js moderate・sharp high、Issue47へ記録）・Secret scanはskip、E2E進行中。台帳更新後headのCIは確認待ち。ユーザーの手動確認待ち。実WebKit未実施。"
+      "checkSummary": "2026-10-09にPC/スマートフォン寸法Chromeの式場編集16件・認証再操作2件が成功。ユーザーの実装再開指示あり。303e874のCI run 37866134420は確認時点でverify/concurrency-db成功、security失敗、E2E進行中。ユーザー自身の使い勝手評価と実WebKitは未確認。"
+    },
+    {
+      "number": 68,
+      "title": "ブラウザー向け更新API28件に同一Origin検証を適用する",
+      "state": "open",
+      "draft": true,
+      "base": "codex/venue-edit-checkpoint",
+      "head": "3f0284169f55c263354a3266441c23d0a4c01000",
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/68",
+      "checkSummary": "2026-10-09: 全体の単体/SQL・RLS597成功、実PG専用12skip。Origin10・式場16・認証再操作2、計28のPC/スマートフォン寸法Chrome E2E成功。lint/型/build成功。独立レビュー要対応指摘なし。GitHub CIは確認待ち、既存依存監査はIssue47。"
     }
   ],
   "issues": [
@@ -1446,8 +1457,8 @@
         "tests/e2e/venue-edit.spec.ts",
         "docs/動作確認_式場編集.md"
       ],
-      "note": "利用者変更はmainに実装済み。PR #66で式場詳細・編集フォーム・PATCH API・一覧への導線を実装。system_adminとRLSで認可し、名称・代表メール・利用状態を更新する。ローカル自動検証とビルド済みサーバーの保存を確認済み。ユーザーの動作確認待ちで停止中。",
-      "next": "動作確認_式場編集.mdの手順でユーザーが専用模擬式場を確認し、結果を反映する。PR #66のCI監査失敗の確認・残る検査・レビュー・main反映は未完了。",
+      "note": "利用者変更はmainに実装済み。PR #66で式場詳細・編集フォーム・PATCH API・一覧への導線を実装。system_adminとRLSで認可し、名称・代表メール・利用状態を更新する。ローカル自動検証とビルド済みサーバーの保存を確認済み。2026-10-09にPC/スマートフォン寸法Chromeで通し確認済み。ユーザーの指示で次の実装へ再開。",
+      "next": "ユーザー自身の使い勝手評価は未記録。依存監査の修正・CIの残る確認・PRレビューを経てmainへ反映する。",
       "issues": [
         54
       ],
@@ -2211,8 +2222,8 @@
         "tests/e2e/venue-edit.spec.ts",
         "docs/動作確認_式場編集.md"
       ],
-      "note": "PR #66で式場詳細・編集フォーム・PATCH API・一覧への導線を実装。system_adminとRLSで認可し、名称・代表メール・利用状態を更新する。ローカル自動検証とビルド済みサーバーの保存を確認済み。ユーザーの動作確認待ちで停止中。",
-      "next": "動作確認_式場編集.mdの手順でユーザーが専用模擬式場を確認し、結果を反映する。PR #66のCI監査失敗の確認・残る検査・レビュー・main反映は未完了。",
+      "note": "PR #66で式場詳細・編集フォーム・PATCH API・一覧への導線を実装。system_adminとRLSで認可し、名称・代表メール・利用状態を更新する。ローカル自動検証とビルド済みサーバーの保存を確認済み。2026-10-09にPC/スマートフォン寸法Chromeで通し確認済み。ユーザーの指示で次の実装へ再開。",
+      "next": "ユーザー自身の使い勝手評価は未記録。依存監査の修正・CIの残る確認・PRレビューを経てmainへ反映する。",
       "issues": [
         54
       ],
@@ -2316,23 +2327,25 @@
       "title": "API Routesの同一Origin検証",
       "category": "実装不足",
       "phase": "1/2",
-      "status": "partial",
+      "status": "review",
       "design": "基本設計9章 CSRF",
       "screens": [],
       "evidence": [
         "src/lib/api/route.ts",
-        "src/middleware.ts",
         "src/lib/api/origin.ts",
-        "src/app/api/venues/[venueId]/route.ts",
-        "tests/unit/venue-update.test.ts"
+        "src/lib/api/internal.ts",
+        "src/app/api/line/webhook/route.ts",
+        "tests/unit/api-origin.test.ts",
+        "tests/e2e/api-origin.spec.ts",
+        "docs/実装計画_API送信元検証.md"
       ],
-      "note": "Server Actions標準保護を利用。PR #66では新設の式場PATCHに同一Origin検証を追加し、APP_BASE_URLを基準に別Origin・Originなしを拒否する。他の更新APIへの展開は未実施。",
-      "next": "式場編集の動作確認後、残るCookie認証の更新APIへ適用する。Webhook/内部/公開認証の例外を明示しクロスサイト拒否を検証する。",
+      "note": "PR #68で共通routeの既定保護として全28更新APIに同一Origin検証を適用。内部cron5本はwrapperの共有secret認証、LINEWebhookはraw body署名認証を維持。本文・認証・DBより前の拒否とJSON/multipartの通常送信を検証済み。",
+      "next": "PR #66に依存するPR #68のCI・レビューを確認し、依存順でmainへ反映する。実機Safariは未確認。",
       "issues": [
         54
       ],
       "prs": [
-        66
+        68
       ],
       "dependsOn": [],
       "requiresAi": false,
@@ -3997,15 +4010,17 @@
       "screens": [],
       "evidence": [
         "docs/学校制作スケジュール.md",
-        "docs/動作確認_式場編集.md"
+        "docs/動作確認_式場編集.md",
+        "docs/実装計画_API送信元検証.md"
       ],
-      "note": "PR #66で優先修正のうち式場編集を実装し、ユーザーの動作確認待ち。既存PRのmain反映、更新API全体へのOrigin検証、削除バッチ修正、10月版の確定は残る。",
-      "next": "式場編集の動作確認結果を反映し、残る優先修正を実装する。CI・レビュー済みの10月版コードと提出/資料参照用の版・制限一覧を確定する。",
+      "note": "PR #66の式場編集とPR #68の更新API Origin検証を実装・ブラウザー確認済み。2026-10-09に実装を再開。削除バッチの失敗処理・依存監査・既存PRのmain反映・10月版確定は残る。",
+      "next": "GAP-11の削除バッチ失敗処理とIssue47の依存監査を進め、CI・レビュー済みの10月版コードと資料参照用の版・制限一覧を確定する。",
       "issues": [
         54
       ],
       "prs": [
-        66
+        66,
+        68
       ],
       "dependsOn": [],
       "requiresAi": false,

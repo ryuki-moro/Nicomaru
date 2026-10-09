@@ -1,6 +1,7 @@
 # にこまる — タスク一覧
 
 基本設計書 **Version 1.6**（2026-08-28）。**2026-10-08に仕様・コード・GitHub・過去の本番作業記録を照合**。
+2026-10-09に式場のブラウザー確認と実装再開、更新APIのOrigin検証を追記。
 
 全機能・画面と具体的な残作業は **[実装進捗一覧](docs/実装進捗一覧.md)** を参照。
 編集する正本は [implementation-progress.json](docs/implementation-progress.json)。
@@ -14,7 +15,7 @@
 | フェーズ | 状態 |
 | --- | --- |
 | 基本設計 | ✅ Version 1.6 |
-| Phase 1（基盤・コア導線） | コア導線のコード・自動検査あり。PWA・更新APIのOrigin検証など共通要件に残作業 |
+| Phase 1（基盤・コア導線） | コア導線のコード・自動検査あり。更新APIのOrigin検証はPR #68で実装・検証済み、マージ待ち。PWAなど共通要件に残作業 |
 | Phase 2（運用機能） | 主な画面・通知・リスク実装あり。式場編集はPR #66で動作確認・マージ待ち。容量集計・監視等に残作業。定期バックアップは将来候補 |
 | Phase 3（AI補助 9-1〜9-6） | コアのコードあり。デモ機器/最小権限接続・停止時操作・有用性評価は確認待ち。常設化は将来候補 |
 | Phase 3拡張（9-7〜9-11） | 条件付き保留。schema等の土台のみ、利用可能な業務導線は未実装 |
@@ -33,7 +34,9 @@ PR #48の[CI run 37406449671](https://github.com/ryuki-moro/Nicomaru/actions/run
 ローカルの単体/SQL・RLSは520件成功・実PostgreSQL用12件skip、式場編集E2EはPC Chrome7件＋スマートフォン寸法Chrome7件の14件成功。
 lint・型・buildと、ビルド済みサーバーでの保存200を確認済み。実WebKitは未実施。
 実装commit `04d9e26`の[CI run 37715092140](https://github.com/ryuki-moro/Nicomaru/actions/runs/37715092140)は、verify/実PG成功、Dependency audit失敗・Secret scanはskip、E2E進行中。台帳更新後headのCIは確認待ち。
-[動作確認手順](docs/動作確認_式場編集.md)を渡し、ユーザーの確認待ちで実装をいったん停止している。
+[動作確認手順](docs/動作確認_式場編集.md)に沿うブラウザー確認を2026-10-09に実施し、ユーザーの指示で実装を再開した。
+
+[PR #68](https://github.com/ryuki-moro/Nicomaru/pull/68)で更新API28件へOrigin検証を適用。内部5件・Webhook1件の別認証を維持した。全体597件成功/実PG専用12skip、Chrome E2E28件成功、lint/型/build成功。[実装計画と検証結果](docs/実装計画_API送信元検証.md)を参照。GitHub CI・依存監査・main反映は別判定。次はGAP-11とIssue #47。
 
 ## 2. 完了したこと
 
@@ -126,9 +129,9 @@ Supabase作成・migration22本・seed・system_admin・private bucket・5cron�
 ### 新たに確認した実装不足
 
 詳細台帳のGAP-01は式場編集を実装し、PR #66で動作確認・マージ待ち。
-GAP-06のOrigin検証は新設の式場PATCHに適用済みで、他の更新APIへの展開が残る。
-その他のGAP-02〜11: PWA、容量集計、監視アラート、性能ログ、
-更新APIのOrigin検証、監査対象の網羅/保持期限、依存の週次更新、整形検査、削除バッチの失敗処理。
+GAP-06のOrigin検証はPR #68で全ブラウザー向け更新APIに適用・検証済み、マージ待ち。
+その他のGAP-02〜11（GAP-06を除く）: PWA、容量集計、監視アラート、性能ログ、
+監査対象の網羅/保持期限、依存の週次更新、整形検査、削除バッチの失敗処理。
 既存コードがある部分は「一部実装」とし、追加の完了条件を台帳に記載した。
 
 ### 制作資料
@@ -165,7 +168,7 @@ main と既存Issue・PRを照合して確認した改善。詳細と完了条�
 | [#43](https://github.com/ryuki-moro/Nicomaru/issues/43) 一覧11画面と利用者APIのページ番号共通検証 | 実装・ローカル検証済み（マージ待ち） |
 | [#44](https://github.com/ryuki-moro/Nicomaru/issues/44) 通知ログCSVの期間入力・日本時間の終了日・入力検証 | 実装・ローカル検証済み（マージ待ち） |
 | [#45](https://github.com/ryuki-moro/Nicomaru/issues/45) 通知ログCSVの1,000件上限による欠落と超過表示 | 実装・ローカル検証済み（マージ待ち） |
-| [#47](https://github.com/ryuki-moro/Nicomaru/issues/47) CIを止める開発依存の脆弱性修正 | 依存監査0件、実装・ローカル検証済み（マージ待ち） |
+| [#47](https://github.com/ryuki-moro/Nicomaru/issues/47) CIを止める開発依存の脆弱性修正 | 10/6は監査0件。10/8にNext.js/sharpを追加検出し、未解消。詳細台帳に記録 |
 | [#49](https://github.com/ryuki-moro/Nicomaru/issues/49) OTP自動送信とE2Eの確認クリックの競合 | テストヘルパー修正済み（マージ待ち） |
 
 
