@@ -53,19 +53,60 @@ export async function connectLocalAiWorker(workerName: string) {
     connectionTimeoutMillis: 5_000,
     statement_timeout: 15_000,
   });
+  let identity: {
+    connectionRole: string;
+    workerRole: string;
+    superuser: boolean;
+    bypassRls: boolean;
+  };
   try {
     await client.connect();
+    const connection = await client.query<{
+      session_user: string;
+      current_user: string;
+      can_set_worker: boolean;
+    }>(
+      `select session_user, current_user, pg_has_role(session_user, 'ai_worker', 'SET') as can_set_worker`,
+    );
+    const login = connection.rows[0];
+    if (login?.session_user !== 'postgres' || login.current_user !== 'postgres') {
+      throw new Error('AI E2E の接続ロールが想定する postgres ではありません');
+    }
+    if (!login.can_set_worker) {
+      throw new Error('CI の postgres → ai_worker メンバーシップに SET TRUE が必要です');
+    }
     // ai_worker は migration で NOLOGIN。CI の owner 接続を降格してから全操作する。
     await client.query('set role ai_worker');
-    const role = await client.query<{ current_user: string }>('select current_user');
-    if (role.rows[0]?.current_user !== 'ai_worker')
+    const role = await client.query<{
+      session_user: string;
+      current_user: string;
+      rolsuper: boolean;
+      rolbypassrls: boolean;
+    }>(
+      `select session_user, current_user, rolsuper, rolbypassrls
+         from pg_roles where rolname = current_user`,
+    );
+    const worker = role.rows[0];
+    if (
+      worker?.session_user !== 'postgres' ||
+      worker.current_user !== 'ai_worker' ||
+      worker.rolsuper ||
+      worker.rolbypassrls
+    )
       throw new Error('ワーカー権限へ切り替わりませんでした');
+    identity = {
+      connectionRole: worker.session_user,
+      workerRole: worker.current_user,
+      superuser: worker.rolsuper,
+      bypassRls: worker.rolbypassrls,
+    };
   } catch (error) {
     await client.end();
     throw error;
   }
 
   return {
+    identity,
     async deniesDirectAccess(): Promise<{ read: boolean; write: boolean }> {
       async function denied(sql: string): Promise<boolean> {
         try {

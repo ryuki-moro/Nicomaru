@@ -111,7 +111,26 @@ jobs:
       # このCIだけの使い捨てDB。公開用migrationには管理者メンバーシップを追加しない。
       # 専用ロールへSET ROLEした後、E2E内でテーブル直接アクセス拒否も確認する。
       - name: Allow fixture connection to assume AI worker role
-        run: docker exec supabase_db_Nicomaru psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 -c 'GRANT ai_worker TO postgres;'
+        run: |
+          # PG17ではCREATEROLE作成者への既存membershipがSET FALSEを持つ。
+          # 単なる再GRANTはその値を保持するため、SET TRUEを明示する。
+          docker exec -i supabase_db_Nicomaru psql -X -U supabase_admin -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          GRANT ai_worker TO postgres WITH SET TRUE, INHERIT FALSE;
+          SELECT member.rolname AS connection_role, target.rolname AS worker_role,
+                 membership.set_option, membership.inherit_option
+            FROM pg_auth_members membership
+            JOIN pg_roles member ON member.oid = membership.member
+            JOIN pg_roles target ON target.oid = membership.roleid
+           WHERE member.rolname = 'postgres' AND target.rolname = 'ai_worker';
+          DO $$ BEGIN
+            IF NOT pg_has_role('postgres', 'ai_worker', 'SET') THEN
+              RAISE EXCEPTION 'CI postgres cannot SET ROLE ai_worker';
+            END IF;
+          END $$;
+          SQL
+          # 所有者ではなく、E2Eと同じ接続ロールでも実際に切替できることを確認する。
+          docker exec supabase_db_Nicomaru psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -c 'SET ROLE ai_worker; SELECT session_user AS connection_role, current_user AS worker_role;'
 
       # ローカルスタックの接続情報を以降のステップへ渡す。
       # 鍵はローカル専用の既知の値で、外部には接続できない。
@@ -124,6 +143,13 @@ jobs:
           # 新しい CLI は JWT 形式の鍵に加えて sb_publishable_/sb_secret_ 形式も出す。無い方を補う
           ANON="$(value ANON_KEY)"; [ -n "$ANON" ] || ANON="$(value PUBLISHABLE_KEY)"
           SERVICE="$(value SERVICE_ROLE_KEY)"; [ -n "$SERVICE" ] || SERVICE="$(value SECRET_KEY)"
+          # 使い捨てのCI用でも、後続ステップのenv表示へ秘密値を出さない。
+          PII_KEY="$(openssl rand -base64 32)"
+          HMAC_KEY="$(openssl rand -base64 32)"
+          CRON_SECRET="$(openssl rand -hex 16)"
+          for secret in "$PII_KEY" "$HMAC_KEY" "$CRON_SECRET"; do
+            echo "::add-mask::$secret"
+          done
           {
             echo "NEXT_PUBLIC_SUPABASE_URL=$(value API_URL)"
             echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON"
@@ -131,9 +157,9 @@ jobs:
             echo "E2E_SUPABASE_SERVICE_ROLE_KEY=$SERVICE"
             echo "E2E_AI_DATABASE_URL=$(value DB_URL)"
             echo "E2E_MAIL_URL=${MAIL_URL:-http://127.0.0.1:54324}"
-            echo "PII_ENCRYPTION_KEY=$(openssl rand -base64 32)"
-            echo "PII_HMAC_KEY=$(openssl rand -base64 32)"
-            echo "INTERNAL_CRON_SECRET=$(openssl rand -hex 16)"
+            echo "PII_ENCRYPTION_KEY=$PII_KEY"
+            echo "PII_HMAC_KEY=$HMAC_KEY"
+            echo "INTERNAL_CRON_SECRET=$CRON_SECRET"
             echo "APP_BASE_URL=http://127.0.0.1:3000"
           } >> "$GITHUB_ENV"
           rm supabase-status.env

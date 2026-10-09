@@ -46,18 +46,6 @@ export default async function PlannerDashboardPage() {
 
   const caseIds = ((caseData ?? []) as CaseIdRow[]).map((row) => row.id);
 
-  // 6-8 と同じ「未提出」の定義（not_started／needs_fix）を UNSUBMITTED_TASK_STATUSES から取る。
-  let unsubmittedCount = 0;
-  if (caseIds.length > 0) {
-    const { count, error } = await supabase
-      .from('case_tasks')
-      .select('id', { count: 'exact', head: true })
-      .in('case_id', caseIds)
-      .in('status', [...UNSUBMITTED_TASK_STATUSES]);
-    if (error) throw fromPostgresError(error);
-    unsubmittedCount = count ?? 0;
-  }
-
   // ---------------------------------------------------- リスク可視化（機能4-2／6-2）
   // 現在値（is_current）だけを読む。再計算は明示再計算か定期処理が行う（6-8）。
   interface SnapshotRow {
@@ -66,15 +54,26 @@ export default async function PlannerDashboardPage() {
     score_level: RiskLevel;
     reasons: RiskReasonView[] | null;
   }
+  let unsubmittedCount = 0;
   let snapshots: SnapshotRow[] = [];
   if (caseIds.length > 0) {
-    const { data, error } = await supabase
-      .from('risk_score_snapshots')
-      .select('case_id, score_value, score_level, reasons')
-      .in('case_id', caseIds)
-      .eq('is_current', true);
-    if (error) throw fromPostgresError(error);
-    snapshots = (data ?? []) as unknown as SnapshotRow[];
+    // 同じ案件IDだけに依存する独立した読み取りを並列にする。各クエリのRLSは維持する。
+    const [tasks, risks] = await Promise.all([
+      supabase
+        .from('case_tasks')
+        .select('id', { count: 'exact', head: true })
+        .in('case_id', caseIds)
+        .in('status', [...UNSUBMITTED_TASK_STATUSES]),
+      supabase
+        .from('risk_score_snapshots')
+        .select('case_id, score_value, score_level, reasons')
+        .in('case_id', caseIds)
+        .eq('is_current', true),
+    ]);
+    if (tasks.error) throw fromPostgresError(tasks.error);
+    if (risks.error) throw fromPostgresError(risks.error);
+    unsubmittedCount = tasks.count ?? 0;
+    snapshots = (risks.data ?? []) as unknown as SnapshotRow[];
   }
   const highRiskCount = snapshots.filter((s) => s.score_level === 'high').length;
 
@@ -168,7 +167,7 @@ export default async function PlannerDashboardPage() {
           <ul className="mt-2 space-y-2">
             {followUps.map((item) => (
               <li key={item.caseId} className="card">
-                <Link href={`/cases/${item.caseId}`} className="block">
+                <Link href={`/cases/${item.caseId}`} prefetch={false} className="block">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-base text-text-primary">
                       {item.coupleName || item.caseCode}
@@ -266,7 +265,11 @@ function NavCard({
   description: string;
 }) {
   return (
-    <Link href={href} className="card block transition-colors hover:bg-field-filled-bg">
+    <Link
+      href={href}
+      prefetch={false}
+      className="card block transition-colors hover:bg-field-filled-bg"
+    >
       <p className="text-section font-bold text-text-primary">{title}</p>
       <p className="mt-1 text-caption text-text-muted">{description}</p>
     </Link>

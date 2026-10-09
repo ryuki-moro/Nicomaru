@@ -58,6 +58,12 @@ npx playwright test performance-load --project=chromium
 
 `firstScreenMs` は文書開始前に設定したMutationObserverで対象見出しを検知し、連続する描画フレームで画面内に表示されていることを確認して記録するブラウザ内のmark時刻。LCPや全操作の準備完了を表す値ではない。Playwrightの確認・通信待ちを含む上限時間は `elapsedMs` として別に保存する。監視・日次集計の併走負荷はこの測定に含まない。観測は成功時・ページ離脱時・30秒の期限到達時に解除する。
 
+2026-10-09のCI run `37876945521`（`7842ec0`）では、初回のp95はdashboard 6,911ms、mypage 6,366ms、一覧API 4,262msで3秒目標に未達だった。再試行traceには30画面の表示に加え、`next-router-prefetch: 1` の画面先読みが255件（案件詳細90、宿題詳細45、その他120）あった。初期画面のリンクは `prefetch={false}` とし、クリック時に取得する。ダッシュボードの独立した宿題件数・リスク参照は並列実行する。`resolveAppUser` はReact `cache` により同じServer Componentリクエスト内のlayout/page間だけ共有する。リクエストをまたぐキャッシュは持たず、Auth検証とactiveプロフィール/RLSの判定を継続する。
+
+根拠: [Next.jsのLink prefetch仕様](https://nextjs.org/docs/app/api-reference/components/link)、[React cacheのリクエスト単位の有効期間](https://react.dev/reference/react/cache)。前後比較では300案件・30利用者を維持し、ホストCPU/メモリ、既存案件件数、試行回数、固定経路ごとの先読み要求件数を添付へ記録する。一覧APIの `Server-Timing` は `auth` と `cases` の所要時間だけを返し、添付の `caseListSamples` に保存する。middleware・通信の待ちはこの2区間の外側になる。30人それぞれの表示名・ロールを確認し、別利用者の結果が混ざらないことも検査する。
+
+同runの後片付けは300 UUIDの一括DELETEが約12KBのURLとなる構造だったため、専用IDを50件ずつ処理する。失敗はHTTP状態と安全なエラーコードだけを `performance-cleanup` に添付し、UUIDや資格情報・DBエラー本文を保存しない。後片付けが失敗した実行の再試行値には残ったfixtureが影響し得るため、cleanup成功と既存案件件数も比較条件に含める。
+
 測定は既存demo seedを再利用しない。固定IDを持つ共同デモデータを300件へ増やしたり削除したりすることを避け、実行ごとのUUIDを持つ専用fixtureを作る。終了時は失敗した場合も当該IDのみを清掃する。Auth Admin APIは確認メールを送らない。
 
 実端末の読み上げ、LINE内ブラウザ、Safariのホーム画面追加、実回線の初回表示は本人の端末で確認し、QA-07/QA-08の手動記録へ残す。

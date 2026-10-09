@@ -9,6 +9,7 @@
  *     API 層はこの状態を 403（FORBIDDEN）として扱い、再ログインを促す（6-3-4）。
  */
 import { redirect } from 'next/navigation';
+import { cache } from 'react';
 
 import { isStaff, type Role } from '@/lib/constants';
 import { forbidden, unauthenticated } from '@/lib/errors';
@@ -44,7 +45,9 @@ export type ResolvedUser =
  * その getAppUser() の先頭でも同じ getUser() を呼んでいたため、
  * 401 と 403 を区別するためだけに全 Route Handler で往復が1回余計に走っていた。
  */
-export async function resolveAppUser(): Promise<ResolvedUser> {
+// React.cacheは同じRSC requestのlayout/page間だけで共有し、次requestで破棄される。
+// プロセス全体・Cookie値キーの共有キャッシュへ変更しない（別利用者への漏洩を防ぐ）。
+export const resolveAppUser = cache(async (): Promise<ResolvedUser> => {
   const supabase = await createSupabaseServerClient();
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user) return { state: 'anonymous' };
@@ -68,7 +71,7 @@ export async function resolveAppUser(): Promise<ResolvedUser> {
       email: data.email,
     },
   };
-}
+});
 
 /** ログイン中の利用者を返す。未ログイン・非 active なら null。 */
 export async function getAppUser(): Promise<AppUser | null> {

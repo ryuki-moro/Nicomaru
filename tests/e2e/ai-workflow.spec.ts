@@ -30,6 +30,12 @@ test('AI下書きは専用ワーカーで処理され、人が採用してから
   const coupleContext = await browser.newContext();
   let caseId: string | undefined;
   try {
+    expect(worker.identity).toEqual({
+      connectionRole: 'postgres',
+      workerRole: 'ai_worker',
+      superuser: false,
+      bypassRls: false,
+    });
     expect(await worker.deniesDirectAccess()).toEqual({ read: true, write: true });
     await worker.ping();
 

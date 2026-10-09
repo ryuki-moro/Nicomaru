@@ -5,14 +5,17 @@
  */
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
+import { availableParallelism, cpus, totalmem } from 'node:os';
 
 import { createServerClient } from '@supabase/ssr';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
 import { encryptPii } from '../../src/lib/crypto';
+import { performanceRouteName } from '../../src/lib/observability/performance';
 import { adminClient } from './helpers/admin';
 import { e2eEnv, futureDate, hasE2eEnv, uniqueEmail } from './helpers/env';
 import { FIRST_SCREEN_MARK, installFirstScreenMark } from './helpers/first-screen-mark';
+import { cleanupPerformanceFixture } from './helpers/performance-cleanup';
 
 function local(url: string): boolean {
   try {
@@ -40,6 +43,7 @@ interface Account {
   venueId: string;
   email: string;
   password: string;
+  displayName: string;
 }
 
 function summary(values: number[]) {
@@ -69,6 +73,8 @@ test('300案件・30同時利用者で初回表示と一覧取得を測定する
   const authUserIds: string[] = [];
   const contexts: BrowserContext[] = [];
   const pages: { page: Page; account: Account }[] = [];
+  const browserRequests = new Map<string, number>();
+  let existingCases: number | null = null;
   const operation = async (
     query: PromiseLike<{ error: { message: string } | null }>,
     label: string,
@@ -78,6 +84,9 @@ test('300案件・30同時利用者で初回表示と一覧取得を測定する
   };
 
   try {
+    const baseline = await admin.from('wedding_cases').select('id', { count: 'exact', head: true });
+    if (baseline.error) throw new Error('性能fixture: 開始前件数の確認に失敗');
+    existingCases = baseline.count;
     await operation(
       admin.from('venues').insert(
         venueIds.map((id, index) => ({
@@ -98,6 +107,7 @@ test('300案件・30同時利用者で初回表示と一覧取得を測定する
         if (created.error || !created.data.user) throw new Error('性能fixture: Auth作成に失敗');
         authUserIds.push(created.data.user.id);
         const profileId = randomUUID();
+        const displayName = '性能測定利用者 ' + (accounts.length + 1);
         await operation(
           admin.from('user_profiles').insert({
             id: profileId,
@@ -105,7 +115,7 @@ test('300案件・30同時利用者で初回表示と一覧取得を測定する
             venue_id: venueId,
             role,
             email,
-            display_name: '性能測定利用者',
+            display_name: displayName,
             status: 'active',
           }),
           'プロフィール作成',
@@ -117,6 +127,7 @@ test('300案件・30同時利用者で初回表示と一覧取得を測定する
           venueId,
           email,
           password,
+          displayName,
         });
       }
       const planners = accounts.filter(
@@ -214,6 +225,13 @@ test('300案件・30同時利用者で初回表示と一覧取得を測定する
         locale: 'ja-JP',
       });
       contexts.push(context);
+      context.on('request', (request) => {
+        const pathname = new URL(request.url()).pathname;
+        if (pathname.startsWith('/_next/')) return;
+        const kind = request.headers()['next-router-prefetch'] === '1' ? 'prefetch' : 'navigation';
+        const key = `${kind}:${performanceRouteName(pathname)}`;
+        browserRequests.set(key, (browserRequests.get(key) ?? 0) + 1);
+      });
       await context.addInitScript(installFirstScreenMark, {
         pathname: account.role === 'planner' ? '/dashboard' : '/mypage',
         heading: account.role === 'planner' ? 'ダッシュボード' : '次にやること',
@@ -237,6 +255,15 @@ test('300案件・30同時利用者で初回表示と一覧取得を測定する
             name: account.role === 'planner' ? 'ダッシュボード' : '次にやること',
             exact: true,
           }),
+        ).toBeVisible();
+        // 同時に別利用者のlayoutを描画してもプロフィールを共有しない。
+        await expect(
+          page
+            .getByRole('banner')
+            .getByText(
+              `${account.role === 'planner' ? 'プランナー' : '新郎新婦'} / ${account.displayName}`,
+              { exact: true },
+            ),
         ).toBeVisible();
         await page.waitForFunction(
           (markName) => performance.getEntriesByName(markName, 'mark').length === 1,
@@ -265,16 +292,33 @@ test('300案件・30同時利用者で初回表示と一覧取得を測定する
           const response = await page.request.get('/api/cases?offset=0&limit=20');
           expect(response.status()).toBe(200);
           await response.body();
-          return performance.now() - started;
+          const timing = response.headers()['server-timing'] ?? '';
+          const stage = (name: string) => {
+            const value = timing.match(new RegExp(`(?:^|,\\s*)${name};dur=([0-9.]+)`))?.[1];
+            return value === undefined ? null : Number(value);
+          };
+          return {
+            elapsedMs: performance.now() - started,
+            authMs: stage('auth'),
+            casesMs: stage('cases'),
+          };
         }),
     );
     const report = {
       measuredAt: new Date().toISOString(),
       environment: 'local-supabase',
       browser: 'chromium',
+      attempt: testInfo.retry,
+      host: {
+        logicalCpus: cpus().length,
+        availableParallelism: availableParallelism(),
+        totalMemoryMiB: Math.round(totalmem() / 1024 / 1024),
+        node: process.version,
+      },
       dataset: {
         venues: 3,
         cases: 300,
+        existingCases,
         tasks: 2400,
         concurrentUsers: 30,
         plannerUsers: 15,
@@ -287,7 +331,9 @@ test('300案件・30同時利用者で初回表示と一覧取得を測定する
       mypage: summary(
         firstScreens.filter((row) => row.screen === '/mypage').map((row) => row.firstScreenMs),
       ),
-      caseList: summary(lists),
+      caseList: summary(lists.map((row) => row.elapsedMs)),
+      caseListSamples: lists,
+      browserRequests: Object.fromEntries(browserRequests),
       samples: firstScreens,
       interpretation:
         '認証を済ませた空キャッシュの30ブラウザによる初回表示。firstScreenMsはブラウザ内で対象見出しの表示を連続する描画フレームで確認したmarkの時刻で、LCPや操作準備完了ではない。elapsedMsはPlaywrightの確認・通信待ちも含む上限時間。ブラウザCPUとSSR/DBは同じ実行環境を共有する。監視/日次集計の併走、商用SLA、実端末性能は測定していない。',
@@ -307,28 +353,20 @@ test('300案件・30同時利用者で初回表示と一覧取得を測定する
       }),
     );
   } finally {
-    await Promise.all(contexts.map((context) => context.close()));
+    const closed = await Promise.allSettled(contexts.map((context) => context.close()));
     // 部分的なfixture作成失敗でも、記録済みの専用IDだけを順番に清掃する。
-    const failures: string[] = [];
-    const clean = async (
-      query: PromiseLike<{ error: { message: string } | null }>,
-      label: string,
-    ) => {
-      const result = await query;
-      if (result.error) failures.push(label);
-    };
-    if (caseIds.length)
-      await clean(admin.from('wedding_cases').delete().in('id', caseIds), 'cases');
-    const profileIds = accounts.map((account) => account.profileId);
-    if (profileIds.length) {
-      await clean(admin.from('audit_logs').delete().in('actor_user_id', profileIds), 'audit_logs');
-      await clean(admin.from('user_profiles').delete().in('id', profileIds), 'profiles');
-    }
-    for (const id of authUserIds) {
-      const result = await admin.auth.admin.deleteUser(id);
-      if (result.error) failures.push('auth');
-    }
-    await clean(admin.from('venues').delete().in('id', venueIds), 'venues');
-    if (failures.length) throw new Error('性能fixtureの清掃失敗: ' + failures.join(', '));
+    const failures = await cleanupPerformanceFixture(admin, {
+      caseIds,
+      profileIds: accounts.map((account) => account.profileId),
+      authUserIds,
+      venueIds,
+    });
+    if (closed.some((result) => result.status === 'rejected'))
+      failures.push({ step: 'browser', status: null, code: 'CLOSE_FAILED' });
+    await testInfo.attach('performance-cleanup', {
+      body: JSON.stringify({ completed: failures.length === 0, failures }),
+      contentType: 'application/json',
+    });
+    if (failures.length) throw new Error('性能fixtureの清掃失敗: ' + JSON.stringify(failures));
   }
 });

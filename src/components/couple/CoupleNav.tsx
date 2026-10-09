@@ -34,6 +34,7 @@ export function CoupleNav() {
             <li key={item.href} className="flex-1">
               <Link
                 href={item.href}
+                prefetch={false}
                 aria-current={active ? 'page' : undefined}
                 className={`block py-3 text-center text-nav ${
                   active ? 'font-bold text-primary' : 'text-text-muted'

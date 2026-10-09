@@ -27,7 +27,9 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { caseCreateSchema } from '@/lib/validation';
 
 export const GET = route(async (request: Request) => {
+  const started = performance.now();
   await requireStaff();
+  const authenticated = performance.now();
   const supabase = await createSupabaseServerClient();
 
   const params = new URL(request.url).searchParams;
@@ -44,7 +46,8 @@ export const GET = route(async (request: Request) => {
     limit,
   });
 
-  return ok({
+  const loaded = performance.now();
+  const response = ok({
     cases: result.items.map((row) => ({
       id: row.id,
       caseCode: row.caseCode,
@@ -58,6 +61,12 @@ export const GET = route(async (request: Request) => {
     })),
     hasNext: result.hasNext,
   });
+  // 固定名と所要時間のみ。URL/検索条件/利用者情報をレスポンス計測へ混ぜない。
+  response.headers.set(
+    'Server-Timing',
+    `auth;dur=${(authenticated - started).toFixed(2)},cases;dur=${(loaded - authenticated).toFixed(2)}`,
+  );
+  return response;
 });
 
 export const POST = route(async (request: Request) => {
