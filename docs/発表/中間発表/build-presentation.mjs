@@ -46,6 +46,51 @@ const { finalizePresentation } = await import(
   pathToFileURL(path.join(SKILL, 'container_tools/artifact_tool_utils.mjs')).href
 );
 const status = JSON.parse(await fs.readFile(path.join(HERE, 'presentation-status.json'), 'utf8'));
+const countLabel = (value) =>
+  Number.isSafeInteger(value) && value >= 0 ? String(value) : '未記録';
+const evidence = {
+  unit: countLabel(status.unitPassed),
+  skipped: countLabel(status.unitSkipped),
+  postgres: countLabel(status.postgresPassed),
+  browser: countLabel(status.browserPassed),
+  browserSkipped: countLabel(status.browserSkipped),
+  audit: countLabel(status.auditVulnerabilities),
+  branch:
+    Number.isFinite(status.branchCoveragePercent) &&
+    status.branchCoveragePercent >= 0 &&
+    status.branchCoveragePercent <= 100
+      ? `${status.branchCoverageScope}の分岐網羅率${status.branchCoveragePercent}%`
+      : '分岐網羅率は未記録',
+};
+const loadTest = status.loadTest ?? {
+  state: 'not_recorded',
+  conditionLabel: 'CIの模擬データ・同時操作',
+  summary: 'この版のCI負荷試験結果は未記録です。',
+  metrics: [],
+};
+const loadStateLabel = {
+  passed: '計測済み',
+  failed: '基準未達',
+  measured_target_unmet: '3秒目標未達',
+  pending: '確定待ち',
+  not_recorded: '未記録',
+}[loadTest.state];
+if (!loadStateLabel) throw new Error('loadTest.stateが未対応です');
+const versionEvidence = [
+  `検証対象commit: ${status.verifiedCommit || '未記録'}`,
+  `main統合commit: ${status.mainCommit || '未記録'}`,
+  `CI実行: ${status.ciRunUrl || '未記録'}`,
+  `単体・DB成功: ${evidence.unit} / 同ジョブのskip: ${evidence.skipped} / 実PostgreSQL別ジョブ成功: ${evidence.postgres}`,
+  `E2E成功: ${evidence.browser} / 負荷用skip: ${evidence.browserSkipped} / 対象: ${status.browserScope || '未記録'}`,
+  evidence.branch,
+  `分岐網羅率の対象: ${(status.branchCoverageModules ?? []).join('、') || '未記録'}`,
+  `依存監査: 全重大度${evidence.audit}件 / 秘密情報検出: ${countLabel(status.secretFindings)}件`,
+  `共有環境: ${status.deploymentStatus || '未記録'}`,
+  `CI負荷試験: ${loadTest.summary}`,
+  `負荷試験実行: ${loadTest.ciOutcome || '未記録'} / 成功件数: ${countLabel(loadTest.passedTests)} / 出典: ${loadTest.source || '未記録'}`,
+  ...(loadTest.metrics ?? []).map((metric) => `負荷測定値: ${metric}`),
+  `人の評価: ${status.humanEvaluationStatus}`,
+].join('\n');
 const progress = JSON.parse(
   await fs.readFile(path.join(ROOT, 'docs/implementation-progress.json'), 'utf8'),
 );
@@ -99,7 +144,7 @@ function slide(title, seconds, speech, sources, dark = false) {
     alignment: 'right',
     color: dark ? '#CBD5DC' : C.muted,
   });
-  s.speakerNotes.text = `${speech}\n\n出典: ${sources.join('、')}\n状態基準日: ${status.asOf}`;
+  s.speakerNotes.text = `${speech}\n\n出典: ${sources.join('、')}\n状態基準日: ${status.asOf}\n${versionEvidence}`;
   slides.push({ title, seconds, speech, sources });
   return s;
 }
@@ -357,41 +402,53 @@ async function screenshot(s, name, x, y, w, h) {
   const s = slide(
     '実装と検証の記録',
     55,
-    `記録済みの検証結果です。${status.verificationLabel}では単体やDB関連の試験${status.unitPassed}件、Chromeによるブラウザー操作${status.browserPassed}件が成功し、当時の依存監査の脆弱性は${status.auditVulnerabilities}件でした。これは特定の版に対する結果です。今回追加した容量監視、監査、PWAなどは別途統合検証を進めています。未実施の実端末試験や使い勝手評価を、これらの自動テストの成功に含めません。mainへの反映状況は進捗台帳とPRで確認します。`,
+    `記録済みの検証結果です。${status.verificationLabel}では単体やDB関連の成功${evidence.unit}件、PCとスマートフォンを模擬したブラウザー操作の成功${evidence.browser}件を記録しています。単体・DBジョブのskip${evidence.skipped}件は、実PostgreSQLの別ジョブで${evidence.postgres}件成功しています。${evidence.branch}。依存監査の脆弱性件数は全重大度で${evidence.audit}です。${status.currentIntegrationStatus}。検証対象commitとmain統合commitはノートに分けて記録しています。共有環境への反映や人による評価の完了とは区別します。`,
     [
       'docs/implementation-progress.json',
       `https://github.com/ryuki-moro/Nicomaru/pull/${status.referencePr}`,
+      ...(status.ciRunUrl ? [status.ciRunUrl] : []),
       'presentation-status.json',
     ],
   );
   text(s, status.verificationLabel, 64, 160, 1150, 44, 28, { color: C.muted });
-  text(s, String(status.unitPassed), 64, 242, 400, 118, 92, { color: C.pink, bold: true });
+  text(s, evidence.unit, 64, 242, 400, 118, 92, { color: C.pink, bold: true });
   text(s, '単体・DB関連の成功件数', 64, 378, 500, 65, 28);
-  text(s, String(status.browserPassed), 685, 242, 400, 118, 92, { color: C.pink, bold: true });
-  text(s, 'Chromeブラウザー操作の成功件数', 685, 378, 525, 90, 28);
-  text(s, status.currentIntegrationStatus, 64, 523, 1145, 48, 30, { bold: true });
-  text(s, '実端末・性能・使い勝手は別途確認します', 64, 590, 1145, 44, 27, { color: C.muted });
+  text(s, evidence.browser, 685, 242, 400, 118, 92, { color: C.pink, bold: true });
+  text(s, 'ブラウザー操作の成功件数\n（PC・スマートフォンを模擬）', 685, 378, 525, 75, 25);
+  text(s, `実PG ${evidence.postgres}件 / ${evidence.branch}`, 64, 459, 1145, 44, 24, {
+    color: C.muted,
+  });
+  text(s, status.currentIntegrationStatus, 64, 517, 1145, 48, 29, { bold: true });
+  text(s, status.humanEvaluationStatus, 64, 587, 1145, 44, 26, { color: C.muted });
 }
 {
   const s = slide(
-    '評価方法と未測定の項目',
+    '自動検証と人による評価',
     55,
-    '評価は、自動試験と人による確認を分けます。権限や業務状態は、正常な操作だけでなく、別案件へのアクセス、期限の境界、DBやStorageの失敗を再現して確かめます。一方で、実端末で迷わず操作できるか、どのくらい時間が掛かるかはまだ評価していません。校内で同じシナリオを試し、所要時間と詰まった箇所を記録します。模擬評価の結果を、実際の式場での導入効果として発表しないよう区別します。',
-    ['tests/db', 'tests/unit', 'tests/e2e', 'docs/学校制作スケジュール.md'],
+    `評価は、自動試験と人による確認を分けます。権限や業務状態に加え、DBやStorageの失敗を再現して確かめます。CI負荷試験については、${loadTest.summary} ${status.humanEvaluationStatus}。CIの模擬データで測った応答性能を、人が実際に操作した作業時間や満足度として扱いません。人による評価は校内で同じシナリオを試し、所要時間と詰まった箇所を記録します。校内評価を実際の式場での導入効果とも区別します。`,
+    [
+      'tests/db',
+      'tests/unit',
+      'tests/e2e/performance-load.spec.ts',
+      'docs/テスト/README.md',
+      ...(loadTest.source ? [loadTest.source] : []),
+      ...(status.ciRunUrl ? [status.ciRunUrl] : []),
+    ],
   );
   table(
     s,
     [
       ['観点', '確認する方法', '現状'],
       ['権限・業務状態', 'RLS・API・画面の自動試験', '版ごとに記録'],
-      ['障害時の動作', 'DB・Storageの失敗を再現', '自動試験を追加'],
+      ['障害時の動作', 'DB・Storageの失敗を再現', '版ごとに記録'],
+      ['CI負荷試験', loadTest.conditionLabel, loadStateLabel],
       ['実端末・操作性', '同じ課題を人が操作する', '未実施'],
-      ['性能・作業時間', '所要時間と遅い処理を測る', '未測定'],
+      ['人の作業時間', '開始・終了の定義を揃えて測る', '未測定'],
     ],
     [300, 540, 312],
     169,
     434,
-    28,
+    26,
   );
   text(s, '校内の模擬評価と、実際の式場での導入効果を区別します', 64, 628, 1140, 40, 25, {
     color: C.muted,
@@ -460,6 +517,12 @@ const notes = [
   '',
   `作成基準日: ${status.asOf}。想定発表時間は約${Math.round(slides.reduce((sum, item) => sum + item.seconds, 0) / 60)}分（8〜10分の暫定構成）。実際の持ち時間・発表者は未確定。`,
   '',
+  '## 検証対象と状態',
+  '',
+  ...versionEvidence.split('\n').map((line) => `- ${line}`),
+  `- 統合状態: ${status.currentIntegrationStatus}。${status.mainStatus}。`,
+  `- 出典の補足: ${status.source}`,
+  '',
   ...slides.flatMap((item, i) => [
     `## ${i + 1}. ${item.title}（目安${item.seconds}秒）`,
     '',
@@ -472,7 +535,7 @@ const notes = [
   '',
   '- AIが停止したら？ 提出・確認・コメント入力を手動で継続します。AI生成の品質や稼働確認は別途記録します。',
   '- 他の式場の情報は見える？ 本人のセッションとRLSで参照範囲を制限し、別式場・別案件の拒否試験を行います。',
-  '- 効果はどのくらい？ 人による性能・使い勝手の測定は未実施です。現時点で削減率や満足度は示していません。',
+  `- 応答性能と使い勝手は？ CI負荷試験は「${loadTest.summary}」。${status.humanEvaluationStatus}。CIの応答性能から、人の作業時間の削減率や満足度を推定しません。`,
   '- 本番運用はいつ？ 現時点で予定はありません。2月は学校の最終発表・デモです。',
   '- Agent AIを契約していないメンバーは？ 動作確認、Officeでの資料編集、発表練習、WBSの実績記入を担当できます。',
   '',
