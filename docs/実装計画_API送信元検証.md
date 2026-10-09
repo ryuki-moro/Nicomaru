@@ -46,6 +46,10 @@
 - ブラウザー: 未認証の正常Originは既存400/401へ到達、別Originは403。実DBの式場保存・再読み込みをPC/スマートフォン寸法Chromeで確認。模擬データだけを使用し清掃する。
 - ロールバック: DB変更なし。専用ブランチの変更を戻せば元のAPI動作になる。
 
+2026-10-09の実施結果: 全体の単体/SQL・RLSテスト597件成功（実PostgreSQL専用12件skip）、lint・型・build成功。PCとスマートフォン寸法Chromeで送信元検証10件、式場編集16件、認証503後の再操作2件、計28件が成功した。専用試験データの清掃も成功。実機Safariと実メール配送は未検証。
+
+正確性・セキュリティ・性能・簡素化の独立レビューで要対応指摘なし。スキル指定の外部`review.py`は`httpx`未導入で実行できず、Codexレビューで代替した。mainへのマージとGitHub CI全体の合格はこのローカル結果に含めない。
+
 ## 参照
 
 - [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#using-standard-headers-to-verify-origin): 送信元と公開Originの比較、ログイン画面のCSRFも考慮する。

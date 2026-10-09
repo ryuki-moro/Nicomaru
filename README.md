@@ -161,6 +161,13 @@ TEST_PG_URL=postgres://postgres:<password>@127.0.0.1:5433/postgres npm run test:
   除外しないと pg_cron からの定期処理が 307 で全滅する。認証は共有シークレットが担う(6-5-2)。
 - **`/api` 配下は未認証でもログイン画面へリダイレクトしない**。リダイレクトすると
   クライアントがログイン画面のHTMLを受け取り、6-5-1 のエラー形式で扱えなくなる。
+- **更新APIは共通`route()`を使い、同一Originを必須にする**。認証前のAPIも含む。
+  `APP_BASE_URL`と異なるOriginやOrigin欠落は、認証・本文解析・DB処理より前に403を返す。
+  正しいOriginでの未認証は従来どおり401。通常のブラウザー`fetch`はOriginを自動送信する。
+  curl等で直接確認する場合は`Origin: <APP_BASE_URLのscheme+host+port>`を付ける（利用者認証は別途必要）。
+  内部cronだけは`route(handler, { source: 'internal-cron' })`で共有secret認証を必須にする。
+  LINE Webhookは独立したraw body署名検証を維持し、LINE連携の`/api/line/link`は通常のOrigin検証対象。
+  [対象・検証計画](docs/実装計画_API送信元検証.md)と`tests/unit/api-origin.test.ts`を参照。
 
 ## フェーズ計画
 

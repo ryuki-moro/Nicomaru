@@ -9,6 +9,8 @@
 | `ai-availability.spec.ts` | AIワーカーの心拍が途切れたとき「利用できません」に切り替わること |
 | `notification-log-export.spec.ts` | system_adminのCSV期間・JST境界・1,000件超とマイクロ秒・ダウンロード・認証と通信異常。実通知やAIの実行は不要 |
 | `venue-edit.spec.ts` | 式場一覧→詳細→変更の保存・再読込、空欄メール/停止中、入力検証、Origin/権限/不存在、500後の再試行。専用の模擬式場・アカウントのみ使用 |
+| `api-origin.spec.ts` | 実ブラウザーのJSON/multipart送信、Origin欠落/別Originの403、内部secret/LINE署名欠落の401。未認証・不正入力のみで副作用なし |
+| `otp-service-unavailable.spec.ts` | 認証サービスの503後に入力を保持し、再操作できること。送信APIは差し替えて実メール送信を遮断 |
 
 `helpers/` は画面操作の部品。**アプリ本体のプログラムは触らない**。
 
