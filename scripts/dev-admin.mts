@@ -88,7 +88,10 @@ async function prepareAccount(): Promise<DevAccount> {
 }
 
 const account = await prepareAccount();
-console.log(`開発用adminモード: http://127.0.0.1:${port}/login`);
+// 更新APIの同一Origin検証とログイン画面への転送は APP_BASE_URL を基準にする。
+// .env.local の値（例: localhost:3000）のままだと 127.0.0.1 の別ポートでは全更新APIが403になる。
+const appBaseUrl = `http://127.0.0.1:${port}`;
+console.log(`開発用adminモード: ${appBaseUrl}/login`);
 console.log('「開発用adminで入る」を押すと式場管理者として操作できます。終了は Ctrl+C。');
 
 const child = spawn(process.execPath, [
@@ -98,6 +101,7 @@ const child = spawn(process.execPath, [
   env: {
     ...process.env,
     NODE_ENV: 'development',
+    APP_BASE_URL: appBaseUrl,
     DEV_ADMIN_LOGIN_ENABLED: 'true',
     DEV_ADMIN_EMAIL: account.email,
     DEV_ADMIN_PASSWORD: account.password,

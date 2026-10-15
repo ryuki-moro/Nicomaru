@@ -26,6 +26,8 @@ beforeEach(() => {
   vi.stubEnv('DEV_ADMIN_AUTH_USER_ID', 'dev-auth-user');
   vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:54321');
   vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-test-key');
+  // dev:admin ランチャーは起動URLを APP_BASE_URL として渡す。
+  vi.stubEnv('APP_BASE_URL', 'http://127.0.0.1:3002');
   mocks.signIn.mockResolvedValue({ error: null, data: {
     user: { id: 'dev-auth-user' }, session: { access_token: 'private-access-token', refresh_token: 'private-refresh-token' },
   } });
@@ -63,6 +65,11 @@ describe('POST /api/auth/dev-admin', () => {
   });
   it('別Originからは認証APIを呼ばない', async () => {
     expect((await POST(request({ origin: 'https://evil.test' }))).status).toBe(403);
+    expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+  it('APP_BASE_URLが起動URLと異なると共通のOrigin検証で拒否される', async () => {
+    vi.stubEnv('APP_BASE_URL', 'http://localhost:3000');
+    expect((await POST(request())).status).toBe(403);
     expect(mocks.createClient).not.toHaveBeenCalled();
   });
   it('認証に失敗した場合はCookieを発行しない', async () => {
