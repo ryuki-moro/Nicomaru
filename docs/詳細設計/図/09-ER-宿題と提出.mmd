@@ -1,0 +1,49 @@
+erDiagram
+  task_templates {
+    uuid id PK
+    uuid venue_id FK
+  }
+  plan_task_templates {
+    uuid id PK
+    uuid plan_type_id FK
+    uuid task_template_id FK
+  }
+  case_tasks {
+    uuid id PK
+    uuid assigned_to FK
+    uuid case_id FK
+    uuid confirmed_by FK
+    uuid task_template_id FK
+  }
+  task_submissions {
+    uuid id PK
+    uuid case_task_id FK
+    uuid file_id FK
+    uuid reviewed_by FK
+    uuid submitted_by FK
+  }
+  storage_files {
+    uuid id PK
+    uuid case_id FK
+    uuid uploaded_by FK
+  }
+  timeline_items {
+    uuid id PK
+    uuid case_id FK
+    uuid related_task_id FK
+  }
+  venues ||--o{ task_templates : "venue_id"
+  plan_types ||--o{ plan_task_templates : "plan_type_id"
+  task_templates ||--o{ plan_task_templates : "task_template_id"
+  user_profiles |o--o{ case_tasks : "assigned_to"
+  wedding_cases ||--o{ case_tasks : "case_id"
+  user_profiles |o--o{ case_tasks : "confirmed_by"
+  task_templates |o--o{ case_tasks : "task_template_id"
+  case_tasks ||--o{ task_submissions : "case_task_id"
+  storage_files |o--o{ task_submissions : "file_id"
+  user_profiles |o--o{ task_submissions : "reviewed_by"
+  user_profiles ||--o{ task_submissions : "submitted_by"
+  wedding_cases ||--o{ storage_files : "case_id"
+  user_profiles ||--o{ storage_files : "uploaded_by"
+  wedding_cases ||--o{ timeline_items : "case_id"
+  case_tasks |o--o{ timeline_items : "related_task_id"

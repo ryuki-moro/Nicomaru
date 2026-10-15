@@ -37,3 +37,25 @@ describe('service_role の権限（20260828002200・表6-4）', () => {
     await db.close();
   });
 });
+
+describe('register_scheduled_jobs（20260828002300・6-12）', () => {
+  it('pg_cron が無い環境では 0 を返して何もしない', async () => {
+    const db = await TestDb.create();
+    const r = await db.query<{ n: number }>(
+      `select register_scheduled_jobs('https://example.test', 'secret') as n`,
+    );
+    expect(r.rows[0].n).toBe(0);
+    await db.close();
+  });
+
+  it('PostgREST のロールからは呼べない', async () => {
+    const db = await TestDb.create();
+    for (const role of ['anon', 'authenticated', 'service_role']) {
+      const r = await db.query<{ ok: boolean }>(
+        `select has_function_privilege('${role}', 'public.register_scheduled_jobs(text, text)', 'execute') as ok`,
+      );
+      expect(r.rows[0].ok, role).toBe(false);
+    }
+    await db.close();
+  });
+});

@@ -137,12 +137,54 @@ describe('phaseNameFor（タイムラインの区分）', () => {
 
 describe('recalculateDueDates（挙式日変更）', () => {
   const tasks: ExistingTask[] = [
-    { id: 'a', taskTemplateId: 't1', title: '未着手', status: 'not_started', dueDate: '2026-08-11', dueOffsetDays: 60 },
-    { id: 'b', taskTemplateId: 't2', title: '不備あり', status: 'needs_fix', dueDate: '2026-09-10', dueOffsetDays: 30 },
-    { id: 'c', taskTemplateId: 't3', title: '提出済', status: 'submitted', dueDate: '2026-09-20', dueOffsetDays: 20 },
-    { id: 'd', taskTemplateId: 't4', title: '確認済', status: 'confirmed', dueDate: '2026-09-25', dueOffsetDays: 15 },
-    { id: 'e', taskTemplateId: 't5', title: '対応不要', status: 'waived', dueDate: '2026-09-26', dueOffsetDays: 14 },
-    { id: 'f', taskTemplateId: null, title: '個別追加', status: 'not_started', dueDate: '2026-09-01', dueOffsetDays: null },
+    {
+      id: 'a',
+      taskTemplateId: 't1',
+      title: '未着手',
+      status: 'not_started',
+      dueDate: '2026-08-11',
+      dueOffsetDays: 60,
+    },
+    {
+      id: 'b',
+      taskTemplateId: 't2',
+      title: '不備あり',
+      status: 'needs_fix',
+      dueDate: '2026-09-10',
+      dueOffsetDays: 30,
+    },
+    {
+      id: 'c',
+      taskTemplateId: 't3',
+      title: '提出済',
+      status: 'submitted',
+      dueDate: '2026-09-20',
+      dueOffsetDays: 20,
+    },
+    {
+      id: 'd',
+      taskTemplateId: 't4',
+      title: '確認済',
+      status: 'confirmed',
+      dueDate: '2026-09-25',
+      dueOffsetDays: 15,
+    },
+    {
+      id: 'e',
+      taskTemplateId: 't5',
+      title: '対応不要',
+      status: 'waived',
+      dueDate: '2026-09-26',
+      dueOffsetDays: 14,
+    },
+    {
+      id: 'f',
+      taskTemplateId: null,
+      title: '個別追加',
+      status: 'not_started',
+      dueDate: '2026-09-01',
+      dueOffsetDays: null,
+    },
   ];
 
   it('未提出（not_started／needs_fix）だけを再計算する', () => {
@@ -174,9 +216,30 @@ describe('recalculateDueDates（挙式日変更）', () => {
 
 describe('previewPlanChange（プラン種別変更）', () => {
   const existing: ExistingTask[] = [
-    { id: 'a', taskTemplateId: 'old1', title: '旧・未着手', status: 'not_started', dueDate: '2026-08-11', dueOffsetDays: 60 },
-    { id: 'b', taskTemplateId: 'old2', title: '旧・提出済', status: 'submitted', dueDate: '2026-08-20', dueOffsetDays: 51 },
-    { id: 'c', taskTemplateId: 'both', title: '両方にある', status: 'not_started', dueDate: '2026-09-10', dueOffsetDays: 30 },
+    {
+      id: 'a',
+      taskTemplateId: 'old1',
+      title: '旧・未着手',
+      status: 'not_started',
+      dueDate: '2026-08-11',
+      dueOffsetDays: 60,
+    },
+    {
+      id: 'b',
+      taskTemplateId: 'old2',
+      title: '旧・提出済',
+      status: 'submitted',
+      dueDate: '2026-08-20',
+      dueOffsetDays: 51,
+    },
+    {
+      id: 'c',
+      taskTemplateId: 'both',
+      title: '両方にある',
+      status: 'not_started',
+      dueDate: '2026-09-10',
+      dueOffsetDays: 30,
+    },
   ];
   const newTemplates = [
     template({ taskTemplateId: 'both', title: '両方にある' }),
@@ -195,15 +258,20 @@ describe('previewPlanChange（プラン種別変更）', () => {
 
   it('新プランで増えるテンプレートだけを追加対象にする', () => {
     const { added } = previewPlanChange('2026-10-10', existing, newTemplates);
-    expect(added).toEqual([
-      { taskTemplateId: 'new1', title: '新規', dueDate: '2026-08-26' },
-    ]);
+    expect(added).toEqual([{ taskTemplateId: 'new1', title: '新規', dueDate: '2026-08-26' }]);
   });
 
   it('個別追加の宿題（task_template_id が NULL）は waived にしない', () => {
     const withManual: ExistingTask[] = [
       ...existing,
-      { id: 'm', taskTemplateId: null, title: '個別', status: 'not_started', dueDate: '2026-09-01', dueOffsetDays: null },
+      {
+        id: 'm',
+        taskTemplateId: null,
+        title: '個別',
+        status: 'not_started',
+        dueDate: '2026-09-01',
+        dueOffsetDays: null,
+      },
     ];
     const { waived, kept } = previewPlanChange('2026-10-10', withManual, newTemplates);
     expect(waived.map((w) => w.id)).not.toContain('m');

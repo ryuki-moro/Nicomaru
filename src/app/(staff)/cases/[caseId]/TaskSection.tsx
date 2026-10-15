@@ -90,10 +90,14 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
   function fail(error: unknown, fallback: string) {
     // 4-3 エラー表示規約: 権限エラー・不存在は P04 へ遷移する。
     // 例えば admin が K05 で案件をアーカイブした直後にこの画面から操作すると 404 になる。
-    if (handleApiError(error, router, {
-      onSummary: (message: string) => setSummary(error instanceof ApiCallError ? message : fallback),
-      onFieldErrors: setFieldErrors,
-    })) return;
+    if (
+      handleApiError(error, router, {
+        onSummary: (message: string) =>
+          setSummary(error instanceof ApiCallError ? message : fallback),
+        onFieldErrors: setFieldErrors,
+      })
+    )
+      return;
   }
 
   async function run(action: () => Promise<string>) {
@@ -190,9 +194,7 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
 
       {tasks.length === 0 && (
         <div className="card space-y-2">
-          <p className="text-label text-text-secondary">
-            まだ宿題が割り当てられていません。
-          </p>
+          <p className="text-label text-text-secondary">まだ宿題が割り当てられていません。</p>
           {!readOnly && hasPlanType && (
             <button type="button" className="btn-primary" onClick={assignTasks} disabled={busy}>
               プラン種別の宿題を割り当てる
@@ -229,7 +231,11 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
                       // 一覧では行が詰まるため、見出しの代わりに「AI」を頭に付ける。
                       <span className="mt-1 flex flex-wrap gap-1">
                         {task.aiLabels.map((label) => (
-                          <span key={label} className="badge-neutral" title="AIによる分類（要確認）">
+                          <span
+                            key={label}
+                            className="badge-neutral"
+                            title="AIによる分類（要確認）"
+                          >
                             AI: {label}
                           </span>
                         ))}

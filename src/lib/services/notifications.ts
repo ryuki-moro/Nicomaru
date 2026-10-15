@@ -132,18 +132,21 @@ export async function dispatchNotification(
   // 停止・削除された利用者には送らない。宛先が無いのに送信を試みると
   // Resend 側でバウンスし、送信ドメインの評価を下げる。
   if (!recipient || recipient.status !== 'active') {
-    await client.from('notifications')
-      .update({ status: 'cancelled' })
-      .eq('id', notification.id);
-    return { notificationId: notification.id, channel: 'in_app', delivered: false,
-      reason: '宛先の利用者が有効ではありません' };
+    await client.from('notifications').update({ status: 'cancelled' }).eq('id', notification.id);
+    return {
+      notificationId: notification.id,
+      channel: 'in_app',
+      delivered: false,
+      reason: '宛先の利用者が有効ではありません',
+    };
   }
 
   const resolved = await resolveChannel(client, notification, recipient);
 
   // マイページ内通知は外部送信を伴わない。保存した時点で届いている。
   if (resolved.channel === 'in_app') {
-    await client.from('notifications')
+    await client
+      .from('notifications')
       .update({ status: 'sent', sent_at: new Date().toISOString(), channel: 'in_app' })
       .eq('id', notification.id);
     return { notificationId: notification.id, channel: 'in_app', delivered: true };
@@ -152,20 +155,25 @@ export async function dispatchNotification(
   // LINE は文字数上限が短い（付録D）。切り詰めてでも送る方が、
   // 送らずに落とすより通知の目的に適う。
   const limit = BODY_LIMIT[notification.notification_type];
-  const body = resolved.channel === 'line' && notification.body.length > limit.line
-    ? `${notification.body.slice(0, limit.line - 1)}…`
-    : notification.body;
+  const body =
+    resolved.channel === 'line' && notification.body.length > limit.line
+      ? `${notification.body.slice(0, limit.line - 1)}…`
+      : notification.body;
 
-  const result = resolved.channel === 'line'
-    ? await sendLine(recipient.line_user_id as string, body)
-    : await sendEmail(recipient.email, notification.title, body);
+  const result =
+    resolved.channel === 'line'
+      ? await sendLine(recipient.line_user_id as string, body)
+      : await sendEmail(recipient.email, notification.title, body);
 
-  await client.from('notifications').update({
-    // 実際に使ったチャネルへ書き換える。切替の事実が notifications 側にも残る（6-9）
-    channel: resolved.channel,
-    status: result.delivered ? 'sent' : 'failed',
-    sent_at: result.delivered ? new Date().toISOString() : null,
-  }).eq('id', notification.id);
+  await client
+    .from('notifications')
+    .update({
+      // 実際に使ったチャネルへ書き換える。切替の事実が notifications 側にも残る（6-9）
+      channel: resolved.channel,
+      status: result.delivered ? 'sent' : 'failed',
+      sent_at: result.delivered ? new Date().toISOString() : null,
+    })
+    .eq('id', notification.id);
 
   await recordLog(client, notification.id, resolved.channel, result, 1);
 

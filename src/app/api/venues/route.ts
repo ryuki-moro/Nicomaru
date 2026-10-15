@@ -54,7 +54,8 @@ export const POST = route(async (request: Request) => {
     .single();
   if (venue.error) {
     // 5-7「重複時は画面で入力エラー（409）」
-    throw venue.error.code === '23505' ? conflict('その式場コードは既に使われています')
+    throw venue.error.code === '23505'
+      ? conflict('その式場コードは既に使われています')
       : fromPostgresError(venue.error);
   }
   const venueId = (venue.data as { id: string }).id;
@@ -72,30 +73,51 @@ export const POST = route(async (request: Request) => {
   if (!issued.ok) {
     // 式場だけ残っても S02 から管理者を追加できるので、式場は巻き戻さない。
     // 画面には理由を返して、管理者だけ作り直せるようにする。
-    return ok({
-      id: venueId,
-      adminCreated: false,
-      reason: issued.reason === 'already_registered'
-        ? 'このメールアドレスは既に登録されています'
-        : '初回パスワード設定リンクを発行できませんでした',
-    }, 201);
+    return ok(
+      {
+        id: venueId,
+        adminCreated: false,
+        reason:
+          issued.reason === 'already_registered'
+            ? 'このメールアドレスは既に登録されています'
+            : '初回パスワード設定リンクを発行できませんでした',
+      },
+      201,
+    );
   }
 
-  const profile = await admin.from('user_profiles').insert({
-    auth_user_id: issued.authUserId,
-    venue_id: venueId,
-    // role は 'admin' に固定。任意指定を受け付けない（表6-4）
-    role: 'admin',
-    display_name: input.adminName,
-    email: input.adminEmail,
-    // 初回パスワード設定が済むまではログインできない（6-3-1）
-    status: 'invited',
-  }).select('id').single();
+  const profile = await admin
+    .from('user_profiles')
+    .insert({
+      auth_user_id: issued.authUserId,
+      venue_id: venueId,
+      // role は 'admin' に固定。任意指定を受け付けない（表6-4）
+      role: 'admin',
+      display_name: input.adminName,
+      email: input.adminEmail,
+      // 初回パスワード設定が済むまではログインできない（6-3-1）
+      status: 'invited',
+    })
+    .select('id')
+    .single();
 
   if (profile.error) {
     // 孤児の Auth ユーザーはそのメールを永久に登録不能にするため必ず巻き戻す
     await admin.auth.admin.deleteUser(issued.authUserId);
     throw fromPostgresError(profile.error);
+  }
+
+  // Service Roleで作成した管理者も、操作したsystem_admin本人のJWTで記録する。
+  try {
+    const audit = await supabase.rpc('log_audit', {
+      p_action: 'user.create',
+      p_target_type: 'user_profiles',
+      p_target_id: profile.data.id,
+      p_detail: { role: 'admin', venue_id: venueId },
+    });
+    if (audit.error) throw new Error();
+  } catch {
+    console.warn('[audit] 式場管理者作成の監査記録を保存できませんでした');
   }
 
   const mail = await sendPasswordSetupMail({
@@ -106,11 +128,14 @@ export const POST = route(async (request: Request) => {
     actionLink: issued.actionLink,
   });
 
-  return ok({
-    id: venueId,
-    adminCreated: true,
-    // 13-1: 検証段階では未送信になりうるので画面へ理由を返す
-    mailDelivered: mail.delivered,
-    mailReason: mail.skippedReason ?? null,
-  }, 201);
+  return ok(
+    {
+      id: venueId,
+      adminCreated: true,
+      // 13-1: 検証段階では未送信になりうるので画面へ理由を返す
+      mailDelivered: mail.delivered,
+      mailReason: mail.skippedReason ?? null,
+    },
+    201,
+  );
 });

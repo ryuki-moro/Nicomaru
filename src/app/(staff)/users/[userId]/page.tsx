@@ -26,11 +26,7 @@ interface ProfileRow {
   venue_id: string | null;
 }
 
-export default async function UserEditPage({
-  params,
-}: {
-  params: Promise<{ userId: string }>;
-}) {
+export default async function UserEditPage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
 
   const user = await getAppUser();
@@ -49,9 +45,10 @@ export default async function UserEditPage({
   if (error || !data) notFound();
   const target = data as ProfileRow;
 
-  const manageable = user.role === 'admin'
-    ? target.role === 'planner' && target.venue_id === user.venueId
-    : target.role === 'planner' || target.role === 'admin';
+  const manageable =
+    user.role === 'admin'
+      ? target.role === 'planner' && target.venue_id === user.venueId
+      : target.role === 'planner' || target.role === 'admin';
   if (!manageable) notFound();
 
   // 削除済みは変更対象にしない（5-1 削除方針の論理削除）
@@ -82,8 +79,9 @@ export default async function UserEditPage({
         .neq('id', target.id)
         .order('display_name')
         .order('id');
-      successorOptions = ((candidates ?? []) as { id: string; display_name: string }[])
-        .map((row) => ({ id: row.id, displayName: row.display_name }));
+      successorOptions = ((candidates ?? []) as { id: string; display_name: string }[]).map(
+        (row) => ({ id: row.id, displayName: row.display_name }),
+      );
     }
   }
 

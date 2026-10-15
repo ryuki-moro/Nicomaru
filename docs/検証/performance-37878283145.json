@@ -1,0 +1,337 @@
+{
+  "measuredAt": "2026-10-09T03:19:50.739Z",
+  "environment": "local-supabase",
+  "browser": "chromium",
+  "attempt": 0,
+  "host": {
+    "logicalCpus": 4,
+    "availableParallelism": 4,
+    "totalMemoryMiB": 15990,
+    "node": "v22.23.3"
+  },
+  "dataset": {
+    "venues": 3,
+    "cases": 300,
+    "existingCases": 10,
+    "tasks": 2400,
+    "concurrentUsers": 30,
+    "plannerUsers": 15,
+    "coupleUsers": 15
+  },
+  "thresholdMs": 3000,
+  "dashboard": {
+    "samples": 15,
+    "p50Ms": 5016,
+    "p95Ms": 5989,
+    "maxMs": 5989,
+    "over3Seconds": 10
+  },
+  "mypage": {
+    "samples": 15,
+    "p50Ms": 4415,
+    "p95Ms": 5287,
+    "maxMs": 5287,
+    "over3Seconds": 14
+  },
+  "caseList": {
+    "samples": 15,
+    "p50Ms": 808,
+    "p95Ms": 833,
+    "maxMs": 833,
+    "over3Seconds": 0
+  },
+  "caseListSamples": [
+    {
+      "elapsedMs": 813.0023569999994,
+      "authMs": 377.3,
+      "casesMs": 37.63
+    },
+    {
+      "elapsedMs": 831.7170189999997,
+      "authMs": 354.15,
+      "casesMs": 44.85
+    },
+    {
+      "elapsedMs": 807.8992090000011,
+      "authMs": 338.61,
+      "casesMs": 23.61
+    },
+    {
+      "elapsedMs": 741.8605370000005,
+      "authMs": 291.33,
+      "casesMs": 75.73
+    },
+    {
+      "elapsedMs": 735.5705149999994,
+      "authMs": 303.97,
+      "casesMs": 64.36
+    },
+    {
+      "elapsedMs": 748.7951360000006,
+      "authMs": 279.62,
+      "casesMs": 58.43
+    },
+    {
+      "elapsedMs": 750.3803559999997,
+      "authMs": 312.26,
+      "casesMs": 72.56
+    },
+    {
+      "elapsedMs": 818.4038520000013,
+      "authMs": 365.15,
+      "casesMs": 39.17
+    },
+    {
+      "elapsedMs": 832.7577520000013,
+      "authMs": 341.34,
+      "casesMs": 46.98
+    },
+    {
+      "elapsedMs": 803.6118839999999,
+      "authMs": 368.23,
+      "casesMs": 32.31
+    },
+    {
+      "elapsedMs": 820.3967240000002,
+      "authMs": 358.86,
+      "casesMs": 40.41
+    },
+    {
+      "elapsedMs": 731.9853510000012,
+      "authMs": 291.19,
+      "casesMs": 56.78
+    },
+    {
+      "elapsedMs": 822.4462300000014,
+      "authMs": 338.69,
+      "casesMs": 35.71
+    },
+    {
+      "elapsedMs": 827.7272000000012,
+      "authMs": 350.32,
+      "casesMs": 46.25
+    },
+    {
+      "elapsedMs": 724.4229610000002,
+      "authMs": 292.75,
+      "casesMs": 31.08
+    }
+  ],
+  "browserRequests": {
+    "navigation:/dashboard": 15,
+    "navigation:/mypage": 15
+  },
+  "samples": [
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 2808.5409439999985,
+      "firstScreenMs": 1366.8000000000466,
+      "responseEndMs": 2320.5,
+      "domContentLoadedMs": 2325.8000000000466
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 1621.8145960000002,
+      "firstScreenMs": 1268.7999999999884,
+      "responseEndMs": 1084.4000000000233,
+      "domContentLoadedMs": 1269.9000000000233
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 2823.0692120000003,
+      "firstScreenMs": 1394.0999999999767,
+      "responseEndMs": 2368.5,
+      "domContentLoadedMs": 2411.2999999999884
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 3453.9803059999995,
+      "firstScreenMs": 2148.6999999999534,
+      "responseEndMs": 2742.399999999965,
+      "domContentLoadedMs": 2755
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 3947.092267,
+      "firstScreenMs": 2387.0999999999767,
+      "responseEndMs": 3059.2999999999884,
+      "domContentLoadedMs": 3271.7000000000116
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 3929.0570769999995,
+      "firstScreenMs": 2894.7999999999884,
+      "responseEndMs": 3194.100000000035,
+      "domContentLoadedMs": 3292.100000000035
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 4291.770305,
+      "firstScreenMs": 3361.399999999965,
+      "responseEndMs": 3425.1999999999534,
+      "domContentLoadedMs": 3427.1999999999534
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 4082.466112,
+      "firstScreenMs": 3287.7999999999884,
+      "responseEndMs": 3319.2000000000116,
+      "domContentLoadedMs": 3454.5999999999767
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 4502.261068,
+      "firstScreenMs": 4006.5,
+      "responseEndMs": 3723.7999999999884,
+      "domContentLoadedMs": 4007.7999999999884
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 4150.427286,
+      "firstScreenMs": 3283.2000000000116,
+      "responseEndMs": 3425.3000000000466,
+      "domContentLoadedMs": 3426.2000000000116
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 6276.232565,
+      "firstScreenMs": 5373.799999999988,
+      "responseEndMs": 4565.399999999965,
+      "domContentLoadedMs": 5147.799999999988
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 6277.48329,
+      "firstScreenMs": 5977.5,
+      "responseEndMs": 4632.5,
+      "domContentLoadedMs": 5409.799999999988
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 6244.4837640000005,
+      "firstScreenMs": 5013.899999999965,
+      "responseEndMs": 4484.599999999977,
+      "domContentLoadedMs": 5014.099999999977
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 5997.39243,
+      "firstScreenMs": 4617.5,
+      "responseEndMs": 4326.799999999988,
+      "domContentLoadedMs": 4409.099999999977
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 6266.656234,
+      "firstScreenMs": 5029.300000000047,
+      "responseEndMs": 4529.200000000012,
+      "domContentLoadedMs": 5043.5
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 4593.846835999999,
+      "firstScreenMs": 4179.5,
+      "responseEndMs": 4008.600000000035,
+      "domContentLoadedMs": 4183
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 6242.355962000001,
+      "firstScreenMs": 5090.700000000012,
+      "responseEndMs": 4419.600000000035,
+      "domContentLoadedMs": 4799.200000000012
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 6269.569953,
+      "firstScreenMs": 5040.299999999988,
+      "responseEndMs": 4382.899999999965,
+      "domContentLoadedMs": 5404.299999999988
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 4590.599984,
+      "firstScreenMs": 4277.599999999977,
+      "responseEndMs": 4002.399999999965,
+      "domContentLoadedMs": 4269.899999999965
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 6200.356869000001,
+      "firstScreenMs": 4877.299999999988,
+      "responseEndMs": 4363.899999999965,
+      "domContentLoadedMs": 4695.399999999965
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 6264.963608,
+      "firstScreenMs": 5763,
+      "responseEndMs": 4602.700000000012,
+      "domContentLoadedMs": 5375.899999999965
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 6276.489506,
+      "firstScreenMs": 5834.200000000012,
+      "responseEndMs": 4672.599999999977,
+      "domContentLoadedMs": 5824.400000000023
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 6269.897199000001,
+      "firstScreenMs": 5615.599999999977,
+      "responseEndMs": 4554.5,
+      "domContentLoadedMs": 5601.399999999965
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 6268.701956000001,
+      "firstScreenMs": 5989.400000000023,
+      "responseEndMs": 4667.900000000023,
+      "domContentLoadedMs": 5545.5
+    },
+    {
+      "screen": "/dashboard",
+      "elapsedMs": 6232.456720999999,
+      "firstScreenMs": 5015.700000000012,
+      "responseEndMs": 4454.600000000035,
+      "domContentLoadedMs": 5026.5
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 6187.287675,
+      "firstScreenMs": 4890.799999999988,
+      "responseEndMs": 4344.200000000012,
+      "domContentLoadedMs": 4652.599999999977
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 6255.258366,
+      "firstScreenMs": 5287,
+      "responseEndMs": 4440.399999999965,
+      "domContentLoadedMs": 5089.399999999965
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 6185.98911,
+      "firstScreenMs": 4629.099999999977,
+      "responseEndMs": 4238.599999999977,
+      "domContentLoadedMs": 4634.200000000012
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 6240.350570999999,
+      "firstScreenMs": 4978.799999999988,
+      "responseEndMs": 4369.599999999977,
+      "domContentLoadedMs": 4772.899999999965
+    },
+    {
+      "screen": "/mypage",
+      "elapsedMs": 4978.761859,
+      "firstScreenMs": 4414.900000000023,
+      "responseEndMs": 4168.800000000047,
+      "domContentLoadedMs": 4414
+    }
+  ],
+  "interpretation": "認証を済ませた空キャッシュの30ブラウザによる初回表示。firstScreenMsはブラウザ内で対象見出しの表示を連続する描画フレームで確認したmarkの時刻で、LCPや操作準備完了ではない。elapsedMsはPlaywrightの確認・通信待ちも含む上限時間。ブラウザCPUとSSR/DBは同じ実行環境を共有する。監視/日次集計の併走、商用SLA、実端末性能は測定していない。"
+}

@@ -1,0 +1,18 @@
+flowchart TD
+  issued["招待発行<br/>token_hashのみ保存<br/>平文URLは発行応答の1回のみ"]
+  check["consume_invitation<br/>purpose / expires_at / revoked_at<br/>use_count < max_uses"]
+  used["登録・消費<br/>Auth / profileを作成<br/>失敗はrestore_invitation"]
+  revoked["期限切れ / 失効 / 上限<br/>消費不可。K02で再発行<br/>旧URLを再び有効にしない"]
+  invited["invited<br/>初回パスワード設定待ち<br/>業務RLSのactive条件を満たさない"]
+  active["active<br/>業務操作可能<br/>venue / caseのRLSは引き続き適用"]
+  suspended["suspended<br/>管理者が停止 / 復帰<br/>担当引継ぎを確認"]
+  deleted["deleted<br/>論理削除<br/>認証済みでも業務APIは拒否"]
+  issued -->|"URL利用"| check
+  check -->|"条件一致"| used
+  issued -->|"時間/取消"| revoked
+  invited -->|"設定完了"| active
+  active -->|"停止"| suspended
+  active -->|"削除"| deleted
+
+  suspended -->|復帰| active
+

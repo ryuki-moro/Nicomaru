@@ -69,21 +69,21 @@ function choicesOf(options: Record<string, unknown> | null): string[] {
 
 function allowedTypesOf(raw: unknown): AllowedFileType[] {
   if (!Array.isArray(raw)) return [];
-  return raw.filter((v): v is AllowedFileType =>
-    typeof v === 'string' && (ALLOWED_FILE_TYPES as readonly string[]).includes(v));
+  return raw.filter(
+    (v): v is AllowedFileType =>
+      typeof v === 'string' && (ALLOWED_FILE_TYPES as readonly string[]).includes(v),
+  );
 }
 
-export default async function TaskDetailPage({
-  params,
-}: {
-  params: Promise<{ taskId: string }>;
-}) {
+export default async function TaskDetailPage({ params }: { params: Promise<{ taskId: string }> }) {
   const { taskId } = await params;
   const supabase = await createSupabaseServerClient();
 
   const taskResult = await supabase
     .from('case_tasks')
-    .select('id, title, description, submission_format, allowed_file_types, options, due_date, status')
+    .select(
+      'id, title, description, submission_format, allowed_file_types, options, due_date, status',
+    )
     .eq('id', taskId)
     .maybeSingle();
 
@@ -108,8 +108,8 @@ export default async function TaskDetailPage({
       .select('original_filename')
       .eq('id', latest.file_id)
       .maybeSingle();
-    attachedFileName = (fileResult.data as { original_filename: string | null } | null)
-      ?.original_filename ?? null;
+    attachedFileName =
+      (fileResult.data as { original_filename: string | null } | null)?.original_filename ?? null;
   }
 
   const format = task.submission_format;
@@ -127,9 +127,7 @@ export default async function TaskDetailPage({
       </header>
 
       {task.description && (
-        <p className="card whitespace-pre-wrap text-body text-text-secondary">
-          {task.description}
-        </p>
+        <p className="card whitespace-pre-wrap text-body text-text-secondary">{task.description}</p>
       )}
 
       {/* 不備あり時のプランナーコメント。責める調子にならないよう情報バナーで示す（4-3 M01 の方針） */}

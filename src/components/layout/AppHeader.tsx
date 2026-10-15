@@ -32,7 +32,7 @@ export function AppHeader({ role, displayName, breadcrumbs, minimal = false }: P
             : 'mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3'
         }
       >
-        <Link href="/" className="text-logo font-bold text-text-primary">
+        <Link href="/" prefetch={false} className="text-logo font-bold text-text-primary">
           にこまる
         </Link>
         <div className="flex items-center gap-3">
@@ -50,7 +50,7 @@ export function AppHeader({ role, displayName, breadcrumbs, minimal = false }: P
               <li key={`${crumb.label}-${index}`} className="flex items-center gap-1">
                 {index > 0 && <span aria-hidden>/</span>}
                 {crumb.href ? (
-                  <Link href={crumb.href} className="text-link hover:underline">
+                  <Link href={crumb.href} prefetch={false} className="text-link hover:underline">
                     {crumb.label}
                   </Link>
                 ) : (

@@ -248,9 +248,7 @@ export function SubmitForm({
             </p>
           )}
           {allowedFileTypes.includes('csv') && (
-            <p className="mt-1 text-caption text-text-muted">
-              CSVは UTF-8 で保存してください。
-            </p>
+            <p className="mt-1 text-caption text-text-muted">CSVは UTF-8 で保存してください。</p>
           )}
           <FieldError message={fieldErrors.file ?? fieldErrors.fileId} />
         </div>

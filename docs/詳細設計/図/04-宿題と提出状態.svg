@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850" role="img">
+<title>04  宿題・提出の状態遷移</title>
+<style>text{font-family:Meiryo,"Noto Sans JP",sans-serif}</style>
+<rect x="0" y="0" width="1200" height="850" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="36" y="43" font-size="27" fill="#993556">04  宿題・提出の状態遷移</text>
+<text x="36" y="77" font-size="13" fill="#5F5E5A">案件宿題の現在状態と、提出バージョンごとのreview_statusを分ける。</text>
+<polyline points="36,94 1164,94" fill="none" stroke="#D3D1C7" stroke-width="1.5"/>
+<text x="36" y="823" font-size="11" fill="#5F5E5A">にこまる | 実装連動の詳細設計 | 2026-10-09 | 学校発表・模擬データ用</text>
+<text x="1120" y="823" font-size="12" fill="#5F5E5A">04</text>
+<polyline points="275,195.0 327.5,195.0 327.5,195.0 380,195.0" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="380,195.0 371.8959760788259,198.91468980700108 371.8959760788259,191.08531019299892" fill="#89857B"/>
+<rect x="322.5" y="178.0" width="32.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="327.5" y="193.0" font-size="11" fill="#5F5E5A">提出</text>
+<polyline points="615,195.0 745.0,195.0 745.0,195.0 875,195.0" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="875,195.0 866.8959760788259,198.91468980700108 866.8959760788259,191.08531019299892" fill="#89857B"/>
+<rect x="740.0" y="178.0" width="32.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="745.0" y="193.0" font-size="11" fill="#5F5E5A">確認</text>
+<polyline points="497.5,245 497.5,307.5 497.5,307.5 497.5,370" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="497.5,370 493.5853101929989,361.8959760788259 501.4146898070011,361.8959760788259" fill="#89857B"/>
+<rect x="492.5" y="290.5" width="32.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="497.5" y="305.5" font-size="11" fill="#5F5E5A">不備</text>
+<polyline points="380,420.0 325,420.0 325,195.0 380,195.0" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="380,195.0 371.8959760788259,198.91468980700108 371.8959760788259,191.08531019299892" fill="#89857B"/>
+<rect x="320" y="403.0" width="43.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="325" y="418.0" font-size="11" fill="#5F5E5A">再提出</text>
+<polyline points="157.5,245 157.5,412.5 157.5,412.5 157.5,580" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="157.5,580 153.58531019299892,571.8959760788259 161.41468980700108,571.8959760788259" fill="#89857B"/>
+<rect x="152.5" y="395.5" width="32.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="157.5" y="410.5" font-size="11" fill="#5F5E5A">免除</text>
+<polyline points="930.0,470 930.0,525.0 930.0,525.0 930.0,580" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="930.0,580 926.0853101929989,571.8959760788259 933.9146898070011,571.8959760788259" fill="#89857B"/>
+<rect x="925.0" y="508.0" width="87.0" height="20" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="930.0" y="523.0" font-size="11" fill="#5F5E5A">提出として確定</text>
+<rect x="40" y="145" width="235" height="100" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="54" y="171" font-size="17" fill="#993556">not_started</text>
+<text x="54" y="197" font-size="14" fill="#2C2C2A">未着手</text>
+<rect x="380" y="145" width="235" height="100" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="394" y="171" font-size="17" fill="#993556">submitted</text>
+<text x="394" y="197" font-size="14" fill="#2C2C2A">確認待ち</text>
+<rect x="875" y="145" width="275" height="100" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="889" y="171" font-size="17" fill="#993556">confirmed</text>
+<text x="889" y="197" font-size="14" fill="#2C2C2A">プランナーが確認</text>
+<rect x="380" y="370" width="235" height="100" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="394" y="396" font-size="17" fill="#993556">needs_fix</text>
+<text x="394" y="422" font-size="14" fill="#2C2C2A">不備コメント → 再提出</text>
+<rect x="40" y="580" width="235" height="100" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="54" y="606" font-size="17" fill="#993556">waived</text>
+<text x="54" y="632" font-size="14" fill="#2C2C2A">staffが対応不要にする</text>
+<rect x="710" y="370" width="440" height="100" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="724" y="396" font-size="17" fill="#993556">task_submissions: draft</text>
+<text x="724" y="422" font-size="14" fill="#2C2C2A">一時保存は本人単位。相手の提出を妨げない</text>
+<rect x="710" y="580" width="440" height="100" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="724" y="606" font-size="17" fill="#993556">提出バージョンを追加</text>
+<text x="724" y="632" font-size="14" fill="#2C2C2A">draft / submitted / needs_fix / confirmed</text>
+<text x="724" y="652" font-size="14" fill="#2C2C2A">最新提出ポインタをRPCで競合制御</text>
+<text x="40" y="742" font-size="14" fill="#2C2C2A">旧提出の確認操作は最新状態と照合し409を返す。画面だけで状態を更新せずRPCを正本とする。</text>
+</svg>

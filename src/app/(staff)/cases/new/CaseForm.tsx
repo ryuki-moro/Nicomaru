@@ -306,7 +306,10 @@ export function CaseForm({ plans, today }: Props) {
           ) : (
             <ul className="space-y-1 text-label">
               {preview.map((item) => (
-                <li key={item.id} className="flex justify-between gap-3 border-b border-border-light py-1">
+                <li
+                  key={item.id}
+                  className="flex justify-between gap-3 border-b border-border-light py-1"
+                >
                   <span>{item.name}</span>
                   <span className="text-text-muted">{formatDate(item.dueDate)}</span>
                 </li>

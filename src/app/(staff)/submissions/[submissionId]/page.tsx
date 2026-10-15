@@ -17,7 +17,10 @@ import { notFound } from 'next/navigation';
 
 import { ClassificationPanel } from '@/app/(staff)/submissions/[submissionId]/ClassificationPanel';
 import { DefectPanel } from '@/app/(staff)/submissions/[submissionId]/DefectPanel';
-import { ReviewForm, SubmissionFileLink } from '@/app/(staff)/submissions/[submissionId]/ReviewForm';
+import {
+  ReviewForm,
+  SubmissionFileLink,
+} from '@/app/(staff)/submissions/[submissionId]/ReviewForm';
 import { ReviewStatusBadge, TaskStatusBadge } from '@/components/ui/StatusBadge';
 import { fetchAiAssistStatus, latestJobForTask } from '@/lib/ai/assist';
 import type { DefectFinding } from '@/lib/ai/defectCheck';
@@ -90,11 +93,11 @@ export default async function SubmissionReviewPage({
   const { data, error } = await supabase
     .from('task_submissions')
     .select(
-      'id, submission_type, text_value, selected_value, content_json, file_id, comment,'
-      + ' review_status, planner_feedback, submitted_at, reviewed_at,'
-      + ' case_tasks!inner ( id, title, description, due_date, status, case_id, options,'
-      + ' wedding_cases!inner ( id, case_code, wedding_date ) ),'
-      + ' storage_files ( id, bucket, object_path, original_filename, mime_type, file_size_bytes )',
+      'id, submission_type, text_value, selected_value, content_json, file_id, comment,' +
+        ' review_status, planner_feedback, submitted_at, reviewed_at,' +
+        ' case_tasks!inner ( id, title, description, due_date, status, case_id, options,' +
+        ' wedding_cases!inner ( id, case_code, wedding_date ) ),' +
+        ' storage_files ( id, bucket, object_path, original_filename, mime_type, file_size_bytes )',
     )
     .eq('id', submissionId)
     .maybeSingle();
@@ -141,12 +144,16 @@ export default async function SubmissionReviewPage({
   let ruleFindings: DefectFinding[] | null = null;
   const csvSchema = csvSchemaOf(task.options);
   if (csvSchema && submission.submission_type === 'file' && submission.storage_files) {
-    const checked = await checkSubmittedCsv(supabase, {
-      bucket: submission.storage_files.bucket,
-      objectPath: submission.storage_files.object_path,
-      fileName: submission.storage_files.original_filename,
-      mimeType: submission.storage_files.mime_type,
-    }, csvSchema);
+    const checked = await checkSubmittedCsv(
+      supabase,
+      {
+        bucket: submission.storage_files.bucket,
+        objectPath: submission.storage_files.object_path,
+        fileName: submission.storage_files.original_filename,
+        mimeType: submission.storage_files.mime_type,
+      },
+      csvSchema,
+    );
     if (checked) ruleFindings = checked.findings;
   }
 
@@ -198,7 +205,9 @@ export default async function SubmissionReviewPage({
           )}
 
           {submission.submission_type === 'select' && (
-            <p className="text-label text-text-primary">{submission.selected_value ?? '（未選択）'}</p>
+            <p className="text-label text-text-primary">
+              {submission.selected_value ?? '（未選択）'}
+            </p>
           )}
 
           {submission.submission_type === 'file' &&
@@ -272,8 +281,8 @@ export default async function SubmissionReviewPage({
           </h2>
           <p className="mt-1 text-label text-text-secondary">
             {isWaived
-              ? '案件詳細（K02）で「対応不要」に設定されているため、確認の必要はありません。'
-                + '確認が必要な場合は、案件詳細で対応不要を解除してください。'
+              ? '案件詳細（K02）で「対応不要」に設定されているため、確認の必要はありません。' +
+                '確認が必要な場合は、案件詳細で対応不要を解除してください。'
               : submission.reviewed_at
                 ? `${formatDateTime(submission.reviewed_at)} に確認結果を登録しました。`
                 : 'この提出はすでに確認が終わっています。'}

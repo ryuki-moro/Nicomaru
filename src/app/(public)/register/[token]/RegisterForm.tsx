@@ -44,7 +44,10 @@ export function RegisterForm({ token }: { token: string }) {
 
   useEffect(() => {
     if (resendIn <= 0) return;
-    const timer = window.setInterval(() => setResendIn((current) => Math.max(current - 1, 0)), 1000);
+    const timer = window.setInterval(
+      () => setResendIn((current) => Math.max(current - 1, 0)),
+      1000,
+    );
     return () => window.clearInterval(timer);
   }, [resendIn]);
 

@@ -1,0 +1,16 @@
+node_modules/
+.next/
+.env*
+test-results/
+playwright-report/
+coverage/
+performance-results/
+performance-report/
+next-env.d.ts
+package-lock.json
+docs/implementation-progress.json
+docs/実装進捗一覧.md
+docs/screenshots/
+docs/images/
+# 生成資料は生成元と専用の整合性検査で管理する。
+docs/詳細設計/generated/

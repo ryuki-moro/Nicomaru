@@ -1,0 +1,21 @@
+flowchart TD
+  input["画面 / 業務イベント<br/>必要最小限の入力を整形<br/>要求を同期推論で待たせない"]
+  queued["queued<br/>worker専用RPCで取得<br/>promptはDB設定から解決"]
+  processing["processing<br/>Ollama / JSON検証<br/>30秒周期のpull"]
+  done["done<br/>出力は下書き / 候補<br/>confirmed または discarded"]
+  human["人の確認・修正<br/>分類/文面/準備シート/起票案<br/>自動送信・自動承認しない"]
+  reclaim["滞留回収<br/>30分超のprocessingを回収<br/>attempts < 3ならqueuedへ"]
+  failed["failed / 利用不可<br/>上限到達、設定不足等を表示<br/>心拍10分超で補助利用不可"]
+  manual["通常操作を継続<br/>手入力・確認・提出・通知は利用可<br/>AIの停止で主導線を止めない"]
+  input -->|"投入"| queued
+  queued -->|"claim / lock"| processing
+  processing -->|"妥当な出力"| done
+  done -->|"採用前"| human
+  processing -->|"タイムアウト"| reclaim
+  reclaim -->|"上限到達"| failed
+  failed -->|"縮退"| manual
+
+  reclaim -->|上限未満| queued
+  human -->|採用| confirmed
+  human -->|破棄| discarded
+

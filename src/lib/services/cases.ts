@@ -34,8 +34,7 @@ export const SEARCH_SCAN_LIMIT = 500;
  * couple_profiles は memo を列レベル権限で剥奪しているため select * が 42501 になる（付録A）。
  * リスクは現在値だけを使うが、埋め込みは配列で返るので is_current で絞る（6-8）。
  */
-const CASE_LIST_SELECT =
-  `id, case_code, wedding_date, status,
+const CASE_LIST_SELECT = `id, case_code, wedding_date, status,
    plan_types ( name ),
    couple_profiles ( ${COUPLE_PROFILE_COLUMNS} ),
    case_tasks ( status ),
@@ -114,9 +113,8 @@ export async function loadCaseList(
     .order('wedding_date', { ascending: true })
     .order('id', { ascending: true });
 
-  query = options.scope === 'archived'
-    ? query.eq('status', 'archived')
-    : query.neq('status', 'archived');
+  query =
+    options.scope === 'archived' ? query.eq('status', 'archived') : query.neq('status', 'archived');
 
   // リスク順も現在値の抽出をサーバー上で行うため、DB 側のページングが使えない
   const serverSide = keyword !== '' || sort === 'risk';
@@ -130,7 +128,9 @@ export async function loadCaseList(
   const rows = (data ?? []) as unknown as CaseListRow[];
   const decorated: CaseListItem[] = rows.map((row) => {
     const total = row.case_tasks.length;
-    const incomplete = row.case_tasks.filter((t) => INCOMPLETE_TASK_STATUSES.includes(t.status)).length;
+    const incomplete = row.case_tasks.filter((t) =>
+      INCOMPLETE_TASK_STATUSES.includes(t.status),
+    ).length;
     // 氏名は暗号化列（13-1）。鍵が合わない値1件で一覧全体を 500 にしないよう readPii を使う
     const partners = row.couple_profiles.map((profile) => ({
       partnerRole: profile.partner_role,
@@ -143,30 +143,41 @@ export async function loadCaseList(
       weddingDate: row.wedding_date,
       status: row.status,
       planTypeName: row.plan_types?.name ?? '未設定',
-      coupleName: partners.map((p) => p.fullName).filter((n) => n.length > 0).join('・'),
+      coupleName: partners
+        .map((p) => p.fullName)
+        .filter((n) => n.length > 0)
+        .join('・'),
       partners,
       total,
       done: total - incomplete,
       // 現在値だけを採る。無ければ「未算出」と出す（空欄にすると「低い」と読まれる）
       risk: current
-        ? { score_value: current.score_value, score_level: current.score_level, reasons: current.reasons }
+        ? {
+            score_value: current.score_value,
+            score_level: current.score_level,
+            reasons: current.reasons,
+          }
         : null,
     };
   });
 
   // 4-3 K01: リスクが高い順。未算出は末尾へ送る。
-  const sorted = sort === 'risk'
-    ? [...decorated].sort((a, b) =>
-        (b.risk ? RISK_LEVEL_RANK[b.risk.score_level] : -1)
-          - (a.risk ? RISK_LEVEL_RANK[a.risk.score_level] : -1)
-        || (b.risk?.score_value ?? -1) - (a.risk?.score_value ?? -1)
-        || a.weddingDate.localeCompare(b.weddingDate)
-        || a.id.localeCompare(b.id))
-    : decorated;
+  const sorted =
+    sort === 'risk'
+      ? [...decorated].sort(
+          (a, b) =>
+            (b.risk ? RISK_LEVEL_RANK[b.risk.score_level] : -1) -
+              (a.risk ? RISK_LEVEL_RANK[a.risk.score_level] : -1) ||
+            (b.risk?.score_value ?? -1) - (a.risk?.score_value ?? -1) ||
+            a.weddingDate.localeCompare(b.weddingDate) ||
+            a.id.localeCompare(b.id),
+        )
+      : decorated;
 
-  const filtered = keyword === ''
-    ? sorted
-    : sorted.filter((row) => row.caseCode.includes(keyword) || row.coupleName.includes(keyword));
+  const filtered =
+    keyword === ''
+      ? sorted
+      : sorted.filter((row) => row.caseCode.includes(keyword) || row.coupleName.includes(keyword));
 
   const items = serverSide ? filtered.slice(offset, offset + options.limit) : filtered;
   const hasNext = serverSide

@@ -45,8 +45,12 @@ async function getCoupleSessionTokens(): Promise<{ access_token: string; refresh
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-  const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
-  const anon = createClient(url, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const admin = createClient(url, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const anon = createClient(url, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 
   const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
     type: 'magiclink',
@@ -60,7 +64,10 @@ async function getCoupleSessionTokens(): Promise<{ access_token: string; refresh
   });
   if (verifyErr || !verifyData.session) throw verifyErr ?? new Error('no session');
 
-  return { access_token: verifyData.session.access_token, refresh_token: verifyData.session.refresh_token };
+  return {
+    access_token: verifyData.session.access_token,
+    refresh_token: verifyData.session.refresh_token,
+  };
 }
 
 async function loginAsPlanner(page: Page) {
@@ -84,7 +91,10 @@ async function main() {
   const browser = await chromium.launch();
 
   // ---- デスクトップ: プランナー側 ------------------------------------------------
-  const staffDesktop = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'ja-JP' });
+  const staffDesktop = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    locale: 'ja-JP',
+  });
   const staffPage = await staffDesktop.newPage();
 
   await staffPage.goto(`${BASE}/login`);
@@ -122,7 +132,10 @@ async function main() {
   await staffDesktop.storageState({ path: `${OUT_DIR}/.staff-state.json` });
 
   // ---- デスクトップ: 新郎新婦側 ---------------------------------------------------
-  const coupleDesktop = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'ja-JP' });
+  const coupleDesktop = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    locale: 'ja-JP',
+  });
   const couplePage = await coupleDesktop.newPage();
 
   await loginAsCouple(couplePage);
@@ -143,7 +156,11 @@ async function main() {
   // ---- モバイル（iPhone 13） -------------------------------------------------------
   const iphone = devices['iPhone 13'];
 
-  const staffMobile = await browser.newContext({ ...iphone, locale: 'ja-JP', storageState: `${OUT_DIR}/.staff-state.json` });
+  const staffMobile = await browser.newContext({
+    ...iphone,
+    locale: 'ja-JP',
+    storageState: `${OUT_DIR}/.staff-state.json`,
+  });
   const staffMobilePage = await staffMobile.newPage();
   await staffMobilePage.goto(`${BASE}/dashboard`);
   await shot(staffMobilePage, '11-mobile-dashboard');
@@ -159,7 +176,11 @@ async function main() {
   await shot(coupleMobileLoginPage, '13-mobile-login');
   await coupleMobileNoSession.close();
 
-  const coupleMobile = await browser.newContext({ ...iphone, locale: 'ja-JP', storageState: `${OUT_DIR}/.couple-state.json` });
+  const coupleMobile = await browser.newContext({
+    ...iphone,
+    locale: 'ja-JP',
+    storageState: `${OUT_DIR}/.couple-state.json`,
+  });
   const coupleMobilePage = await coupleMobile.newPage();
   await coupleMobilePage.goto(`${BASE}/mypage`);
   await shot(coupleMobilePage, '14-mobile-mypage');

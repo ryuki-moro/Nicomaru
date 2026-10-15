@@ -70,7 +70,11 @@ export function DefectPanel({
         `/api/submissions/${submissionId}/defect-check`,
       );
       track({
-        id: result.jobId, status: 'queued', output: null, reviewed_output: null, error_message: null,
+        id: result.jobId,
+        status: 'queued',
+        output: null,
+        reviewed_output: null,
+        error_message: null,
       });
     } catch (cause) {
       setError(
@@ -155,8 +159,8 @@ export function DefectPanel({
           </p>
         )}
 
-        {showLlm && (
-          llmFindings.length === 0 ? (
+        {showLlm &&
+          (llmFindings.length === 0 ? (
             <p className="mt-1 text-label text-text-primary">
               表記ゆれ・敬称の疑いは挙がりませんでした。
             </p>
@@ -166,23 +170,25 @@ export function DefectPanel({
                 <FindingRow key={`llm-${i}`} finding={finding} source="AIによる指摘" />
               ))}
             </ul>
-          )
-        )}
+          ))}
 
         <FieldError message={error ?? undefined} />
 
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          {aiAvailable && (!job || job.status === 'failed' || job.status === 'confirmed'
-            || job.status === 'discarded') && (
-            <button
-              type="button"
-              className="btn-secondary sm:w-64"
-              disabled={pending}
-              onClick={requestCheck}
-            >
-              {pending ? '依頼中…' : 'AIに表記ゆれ・敬称を見てもらう'}
-            </button>
-          )}
+          {aiAvailable &&
+            (!job ||
+              job.status === 'failed' ||
+              job.status === 'confirmed' ||
+              job.status === 'discarded') && (
+              <button
+                type="button"
+                className="btn-secondary sm:w-64"
+                disabled={pending}
+                onClick={requestCheck}
+              >
+                {pending ? '依頼中…' : 'AIに表記ゆれ・敬称を見てもらう'}
+              </button>
+            )}
           {job?.status === 'done' && (
             <>
               <button

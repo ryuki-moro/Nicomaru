@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850" role="img">
+<title>12  ER / AIと運用</title>
+<style>text{font-family:Meiryo,"Noto Sans JP",sans-serif}</style>
+<rect x="0" y="0" width="1200" height="850" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="36" y="43" font-size="27" fill="#993556">12  ER / AIと運用</text>
+<text x="36" y="77" font-size="13" fill="#5F5E5A">public全33テーブルの分冊。PKとFK参照・多重度を示す。全列/制約/RLSはデータ辞書。</text>
+<polyline points="36,94 1164,94" fill="none" stroke="#D3D1C7" stroke-width="1.5"/>
+<text x="36" y="823" font-size="11" fill="#5F5E5A">にこまる | 実装連動の詳細設計 | 2026-10-09 | 学校発表・模擬データ用</text>
+<text x="1120" y="823" font-size="12" fill="#5F5E5A">12</text>
+<rect x="36" y="122" width="552" height="150" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="48" y="145" font-size="16" fill="#993556">ai_jobs</text>
+<text x="48" y="167" font-size="11" fill="#5F5E5A">PK (id) / RLS有効</text>
+<text x="48" y="185" font-size="10.7" fill="#2C2C2A">case_id → wedding_cases.id [0..N → 0..1]</text>
+<text x="48" y="199" font-size="10.7" fill="#2C2C2A">confirmed_by → user_profiles.id [0..N → 0..1]</text>
+<text x="48" y="213" font-size="10.7" fill="#2C2C2A">prompt_template_id → ai_prompt_templates.id [0..N → 0..1]</text>
+<text x="48" y="227" font-size="10.7" fill="#2C2C2A">related_task_id → case_tasks.id [0..N → 0..1]</text>
+<text x="48" y="241" font-size="10.7" fill="#2C2C2A">venue_id → venues.id [0..N → 1]</text>
+<rect x="610" y="122" width="552" height="150" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="622" y="145" font-size="16" fill="#993556">ai_prompt_templates</text>
+<text x="622" y="167" font-size="11" fill="#5F5E5A">PK (id) / RLS有効</text>
+<text x="622" y="185" font-size="10.7" fill="#2C2C2A">venue_id → venues.id [0..N → 0..1]</text>
+<rect x="36" y="288" width="552" height="150" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="48" y="311" font-size="16" fill="#993556">ai_worker_heartbeats</text>
+<text x="48" y="333" font-size="11" fill="#5F5E5A">PK (worker_name) / RLS有効</text>
+<text x="48" y="351" font-size="11" fill="#5F5E5A">外部キーなし（独立した設定/実行記録）</text>
+<rect x="610" y="288" width="552" height="150" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="622" y="311" font-size="16" fill="#993556">audit_logs</text>
+<text x="622" y="333" font-size="11" fill="#5F5E5A">PK (id) / RLS有効</text>
+<text x="622" y="351" font-size="10.7" fill="#2C2C2A">actor_user_id → user_profiles.id [0..N → 0..1]</text>
+<rect x="36" y="454" width="552" height="150" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="48" y="477" font-size="16" fill="#993556">auth_rate_limits</text>
+<text x="48" y="499" font-size="11" fill="#5F5E5A">PK (id) / RLS有効</text>
+<text x="48" y="517" font-size="11" fill="#5F5E5A">外部キーなし（独立した設定/実行記録）</text>
+<rect x="610" y="454" width="552" height="150" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="622" y="477" font-size="16" fill="#993556">batch_runs</text>
+<text x="622" y="499" font-size="11" fill="#5F5E5A">PK (id) / RLS有効</text>
+<text x="622" y="517" font-size="11" fill="#5F5E5A">外部キーなし（独立した設定/実行記録）</text>
+<rect x="36" y="620" width="552" height="150" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="48" y="643" font-size="16" fill="#993556">usage_snapshots</text>
+<text x="48" y="665" font-size="11" fill="#5F5E5A">PK (measured_on) / RLS有効</text>
+<text x="48" y="683" font-size="11" fill="#5F5E5A">外部キーなし（独立した設定/実行記録）</text>
+<rect x="610" y="620" width="552" height="150" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="622" y="643" font-size="16" fill="#993556">system_alerts</text>
+<text x="622" y="665" font-size="11" fill="#5F5E5A">PK (alert_key) / RLS有効</text>
+<text x="622" y="683" font-size="11" fill="#5F5E5A">外部キーなし（独立した設定/実行記録）</text>
+<text x="36" y="790" font-size="11" fill="#5F5E5A">矢印は子のFK → 親。NULL可は参照先0..1、FKが一意なら子側も0..1。式場/案件境界はRLSで検証。</text>
+</svg>

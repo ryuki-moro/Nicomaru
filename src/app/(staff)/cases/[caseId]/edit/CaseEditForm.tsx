@@ -86,8 +86,10 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
     if (form.groomName !== initial.groomName) payload.groomName = form.groomName;
     if (form.brideName !== initial.brideName) payload.brideName = form.brideName;
     if (form.contactEmail !== initial.contactEmail) payload.contactEmail = form.contactEmail;
-    if (form.primaryContact !== initial.primaryContact) payload.primaryContact = form.primaryContact;
-    if (form.contactChannel !== initial.contactChannel) payload.contactChannel = form.contactChannel;
+    if (form.primaryContact !== initial.primaryContact)
+      payload.primaryContact = form.primaryContact;
+    if (form.contactChannel !== initial.contactChannel)
+      payload.contactChannel = form.contactChannel;
     if (form.guestCount !== initial.guestCount) {
       payload.guestCount = form.guestCount === '' ? null : Number(form.guestCount);
     }
@@ -105,7 +107,10 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
     setFieldErrors({});
 
     try {
-      const result = await api.patch<PatchResponse>(`/api/cases/${caseId}`, buildPayload(confirmed));
+      const result = await api.patch<PatchResponse>(
+        `/api/cases/${caseId}`,
+        buildPayload(confirmed),
+      );
       if (!result.applied && result.preview) {
         setPreview(result.preview);
         return;
@@ -335,17 +340,23 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               変更内容の確認
             </h2>
             <p className="text-label text-text-secondary">
-              挙式日{preview.planChanged ? '・プラン種別' : ''}の変更にともない、宿題の内容が次のように変わります。
+              挙式日{preview.planChanged ? '・プラン種別' : ''}
+              の変更にともない、宿題の内容が次のように変わります。
             </p>
 
             <section>
-              <h3 className="text-label font-medium">期限が変わる宿題（{preview.dueChanges.length}件）</h3>
+              <h3 className="text-label font-medium">
+                期限が変わる宿題（{preview.dueChanges.length}件）
+              </h3>
               {preview.dueChanges.length === 0 ? (
                 <p className="text-caption text-text-muted">ありません。</p>
               ) : (
                 <ul className="text-label">
                   {preview.dueChanges.map((change) => (
-                    <li key={change.id} className="flex justify-between gap-3 border-b border-border-light py-1">
+                    <li
+                      key={change.id}
+                      className="flex justify-between gap-3 border-b border-border-light py-1"
+                    >
                       <span>{change.title}</span>
                       <span className="text-text-muted">
                         {formatDate(change.from)} → {formatDate(change.to)}
@@ -376,7 +387,9 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
             </section>
 
             <section>
-              <h3 className="text-label font-medium">対応不要になる宿題（{preview.waived.length}件）</h3>
+              <h3 className="text-label font-medium">
+                対応不要になる宿題（{preview.waived.length}件）
+              </h3>
               {preview.waived.length === 0 ? (
                 <p className="text-caption text-text-muted">ありません。</p>
               ) : (

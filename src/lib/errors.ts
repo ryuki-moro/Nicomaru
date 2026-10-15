@@ -20,6 +20,7 @@ export const ERROR_CODES = {
   UNPROCESSABLE: 422,
   RATE_LIMITED: 429,
   INTERNAL_ERROR: 500,
+  SERVICE_UNAVAILABLE: 503,
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;
@@ -50,6 +51,7 @@ const DEFAULT_MESSAGE: Record<ErrorCode, string> = {
   UNPROCESSABLE: 'この内容では処理できません',
   RATE_LIMITED: '試行回数の上限に達しました。しばらく時間をおいてからお試しください',
   INTERNAL_ERROR: 'サーバー側で問題が発生しました',
+  SERVICE_UNAVAILABLE: '現在、認証サービスに接続できません。少し待ってからもう一度お試しください',
 };
 
 /** API 層で throw し、ルートハンドラの共通ラッパーがレスポンスへ変換する。 */

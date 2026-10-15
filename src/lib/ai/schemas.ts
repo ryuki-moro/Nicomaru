@@ -32,7 +32,10 @@ export type AiJobType = (typeof AI_JOB_TYPES)[number];
 
 /** 7-2 のコア機能。7-5 の拡張は「基盤とコア機能が動作していること」が着手条件（1-3）。 */
 export const AI_CORE_JOB_TYPES: readonly AiJobType[] = [
-  'classification', 'draft', 'defect_check', 'task_extraction',
+  'classification',
+  'draft',
+  'defect_check',
+  'task_extraction',
 ];
 
 export const AI_JOB_TYPE_LABEL: Record<AiJobType, string> = {
@@ -54,8 +57,16 @@ export const AI_JOB_TYPE_LABEL: Record<AiJobType, string> = {
  * 増やすときは設計書の 7-2 を先に改訂する。
  */
 export const CLASSIFICATION_LABELS = [
-  '日程', '費用', '衣装', '料理・飲物', '装花・装飾',
-  '写真・映像', '招待客・席次', '進行・演出', '支払い・手続き', 'その他',
+  '日程',
+  '費用',
+  '衣装',
+  '料理・飲物',
+  '装花・装飾',
+  '写真・映像',
+  '招待客・席次',
+  '進行・演出',
+  '支払い・手続き',
+  'その他',
 ] as const;
 export type ClassificationLabel = (typeof CLASSIFICATION_LABELS)[number];
 
@@ -83,24 +94,32 @@ export const DEFECT_TYPE_LABEL: Record<DefectType, string> = {
 };
 
 export const defectCheckOutputSchema = z.object({
-  findings: z.array(z.object({
-    /** 1始まりの行番号。ヘッダー行は含めない */
-    row: z.number().int().min(1),
-    column: z.string(),
-    type: z.enum(DEFECT_TYPES),
-    detail: z.string(),
-    confidence: z.number().min(0).max(1),
-  })).default([]),
+  findings: z
+    .array(
+      z.object({
+        /** 1始まりの行番号。ヘッダー行は含めない */
+        row: z.number().int().min(1),
+        column: z.string(),
+        type: z.enum(DEFECT_TYPES),
+        detail: z.string(),
+        confidence: z.number().min(0).max(1),
+      }),
+    )
+    .default([]),
 });
 
 // ------------------------------------------------------------- 9-5 宿題起票案
 export const taskExtractionOutputSchema = z.object({
-  tasks: z.array(z.object({
-    title: z.string().min(1).max(120),
-    description: z.string().default(''),
-    /** 「挙式2か月前ごろ」のような目安。日付に確定させないのはプランナーが決めるため */
-    due_hint: z.string().default(''),
-  })).default([]),
+  tasks: z
+    .array(
+      z.object({
+        title: z.string().min(1).max(120),
+        description: z.string().default(''),
+        /** 「挙式2か月前ごろ」のような目安。日付に確定させないのはプランナーが決めるため */
+        due_hint: z.string().default(''),
+      }),
+    )
+    .default([]),
 });
 
 // ------------------------------------------------------- 9-7 FAQ（Phase 3拡張）
@@ -108,7 +127,8 @@ export const faqAnswerOutputSchema = z.object({
   /** 確信が持てない場合は回答せず null（7-5「低確信時の無回答を必須とする」） */
   answer: z.string().nullable(),
   /** 根拠の出典タイトル。7-5 は「根拠を必ず表示し」と定める */
-  sources: z.array(z.object({ title: z.string(), knowledgeId: z.string().uuid().optional() }))
+  sources: z
+    .array(z.object({ title: z.string(), knowledgeId: z.string().uuid().optional() }))
     .default([]),
   confidence: z.number().min(0).max(1),
 });
@@ -127,11 +147,15 @@ export const handoverSummaryOutputSchema = z.object({
 });
 
 export const templateDraftOutputSchema = z.object({
-  templates: z.array(z.object({
-    name: z.string().min(1).max(120),
-    description: z.string().default(''),
-    due_offset_days: z.number().int().min(0),
-  })).default([]),
+  templates: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(120),
+        description: z.string().default(''),
+        due_offset_days: z.number().int().min(0),
+      }),
+    )
+    .default([]),
 });
 
 export const translationOutputSchema = z.object({
@@ -169,10 +193,12 @@ export type AiOutput<T extends AiJobType> = z.infer<(typeof AI_OUTPUT_SCHEMAS)[T
  */
 export const aiJobInputSchema = z.object({
   /** 参照先。例: { table: 'task_submissions', id: '...' } */
-  ref: z.object({
-    table: z.string().min(1),
-    id: z.string().uuid(),
-  }).optional(),
+  ref: z
+    .object({
+      table: z.string().min(1),
+      id: z.string().uuid(),
+    })
+    .optional(),
   /** 参照だけでは足りない短いテキスト（分類対象の自由記述など）。マスク済みであること */
   text: z.string().max(4000).optional(),
   /** job_type ごとの補助パラメータ（翻訳先言語など） */
@@ -189,8 +215,6 @@ export function validateAiOutput(
   if (parsed.success) return { ok: true, value: parsed.data };
   return {
     ok: false,
-    error: parsed.error.issues
-      .map((i) => `${i.path.join('.') || '_'}: ${i.message}`)
-      .join(' / '),
+    error: parsed.error.issues.map((i) => `${i.path.join('.') || '_'}: ${i.message}`).join(' / '),
   };
 }

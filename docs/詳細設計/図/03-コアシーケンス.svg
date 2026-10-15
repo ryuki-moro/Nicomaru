@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850" role="img">
+<title>03  案件登録から提出物の確認まで</title>
+<style>text{font-family:Meiryo,"Noto Sans JP",sans-serif}</style>
+<rect x="0" y="0" width="1200" height="850" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="36" y="43" font-size="27" fill="#993556">03  案件登録から提出物の確認まで</text>
+<text x="36" y="77" font-size="13" fill="#5F5E5A">DBの確定とAuth/Storage/外部送信は別境界。失敗時の補償を明記する。</text>
+<polyline points="36,94 1164,94" fill="none" stroke="#D3D1C7" stroke-width="1.5"/>
+<text x="36" y="823" font-size="11" fill="#5F5E5A">にこまる | 実装連動の詳細設計 | 2026-10-09 | 学校発表・模擬データ用</text>
+<text x="1120" y="823" font-size="12" fill="#5F5E5A">03</text>
+<rect x="35" y="125" width="160" height="55" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="49" y="151" font-size="17" fill="#993556">プランナー</text>
+<polyline points="115,180 115,731" fill="none" stroke="#D3D1C7" stroke-width="1.5"/>
+<rect x="270" y="125" width="160" height="55" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="284" y="151" font-size="17" fill="#993556">Next.js API</text>
+<polyline points="350,180 350,731" fill="none" stroke="#D3D1C7" stroke-width="1.5"/>
+<rect x="505" y="125" width="160" height="55" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="519" y="151" font-size="17" fill="#993556">DB / RPC</text>
+<polyline points="585,180 585,731" fill="none" stroke="#D3D1C7" stroke-width="1.5"/>
+<rect x="740" y="125" width="160" height="55" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="754" y="151" font-size="17" fill="#993556">Auth / 通知</text>
+<polyline points="820,180 820,731" fill="none" stroke="#D3D1C7" stroke-width="1.5"/>
+<rect x="975" y="125" width="160" height="55" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="989" y="151" font-size="17" fill="#993556">新郎新婦</text>
+<polyline points="1055,180 1055,731" fill="none" stroke="#D3D1C7" stroke-width="1.5"/>
+<polyline points="115,214 350,214" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="350,214 341.8959760788259,217.91468980700108 341.8959760788259,210.08531019299892" fill="#89857B"/>
+<text x="121" y="207" font-size="11" fill="#2C2C2A">案件入力 / POST cases</text>
+<polyline points="350,256 585,256" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="585,256 576.8959760788259,259.9146898070011 576.8959760788259,252.08531019299892" fill="#89857B"/>
+<text x="356" y="249" font-size="11" fill="#2C2C2A">create_wedding_case: 案件・2招待・履歴を一括確定</text>
+<polyline points="585,298 350,298" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="350,298 358.1040239211741,294.0853101929989 358.1040239211741,301.9146898070011" fill="#89857B"/>
+<text x="356" y="291" font-size="11" fill="#2C2C2A">201用のID / URLの平文はアプリが1度だけ返す</text>
+<polyline points="115,340 350,340" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="350,340 341.8959760788259,343.9146898070011 341.8959760788259,336.0853101929989" fill="#89857B"/>
+<text x="121" y="333" font-size="11" fill="#2C2C2A">別要求で宿題割当・招待送付</text>
+<polyline points="350,382 820,382" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="820,382 811.8959760788259,385.9146898070011 811.8959760788259,378.0853101929989" fill="#89857B"/>
+<text x="356" y="375" font-size="11" fill="#2C2C2A">通知送信（未構成/失敗は発行成功と区別）</text>
+<polyline points="1055,424 350,424" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="350,424 358.1040239211741,420.0853101929989 358.1040239211741,427.9146898070011" fill="#89857B"/>
+<text x="356" y="417" font-size="11" fill="#2C2C2A">招待token + 初回登録情報</text>
+<polyline points="350,466 585,466" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="585,466 576.8959760788259,469.9146898070011 576.8959760788259,462.0853101929989" fill="#89857B"/>
+<text x="356" y="459" font-size="11" fill="#2C2C2A">consume_invitation: 期限/回数/失効を原子的検証</text>
+<polyline points="350,508 820,508" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="820,508 811.8959760788259,511.9146898070011 811.8959760788259,504.0853101929989" fill="#89857B"/>
+<text x="356" y="501" font-size="11" fill="#2C2C2A">Auth作成 → 失敗時はrestore_invitation</text>
+<polyline points="1055,550 350,550" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="350,550 358.1040239211741,546.0853101929989 358.1040239211741,553.9146898070011" fill="#89857B"/>
+<text x="356" y="543" font-size="11" fill="#2C2C2A">提出（ファイルは先にStorageへ）</text>
+<polyline points="350,592 585,592" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="585,592 576.8959760788259,595.9146898070011 576.8959760788259,588.0853101929989" fill="#89857B"/>
+<text x="356" y="585" font-size="11" fill="#2C2C2A">submit_task_atomic / 最新提出を更新</text>
+<polyline points="115,634 350,634" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="350,634 341.8959760788259,637.9146898070011 341.8959760788259,630.0853101929989" fill="#89857B"/>
+<text x="121" y="627" font-size="11" fill="#2C2C2A">確認 または 不備コメント</text>
+<polyline points="350,676 585,676" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="585,676 576.8959760788259,679.9146898070011 576.8959760788259,672.0853101929989" fill="#89857B"/>
+<text x="356" y="669" font-size="11" fill="#2C2C2A">review_submission: 競合検査・状態更新</text>
+<text x="36" y="779" font-size="14" fill="#2C2C2A">不備ありは再提出へ。AI案は任意の補助であり、提出/確認/通知の確定を自動代行しない。</text>
+</svg>

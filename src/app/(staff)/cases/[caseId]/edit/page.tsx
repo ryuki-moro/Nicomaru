@@ -11,11 +11,7 @@ import { redirect } from 'next/navigation';
 
 import { CaseEditForm, type CaseEditInitial } from './CaseEditForm';
 import { requirePageUser } from '@/lib/auth/session';
-import {
-  COUPLE_PROFILE_COLUMNS,
-  type ContactChannel,
-  type PartnerRole,
-} from '@/lib/constants';
+import { COUPLE_PROFILE_COLUMNS, type ContactChannel, type PartnerRole } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 

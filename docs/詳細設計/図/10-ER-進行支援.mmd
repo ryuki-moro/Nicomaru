@@ -1,0 +1,45 @@
+erDiagram
+  risk_rules {
+    uuid id PK
+    uuid venue_id FK
+  }
+  risk_score_snapshots {
+    uuid id PK
+    uuid case_id FK
+    uuid risk_rule_id FK
+  }
+  communication_logs {
+    uuid id PK
+    uuid case_id FK
+    uuid created_by FK
+  }
+  follow_logs {
+    uuid id PK
+    uuid case_id FK
+    uuid planner_id FK
+  }
+  meeting_notes {
+    uuid id PK
+    uuid case_id FK
+    uuid created_by FK
+  }
+  meeting_sheets {
+    uuid id PK
+    uuid ai_draft_job_id FK
+    uuid case_id FK
+    uuid generated_by FK
+    uuid pdf_file_id FK
+  }
+  venues |o--o{ risk_rules : "venue_id"
+  wedding_cases ||--o{ risk_score_snapshots : "case_id"
+  risk_rules |o--o{ risk_score_snapshots : "risk_rule_id"
+  wedding_cases ||--o{ communication_logs : "case_id"
+  user_profiles |o--o{ communication_logs : "created_by"
+  wedding_cases ||--o{ follow_logs : "case_id"
+  user_profiles ||--o{ follow_logs : "planner_id"
+  wedding_cases ||--o{ meeting_notes : "case_id"
+  user_profiles ||--o{ meeting_notes : "created_by"
+  ai_jobs |o--o{ meeting_sheets : "ai_draft_job_id"
+  wedding_cases ||--o{ meeting_sheets : "case_id"
+  user_profiles ||--o{ meeting_sheets : "generated_by"
+  storage_files |o--o{ meeting_sheets : "pdf_file_id"

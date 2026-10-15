@@ -28,7 +28,9 @@ function requireKey(name: string, bytes: number): Buffer {
   }
   const key = Buffer.from(raw, 'base64');
   if (key.length !== bytes) {
-    throw new Error(`${name} は base64 で ${bytes} バイトである必要があります（現在 ${key.length}）`);
+    throw new Error(
+      `${name} は base64 で ${bytes} バイトである必要があります（現在 ${key.length}）`,
+    );
   }
   return key;
 }
@@ -47,7 +49,11 @@ export function encryptPii(plaintext: string | null | undefined): string | null 
   if (plaintext === null || plaintext === undefined || plaintext === '') return null;
   const iv = randomBytes(IV_BYTES);
   const cipher = createCipheriv(ALGORITHM, keys.encryption(), iv);
-  const body = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final(), cipher.getAuthTag()]);
+  const body = Buffer.concat([
+    cipher.update(plaintext, 'utf8'),
+    cipher.final(),
+    cipher.getAuthTag(),
+  ]);
   return `${PREFIX}:${iv.toString('base64url')}:${body.toString('base64url')}`;
 }
 

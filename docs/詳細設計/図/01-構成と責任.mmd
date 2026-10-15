@@ -1,0 +1,16 @@
+flowchart TD
+  client["ブラウザ / ホーム画面アプリ<br/>couple / planner / admin<br/>Service Workerは機微情報を保存しない"]
+  web["Next.js / Vercel<br/>画面・入力検証・認証・Origin検証<br/>RLSクライアントによる読み書き"]
+  auth["Supabase Auth<br/>OTP / パスワード / セッション<br/>activeプロフィールと照合"]
+  db["Supabase DB / Storage<br/>RPCの原子性 + RLSの行境界<br/>非公開ファイル + 短命署名URL"]
+  notify["LINE / Resend<br/>通知本文を外部へ送信する専用出口<br/>送信結果・上限・代替を管理"]
+  cron["pg_cron / GitHub Actions<br/>定期登録 + 共有secret認証<br/>容量・監視・削除・通知・回収"]
+  worker["校内・自宅のAI worker<br/>専用DBロールでpull / 30秒周期<br/>Service Roleを渡さない"]
+  ollama["Ollama（ローカル）<br/>必要な最小入力 / JSON出力<br/>人が確認・修正して採用"]
+  client -->|"HTTPS"| web
+  web -->|"本人確認"| auth
+  web -->|"JWT / RLS"| db
+  web -->|"必要な通知のみ"| notify
+  cron -->|"限定RPC"| db
+  worker -->|"ジョブ取得・結果"| db
+  worker -->|"ローカル推論"| ollama

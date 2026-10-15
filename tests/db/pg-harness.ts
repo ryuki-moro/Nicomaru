@@ -68,7 +68,9 @@ grant execute on function auth.uid() to anon, authenticated;
 `;
 
 function migrationFiles(): string[] {
-  return readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).sort();
+  return readdirSync(MIGRATIONS_DIR)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
 }
 
 /** テスト用データベースを作り直し、マイグレーションと seed を適用する。 */
@@ -79,7 +81,9 @@ export async function createTestDatabase(dbName: string): Promise<string> {
     // 前回の残骸を落とす。接続が残っていると drop できないので強制切断する。
     await admin.query(
       `select pg_terminate_backend(pid) from pg_stat_activity
-        where datname = $1 and pid <> pg_backend_pid()`, [dbName]);
+        where datname = $1 and pid <> pg_backend_pid()`,
+      [dbName],
+    );
     await admin.query(`drop database if exists ${dbName}`);
     await admin.query(`create database ${dbName}`);
   } finally {
@@ -111,7 +115,10 @@ export async function createTestDatabase(dbName: string): Promise<string> {
  * （GUC と SET ROLE は接続単位なので、プールから借りた1本に閉じ込める必要がある）。
  */
 export class PgTestDb {
-  private constructor(readonly pool: Pool, readonly url: string) {}
+  private constructor(
+    readonly pool: Pool,
+    readonly url: string,
+  ) {}
 
   static async create(dbName = 'nicomaru_concurrency_test'): Promise<PgTestDb> {
     const url = await createTestDatabase(dbName);
@@ -133,7 +140,9 @@ export class PgTestDb {
   async asUser<T>(authUserId: string | null, fn: (q: Querier) => Promise<T>): Promise<T> {
     const client = await this.pool.connect();
     try {
-      await client.query(`select set_config('request.jwt.claim.sub', $1, false)`, [authUserId ?? '']);
+      await client.query(`select set_config('request.jwt.claim.sub', $1, false)`, [
+        authUserId ?? '',
+      ]);
       await client.query('set role authenticated');
       return await fn((sql, params) => client.query(sql, params));
     } finally {
@@ -147,4 +156,7 @@ export class PgTestDb {
   }
 }
 
-export type Querier = (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[]; rowCount: number | null }>;
+export type Querier = (
+  sql: string,
+  params?: unknown[],
+) => Promise<{ rows: Record<string, unknown>[]; rowCount: number | null }>;

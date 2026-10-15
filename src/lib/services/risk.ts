@@ -151,10 +151,12 @@ export function calculateRisk(input: RiskInput, rules: readonly RiskRule[]): Ris
   );
 
   // priority 最大。同値のときは level の高い方、さらに同値なら id の昇順で決定的に選ぶ。
-  const primary = [...matched].sort((a, b) =>
-    b.rule.priority - a.rule.priority
-    || RISK_LEVEL_RANK[b.rule.level] - RISK_LEVEL_RANK[a.rule.level]
-    || a.rule.id.localeCompare(b.rule.id))[0];
+  const primary = [...matched].sort(
+    (a, b) =>
+      b.rule.priority - a.rule.priority ||
+      RISK_LEVEL_RANK[b.rule.level] - RISK_LEVEL_RANK[a.rule.level] ||
+      a.rule.id.localeCompare(b.rule.id),
+  )[0];
 
   return {
     scoreValue,

@@ -8,8 +8,7 @@
  * 同じ正規表現が5ファイルに2つの名前（UUID_PATTERN／UUID_RE）で写経されていたので
  * ここへ寄せた。判定を直すときに片方だけ直す事故を防ぐ。
  */
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function isUuid(value: unknown): value is string {
   return typeof value === 'string' && UUID_PATTERN.test(value);

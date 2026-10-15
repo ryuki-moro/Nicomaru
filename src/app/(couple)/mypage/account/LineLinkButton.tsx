@@ -22,9 +22,11 @@ export function LineLinkButton({ linkToken }: { linkToken: string }) {
       const { url } = await api.post<{ url: string }>('/api/line/link', { linkToken });
       window.location.href = url;
     } catch (e) {
-      setError(e instanceof ApiCallError
-        ? e.message
-        : '連携の準備ができませんでした。時間をおいてお試しください');
+      setError(
+        e instanceof ApiCallError
+          ? e.message
+          : '連携の準備ができませんでした。時間をおいてお試しください',
+      );
       setPending(false);
     }
   }

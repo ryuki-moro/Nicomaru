@@ -1,0 +1,16 @@
+flowchart TD
+  queue["notifications: queued<br/>新規通知 / 日次リマインド<br/>アプリ内通知は外部送信なし"]
+  choose["チャネル選択<br/>LINE紐付け + overdue / needs_fix<br/>案件あり + claim_line_quota成功"]
+  line["LINE送信<br/>送信枠内の重要通知"]
+  email["メールへ代替<br/>未紐付け / 上限 / 対象外<br/>Resend構成と送信結果を確認"]
+  result["sent / failed<br/>notification_logsに結果<br/>switch reasonを残す"]
+  batch["定期登録<br/>register_scheduled_jobs<br/>アプリURL更新で登録し直す"]
+  internal["内部API認証<br/>x-internal-cron-secret必須<br/>ユーザーCookieに依存しない"]
+  record["batch_runs / system_alerts<br/>開始・終了・件数・失敗段階<br/>監視条件の重複/復旧を管理"]
+  queue -->|"外部通知"| choose
+  choose -->|"条件一致"| line
+  choose -->|"条件不一致"| email
+  line -->|"結果"| result
+  email -->|"結果"| result
+  batch -->|"定期実行"| internal
+  internal -->|"記録"| record

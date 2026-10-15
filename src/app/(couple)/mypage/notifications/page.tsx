@@ -16,6 +16,7 @@ import { getAppUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { formatDateTime } from '@/lib/format';
 import { NOTIFICATION_TYPE_LABEL, type NotificationType } from '@/lib/notify/templates';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -33,13 +34,13 @@ interface NotificationRow {
 }
 
 interface Props {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }
 
 export default async function NotificationsPage({ searchParams }: Props) {
   const user = await getAppUser();
   const params = await searchParams;
-  const page = Math.max(Number(params.page) || 1, 1);
+  const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
 
   const supabase = await createSupabaseServerClient();
@@ -73,9 +74,7 @@ export default async function NotificationsPage({ searchParams }: Props) {
         </div>
       )}
 
-      {!error && visible.length === 0 && (
-        <EmptyState message="いまお知らせはありません。" />
-      )}
+      {!error && visible.length === 0 && <EmptyState message="いまお知らせはありません。" />}
 
       <ul className="space-y-3">
         {visible.map((item) => {
@@ -88,7 +87,10 @@ export default async function NotificationsPage({ searchParams }: Props) {
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-base text-text-primary">{item.title}</span>
                   {item.read_at === null && (
-                    <span className="mt-1 inline-block size-2 shrink-0 rounded-full bg-danger" aria-label="未読" />
+                    <span
+                      className="mt-1 inline-block size-2 shrink-0 rounded-full bg-danger"
+                      aria-label="未読"
+                    />
                   )}
                 </div>
                 <p className="mt-1 text-label text-text-secondary">{item.body}</p>
@@ -109,7 +111,9 @@ export default async function NotificationsPage({ searchParams }: Props) {
             <Link href={`/mypage/notifications?page=${page - 1}`} className="btn-ghost">
               前のページ
             </Link>
-          ) : <span />}
+          ) : (
+            <span />
+          )}
           {hasNext && (
             <Link href={`/mypage/notifications?page=${page + 1}`} className="btn-ghost">
               次のページ

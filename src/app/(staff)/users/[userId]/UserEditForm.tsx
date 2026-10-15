@@ -269,8 +269,8 @@ export function UserEditForm({
           <>
             <p className="text-label text-text-secondary">
               削除しても記録は残り、ログインだけができなくなります。
-              {assignedCaseCount > 0
-                && `担当中の案件が${assignedCaseCount}件あるため、引き継ぎ先のプランナーの指定が必要です。`}
+              {assignedCaseCount > 0 &&
+                `担当中の案件が${assignedCaseCount}件あるため、引き継ぎ先のプランナーの指定が必要です。`}
             </p>
             <button
               type="button"

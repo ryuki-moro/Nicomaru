@@ -59,15 +59,17 @@ describe('有効期限と使用回数（13-1 の決定）', () => {
   it('初回登録は14日・1回まで', () => {
     expect(INVITATION_TTL_DAYS.initial_registration).toBe(14);
     expect(invitationMaxUses('initial_registration')).toBe(1);
-    expect(invitationExpiresAt('initial_registration', NOW).toISOString())
-      .toBe('2026-09-15T00:00:00.000Z');
+    expect(invitationExpiresAt('initial_registration', NOW).toISOString()).toBe(
+      '2026-09-15T00:00:00.000Z',
+    );
   });
 
   it('マイページ案内は30日・5回まで', () => {
     expect(INVITATION_TTL_DAYS.mypage_access).toBe(30);
     expect(INVITATION_MAX_USES.mypage_access).toBe(5);
-    expect(invitationExpiresAt('mypage_access', NOW).toISOString())
-      .toBe('2026-10-01T00:00:00.000Z');
+    expect(invitationExpiresAt('mypage_access', NOW).toISOString()).toBe(
+      '2026-10-01T00:00:00.000Z',
+    );
   });
 });
 
@@ -114,9 +116,11 @@ describe('matchRecipientEmail（6-6-1 のメール照合）', () => {
 
 describe('buildInvitationUrl', () => {
   it('末尾のスラッシュを重複させない', () => {
-    expect(buildInvitationUrl('https://example.test/', 'TOKEN'))
-      .toBe('https://example.test/register/TOKEN');
-    expect(buildInvitationUrl('https://example.test', 'TOKEN'))
-      .toBe('https://example.test/register/TOKEN');
+    expect(buildInvitationUrl('https://example.test/', 'TOKEN')).toBe(
+      'https://example.test/register/TOKEN',
+    );
+    expect(buildInvitationUrl('https://example.test', 'TOKEN')).toBe(
+      'https://example.test/register/TOKEN',
+    );
   });
 });

@@ -21,12 +21,14 @@ export function OtpInput({
   onComplete,
   disabled = false,
   invalid = false,
+  describedBy,
 }: {
   value: string;
   onChange: (value: string) => void;
   onComplete?: (value: string) => void;
   disabled?: boolean;
   invalid?: boolean;
+  describedBy?: string;
 }) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);
 
@@ -56,9 +58,10 @@ export function OtpInput({
           maxLength={1}
           aria-label={`ワンタイムコード ${index + 1}桁目`}
           aria-invalid={invalid || undefined}
+          aria-describedby={describedBy}
           className={[
             'h-11 w-9 rounded-field bg-surface text-center text-base text-text-primary',
-            'focus:border-2 focus:border-primary focus:outline-none',
+            'focus:border-2 focus:border-primary focus:outline-hidden',
             'disabled:cursor-not-allowed disabled:opacity-50',
             invalid ? 'border border-danger' : 'border border-border-mid',
           ].join(' ')}
@@ -85,7 +88,10 @@ export function OtpInput({
           }}
           onPaste={(event) => {
             event.preventDefault();
-            const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP.length);
+            const pasted = event.clipboardData
+              .getData('text')
+              .replace(/\D/g, '')
+              .slice(0, OTP.length);
             if (!pasted) return;
             commit(pasted);
             focusAt(pasted.length);
@@ -109,10 +115,16 @@ type Mode = 'otp' | 'password';
  * パスワード認証は表6-6 に無いので Supabase クライアント経由で行う（6-5 の原則）。
  * 連続失敗に対する制限は Supabase Auth 側の既定のレート制限に委ねる。
  */
-export function LoginForm({ next }: { next: string | null }) {
+export function LoginForm({
+  next,
+  initialMode = 'otp',
+}: {
+  next: string | null;
+  initialMode?: Mode;
+}) {
   const router = useRouter();
 
-  const [mode, setMode] = useState<Mode>('otp');
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [codeSent, setCodeSent] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -144,7 +156,10 @@ export function LoginForm({ next }: { next: string | null }) {
   // 再送信の待ち時間（6-3-1 方針(3)／5-3 resendIntervalSeconds）
   useEffect(() => {
     if (resendIn <= 0) return;
-    const timer = window.setInterval(() => setResendIn((current) => Math.max(current - 1, 0)), 1000);
+    const timer = window.setInterval(
+      () => setResendIn((current) => Math.max(current - 1, 0)),
+      1000,
+    );
     return () => window.clearInterval(timer);
   }, [resendIn]);
 
@@ -161,15 +176,22 @@ export function LoginForm({ next }: { next: string | null }) {
     const authCode = url.searchParams.get('code');
     const accessToken = hashParams.get('access_token');
     const refreshToken = hashParams.get('refresh_token');
-    const linkError = url.searchParams.get('error_description') ?? hashParams.get('error_description');
+    const linkError =
+      url.searchParams.get('error_description') ?? hashParams.get('error_description');
 
     if (!authCode && !accessToken && !linkError) return;
 
     // トークンを含むURLを履歴に残さない
-    window.history.replaceState(null, '', url.pathname + (next ? `?next=${encodeURIComponent(next)}` : ''));
+    window.history.replaceState(
+      null,
+      '',
+      url.pathname + (next ? `?next=${encodeURIComponent(next)}` : ''),
+    );
 
     if (linkError || (!authCode && !refreshToken)) {
-      setError('ログインリンクが無効か、有効期限が切れています。メールに記載の6桁のコードをご入力ください');
+      setError(
+        'ログインリンクが無効か、有効期限が切れています。メールに記載の6桁のコードをご入力ください',
+      );
       setCodeSent(true);
       return;
     }
@@ -187,7 +209,9 @@ export function LoginForm({ next }: { next: string | null }) {
       if (cancelled) return;
       setPending(false);
       if (result.error) {
-        setError('このブラウザではログインリンクを確認できませんでした。メールに記載の6桁のコードをご入力ください');
+        setError(
+          'このブラウザではログインリンクを確認できませんでした。メールに記載の6桁のコードをご入力ください',
+        );
         setCodeSent(true);
         return;
       }
@@ -211,8 +235,8 @@ export function LoginForm({ next }: { next: string | null }) {
       setCode('');
       setResendIn(OTP.resendIntervalSeconds);
       setNotice(
-        `${email} 宛にログインリンクと6桁のコードをお送りしました。`
-        + `どちらでもログインできます（有効期限は${Math.round(OTP.ttlSeconds / 60)}分）。`,
+        `${email} 宛にログインリンクと6桁のコードをお送りしました。` +
+          `どちらでもログインできます（有効期限は${Math.round(OTP.ttlSeconds / 60)}分）。`,
       );
     } catch (cause) {
       handleFailure(cause, 'メールを送信できませんでした。時間をおいてお試しください');
@@ -241,18 +265,16 @@ export function LoginForm({ next }: { next: string | null }) {
     setPending(true);
     setError(null);
     setFieldErrors({});
-    const { error: signInError } = await createSupabaseBrowserClient().auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (signInError) {
-      // 「登録が無い」と「パスワード違い」を区別せず返す（利用者列挙の防止。9章）
-      setError('メールアドレスまたはパスワードが正しくありません');
+    try {
+      const result = await api.post<{ redirectTo: string }>('/api/auth/password-login', {
+        email,
+        password,
+      });
+      goToLanding(result.redirectTo);
+    } catch (cause) {
+      handleFailure(cause, 'ログインできませんでした。時間をおいてお試しください');
       setPending(false);
-      return;
     }
-    // 遷移先はロールで決まる。ルートページが landingPathFor で振り分ける（4-2）
-    goToLanding('/');
   };
 
   const switchMode = (nextMode: Mode) => {
@@ -300,9 +322,10 @@ export function LoginForm({ next }: { next: string | null }) {
             placeholder="you@example.com"
             value={email}
             aria-invalid={fieldErrors.email ? true : undefined}
+            aria-describedby={fieldErrors.email ? 'login-email-error' : undefined}
             onChange={(event) => setEmail(event.target.value)}
           />
-          <FieldError message={fieldErrors.email} />
+          <FieldError id="login-email-error" message={fieldErrors.email} />
         </div>
 
         {mode === 'password' && (
@@ -319,9 +342,10 @@ export function LoginForm({ next }: { next: string | null }) {
               disabled={pending}
               value={password}
               aria-invalid={fieldErrors.password ? true : undefined}
+              aria-describedby={fieldErrors.password ? 'login-password-error' : undefined}
               onChange={(event) => setPassword(event.target.value)}
             />
-            <FieldError message={fieldErrors.password} />
+            <FieldError id="login-password-error" message={fieldErrors.password} />
           </div>
         )}
 
@@ -334,8 +358,9 @@ export function LoginForm({ next }: { next: string | null }) {
               onComplete={(completed) => void verifyOtp(completed)}
               disabled={pending}
               invalid={Boolean(fieldErrors.code)}
+              describedBy={fieldErrors.code ? 'login-code-error' : undefined}
             />
-            <FieldError message={fieldErrors.code} />
+            <FieldError id="login-code-error" message={fieldErrors.code} />
           </div>
         )}
 

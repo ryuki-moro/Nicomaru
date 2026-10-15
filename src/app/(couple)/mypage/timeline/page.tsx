@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { formatDateJp } from '@/lib/format';
 import { type IsoDate } from '@/lib/services/schedule';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const metadata = { title: '準備タイムライン' };
@@ -50,16 +51,10 @@ function groupByPhase(rows: readonly TimelineRow[]): PhaseGroup[] {
   return groups;
 }
 
-/** ?page= を1始まりのページ番号にする。壊れた値は1ページ目へ寄せる。 */
-function resolvePage(raw: string | undefined): number {
-  const parsed = Number(raw ?? '1');
-  return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
-}
-
 export default async function TimelinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }) {
   const page = resolvePage((await searchParams).page);
   const supabase = await createSupabaseServerClient();

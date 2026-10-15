@@ -70,8 +70,8 @@ export async function sendMail(message: MailMessage): Promise<SendResult> {
 
   if (!apiKey || !from) {
     console.info(
-      '[mail] RESEND_API_KEY／RESEND_FROM が未設定のため送信をスキップしました（13-1 開発者宛検証段階）\n'
-      + `  to: ${message.to}\n  subject: ${message.subject}\n${message.text}`,
+      '[mail] RESEND_API_KEY／RESEND_FROM が未設定のため送信をスキップしました（13-1 開発者宛検証段階）\n' +
+        `  to: ${message.to}\n  subject: ${message.subject}\n${message.text}`,
     );
     return { delivered: false, reason: 'not_configured', skippedReason: NOT_CONFIGURED_MESSAGE };
   }
@@ -80,7 +80,12 @@ export async function sendMail(message: MailMessage): Promise<SendResult> {
     const response = await fetch(RESEND_ENDPOINT, {
       method: 'POST',
       headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ from, to: [message.to], subject: message.subject, text: message.text }),
+      body: JSON.stringify({
+        from,
+        to: [message.to],
+        subject: message.subject,
+        text: message.text,
+      }),
     });
 
     if (!response.ok) {
@@ -90,7 +95,7 @@ export async function sendMail(message: MailMessage): Promise<SendResult> {
     }
 
     // 送信自体は成功している。応答本文の解釈に失敗しても「送れなかった」と誤って伝えない。
-    const body = await response.json().catch(() => ({})) as { id?: string };
+    const body = (await response.json().catch(() => ({}))) as { id?: string };
     return { delivered: true, providerMessageId: body.id ?? null };
   } catch (error) {
     // fetch は DNS障害・タイムアウト・接続断で例外になる。ここで throw すると
@@ -129,9 +134,18 @@ export async function issuePasswordSetupLink(
 
   for (const type of order) {
     // GenerateLinkParams は type ごとの直和型なので、変数のままでは代入できない
-    const { data, error } = type === 'invite'
-      ? await admin.auth.admin.generateLink({ type: 'invite', email: params.email, options: { redirectTo } })
-      : await admin.auth.admin.generateLink({ type: 'recovery', email: params.email, options: { redirectTo } });
+    const { data, error } =
+      type === 'invite'
+        ? await admin.auth.admin.generateLink({
+            type: 'invite',
+            email: params.email,
+            options: { redirectTo },
+          })
+        : await admin.auth.admin.generateLink({
+            type: 'recovery',
+            email: params.email,
+            options: { redirectTo },
+          });
 
     if (!error && data?.user && data.properties) {
       return { ok: true, authUserId: data.user.id, actionLink: data.properties.action_link };
@@ -139,7 +153,11 @@ export async function issuePasswordSetupLink(
 
     lastDetail = error?.message;
     // invite は「既に登録済み」で失敗する。新規登録の入口ではそのまま 409 にしたい
-    if (type === 'invite' && !params.isResend && /already|registered|exists/i.test(lastDetail ?? '')) {
+    if (
+      type === 'invite' &&
+      !params.isResend &&
+      /already|registered|exists/i.test(lastDetail ?? '')
+    ) {
       return { ok: false, reason: 'already_registered', detail: lastDetail };
     }
   }

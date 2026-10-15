@@ -39,7 +39,9 @@ describe('再提出フロー（6-7 needs_fix → 再提出）', () => {
       db.query<{ id: string }>(
         `insert into case_tasks (case_id, title, submission_format, due_date)
          values ($1, 'BGMリクエスト', 'text', current_date + 45) returning id`,
-        [fx.caseId]));
+        [fx.caseId],
+      ),
+    );
     taskId = t.rows[0].id;
 
     // プランナーが「不備あり」を付けた状態を作る
@@ -48,14 +50,17 @@ describe('再提出フロー（6-7 needs_fix → 再提出）', () => {
         `insert into task_submissions
            (case_task_id, submitted_by, submission_type, text_value, review_status, is_latest)
          values ($1, $2, 'text', 'v1', 'needs_fix', true)`,
-        [taskId, fx.couple.profileId]));
+        [taskId, fx.couple.profileId],
+      ),
+    );
   });
 
   it('couple は needs_fix の行を直接 update できない（付録A の意図どおり）', async () => {
     await db.asUser(fx.couple.authUserId, async () => {
       const r = await db.query(
         'update task_submissions set is_latest = false where case_task_id = $1 returning id',
-        [taskId]);
+        [taskId],
+      );
       expect(r.rows).toHaveLength(0);
     });
   });
@@ -67,7 +72,9 @@ describe('再提出フロー（6-7 needs_fix → 再提出）', () => {
           `insert into task_submissions
              (case_task_id, submitted_by, submission_type, text_value, review_status, is_latest)
            values ($1, $2, 'text', 'v2', 'submitted', true)`,
-          [taskId, fx.couple.profileId]));
+          [taskId, fx.couple.profileId],
+        ),
+      );
       expect(code).toBe('23505');
     });
   });
@@ -75,28 +82,35 @@ describe('再提出フロー（6-7 needs_fix → 再提出）', () => {
   it('demote_latest_submission() を通せば降格でき、新しい提出を作れる', async () => {
     await db.asUser(fx.couple.authUserId, async () => {
       const demoted = await db.query<{ demote_latest_submission: string | null }>(
-        'select demote_latest_submission($1)', [taskId]);
+        'select demote_latest_submission($1)',
+        [taskId],
+      );
       expect(demoted.rows[0].demote_latest_submission).not.toBeNull();
 
       const inserted = await db.query(
         `insert into task_submissions
            (case_task_id, submitted_by, submission_type, text_value, review_status, is_latest)
          values ($1, $2, 'text', 'v2', 'submitted', true) returning id`,
-        [taskId, fx.couple.profileId]);
+        [taskId, fx.couple.profileId],
+      );
       expect(inserted.rows).toHaveLength(1);
     });
 
     const rows = await db.asOwner(() =>
       db.query<{ n: number }>(
         'select count(*)::int as n from task_submissions where case_task_id = $1 and is_latest',
-        [taskId]));
+        [taskId],
+      ),
+    );
     expect(rows.rows[0].n).toBe(1);
   });
 
   it('降格対象が無ければ NULL を返す（未レビュー提出は上書きが正しい経路）', async () => {
     const rows = await db.asUser(fx.couple.authUserId, () =>
-      db.query<{ demote_latest_submission: string | null }>(
-        'select demote_latest_submission($1)', [taskId]));
+      db.query<{ demote_latest_submission: string | null }>('select demote_latest_submission($1)', [
+        taskId,
+      ]),
+    );
     expect(rows.rows[0].demote_latest_submission).toBeNull();
   });
 
@@ -122,16 +136,26 @@ describe('連絡履歴の自動記録（log_communication）', () => {
         db.query(
           `insert into communication_logs (case_id, channel, direction, source, summary, occurred_at)
            values ($1, 'in_app', 'inbound', 'submit', 'x', now())`,
-          [fx.caseId]));
+          [fx.caseId],
+        ),
+      );
       expect(direct).toBe('42501');
 
-      await db.query('select log_communication($1, $2, $3, $4, $5)',
-        [fx.caseId, 'in_app', 'inbound', 'submit', '宿題が提出されました']);
+      await db.query('select log_communication($1, $2, $3, $4, $5)', [
+        fx.caseId,
+        'in_app',
+        'inbound',
+        'submit',
+        '宿題が提出されました',
+      ]);
     });
 
     const rows = await db.asUser(fx.planner.authUserId, () =>
       db.query<{ created_by: string; source: string }>(
-        'select created_by, source from communication_logs where case_id = $1', [fx.caseId]));
+        'select created_by, source from communication_logs where case_id = $1',
+        [fx.caseId],
+      ),
+    );
     expect(rows.rows).toHaveLength(1);
     // created_by は引数ではなく auth.uid() から解決される（実行者を偽装できない）
     expect(rows.rows[0].created_by).toBe(fx.couple.profileId);
@@ -140,15 +164,22 @@ describe('連絡履歴の自動記録（log_communication）', () => {
 
   it('couple には連絡履歴の参照を許さない（planner／admin 向け情報）', async () => {
     const rows = await db.asUser(fx.couple.authUserId, () =>
-      db.query('select id from communication_logs'));
+      db.query('select id from communication_logs'),
+    );
     expect(rows.rows).toHaveLength(0);
   });
 
   it('触れない案件には記録できない', async () => {
     await db.asUser(fx.couple.authUserId, async () => {
       const code = await errcodeOf(() =>
-        db.query('select log_communication($1, $2, $3, $4, $5)',
-          [fx.otherCaseId, 'in_app', 'inbound', 'submit', 'x']));
+        db.query('select log_communication($1, $2, $3, $4, $5)', [
+          fx.otherCaseId,
+          'in_app',
+          'inbound',
+          'submit',
+          'x',
+        ]),
+      );
       expect(code).toBe('42501');
     });
   });
@@ -160,11 +191,13 @@ describe('提出ファイルのメタ情報（storage_files）', () => {
       const inserted = await db.query<{ id: string }>(
         `insert into storage_files (case_id, uploaded_by, object_path, mime_type, file_size_bytes)
          values ($1, $2, $3, 'text/csv', 1024) returning id`,
-        [fx.caseId, fx.couple.profileId, `${fx.venueId}/${fx.caseId}/t/f1.csv`]);
+        [fx.caseId, fx.couple.profileId, `${fx.venueId}/${fx.caseId}/t/f1.csv`],
+      );
       expect(inserted.rows).toHaveLength(1);
 
-      const deleted = await db.query(
-        'delete from storage_files where id = $1 returning id', [inserted.rows[0].id]);
+      const deleted = await db.query('delete from storage_files where id = $1 returning id', [
+        inserted.rows[0].id,
+      ]);
       expect(deleted.rows).toHaveLength(1);
     });
   });
@@ -174,14 +207,18 @@ describe('提出ファイルのメタ情報（storage_files）', () => {
       db.query<{ id: string }>(
         `insert into storage_files (case_id, uploaded_by, object_path, visibility)
          values ($1, $2, $3, 'planner_only') returning id`,
-        [fx.caseId, fx.planner.profileId, `${fx.venueId}/${fx.caseId}/sheet.pdf`]));
+        [fx.caseId, fx.planner.profileId, `${fx.venueId}/${fx.caseId}/sheet.pdf`],
+      ),
+    );
 
     const asCouple = await db.asUser(fx.couple.authUserId, () =>
-      db.query('select id from storage_files where id = $1', [file.rows[0].id]));
+      db.query('select id from storage_files where id = $1', [file.rows[0].id]),
+    );
     expect(asCouple.rows).toHaveLength(0);
 
     const asPlanner = await db.asUser(fx.planner.authUserId, () =>
-      db.query('select id from storage_files where id = $1', [file.rows[0].id]));
+      db.query('select id from storage_files where id = $1', [file.rows[0].id]),
+    );
     expect(asPlanner.rows).toHaveLength(1);
   });
 
@@ -190,11 +227,14 @@ describe('提出ファイルのメタ情報（storage_files）', () => {
       db.query<{ id: string }>(
         `insert into storage_files (case_id, uploaded_by, object_path)
          values ($1, $2, $3) returning id`,
-        [fx.otherCaseId, fx.otherVenueAdmin.profileId, 'other/f.csv']));
+        [fx.otherCaseId, fx.otherVenueAdmin.profileId, 'other/f.csv'],
+      ),
+    );
 
     await db.asUser(fx.couple.authUserId, async () => {
-      const r = await db.query('delete from storage_files where id = $1 returning id',
-        [file.rows[0].id]);
+      const r = await db.query('delete from storage_files where id = $1 returning id', [
+        file.rows[0].id,
+      ]);
       expect(r.rows).toHaveLength(0);
     });
   });
@@ -204,11 +244,13 @@ describe('invited→active の遷移（complete_invite）', () => {
   it('本人セッションからの直接 update は通らないが、関数経由なら遷移できる', async () => {
     const invited = await db.asOwner(async () => {
       const auth = await db.query<{ id: string }>(
-        "insert into auth.users (email) values ('invited@example.test') returning id");
+        "insert into auth.users (email) values ('invited@example.test') returning id",
+      );
       await db.query(
         `insert into user_profiles (auth_user_id, venue_id, role, display_name, email, status)
          values ($1, $2, 'planner', '招待中', 'invited@example.test', 'invited')`,
-        [auth.rows[0].id, fx.venueId]);
+        [auth.rows[0].id, fx.venueId],
+      );
       return auth.rows[0].id;
     });
 
@@ -217,7 +259,8 @@ describe('invited→active の遷移（complete_invite）', () => {
     // 本人セッションからの直接 UPDATE は 42501 で拒否される（invited から自力で抜けられない）。
     await db.asUser(invited, async () => {
       const code = await errcodeOf(() =>
-        db.query("update user_profiles set status = 'active' where auth_user_id = auth.uid()"));
+        db.query("update user_profiles set status = 'active' where auth_user_id = auth.uid()"),
+      );
       expect(code).toBe('42501');
     });
 
@@ -228,39 +271,47 @@ describe('invited→active の遷移（complete_invite）', () => {
 
     const after = await db.asOwner(() =>
       db.query<{ status: string }>(
-        "select status from user_profiles where email = 'invited@example.test'"));
+        "select status from user_profiles where email = 'invited@example.test'",
+      ),
+    );
     expect(after.rows[0].status).toBe('active');
   });
 
   it('2回目は already_active（冪等）', async () => {
     const authId = await db.asOwner(async () => {
       const r = await db.query<{ auth_user_id: string }>(
-        "select auth_user_id from user_profiles where email = 'invited@example.test'");
+        "select auth_user_id from user_profiles where email = 'invited@example.test'",
+      );
       return r.rows[0].auth_user_id;
     });
     const r = await db.asUser(authId, () =>
-      db.query<{ complete_invite: string }>('select complete_invite()'));
+      db.query<{ complete_invite: string }>('select complete_invite()'),
+    );
     expect(r.rows[0].complete_invite).toBe('already_active');
   });
 
   it('既に active な利用者は already_active（couple は初回登録時から active）', async () => {
     const r = await db.asUser(fx.couple.authUserId, () =>
-      db.query<{ complete_invite: string }>('select complete_invite()'));
+      db.query<{ complete_invite: string }>('select complete_invite()'),
+    );
     expect(r.rows[0].complete_invite).toBe('already_active');
   });
 
   it('invited の couple は not_allowed（この経路は staff の初回設定専用）', async () => {
     const authId = await db.asOwner(async () => {
       const auth = await db.query<{ id: string }>(
-        "insert into auth.users (email) values ('invited-couple@example.test') returning id");
+        "insert into auth.users (email) values ('invited-couple@example.test') returning id",
+      );
       await db.query(
         `insert into user_profiles (auth_user_id, venue_id, role, display_name, email, status)
          values ($1, $2, 'couple', '招待中couple', 'invited-couple@example.test', 'invited')`,
-        [auth.rows[0].id, fx.venueId]);
+        [auth.rows[0].id, fx.venueId],
+      );
       return auth.rows[0].id;
     });
     const r = await db.asUser(authId, () =>
-      db.query<{ complete_invite: string }>('select complete_invite()'));
+      db.query<{ complete_invite: string }>('select complete_invite()'),
+    );
     expect(r.rows[0].complete_invite).toBe('not_allowed');
   });
 });
@@ -283,34 +334,41 @@ describe('提出の案件共有（6-7 新郎新婦は同じ宿題に1つの提�
       // fixture の bride 側 couple_profiles は未招待（user_profile_id が NULL）。
       // 6-6-1 は新郎新婦の両方に招待を発行するので、両方が登録済みの通常状態を作る。
       const brideAuth = await db.query<{ id: string }>(
-        "insert into auth.users (email) values ('bride-linked@example.test') returning id");
+        "insert into auth.users (email) values ('bride-linked@example.test') returning id",
+      );
       const brideProfile = await db.query<{ id: string }>(
         `insert into user_profiles (auth_user_id, venue_id, role, display_name, email, status)
          values ($1, $2, 'couple', '山田 花子', 'bride-linked@example.test', 'active')
          returning id`,
-        [brideAuth.rows[0].id, fx.venueId]);
+        [brideAuth.rows[0].id, fx.venueId],
+      );
       await db.query(
         `update couple_profiles set user_profile_id = $1
           where case_id = $2 and partner_role = 'bride'`,
-        [brideProfile.rows[0].id, fx.caseId]);
+        [brideProfile.rows[0].id, fx.caseId],
+      );
 
       // 別案件の couple（案件をまたいで提出状態を覗けないことの確認用）
       const otherAuth = await db.query<{ id: string }>(
-        "insert into auth.users (email) values ('other-couple@example.test') returning id");
+        "insert into auth.users (email) values ('other-couple@example.test') returning id",
+      );
       const otherProfile = await db.query<{ id: string }>(
         `insert into user_profiles (auth_user_id, venue_id, role, display_name, email, status)
          values ($1, $2, 'couple', '別案件の新郎', 'other-couple@example.test', 'active')
          returning id`,
-        [otherAuth.rows[0].id, fx.otherVenueId]);
+        [otherAuth.rows[0].id, fx.otherVenueId],
+      );
       await db.query(
         `insert into couple_profiles (case_id, user_profile_id, partner_role, full_name)
          values ($1, $2, 'groom', '別案件 太郎')`,
-        [fx.otherCaseId, otherProfile.rows[0].id]);
+        [fx.otherCaseId, otherProfile.rows[0].id],
+      );
 
       const t = await db.query<{ id: string }>(
         `insert into case_tasks (case_id, title, submission_format, due_date)
          values ($1, '席次表の確認', 'text', current_date + 30) returning id`,
-        [fx.caseId]);
+        [fx.caseId],
+      );
 
       return {
         taskId: t.rows[0].id,
@@ -328,18 +386,23 @@ describe('提出の案件共有（6-7 新郎新婦は同じ宿題に1つの提�
         `insert into task_submissions
            (case_task_id, submitted_by, submission_type, text_value, review_status, is_latest)
          values ($1, $2, 'text', 'groom-draft', 'draft', true)`,
-        [taskId, fx.couple.profileId]));
+        [taskId, fx.couple.profileId],
+      ),
+    );
   });
 
   it('相手の draft でも案件メンバーなら状態を取得できる（中身は隠れたまま）', async () => {
     await db.asUser(bride.authUserId, async () => {
       // 付録A の「一時保存は本人以外に見せない」は維持する。直読みは0行のまま。
-      const direct = await db.query(
-        'select id from task_submissions where case_task_id = $1', [taskId]);
+      const direct = await db.query('select id from task_submissions where case_task_id = $1', [
+        taskId,
+      ]);
       expect(direct.rows).toHaveLength(0);
 
       const r = await db.query<{ review_status: string; submitted_by: string }>(
-        'select review_status, submitted_by from latest_submission_for_task($1)', [taskId]);
+        'select review_status, submitted_by from latest_submission_for_task($1)',
+        [taskId],
+      );
       expect(r.rows).toHaveLength(1);
       expect(r.rows[0].review_status).toBe('draft');
       expect(r.rows[0].submitted_by).toBe(fx.couple.profileId);
@@ -352,25 +415,33 @@ describe('提出の案件共有（6-7 新郎新婦は同じ宿題に1つの提�
       // 所有権を移す前は update ポリシーを案件単位に広げても0行更新のままになる。
       const blocked = await db.query(
         `update task_submissions set text_value = 'bride-v1'
-          where case_task_id = $1 and is_latest returning id`, [taskId]);
+          where case_task_id = $1 and is_latest returning id`,
+        [taskId],
+      );
       expect(blocked.rows).toHaveLength(0);
 
       const claimed = await db.query<{ claim_latest_submission: string | null }>(
-        'select claim_latest_submission($1)', [taskId]);
+        'select claim_latest_submission($1)',
+        [taskId],
+      );
       expect(claimed.rows[0].claim_latest_submission).not.toBeNull();
 
       const updated = await db.query(
         `update task_submissions
             set text_value = 'bride-v1', submitted_by = $2, review_status = 'submitted'
           where case_task_id = $1 and is_latest returning id`,
-        [taskId, bride.profileId]);
+        [taskId, bride.profileId],
+      );
       expect(updated.rows).toHaveLength(1);
     });
 
     const row = await db.asOwner(() =>
       db.query<{ submitted_by: string; text_value: string; review_status: string }>(
         `select submitted_by, text_value, review_status from task_submissions
-          where case_task_id = $1 and is_latest`, [taskId]));
+          where case_task_id = $1 and is_latest`,
+        [taskId],
+      ),
+    );
     expect(row.rows[0].submitted_by).toBe(bride.profileId);
     expect(row.rows[0].text_value).toBe('bride-v1');
     expect(row.rows[0].review_status).toBe('submitted');
@@ -382,7 +453,8 @@ describe('提出の案件共有（6-7 新郎新婦は同じ宿題に1つの提�
         `update task_submissions
             set text_value = 'groom-v2', submitted_by = $2
           where case_task_id = $1 and is_latest returning id`,
-        [taskId, fx.couple.profileId]);
+        [taskId, fx.couple.profileId],
+      );
       expect(updated.rows).toHaveLength(1);
     });
   });
@@ -392,7 +464,10 @@ describe('提出の案件共有（6-7 新郎新婦は同じ宿題に1つの提�
       const code = await errcodeOf(() =>
         db.query(
           `update task_submissions set review_status = 'confirmed'
-            where case_task_id = $1 and is_latest`, [taskId]));
+            where case_task_id = $1 and is_latest`,
+          [taskId],
+        ),
+      );
       expect(code).toBe('42501');
     });
   });
@@ -400,17 +475,20 @@ describe('提出の案件共有（6-7 新郎新婦は同じ宿題に1つの提�
   it('planner は latest_submission_for_task を呼べない（draft を素通しさせない）', async () => {
     await db.asUser(fx.planner.authUserId, async () => {
       const code = await errcodeOf(() =>
-        db.query('select * from latest_submission_for_task($1)', [taskId]));
+        db.query('select * from latest_submission_for_task($1)', [taskId]),
+      );
       expect(code).toBe('42501');
     });
   });
 
   it('他案件の couple は取得も所有権移転も呼べない', async () => {
     await db.asUser(otherCouple.authUserId, async () => {
-      expect(await errcodeOf(() =>
-        db.query('select * from latest_submission_for_task($1)', [taskId]))).toBe('42501');
-      expect(await errcodeOf(() =>
-        db.query('select claim_latest_submission($1)', [taskId]))).toBe('42501');
+      expect(
+        await errcodeOf(() => db.query('select * from latest_submission_for_task($1)', [taskId])),
+      ).toBe('42501');
+      expect(await errcodeOf(() => db.query('select claim_latest_submission($1)', [taskId]))).toBe(
+        '42501',
+      );
     });
   });
 
@@ -421,32 +499,40 @@ describe('提出の案件共有（6-7 新郎新婦は同じ宿題に1つの提�
                                  confirmed_by, confirmed_at)
          values ($1, '衣装の最終確認', 'text', current_date + 20, 'confirmed', $2, now())
          returning id`,
-        [fx.caseId, fx.planner.profileId]);
+        [fx.caseId, fx.planner.profileId],
+      );
       await db.query(
         `insert into task_submissions
            (case_task_id, submitted_by, submission_type, text_value, review_status, is_latest)
          values ($1, $2, 'text', 'v1', 'confirmed', true)`,
-        [t.rows[0].id, fx.couple.profileId]);
+        [t.rows[0].id, fx.couple.profileId],
+      );
       return t.rows[0].id;
     });
 
     // 確認したのは新郎の提出だが、出し直すのは新婦でもよい（提出は案件単位）
     await db.asUser(bride.authUserId, async () => {
       const demoted = await db.query<{ demote_latest_submission: string | null }>(
-        'select demote_latest_submission($1)', [reTaskId]);
+        'select demote_latest_submission($1)',
+        [reTaskId],
+      );
       expect(demoted.rows[0].demote_latest_submission).not.toBeNull();
 
       await db.query(
         `insert into task_submissions
            (case_task_id, submitted_by, submission_type, text_value, review_status, is_latest)
          values ($1, $2, 'text', 'v2', 'submitted', true)`,
-        [reTaskId, bride.profileId]);
+        [reTaskId, bride.profileId],
+      );
       await db.query('select submit_task($1, $2)', [reTaskId, 'submitted']);
     });
 
     const after = await db.asOwner(() =>
       db.query<{ status: string; confirmed_by: string | null; confirmed_at: string | null }>(
-        'select status, confirmed_by, confirmed_at from case_tasks where id = $1', [reTaskId]));
+        'select status, confirmed_by, confirmed_at from case_tasks where id = $1',
+        [reTaskId],
+      ),
+    );
     expect(after.rows[0].status).toBe('submitted');
     expect(after.rows[0].confirmed_by).toBeNull();
     expect(after.rows[0].confirmed_at).toBeNull();
@@ -475,11 +561,14 @@ describe('submit_task_atomic（6-7 提出）', () => {
       const t = await db.query<{ id: string }>(
         `insert into case_tasks (case_id, title, submission_format, due_date)
          values ($1, '席次のご希望', 'text', current_date + 30) returning id`,
-        [fx.caseId]);
+        [fx.caseId],
+      );
       const linked = await db.query<{ auth_user_id: string; id: string }>(
         `select u.auth_user_id, u.id
            from couple_profiles c join user_profiles u on u.id = c.user_profile_id
-          where c.case_id = $1 and c.partner_role = 'bride'`, [fx.caseId]);
+          where c.case_id = $1 and c.partner_role = 'bride'`,
+        [fx.caseId],
+      );
       return { taskId: t.rows[0].id, linked: linked.rows[0] };
     });
     taskId = setup.taskId;
@@ -490,14 +579,19 @@ describe('submit_task_atomic（6-7 提出）', () => {
 
   it('couple は提出でき、宿題の状態も同じ処理で変わる', async () => {
     const id = await db.asUser(fx.couple.authUserId, async () => {
-      const r = await db.query<{ submission_id: string; replaced_file_id: string | null }>(
-        call, [taskId, 'text', '窓側の席が良いです', false]);
+      const r = await db.query<{ submission_id: string; replaced_file_id: string | null }>(call, [
+        taskId,
+        'text',
+        '窓側の席が良いです',
+        false,
+      ]);
       return r.rows[0].submission_id;
     });
     expect(id).toBeTruthy();
 
     const after = await db.asOwner(() =>
-      db.query<{ status: string }>('select status from case_tasks where id = $1', [taskId]));
+      db.query<{ status: string }>('select status from case_tasks where id = $1', [taskId]),
+    );
     expect(after.rows[0].status).toBe('submitted');
   });
 
@@ -510,21 +604,30 @@ describe('submit_task_atomic（6-7 提出）', () => {
 
   it('相手が提出した内容も上書きできる（提出は案件単位。6-7）', async () => {
     const id = await db.asUser(bride.authUserId, async () => {
-      const r = await db.query<{ submission_id: string }>(
-        call, [taskId, 'text', '通路側に変更します', false]);
+      const r = await db.query<{ submission_id: string }>(call, [
+        taskId,
+        'text',
+        '通路側に変更します',
+        false,
+      ]);
       return r.rows[0].submission_id;
     });
 
     const rows = await db.asOwner(() =>
       db.query<{ n: string }>(
         'select count(*) as n from task_submissions where case_task_id = $1 and is_latest',
-        [taskId]));
+        [taskId],
+      ),
+    );
     // 上書きなので最新行は1つのまま（部分ユニークに衝突しない）
     expect(Number(rows.rows[0].n)).toBe(1);
 
     const owner = await db.asOwner(() =>
       db.query<{ submitted_by: string }>(
-        'select submitted_by from task_submissions where id = $1', [id]));
+        'select submitted_by from task_submissions where id = $1',
+        [id],
+      ),
+    );
     expect(owner.rows[0].submitted_by).toBe(bride.profileId);
   });
 
@@ -532,17 +635,27 @@ describe('submit_task_atomic（6-7 提出）', () => {
     await db.asOwner(() =>
       db.query(
         `update task_submissions set review_status = 'needs_fix'
-          where case_task_id = $1 and is_latest`, [taskId]));
+          where case_task_id = $1 and is_latest`,
+        [taskId],
+      ),
+    );
 
     const id = await db.asUser(fx.couple.authUserId, async () => {
-      const r = await db.query<{ submission_id: string }>(
-        call, [taskId, 'text', '直しました', false]);
+      const r = await db.query<{ submission_id: string }>(call, [
+        taskId,
+        'text',
+        '直しました',
+        false,
+      ]);
       return r.rows[0].submission_id;
     });
 
     const rows = await db.asOwner(() =>
       db.query<{ id: string; is_latest: boolean }>(
-        'select id, is_latest from task_submissions where case_task_id = $1', [taskId]));
+        'select id, is_latest from task_submissions where case_task_id = $1',
+        [taskId],
+      ),
+    );
     expect(rows.rows.length).toBe(2);
     expect(rows.rows.filter((r) => r.is_latest).map((r) => r.id)).toEqual([id]);
   });
@@ -552,7 +665,8 @@ describe('submit_task_atomic（6-7 提出）', () => {
       const r = await db.query<{ id: string }>(
         `insert into case_tasks (case_id, title, submission_format, due_date, status)
          values ($1, '不要な宿題', 'text', current_date + 30, 'waived') returning id`,
-        [fx.caseId]);
+        [fx.caseId],
+      );
       return r.rows[0].id;
     });
 
@@ -567,12 +681,14 @@ describe('submit_task_atomic（6-7 提出）', () => {
       const r = await db.query<{ id: string }>(
         `insert into case_tasks (case_id, title, submission_format, due_date)
          values ($1, '他案件の宿題', 'text', current_date + 30) returning id`,
-        [fx.otherCaseId]);
+        [fx.otherCaseId],
+      );
       return r.rows[0].id;
     });
 
     const rows = await db.asUser(fx.couple.authUserId, () =>
-      db.query(call, [other, 'text', 'x', false]));
+      db.query(call, [other, 'text', 'x', false]),
+    );
     expect(rows.rows).toHaveLength(0);
   });
 
@@ -593,7 +709,9 @@ describe('review_submission（6-7 確認）', () => {
       db.query<{ id: string }>(
         `insert into case_tasks (case_id, title, submission_format, due_date, status)
          values ($1, 'BGMのご希望', 'text', current_date + 30, 'submitted') returning id`,
-        [fx.caseId]));
+        [fx.caseId],
+      ),
+    );
     taskId = t.rows[0].id;
 
     const inserted = await db.asOwner(() =>
@@ -601,7 +719,9 @@ describe('review_submission（6-7 確認）', () => {
         `insert into task_submissions
            (case_task_id, submitted_by, submission_type, text_value, review_status, is_latest)
          values ($1, $2, 'text', 'クラシックで', 'submitted', true) returning id`,
-        [taskId, fx.couple.profileId]));
+        [taskId, fx.couple.profileId],
+      ),
+    );
     submissionId = inserted.rows[0].id;
   });
 
@@ -616,8 +736,11 @@ describe('review_submission（6-7 確認）', () => {
 
   it('planner の確認で提出と宿題が同時に確定する', async () => {
     const row = await db.asUser(fx.planner.authUserId, async () => {
-      const r = await db.query<{ case_id: string; task_title: string }>(
-        call, [submissionId, 'confirmed', null]);
+      const r = await db.query<{ case_id: string; task_title: string }>(call, [
+        submissionId,
+        'confirmed',
+        null,
+      ]);
       return r.rows[0];
     });
     expect(row.case_id).toBe(fx.caseId);
@@ -627,7 +750,10 @@ describe('review_submission（6-7 確認）', () => {
       db.query<{ review_status: string; task_status: string; confirmed_by: string }>(
         `select s.review_status, t.status as task_status, t.confirmed_by
            from task_submissions s join case_tasks t on t.id = s.case_task_id
-          where s.id = $1`, [submissionId]));
+          where s.id = $1`,
+        [submissionId],
+      ),
+    );
     expect(after.rows[0].review_status).toBe('confirmed');
     expect(after.rows[0].task_status).toBe('confirmed');
     expect(after.rows[0].confirmed_by).toBe(fx.planner.profileId);
@@ -644,12 +770,15 @@ describe('review_submission（6-7 確認）', () => {
     const waived = await db.asOwner(async () => {
       const t = await db.query<{ id: string }>(
         `insert into case_tasks (case_id, title, submission_format, due_date, status)
-         values ($1, '不要', 'text', current_date + 30, 'waived') returning id`, [fx.caseId]);
+         values ($1, '不要', 'text', current_date + 30, 'waived') returning id`,
+        [fx.caseId],
+      );
       const inserted = await db.query<{ id: string }>(
         `insert into task_submissions
            (case_task_id, submitted_by, submission_type, review_status, is_latest)
          values ($1, $2, 'text', 'submitted', true) returning id`,
-        [t.rows[0].id, fx.couple.profileId]);
+        [t.rows[0].id, fx.couple.profileId],
+      );
       return inserted.rows[0].id;
     });
 
@@ -668,7 +797,8 @@ describe('review_submission（6-7 確認）', () => {
 
   it('触れない案件の提出は 0 行', async () => {
     const rows = await db.asUser(fx.otherPlanner.authUserId, () =>
-      db.query(call, [submissionId, 'confirmed', null]));
+      db.query(call, [submissionId, 'confirmed', null]),
+    );
     expect(rows.rows).toHaveLength(0);
   });
 
@@ -678,22 +808,28 @@ describe('review_submission（6-7 確認）', () => {
         `insert into case_tasks (case_id, title, submission_format, due_date, status,
                                  confirmed_by, confirmed_at)
          values ($1, '再確認', 'text', current_date + 30, 'submitted', $2, now())
-         returning id`, [fx.caseId, fx.planner.profileId]);
+         returning id`,
+        [fx.caseId, fx.planner.profileId],
+      );
       const inserted = await db.query<{ id: string }>(
         `insert into task_submissions
            (case_task_id, submitted_by, submission_type, review_status, is_latest)
          values ($1, $2, 'text', 'submitted', true) returning id`,
-        [t.rows[0].id, fx.couple.profileId]);
+        [t.rows[0].id, fx.couple.profileId],
+      );
       return { taskId: t.rows[0].id, submissionId: inserted.rows[0].id };
     });
 
     await db.asUser(fx.planner.authUserId, () =>
-      db.query(call, [target.submissionId, 'needs_fix', '郵便番号が抜けています']));
+      db.query(call, [target.submissionId, 'needs_fix', '郵便番号が抜けています']),
+    );
 
     const after = await db.asOwner(() =>
       db.query<{ status: string; confirmed_by: string | null; confirmed_at: string | null }>(
         'select status, confirmed_by, confirmed_at from case_tasks where id = $1',
-        [target.taskId]));
+        [target.taskId],
+      ),
+    );
     expect(after.rows[0].status).toBe('needs_fix');
     expect(after.rows[0].confirmed_by).toBeNull();
     expect(after.rows[0].confirmed_at).toBeNull();

@@ -1,0 +1,33 @@
+erDiagram
+  notifications {
+    uuid id PK
+    uuid case_id FK
+    uuid created_by FK
+    uuid recipient_user_id FK
+    uuid venue_id FK
+  }
+  notification_logs {
+    uuid id PK
+    uuid notification_id FK
+  }
+  notification_settings {
+    uuid id PK
+    uuid venue_id FK
+  }
+  notification_quota_counters {
+    uuid id PK
+  }
+  line_link_nonces {
+    uuid id PK
+    uuid user_profile_id FK
+  }
+  line_webhook_events {
+    text event_id PK
+  }
+  wedding_cases |o--o{ notifications : "case_id"
+  user_profiles |o--o{ notifications : "created_by"
+  user_profiles ||--o{ notifications : "recipient_user_id"
+  venues ||--o{ notifications : "venue_id"
+  notifications ||--o{ notification_logs : "notification_id"
+  venues |o--o{ notification_settings : "venue_id"
+  user_profiles ||--o{ line_link_nonces : "user_profile_id"

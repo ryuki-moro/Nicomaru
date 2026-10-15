@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { formatDate } from '@/lib/format';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,7 @@ interface VenueRow {
 }
 
 interface Props {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }
 
 export default async function VenueListPage({ searchParams }: Props) {
@@ -41,13 +42,15 @@ export default async function VenueListPage({ searchParams }: Props) {
   if (!user || user.role !== 'system_admin') redirect('/error?code=403');
 
   const params = await searchParams;
-  const page = Math.max(Number(params.page) || 1, 1);
+  const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from('venues')
-    .select('id, name, code, contact_email, active, created_at, user_profiles ( display_name, role, status )')
+    .select(
+      'id, name, code, contact_email, active, created_at, user_profiles ( display_name, role, status )',
+    )
     .order('code', { ascending: true })
     .range(offset, offset + LIST_PAGE_SIZE);
 
@@ -120,9 +123,17 @@ export default async function VenueListPage({ searchParams }: Props) {
       {(page > 1 || hasNext) && (
         <div className="flex items-center justify-between">
           {page > 1 ? (
-            <Link href={linkTo(page - 1)} className="btn-ghost">前のページ</Link>
-          ) : <span />}
-          {hasNext && <Link href={linkTo(page + 1)} className="btn-ghost">次のページ</Link>}
+            <Link href={linkTo(page - 1)} className="btn-ghost">
+              前のページ
+            </Link>
+          ) : (
+            <span />
+          )}
+          {hasNext && (
+            <Link href={linkTo(page + 1)} className="btn-ghost">
+              次のページ
+            </Link>
+          )}
         </div>
       )}
     </div>

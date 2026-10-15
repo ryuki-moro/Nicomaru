@@ -26,6 +26,7 @@ import {
   SEARCH_SCAN_LIMIT,
   type CaseListItem,
 } from '@/lib/services/cases';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -57,7 +58,13 @@ async function restoreCase(formData: FormData) {
 }
 
 interface Props {
-  searchParams: Promise<{ q?: string; scope?: string; page?: string; error?: string; sort?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    scope?: string;
+    page?: string | string[];
+    error?: string;
+    sort?: string;
+  }>;
 }
 
 export default async function CaseListPage({ searchParams }: Props) {
@@ -69,7 +76,7 @@ export default async function CaseListPage({ searchParams }: Props) {
   // 4-3 K01: 並び順の既定は挙式日順。リスクスコア順は機能6-2（Phase 2）で追加する。
   const sort = params.sort === 'risk' ? 'risk' : 'wedding_date';
   const keyword = (params.q ?? '').trim();
-  const page = Math.max(Number(params.page) || 1, 1);
+  const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
 
   const supabase = await createSupabaseServerClient();
@@ -82,7 +89,11 @@ export default async function CaseListPage({ searchParams }: Props) {
   let loadError = false;
   try {
     const result = await loadCaseList(supabase, {
-      scope, sort, keyword, offset, limit: LIST_PAGE_SIZE,
+      scope,
+      sort,
+      keyword,
+      offset,
+      limit: LIST_PAGE_SIZE,
     });
     visible = result.items;
     hasNext = result.hasNext;
@@ -223,9 +234,11 @@ export default async function CaseListPage({ searchParams }: Props) {
                   <td>
                     {/* 6-8: 現在値を読むだけ。ここでは再計算しない。
                         未算出を空欄にすると「リスクが低い」と読まれるため明示する */}
-                    {row.risk
-                      ? <RiskBadge level={row.risk.score_level} reasons={row.risk.reasons ?? []} />
-                      : <RiskNotCalculated />}
+                    {row.risk ? (
+                      <RiskBadge level={row.risk.score_level} reasons={row.risk.reasons ?? []} />
+                    ) : (
+                      <RiskNotCalculated />
+                    )}
                   </td>
                   <td>{CASE_STATUS_LABEL[row.status]}</td>
                   {scope === 'archived' && canSeeArchived && (

@@ -16,7 +16,9 @@ export default async function VenueNewPage() {
       <nav aria-label="パンくず">
         <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
           <li>
-            <Link href="/venues" className="text-link hover:underline">式場一覧</Link>
+            <Link href="/venues" className="text-link hover:underline">
+              式場一覧
+            </Link>
           </li>
           <li aria-hidden>/</li>
           <li aria-current="page">新規登録</li>

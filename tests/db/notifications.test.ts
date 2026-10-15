@@ -40,9 +40,14 @@ const createSql = 'select create_notification($1, $2, $3, $4, $5, $6)';
 describe('create_notification（機能7-1）', () => {
   it('planner は自担当案件の couple 宛に作成できる', async () => {
     await db.asUser(fx.planner.authUserId, async () => {
-      const r = await db.query<{ create_notification: string }>(
-        createSql,
-        [fx.caseId, fx.couple.profileId, 'in_app', 'due_reminder', '件名', '本文']);
+      const r = await db.query<{ create_notification: string }>(createSql, [
+        fx.caseId,
+        fx.couple.profileId,
+        'in_app',
+        'due_reminder',
+        '件名',
+        '本文',
+      ]);
       expect(r.rows[0].create_notification).toBeTruthy();
     });
   });
@@ -50,8 +55,8 @@ describe('create_notification（機能7-1）', () => {
   it('couple は作成できない（通知はプランナーが送るもの）', async () => {
     await db.asUser(fx.couple.authUserId, async () => {
       const code = await errcodeOf(() =>
-        db.query(createSql,
-          [fx.caseId, fx.couple.profileId, 'in_app', 'info', '件名', '本文']));
+        db.query(createSql, [fx.caseId, fx.couple.profileId, 'in_app', 'info', '件名', '本文']),
+      );
       expect(code).toBe('42501');
     });
   });
@@ -59,8 +64,15 @@ describe('create_notification（機能7-1）', () => {
   it('案件に属さない利用者は宛先にできない（任意の user_profiles.id を渡せない）', async () => {
     await db.asUser(fx.planner.authUserId, async () => {
       const code = await errcodeOf(() =>
-        db.query(createSql,
-          [fx.caseId, fx.otherPlanner.profileId, 'in_app', 'info', '件名', '本文']));
+        db.query(createSql, [
+          fx.caseId,
+          fx.otherPlanner.profileId,
+          'in_app',
+          'info',
+          '件名',
+          '本文',
+        ]),
+      );
       expect(code).toBe('BH422');
     });
   });
@@ -68,8 +80,15 @@ describe('create_notification（機能7-1）', () => {
   it('触れない案件には作成できない', async () => {
     await db.asUser(fx.planner.authUserId, async () => {
       const code = await errcodeOf(() =>
-        db.query(createSql,
-          [fx.otherCaseId, fx.couple.profileId, 'in_app', 'info', '件名', '本文']));
+        db.query(createSql, [
+          fx.otherCaseId,
+          fx.couple.profileId,
+          'in_app',
+          'info',
+          '件名',
+          '本文',
+        ]),
+      );
       expect(code).toBe('42501');
     });
   });
@@ -78,19 +97,22 @@ describe('create_notification（機能7-1）', () => {
 describe('通知の参照範囲（付録A notifications_select）', () => {
   it('受信者本人は自分宛の通知を参照できる', async () => {
     const rows = await db.asUser(fx.couple.authUserId, () =>
-      db.query('select id from notifications'));
+      db.query('select id from notifications'),
+    );
     expect(rows.rows.length).toBeGreaterThan(0);
   });
 
   it('担当プランナーは案件の通知を参照できる（N01）', async () => {
     const rows = await db.asUser(fx.planner.authUserId, () =>
-      db.query('select id from notifications where case_id = $1', [fx.caseId]));
+      db.query('select id from notifications where case_id = $1', [fx.caseId]),
+    );
     expect(rows.rows.length).toBeGreaterThan(0);
   });
 
   it('別式場の admin からは見えない', async () => {
     const rows = await db.asUser(fx.otherVenueAdmin.authUserId, () =>
-      db.query('select id from notifications'));
+      db.query('select id from notifications'),
+    );
     expect(rows.rows).toHaveLength(0);
   });
 
@@ -98,7 +120,9 @@ describe('通知の参照範囲（付録A notifications_select）', () => {
     await db.asUser(fx.couple.authUserId, async () => {
       const r = await db.query(
         `update notifications set read_at = now(), status = 'read'
-          where recipient_user_id = $1 returning id`, [fx.couple.profileId]);
+          where recipient_user_id = $1 returning id`,
+        [fx.couple.profileId],
+      );
       expect(r.rows.length).toBeGreaterThan(0);
     });
   });
@@ -108,11 +132,15 @@ describe('claim_line_quota（6-9 LINE送信上限）', () => {
   it('既定では案件あたり週1通まで', async () => {
     await db.asOwner(async () => {
       const first = await db.query<{ claim_line_quota: boolean }>(
-        'select claim_line_quota($1, $2)', [fx.caseId, fx.venueId]);
+        'select claim_line_quota($1, $2)',
+        [fx.caseId, fx.venueId],
+      );
       expect(first.rows[0].claim_line_quota).toBe(true);
 
       const second = await db.query<{ claim_line_quota: boolean }>(
-        'select claim_line_quota($1, $2)', [fx.caseId, fx.venueId]);
+        'select claim_line_quota($1, $2)',
+        [fx.caseId, fx.venueId],
+      );
       expect(second.rows[0].claim_line_quota).toBe(false);
     });
   });
@@ -123,7 +151,10 @@ describe('claim_line_quota（6-9 LINE送信上限）', () => {
     const venueCount = await db.asOwner(() =>
       db.query<{ sent_count: number }>(
         `select sent_count from notification_quota_counters
-          where scope = 'venue_month' and scope_id = $1`, [fx.venueId]));
+          where scope = 'venue_month' and scope_id = $1`,
+        [fx.venueId],
+      ),
+    );
     // 成功した1通ぶんだけが数えられている
     expect(venueCount.rows[0].sent_count).toBe(1);
   });
@@ -134,13 +165,17 @@ describe('claim_line_quota（6-9 LINE送信上限）', () => {
         `insert into wedding_cases
            (venue_id, plan_type_id, primary_planner_id, case_code, wedding_date)
          values ($1, null, $2, 'BRIDAL01-2026-0777', current_date + 90) returning id`,
-        [fx.venueId, fx.planner.profileId]);
+        [fx.venueId, fx.planner.profileId],
+      );
       return r.rows[0].id;
     });
 
     const result = await db.asOwner(() =>
-      db.query<{ claim_line_quota: boolean }>(
-        'select claim_line_quota($1, $2)', [other, fx.venueId]));
+      db.query<{ claim_line_quota: boolean }>('select claim_line_quota($1, $2)', [
+        other,
+        fx.venueId,
+      ]),
+    );
     expect(result.rows[0].claim_line_quota).toBe(true);
   });
 
@@ -149,25 +184,29 @@ describe('claim_line_quota（6-9 LINE送信上限）', () => {
       // 式場の月上限を2に絞る（設定はコード直書きではなくテーブルで持つ。6-9）
       await db.query(
         `insert into notification_settings (venue_id, line_per_case_per_week, line_per_venue_per_month)
-         values ($1, 99, 2)`, [fx.venueId]);
+         values ($1, 99, 2)`,
+        [fx.venueId],
+      );
 
       const fresh = await db.query<{ id: string }>(
         `insert into wedding_cases
            (venue_id, plan_type_id, primary_planner_id, case_code, wedding_date)
          values ($1, null, $2, 'BRIDAL01-2026-0778', current_date + 90) returning id`,
-        [fx.venueId, fx.planner.profileId]);
+        [fx.venueId, fx.planner.profileId],
+      );
 
       // 既に2通ぶん（上のテストで case×2）使っているため、次は式場上限で弾かれる
-      const r = await db.query<{ claim_line_quota: boolean }>(
-        'select claim_line_quota($1, $2)', [fresh.rows[0].id, fx.venueId]);
+      const r = await db.query<{ claim_line_quota: boolean }>('select claim_line_quota($1, $2)', [
+        fresh.rows[0].id,
+        fx.venueId,
+      ]);
       expect(r.rows[0].claim_line_quota).toBe(false);
     });
   });
 
   it('カウンタは authenticated から直接触れない（付録A の auth_rate_limits と同じ扱い）', async () => {
     await db.asUser(fx.planner.authUserId, async () => {
-      const code = await errcodeOf(() =>
-        db.query('select * from notification_quota_counters'));
+      const code = await errcodeOf(() => db.query('select * from notification_quota_counters'));
       expect(code).toBe('42501');
     });
   });
@@ -180,7 +219,8 @@ describe('notification_settings', () => {
       expect(rows.rows.length).toBeGreaterThan(0);
 
       const updated = await db.query(
-        'update notification_settings set line_per_case_per_week = 9 returning id');
+        'update notification_settings set line_per_case_per_week = 9 returning id',
+      );
       expect(updated.rows).toHaveLength(0);
     });
   });
@@ -189,7 +229,8 @@ describe('notification_settings', () => {
     await db.asUser(fx.admin.authUserId, async () => {
       const r = await db.query(
         'update notification_settings set line_per_case_per_week = 3 where venue_id = $1 returning id',
-        [fx.venueId]);
+        [fx.venueId],
+      );
       expect(r.rows).toHaveLength(1);
     });
   });
@@ -197,7 +238,8 @@ describe('notification_settings', () => {
   it('システム既定（venue_id is null）は admin からは変更できない', async () => {
     await db.asUser(fx.admin.authUserId, async () => {
       const r = await db.query(
-        'update notification_settings set line_per_case_per_week = 9 where venue_id is null returning id');
+        'update notification_settings set line_per_case_per_week = 9 where venue_id is null returning id',
+      );
       expect(r.rows).toHaveLength(0);
     });
   });

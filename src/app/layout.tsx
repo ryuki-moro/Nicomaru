@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 
+import { PerformanceReporter } from '@/components/PerformanceReporter';
+import { PwaRegistration } from '@/components/PwaRegistration';
+
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -11,6 +14,7 @@ export const metadata: Metadata = {
   // PWA として利用する（要件 3-2／2-2）
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'にこまる' },
+  icons: { icon: '/icons/icon.svg', apple: '/icons/apple-touch-icon.png' },
 };
 
 export const viewport: Viewport = {
@@ -22,7 +26,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body>
+        {children}
+        <PwaRegistration />
+        <PerformanceReporter />
+      </body>
     </html>
   );
 }

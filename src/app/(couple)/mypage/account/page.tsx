@@ -32,13 +32,19 @@ export default async function AccountPage({ searchParams }: Props) {
 
   const supabase = await createSupabaseServerClient();
   const [profileResult, meResult] = await Promise.all([
-    supabase.from('couple_profiles').select(COUPLE_PROFILE_COLUMNS)
-      .eq('user_profile_id', user.id).maybeSingle(),
+    supabase
+      .from('couple_profiles')
+      .select(COUPLE_PROFILE_COLUMNS)
+      .eq('user_profile_id', user.id)
+      .maybeSingle(),
     supabase.from('user_profiles').select('line_user_id').eq('id', user.id).maybeSingle(),
   ]);
 
-  const profile = profileResult.data as unknown as
-    { partner_role: PartnerRole; full_name: string; email: string | null } | null;
+  const profile = profileResult.data as unknown as {
+    partner_role: PartnerRole;
+    full_name: string;
+    email: string | null;
+  } | null;
   const linked = Boolean((meResult.data as { line_user_id: string | null } | null)?.line_user_id);
 
   return (

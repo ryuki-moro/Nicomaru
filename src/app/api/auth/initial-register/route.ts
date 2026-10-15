@@ -191,7 +191,9 @@ export const POST = route(async (request) => {
     if (existingProfile) {
       if (existingProfile.role !== 'couple') {
         // プランナー・管理者のアドレスでの登録。権限の混線を避けるため受け付けない。
-        throw conflict('このメールアドレスは別の用途で登録されています。プランナーへご連絡ください');
+        throw conflict(
+          'このメールアドレスは別の用途で登録されています。プランナーへご連絡ください',
+        );
       }
       profileId = existingProfile.id;
     } else {

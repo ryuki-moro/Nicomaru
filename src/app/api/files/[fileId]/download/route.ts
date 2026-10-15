@@ -14,7 +14,6 @@ import { ApiError, forbidden, fromPostgresError, notFound } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isUuid } from '@/lib/uuid';
 
-
 /** 表6-6:「TTL 60秒、都度発行」。URL を画面に焼き込まないための短さなので延ばさない。 */
 const SIGNED_URL_TTL_SECONDS = 60;
 

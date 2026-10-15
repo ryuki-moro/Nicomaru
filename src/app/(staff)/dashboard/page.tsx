@@ -39,24 +39,12 @@ export default async function PlannerDashboardPage() {
   // planner は RLS でも自担当に絞られるが、admin は式場内全件が見えるため
   // 「担当案件数」の意味を保つよう planner のときだけ明示的に担当条件を足す。
   const baseCaseQuery = supabase.from('wedding_cases').select('id').neq('status', 'archived');
-  const { data: caseData, error: caseError } = await (
-    user.role === 'planner' ? baseCaseQuery.eq('primary_planner_id', user.id) : baseCaseQuery
-  );
+  const { data: caseData, error: caseError } = await (user.role === 'planner'
+    ? baseCaseQuery.eq('primary_planner_id', user.id)
+    : baseCaseQuery);
   if (caseError) throw fromPostgresError(caseError);
 
   const caseIds = ((caseData ?? []) as CaseIdRow[]).map((row) => row.id);
-
-  // 6-8 と同じ「未提出」の定義（not_started／needs_fix）を UNSUBMITTED_TASK_STATUSES から取る。
-  let unsubmittedCount = 0;
-  if (caseIds.length > 0) {
-    const { count, error } = await supabase
-      .from('case_tasks')
-      .select('id', { count: 'exact', head: true })
-      .in('case_id', caseIds)
-      .in('status', [...UNSUBMITTED_TASK_STATUSES]);
-    if (error) throw fromPostgresError(error);
-    unsubmittedCount = count ?? 0;
-  }
 
   // ---------------------------------------------------- リスク可視化（機能4-2／6-2）
   // 現在値（is_current）だけを読む。再計算は明示再計算か定期処理が行う（6-8）。
@@ -66,15 +54,26 @@ export default async function PlannerDashboardPage() {
     score_level: RiskLevel;
     reasons: RiskReasonView[] | null;
   }
+  let unsubmittedCount = 0;
   let snapshots: SnapshotRow[] = [];
   if (caseIds.length > 0) {
-    const { data, error } = await supabase
-      .from('risk_score_snapshots')
-      .select('case_id, score_value, score_level, reasons')
-      .in('case_id', caseIds)
-      .eq('is_current', true);
-    if (error) throw fromPostgresError(error);
-    snapshots = (data ?? []) as unknown as SnapshotRow[];
+    // 同じ案件IDだけに依存する独立した読み取りを並列にする。各クエリのRLSは維持する。
+    const [tasks, risks] = await Promise.all([
+      supabase
+        .from('case_tasks')
+        .select('id', { count: 'exact', head: true })
+        .in('case_id', caseIds)
+        .in('status', [...UNSUBMITTED_TASK_STATUSES]),
+      supabase
+        .from('risk_score_snapshots')
+        .select('case_id, score_value, score_level, reasons')
+        .in('case_id', caseIds)
+        .eq('is_current', true),
+    ]);
+    if (tasks.error) throw fromPostgresError(tasks.error);
+    if (risks.error) throw fromPostgresError(risks.error);
+    unsubmittedCount = tasks.count ?? 0;
+    snapshots = (risks.data ?? []) as unknown as SnapshotRow[];
   }
   const highRiskCount = snapshots.filter((s) => s.score_level === 'high').length;
 
@@ -93,15 +92,21 @@ export default async function PlannerDashboardPage() {
     if (meta.error) throw fromPostgresError(meta.error);
     if (profiles.error) throw fromPostgresError(profiles.error);
 
-    for (const row of (meta.data ?? []) as unknown as
-      { id: string; case_code: string; wedding_date: string | null }[]) {
+    for (const row of (meta.data ?? []) as unknown as {
+      id: string;
+      case_code: string;
+      wedding_date: string | null;
+    }[]) {
       caseMeta.set(row.id, {
         caseCode: row.case_code,
         weddingDate: row.wedding_date ? row.wedding_date.slice(0, 10) : null,
       });
     }
-    for (const p of (profiles.data ?? []) as unknown as
-      { case_id: string; full_name: string; is_primary_contact: boolean }[]) {
+    for (const p of (profiles.data ?? []) as unknown as {
+      case_id: string;
+      full_name: string;
+      is_primary_contact: boolean;
+    }[]) {
       const list = nameByCase.get(p.case_id) ?? [];
       // 主連絡先を先頭に（K01 の表示順と揃える）
       if (p.is_primary_contact) list.unshift(readPii(p.full_name));
@@ -120,10 +125,12 @@ export default async function PlannerDashboardPage() {
       reasons: s.reasons ?? [],
     }))
     // リスクの高い順 → 挙式日が近い順。同着は case_id で決定的にする（4-3 一覧画面共通）。
-    .sort((a, b) =>
-      RISK_LEVEL_RANK[b.scoreLevel] - RISK_LEVEL_RANK[a.scoreLevel]
-      || (a.weddingDate ?? '9999-12-31').localeCompare(b.weddingDate ?? '9999-12-31')
-      || a.caseId.localeCompare(b.caseId))
+    .sort(
+      (a, b) =>
+        RISK_LEVEL_RANK[b.scoreLevel] - RISK_LEVEL_RANK[a.scoreLevel] ||
+        (a.weddingDate ?? '9999-12-31').localeCompare(b.weddingDate ?? '9999-12-31') ||
+        a.caseId.localeCompare(b.caseId),
+    )
     .slice(0, 10);
 
   const caseCountLabel = user.role === 'planner' ? '担当案件数' : '式場の案件数';
@@ -131,9 +138,7 @@ export default async function PlannerDashboardPage() {
   return (
     <div>
       <h1 className="section-head">ダッシュボード</h1>
-      <p className="mt-1 text-caption text-text-muted">
-        {user.displayName} さんの担当状況です。
-      </p>
+      <p className="mt-1 text-caption text-text-muted">{user.displayName} さんの担当状況です。</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <SummaryCard label={caseCountLabel} value={caseIds.length} unit="件" />
@@ -157,14 +162,12 @@ export default async function PlannerDashboardPage() {
           リスクの高い順に表示しています。判断の材料としてお使いください。
         </p>
         {followUps.length === 0 ? (
-          <p className="card mt-2 text-label text-text-muted">
-            いま気にかけたい案件はありません。
-          </p>
+          <p className="card mt-2 text-label text-text-muted">いま気にかけたい案件はありません。</p>
         ) : (
           <ul className="mt-2 space-y-2">
             {followUps.map((item) => (
               <li key={item.caseId} className="card">
-                <Link href={`/cases/${item.caseId}`} className="block">
+                <Link href={`/cases/${item.caseId}`} prefetch={false} className="block">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-base text-text-primary">
                       {item.coupleName || item.caseCode}
@@ -262,7 +265,11 @@ function NavCard({
   description: string;
 }) {
   return (
-    <Link href={href} className="card block transition-colors hover:bg-field-filled-bg">
+    <Link
+      href={href}
+      prefetch={false}
+      className="card block transition-colors hover:bg-field-filled-bg"
+    >
       <p className="text-section font-bold text-text-primary">{title}</p>
       <p className="mt-1 text-caption text-text-muted">{description}</p>
     </Link>

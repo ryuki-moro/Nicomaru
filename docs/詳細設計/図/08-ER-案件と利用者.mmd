@@ -1,0 +1,46 @@
+erDiagram
+  venues {
+    uuid id PK
+  }
+  user_profiles {
+    uuid id PK
+    uuid auth_user_id FK
+    uuid venue_id FK
+  }
+  plan_types {
+    uuid id PK
+    uuid venue_id FK
+  }
+  wedding_cases {
+    uuid id PK
+    uuid plan_type_id FK
+    uuid primary_planner_id FK
+    uuid venue_id FK
+  }
+  couple_profiles {
+    uuid id PK
+    uuid case_id FK
+    uuid user_profile_id FK
+  }
+  case_invitations {
+    uuid id PK
+    uuid case_id FK
+    uuid invited_by FK
+  }
+  case_guests {
+    uuid id PK
+    uuid case_id FK
+    uuid created_by_user_id FK
+  }
+  auth_users ||--o| user_profiles : "auth_user_id"
+  venues |o--o{ user_profiles : "venue_id"
+  venues ||--o{ plan_types : "venue_id"
+  plan_types |o--o{ wedding_cases : "plan_type_id"
+  user_profiles ||--o{ wedding_cases : "primary_planner_id"
+  venues ||--o{ wedding_cases : "venue_id"
+  wedding_cases ||--o{ couple_profiles : "case_id"
+  user_profiles |o--o| couple_profiles : "user_profile_id"
+  wedding_cases ||--o{ case_invitations : "case_id"
+  user_profiles ||--o{ case_invitations : "invited_by"
+  wedding_cases ||--o{ case_guests : "case_id"
+  user_profiles |o--o{ case_guests : "created_by_user_id"

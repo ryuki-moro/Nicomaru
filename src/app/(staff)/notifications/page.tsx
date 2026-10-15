@@ -19,6 +19,7 @@ import { requireStaff } from '@/lib/auth/session';
 import { CONTACT_CHANNEL_LABEL, LIST_PAGE_SIZE } from '@/lib/constants';
 import { formatDateTime } from '@/lib/format';
 import { NOTIFICATION_TYPE_LABEL, type NotificationType } from '@/lib/notify/templates';
+import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -52,13 +53,13 @@ interface NotificationRow {
 }
 
 interface Props {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }
 
 export default async function NotificationHistoryPage({ searchParams }: Props) {
   await requireStaff();
   const params = await searchParams;
-  const page = Math.max(Number(params.page) || 1, 1);
+  const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
 
   const supabase = await createSupabaseServerClient();
@@ -77,8 +78,7 @@ export default async function NotificationHistoryPage({ searchParams }: Props) {
   const hasNext = rows.length > LIST_PAGE_SIZE;
   const visible = rows.slice(0, LIST_PAGE_SIZE);
 
-  const linkTo = (next: number) =>
-    next > 1 ? `/notifications?page=${next}` : '/notifications';
+  const linkTo = (next: number) => (next > 1 ? `/notifications?page=${next}` : '/notifications');
 
   return (
     <div className="space-y-4">
@@ -102,9 +102,7 @@ export default async function NotificationHistoryPage({ searchParams }: Props) {
         </div>
       )}
 
-      {!error && visible.length === 0 && (
-        <EmptyState message="送信した通知はまだありません。" />
-      )}
+      {!error && visible.length === 0 && <EmptyState message="送信した通知はまだありません。" />}
 
       {visible.length > 0 && (
         <div className="table-wrap">
@@ -129,7 +127,9 @@ export default async function NotificationHistoryPage({ searchParams }: Props) {
                       <Link href={`/cases/${row.case_id}`} className="text-link hover:underline">
                         {row.wedding_cases?.case_code ?? '—'}
                       </Link>
-                    ) : '—'}
+                    ) : (
+                      '—'
+                    )}
                   </td>
                   <td>{NOTIFICATION_TYPE_LABEL[row.notification_type]}</td>
                   <td>{row.title}</td>
@@ -139,10 +139,12 @@ export default async function NotificationHistoryPage({ searchParams }: Props) {
                     {row.notification_logs.length === 0
                       ? '—'
                       : row.notification_logs
-                          .map((log) =>
-                            `${CHANNEL_LABEL[log.provider] ?? log.provider}：`
-                            + `${log.status === 'success' ? '成功' : '失敗'}`
-                            + (log.attempt_no > 1 ? `（${log.attempt_no}回目）` : ''))
+                          .map(
+                            (log) =>
+                              `${CHANNEL_LABEL[log.provider] ?? log.provider}：` +
+                              `${log.status === 'success' ? '成功' : '失敗'}` +
+                              (log.attempt_no > 1 ? `（${log.attempt_no}回目）` : ''),
+                          )
                           .join(' / ')}
                   </td>
                 </tr>
@@ -155,10 +157,16 @@ export default async function NotificationHistoryPage({ searchParams }: Props) {
       {(page > 1 || hasNext) && (
         <div className="flex items-center justify-between">
           {page > 1 ? (
-            <Link href={linkTo(page - 1)} className="btn-ghost">前のページ</Link>
-          ) : <span />}
+            <Link href={linkTo(page - 1)} className="btn-ghost">
+              前のページ
+            </Link>
+          ) : (
+            <span />
+          )}
           {hasNext && (
-            <Link href={linkTo(page + 1)} className="btn-ghost">次のページ</Link>
+            <Link href={linkTo(page + 1)} className="btn-ghost">
+              次のページ
+            </Link>
           )}
         </div>
       )}

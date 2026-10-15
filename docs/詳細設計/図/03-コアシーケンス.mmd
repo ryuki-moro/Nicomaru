@@ -1,0 +1,18 @@
+sequenceDiagram
+  participant staff as プランナー
+  participant api as Next.js API
+  participant db as DB / RPC
+  participant auth as Auth / 通知
+  participant couple as 新郎新婦
+  staff->>api: 案件入力 / POST cases
+  api->>db: create_wedding_case: 案件・2招待・履歴を一括確定
+  db->>api: 201用のID / URLの平文はアプリが1度だけ返す
+  staff->>api: 別要求で宿題割当・招待送付
+  api->>auth: 通知送信（未構成/失敗は発行成功と区別）
+  couple->>api: 招待token + 初回登録情報
+  api->>db: consume_invitation: 期限/回数/失効を原子的検証
+  api->>auth: Auth作成 → 失敗時はrestore_invitation
+  couple->>api: 提出（ファイルは先にStorageへ）
+  api->>db: submit_task_atomic / 最新提出を更新
+  staff->>api: 確認 または 不備コメント
+  api->>db: review_submission: 競合検査・状態更新

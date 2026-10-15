@@ -51,67 +51,68 @@ interface CaseDetailRow {
   }[];
 }
 
-const CASE_DETAIL_SELECT =
-  `id, case_code, venue_id, plan_type_id, primary_planner_id, wedding_date, wedding_time,
+const CASE_DETAIL_SELECT = `id, case_code, venue_id, plan_type_id, primary_planner_id, wedding_date, wedding_time,
    contact_channel, status, guest_count, venue_room, notes, archived_at,
    plan_types ( id, name ),
    user_profiles ( id, display_name ),
    couple_profiles ( ${COUPLE_PROFILE_COLUMNS} )`;
 
-export const GET = route(async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
-  await requireStaff();
-  const { caseId } = await context.params;
-  const supabase = await createSupabaseServerClient();
+export const GET = route(
+  async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
+    await requireStaff();
+    const { caseId } = await context.params;
+    const supabase = await createSupabaseServerClient();
 
-  const { data, error } = await supabase
-    .from('wedding_cases')
-    .select(CASE_DETAIL_SELECT)
-    .eq('id', caseId)
-    .maybeSingle();
-  if (error) throw fromPostgresError(error);
-  if (!data) throw notFound('案件が見つかりません');
+    const { data, error } = await supabase
+      .from('wedding_cases')
+      .select(CASE_DETAIL_SELECT)
+      .eq('id', caseId)
+      .maybeSingle();
+    if (error) throw fromPostgresError(error);
+    if (!data) throw notFound('案件が見つかりません');
 
-  const row = data as unknown as CaseDetailRow;
+    const row = data as unknown as CaseDetailRow;
 
-  const { data: taskRows, error: taskError } = await supabase
-    .from('case_tasks')
-    .select('id, title, status, due_date, importance, display_order')
-    .eq('case_id', caseId)
-    // 一覧の既定並び順は ORDER BY due_date, display_order, id（4-3／定数 TASK_ORDER と同一）
-    .order('due_date', { ascending: true })
-    .order('display_order', { ascending: true })
-    .order('id', { ascending: true });
-  if (taskError) throw fromPostgresError(taskError);
+    const { data: taskRows, error: taskError } = await supabase
+      .from('case_tasks')
+      .select('id, title, status, due_date, importance, display_order')
+      .eq('case_id', caseId)
+      // 一覧の既定並び順は ORDER BY due_date, display_order, id（4-3／定数 TASK_ORDER と同一）
+      .order('due_date', { ascending: true })
+      .order('display_order', { ascending: true })
+      .order('id', { ascending: true });
+    if (taskError) throw fromPostgresError(taskError);
 
-  const tasks = (taskRows ?? []) as { status: TaskStatus }[];
-  const incomplete = tasks.filter((t) => INCOMPLETE_TASK_STATUSES.includes(t.status)).length;
+    const tasks = (taskRows ?? []) as { status: TaskStatus }[];
+    const incomplete = tasks.filter((t) => INCOMPLETE_TASK_STATUSES.includes(t.status)).length;
 
-  return ok({
-    id: row.id,
-    caseCode: row.case_code,
-    weddingDate: row.wedding_date,
-    weddingTime: row.wedding_time,
-    contactChannel: row.contact_channel,
-    status: row.status,
-    guestCount: row.guest_count,
-    venueRoom: row.venue_room,
-    notes: row.notes,
-    archivedAt: row.archived_at,
-    planType: row.plan_types,
-    primaryPlanner: row.user_profiles,
-    partners: row.couple_profiles.map((profile) => ({
-      partnerRole: profile.partner_role,
-      // 暗号化列は参照時に復号する（13-1）。鍵が合わない値で応答全体を 500 にしないよう
-      // readPii を使う（復号できない値はそのまま返る）。
-      fullName: readPii(profile.full_name),
-      // 未登録は null のまま返す。空文字にすると「登録済みだが空」と区別できなくなる。
-      email: readPii(profile.email) || null,
-      isPrimaryContact: profile.is_primary_contact,
-    })),
-    taskTotal: tasks.length,
-    taskDone: tasks.length - incomplete,
-  });
-});
+    return ok({
+      id: row.id,
+      caseCode: row.case_code,
+      weddingDate: row.wedding_date,
+      weddingTime: row.wedding_time,
+      contactChannel: row.contact_channel,
+      status: row.status,
+      guestCount: row.guest_count,
+      venueRoom: row.venue_room,
+      notes: row.notes,
+      archivedAt: row.archived_at,
+      planType: row.plan_types,
+      primaryPlanner: row.user_profiles,
+      partners: row.couple_profiles.map((profile) => ({
+        partnerRole: profile.partner_role,
+        // 暗号化列は参照時に復号する（13-1）。鍵が合わない値で応答全体を 500 にしないよう
+        // readPii を使う（復号できない値はそのまま返る）。
+        fullName: readPii(profile.full_name),
+        // 未登録は null のまま返す。空文字にすると「登録済みだが空」と区別できなくなる。
+        email: readPii(profile.email) || null,
+        isPrimaryContact: profile.is_primary_contact,
+      })),
+      taskTotal: tasks.length,
+      taskDone: tasks.length - incomplete,
+    });
+  },
+);
 
 // ------------------------------------------------------------------- K04 の更新
 interface ExistingTaskRow {
@@ -123,160 +124,170 @@ interface ExistingTaskRow {
   task_templates: { due_offset_days: number } | null;
 }
 
-export const PATCH = route(async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
-  const actor = await requireStaff();
-  const { caseId } = await context.params;
-  const input = await parseBody(request, casePatchSchema);
-  const supabase = await createSupabaseServerClient();
+export const PATCH = route(
+  async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
+    const actor = await requireStaff();
+    const { caseId } = await context.params;
+    const input = await parseBody(request, casePatchSchema);
+    const supabase = await createSupabaseServerClient();
 
-  // アーカイブ／復元（K05／K01「復元する」）は admin のみ。
-  // 他項目と同時に送られた場合、片方だけ適用されると画面の表示と実データが食い違うため弾く。
-  if (input.archived !== undefined) {
-    if (actor.role !== 'admin' && actor.role !== 'system_admin') throw forbidden();
-    const others = Object.keys(input).filter((key) => key !== 'archived' && key !== 'confirmed');
-    if (others.length > 0) {
-      throw badRequest([
-        { field: 'archived', reason: 'アーカイブの切り替えは他の項目と同時に変更できません' },
-      ]);
+    // アーカイブ／復元（K05／K01「復元する」）は admin のみ。
+    // 他項目と同時に送られた場合、片方だけ適用されると画面の表示と実データが食い違うため弾く。
+    if (input.archived !== undefined) {
+      if (actor.role !== 'admin' && actor.role !== 'system_admin') throw forbidden();
+      const others = Object.keys(input).filter((key) => key !== 'archived' && key !== 'confirmed');
+      if (others.length > 0) {
+        throw badRequest([
+          { field: 'archived', reason: 'アーカイブの切り替えは他の項目と同時に変更できません' },
+        ]);
+      }
+      const { error } = await supabase.rpc('apply_case_update', {
+        p_case_id: caseId,
+        p_patch: { archived: input.archived },
+        p_profiles: {},
+        p_due_changes: [],
+        p_waived_task_ids: null,
+        p_new_tasks: [],
+      });
+      if (error) throw fromPostgresError(error);
+      return ok({ applied: true });
     }
-    const { error } = await supabase.rpc('apply_case_update', {
+
+    const { data: currentRow, error: currentError } = await supabase
+      .from('wedding_cases')
+      .select('id, wedding_date, plan_type_id')
+      .eq('id', caseId)
+      .maybeSingle();
+    if (currentError) throw fromPostgresError(currentError);
+    if (!currentRow) throw notFound('案件が見つかりません');
+    const current = currentRow as { id: string; wedding_date: string; plan_type_id: string | null };
+
+    const weddingDate = input.weddingDate ?? current.wedding_date;
+    const planTypeId = input.planTypeId ?? current.plan_type_id;
+    const weddingDateChanged =
+      input.weddingDate !== undefined && input.weddingDate !== current.wedding_date;
+    const planChanged = input.planTypeId !== undefined && input.planTypeId !== current.plan_type_id;
+
+    let dueChanges: { id: string; title: string; from: string; to: string }[] = [];
+    let waived: { id: string; title: string }[] = [];
+    let added: { taskTemplateId: string; title: string; dueDate: string }[] = [];
+    let newTasks: ReturnType<typeof planTasks> = [];
+
+    if ((weddingDateChanged || planChanged) && planTypeId) {
+      const { data: taskData, error: taskError } = await supabase
+        .from('case_tasks')
+        .select('id, task_template_id, title, status, due_date, task_templates ( due_offset_days )')
+        .eq('case_id', caseId);
+      if (taskError) throw fromPostgresError(taskError);
+      const taskRows = (taskData ?? []) as unknown as ExistingTaskRow[];
+
+      // テンプレートの読み出しは lib/services/planTemplates.ts に一本化した。
+      // ここと assign-tasks が別々の集合を見ると、確認ダイアログの内容と実際の割当がずれる（6-6-2）。
+      const templates = await loadPlanTemplates(supabase, planTypeId);
+      const offsetByTemplate = new Map(
+        templates.map((t) => [t.taskTemplateId, t.dueOffsetDaysOverride ?? t.dueOffsetDays]),
+      );
+
+      // 逆算日数は「新しいプランの上書き値 → テンプレート本体の値」の順で解決する。
+      // 個別追加の宿題（task_template_id が NULL）は逆算日数を持たないため再計算対象外（6-6-2）。
+      const existing: ExistingTask[] = taskRows.map((row) => ({
+        id: row.id,
+        taskTemplateId: row.task_template_id,
+        title: row.title,
+        status: row.status,
+        dueDate: row.due_date,
+        dueOffsetDays:
+          row.task_template_id === null
+            ? null
+            : (offsetByTemplate.get(row.task_template_id) ??
+              row.task_templates?.due_offset_days ??
+              null),
+      }));
+
+      if (planChanged) {
+        const preview = previewPlanChange(weddingDate, existing, templates);
+        waived = preview.waived;
+        added = preview.added;
+        newTasks = planTasks(
+          weddingDate,
+          templates,
+          existing.map((t) => t.taskTemplateId).filter((id): id is string => id !== null),
+        );
+      }
+
+      if (weddingDateChanged) {
+        const waivedIds = new Set(waived.map((w) => w.id));
+        // waived にする宿題の期限を動かしても意味が無いので、差分の提示からも外す
+        dueChanges = recalculateDueDates(weddingDate, existing).filter((c) => !waivedIds.has(c.id));
+      }
+    }
+
+    const needsConfirmation = dueChanges.length > 0 || waived.length > 0 || added.length > 0;
+
+    // 差分がある変更は confirmed:true を受け取るまで書き込まない（4-3 K04）
+    if (needsConfirmation && input.confirmed !== true) {
+      return ok({
+        applied: false,
+        preview: { weddingDate, planChanged, dueChanges, waived, added },
+      });
+    }
+
+    const patch: Record<string, unknown> = {};
+    if (input.weddingDate !== undefined) patch.wedding_date = input.weddingDate;
+    if (input.weddingTime !== undefined) patch.wedding_time = input.weddingTime;
+    if (input.planTypeId !== undefined) patch.plan_type_id = input.planTypeId;
+    if (input.contactChannel !== undefined) patch.contact_channel = input.contactChannel;
+    if (input.guestCount !== undefined) patch.guest_count = input.guestCount;
+    if (input.venueRoom !== undefined) patch.venue_room = input.venueRoom;
+    if (input.notes !== undefined) patch.notes = input.notes;
+    if (input.primaryPlannerId !== undefined) patch.primary_planner_id = input.primaryPlannerId;
+
+    // 氏名・連絡先メールは暗号化して渡す。復号鍵はサーバー側にのみ置く（13-1）
+    const profiles: Record<string, unknown> = {};
+    if (input.groomName !== undefined) profiles.groom_name_enc = encryptPii(input.groomName);
+    if (input.brideName !== undefined) profiles.bride_name_enc = encryptPii(input.brideName);
+    if (input.primaryContact !== undefined) profiles.primary_contact = input.primaryContact;
+    if (input.contactEmail !== undefined) {
+      profiles.contact_email_enc = encryptPii(input.contactEmail);
+      profiles.contact_email_hash = emailHash(input.contactEmail);
+    }
+
+    const { data, error } = await supabase.rpc('apply_case_update', {
       p_case_id: caseId,
-      p_patch: { archived: input.archived },
-      p_profiles: {},
-      p_due_changes: [],
-      p_waived_task_ids: null,
-      p_new_tasks: [],
+      p_patch: patch,
+      p_profiles: profiles,
+      p_due_changes: dueChanges.map((change) => ({
+        id: change.id,
+        due_date: change.to,
+        phase_name: phaseNameFor(weddingDate, change.to),
+      })),
+      p_waived_task_ids: waived.length > 0 ? waived.map((w) => w.id) : null,
+      p_new_tasks: newTasks.map((task) => ({
+        task_template_id: task.taskTemplateId,
+        title: task.title,
+        description: task.description,
+        submission_format: task.submissionFormat,
+        allowed_file_types: task.allowedFileTypes,
+        options: task.options,
+        is_required: task.isRequired,
+        importance: task.importance,
+        due_date: task.dueDate,
+        display_order: task.displayOrder,
+        phase_name: phaseNameFor(weddingDate, task.dueDate),
+      })),
     });
     if (error) throw fromPostgresError(error);
-    return ok({ applied: true });
-  }
 
-  const { data: currentRow, error: currentError } = await supabase
-    .from('wedding_cases')
-    .select('id, wedding_date, plan_type_id')
-    .eq('id', caseId)
-    .maybeSingle();
-  if (currentError) throw fromPostgresError(currentError);
-  if (!currentRow) throw notFound('案件が見つかりません');
-  const current = currentRow as { id: string; wedding_date: string; plan_type_id: string | null };
-
-  const weddingDate = input.weddingDate ?? current.wedding_date;
-  const planTypeId = input.planTypeId ?? current.plan_type_id;
-  const weddingDateChanged = input.weddingDate !== undefined && input.weddingDate !== current.wedding_date;
-  const planChanged = input.planTypeId !== undefined && input.planTypeId !== current.plan_type_id;
-
-  let dueChanges: { id: string; title: string; from: string; to: string }[] = [];
-  let waived: { id: string; title: string }[] = [];
-  let added: { taskTemplateId: string; title: string; dueDate: string }[] = [];
-  let newTasks: ReturnType<typeof planTasks> = [];
-
-  if ((weddingDateChanged || planChanged) && planTypeId) {
-    const { data: taskData, error: taskError } = await supabase
-      .from('case_tasks')
-      .select('id, task_template_id, title, status, due_date, task_templates ( due_offset_days )')
-      .eq('case_id', caseId);
-    if (taskError) throw fromPostgresError(taskError);
-    const taskRows = (taskData ?? []) as unknown as ExistingTaskRow[];
-
-    // テンプレートの読み出しは lib/services/planTemplates.ts に一本化した。
-    // ここと assign-tasks が別々の集合を見ると、確認ダイアログの内容と実際の割当がずれる（6-6-2）。
-    const templates = await loadPlanTemplates(supabase, planTypeId);
-    const offsetByTemplate = new Map(
-      templates.map((t) => [t.taskTemplateId, t.dueOffsetDaysOverride ?? t.dueOffsetDays]),
-    );
-
-    // 逆算日数は「新しいプランの上書き値 → テンプレート本体の値」の順で解決する。
-    // 個別追加の宿題（task_template_id が NULL）は逆算日数を持たないため再計算対象外（6-6-2）。
-    const existing: ExistingTask[] = taskRows.map((row) => ({
-      id: row.id,
-      taskTemplateId: row.task_template_id,
-      title: row.title,
-      status: row.status,
-      dueDate: row.due_date,
-      dueOffsetDays:
-        row.task_template_id === null
-          ? null
-          : offsetByTemplate.get(row.task_template_id) ?? row.task_templates?.due_offset_days ?? null,
-    }));
-
-    if (planChanged) {
-      const preview = previewPlanChange(weddingDate, existing, templates);
-      waived = preview.waived;
-      added = preview.added;
-      newTasks = planTasks(
-        weddingDate,
-        templates,
-        existing.map((t) => t.taskTemplateId).filter((id): id is string => id !== null),
-      );
-    }
-
-    if (weddingDateChanged) {
-      const waivedIds = new Set(waived.map((w) => w.id));
-      // waived にする宿題の期限を動かしても意味が無いので、差分の提示からも外す
-      dueChanges = recalculateDueDates(weddingDate, existing).filter((c) => !waivedIds.has(c.id));
-    }
-  }
-
-  const needsConfirmation = dueChanges.length > 0 || waived.length > 0 || added.length > 0;
-
-  // 差分がある変更は confirmed:true を受け取るまで書き込まない（4-3 K04）
-  if (needsConfirmation && input.confirmed !== true) {
+    const result = (data ?? { due_changed: 0, waived: 0, added: 0 }) as {
+      due_changed: number;
+      waived: number;
+      added: number;
+    };
     return ok({
-      applied: false,
-      preview: { weddingDate, planChanged, dueChanges, waived, added },
+      applied: true,
+      dueChanged: result.due_changed,
+      waived: result.waived,
+      added: result.added,
     });
-  }
-
-  const patch: Record<string, unknown> = {};
-  if (input.weddingDate !== undefined) patch.wedding_date = input.weddingDate;
-  if (input.weddingTime !== undefined) patch.wedding_time = input.weddingTime;
-  if (input.planTypeId !== undefined) patch.plan_type_id = input.planTypeId;
-  if (input.contactChannel !== undefined) patch.contact_channel = input.contactChannel;
-  if (input.guestCount !== undefined) patch.guest_count = input.guestCount;
-  if (input.venueRoom !== undefined) patch.venue_room = input.venueRoom;
-  if (input.notes !== undefined) patch.notes = input.notes;
-  if (input.primaryPlannerId !== undefined) patch.primary_planner_id = input.primaryPlannerId;
-
-  // 氏名・連絡先メールは暗号化して渡す。復号鍵はサーバー側にのみ置く（13-1）
-  const profiles: Record<string, unknown> = {};
-  if (input.groomName !== undefined) profiles.groom_name_enc = encryptPii(input.groomName);
-  if (input.brideName !== undefined) profiles.bride_name_enc = encryptPii(input.brideName);
-  if (input.primaryContact !== undefined) profiles.primary_contact = input.primaryContact;
-  if (input.contactEmail !== undefined) {
-    profiles.contact_email_enc = encryptPii(input.contactEmail);
-    profiles.contact_email_hash = emailHash(input.contactEmail);
-  }
-
-  const { data, error } = await supabase.rpc('apply_case_update', {
-    p_case_id: caseId,
-    p_patch: patch,
-    p_profiles: profiles,
-    p_due_changes: dueChanges.map((change) => ({
-      id: change.id,
-      due_date: change.to,
-      phase_name: phaseNameFor(weddingDate, change.to),
-    })),
-    p_waived_task_ids: waived.length > 0 ? waived.map((w) => w.id) : null,
-    p_new_tasks: newTasks.map((task) => ({
-      task_template_id: task.taskTemplateId,
-      title: task.title,
-      description: task.description,
-      submission_format: task.submissionFormat,
-      allowed_file_types: task.allowedFileTypes,
-      options: task.options,
-      is_required: task.isRequired,
-      importance: task.importance,
-      due_date: task.dueDate,
-      display_order: task.displayOrder,
-      phase_name: phaseNameFor(weddingDate, task.dueDate),
-    })),
-  });
-  if (error) throw fromPostgresError(error);
-
-  const result = (data ?? { due_changed: 0, waived: 0, added: 0 }) as {
-    due_changed: number;
-    waived: number;
-    added: number;
-  };
-  return ok({ applied: true, dueChanged: result.due_changed, waived: result.waived, added: result.added });
-});
+  },
+);

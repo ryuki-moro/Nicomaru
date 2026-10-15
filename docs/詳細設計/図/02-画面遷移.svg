@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="850" viewBox="0 0 1200 850" role="img">
+<title>02  公開画面と役割別の画面遷移</title>
+<style>text{font-family:Meiryo,"Noto Sans JP",sans-serif}</style>
+<rect x="0" y="0" width="1200" height="850" rx="6" fill="#F7F5F0" stroke="#F7F5F0"/>
+<text x="36" y="43" font-size="27" fill="#993556">02  公開画面と役割別の画面遷移</text>
+<text x="36" y="77" font-size="13" fill="#5F5E5A">31画面ID。URL・機能との完全対応は「機能画面対応.md」を参照。</text>
+<polyline points="36,94 1164,94" fill="none" stroke="#D3D1C7" stroke-width="1.5"/>
+<text x="36" y="823" font-size="11" fill="#5F5E5A">にこまる | 実装連動の詳細設計 | 2026-10-09 | 学校発表・模擬データ用</text>
+<text x="1120" y="823" font-size="12" fill="#5F5E5A">02</text>
+<rect x="36" y="125" width="264" height="78" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="50" y="151" font-size="17" fill="#993556">P01 ログイン</text>
+<text x="50" y="177" font-size="14" fill="#2C2C2A">未ログイン可</text>
+<rect x="322" y="125" width="264" height="78" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="336" y="151" font-size="17" fill="#993556">P02 初回登録</text>
+<text x="336" y="177" font-size="14" fill="#2C2C2A">未ログイン可</text>
+<rect x="608" y="125" width="264" height="78" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="622" y="151" font-size="17" fill="#993556">P03 パスワード再設定</text>
+<text x="622" y="177" font-size="14" fill="#2C2C2A">未ログイン可</text>
+<rect x="894" y="125" width="264" height="78" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="908" y="151" font-size="17" fill="#993556">P04 エラー</text>
+<text x="908" y="177" font-size="14" fill="#2C2C2A">未ログイン可</text>
+<rect x="36" y="218" width="1128" height="30" rx="6" fill="#FBEAF0" stroke="#FBEAF0"/>
+<text x="48" y="239" font-size="13" fill="#993556">認証成功後のactive / roleで着地点を決定。各グループ内の操作もAPIとRLSで範囲を制限する。</text>
+<polyline points="168,248 168,267" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="168,267 164.08531019299892,258.8959760788259 171.91468980700108,258.8959760788259" fill="#89857B"/>
+<rect x="36" y="267" width="264" height="358" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="50" y="293" font-size="17" fill="#993556">couple</text>
+<text x="50" y="327" font-size="13" fill="#2C2C2A">M01  マイページ</text>
+<text x="50" y="352" font-size="13" fill="#2C2C2A">M02  宿題一覧</text>
+<text x="50" y="377" font-size="13" fill="#2C2C2A">M03  宿題詳細・提出</text>
+<text x="50" y="402" font-size="13" fill="#2C2C2A">M04  タイムライン</text>
+<text x="50" y="427" font-size="13" fill="#2C2C2A">M05  通知一覧</text>
+<text x="50" y="452" font-size="13" fill="#2C2C2A">M06  アカウント/LINE</text>
+<polyline points="454,248 454,267" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="454,267 450.0853101929989,258.8959760788259 457.9146898070011,258.8959760788259" fill="#89857B"/>
+<rect x="322" y="267" width="264" height="358" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="336" y="293" font-size="17" fill="#993556">planner / staff</text>
+<text x="336" y="327" font-size="13" fill="#2C2C2A">D01  ダッシュボード</text>
+<text x="336" y="352" font-size="13" fill="#2C2C2A">K01  案件一覧</text>
+<text x="336" y="377" font-size="13" fill="#2C2C2A">K02  案件詳細</text>
+<text x="336" y="402" font-size="13" fill="#2C2C2A">K03  案件登録</text>
+<text x="336" y="427" font-size="13" fill="#2C2C2A">K04  案件変更</text>
+<text x="336" y="452" font-size="13" fill="#2C2C2A">K05  アーカイブ確認</text>
+<text x="336" y="477" font-size="13" fill="#2C2C2A">D02  提出物確認</text>
+<text x="336" y="502" font-size="13" fill="#2C2C2A">D03  準備シート</text>
+<text x="336" y="527" font-size="13" fill="#2C2C2A">D04  フォロー記録</text>
+<text x="336" y="552" font-size="13" fill="#2C2C2A">D05  打ち合わせ/起票</text>
+<text x="336" y="577" font-size="13" fill="#2C2C2A">N01  staff通知履歴</text>
+<polyline points="740,248 740,267" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="740,267 736.0853101929989,258.8959760788259 743.9146898070011,258.8959760788259" fill="#89857B"/>
+<rect x="608" y="267" width="264" height="358" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="622" y="293" font-size="17" fill="#993556">式場管理 admin</text>
+<text x="622" y="327" font-size="13" fill="#2C2C2A">T01  テンプレート一覧</text>
+<text x="622" y="352" font-size="13" fill="#2C2C2A">T02  テンプレート編集/新規</text>
+<text x="622" y="377" font-size="13" fill="#2C2C2A">T03  プラン種別</text>
+<text x="622" y="402" font-size="13" fill="#2C2C2A">U01  利用者一覧</text>
+<text x="622" y="427" font-size="13" fill="#2C2C2A">U02  利用者登録</text>
+<text x="622" y="452" font-size="13" fill="#2C2C2A">U03  利用者変更</text>
+<text x="622" y="477" font-size="13" fill="#2C2C2A">U04  利用者削除確認</text>
+<polyline points="1026,248 1026,267" fill="none" stroke="#89857B" stroke-width="1.5"/>
+<polygon points="1026,267 1022.0853101929989,258.8959760788259 1029.914689807001,258.8959760788259" fill="#89857B"/>
+<rect x="894" y="267" width="264" height="358" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="908" y="293" font-size="17" fill="#993556">system_admin</text>
+<text x="908" y="327" font-size="13" fill="#2C2C2A">S01  式場一覧</text>
+<text x="908" y="352" font-size="13" fill="#2C2C2A">S02  式場登録/編集</text>
+<text x="908" y="377" font-size="13" fill="#2C2C2A">S03  利用状況/ログ</text>
+<rect x="36" y="658" width="1128" height="114" rx="6" fill="white" stroke="#D3D1C7"/>
+<text x="50" y="684" font-size="17" fill="#993556">拒否・再操作</text>
+<text x="50" y="710" font-size="14" fill="#2C2C2A">API: 未認証401 / 不正Origin・権限不足403 / 存在しない・不可視404。</text>
+<text x="50" y="730" font-size="14" fill="#2C2C2A">期限切れ招待は再発行を依頼。OTPのリンク着地が別ブラウザで失敗した場合は6桁コードを利用。</text>
+<text x="50" y="750" font-size="14" fill="#2C2C2A">画面の権限不足は役割別着地点へ戻す。APIの403と画面redirectを混同しない。</text>
+</svg>

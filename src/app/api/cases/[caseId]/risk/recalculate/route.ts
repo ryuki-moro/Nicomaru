@@ -15,7 +15,6 @@ import { isUuid } from '@/lib/uuid';
 
 export const runtime = 'nodejs';
 
-
 export const POST = route(
   async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
     // リスクは planner／admin 向けの情報。couple には値そのものを見せない（6-3-2／5-1）。

@@ -82,44 +82,42 @@ export function renderNotification(
       return {
         title: `${task}のご準備について`,
         body:
-          `${to} ${task}のご提出期限が${vars.daysLeft ?? 0}日後`
-          + `（${vars.dueDate ?? ''}）です。`
-          + 'ご準備がお済みでしたらマイページからご提出ください。'
-          + `ご不明な点は担当${planner}までお気軽にどうぞ。${url}`,
+          `${to} ${task}のご提出期限が${vars.daysLeft ?? 0}日後` +
+          `（${vars.dueDate ?? ''}）です。` +
+          'ご準備がお済みでしたらマイページからご提出ください。' +
+          `ご不明な点は担当${planner}までお気軽にどうぞ。${url}`,
       };
 
     case 'overdue':
       return {
         title: `${task}のご確認のお願い`,
         body:
-          `${to} ${task}のご提出期限（${vars.dueDate ?? ''}）を過ぎております。`
-          + 'ご都合がつかない場合は期限の調整も可能ですので、'
-          + `担当${planner}までご相談ください。${url}`,
+          `${to} ${task}のご提出期限（${vars.dueDate ?? ''}）を過ぎております。` +
+          'ご都合がつかない場合は期限の調整も可能ですので、' +
+          `担当${planner}までご相談ください。${url}`,
       };
 
     case 'submission_request':
       return {
         title: `${task}のご案内`,
         body:
-          `${to} ${task}のご入力をお願いしております。`
-          + `${vars.dueDate ?? ''}までにマイページからご提出ください。${url}`,
+          `${to} ${task}のご入力をお願いしております。` +
+          `${vars.dueDate ?? ''}までにマイページからご提出ください。${url}`,
       };
 
     case 'needs_fix':
       return {
         title: `${task}について1点ご確認ください`,
         body:
-          `${to} ご提出いただいた${task}について、`
-          + `${vars.reviewComment ?? '内容'}をご確認いただけますでしょうか。`
-          + `お手数ですがマイページからご修正をお願いいたします。${url}`,
+          `${to} ご提出いただいた${task}について、` +
+          `${vars.reviewComment ?? '内容'}をご確認いただけますでしょうか。` +
+          `お手数ですがマイページからご修正をお願いいたします。${url}`,
       };
 
     case 'info':
       return {
         title: vars.subject ?? 'お知らせ',
-        body:
-          `${to} ${vars.message ?? ''} `
-          + `ご不明な点は担当${planner}までお気軽にどうぞ。`,
+        body: `${to} ${vars.message ?? ''} ` + `ご不明な点は担当${planner}までお気軽にどうぞ。`,
       };
   }
 }

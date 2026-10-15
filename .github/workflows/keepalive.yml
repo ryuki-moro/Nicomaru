@@ -23,10 +23,21 @@ jobs:
       # APP_BASE_URL が未設定のリポジトリでは何もしない（fork や検証用クローン向け）
       - name: Ping
         if: ${{ vars.APP_BASE_URL != '' }}
+        env:
+          APP_BASE_URL: ${{ vars.APP_BASE_URL }}
         run: |
           set -euo pipefail
-          status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
-            "${{ vars.APP_BASE_URL }}/api/health")
-          echo "status=$status"
-          # 認証が要らない軽量エンドポイントなので 200 以外は異常とみなす
-          test "$status" = "200"
+          # 一過性の接続失敗で警告せず、10秒間隔で2回連続した失敗をCI通知へつなぐ。
+          # DB不通時はDB自身に記録できないため、この外部監視が検知先となる。
+          for attempt in 1 2; do
+            status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
+              "${APP_BASE_URL%/}/api/health" 2>/dev/null || true)
+            if [ "$status" = "200" ]; then
+              echo "Keepalive succeeded (attempt $attempt)"
+              exit 0
+            fi
+            echo "Keepalive failed (attempt $attempt)"
+            if [ "$attempt" = "1" ]; then sleep 10; fi
+          done
+          echo "::error::Keepalive failed twice consecutively. Check the application and Supabase status."
+          exit 1

@@ -18,9 +18,12 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const supabase = await createSupabaseServerClient();
-    // RLS 下で 0 行になっても構わない。接続が生きていることだけを確かめる。
-    const { error } = await supabase.from('venues').select('id', { head: true, count: 'exact' });
-    if (error) throw new Error(error.message);
+    // データ/件数は取得しない。HEADではSQLSTATEが失われるため0件GETを使う。
+    // anonに業務テーブルのSELECT権限が無い環境では42501になるが、
+    // これはPostgreSQLが応答した証拠であり、接続の死活確認としては正常。
+    // 業務の認可や最新migrationの適用確認を兼ねるエンドポイントではない。
+    const { error } = await supabase.from('venues').select('id').limit(0);
+    if (error && error.code !== '42501') throw new Error('DB probe failed');
     return NextResponse.json({ ok: true });
   } catch {
     // 詳細はクライアントへ返さない。失敗の事実だけを 503 で伝える。

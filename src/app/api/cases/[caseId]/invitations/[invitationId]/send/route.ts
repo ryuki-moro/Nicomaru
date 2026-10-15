@@ -40,7 +40,10 @@ interface PartnerRow {
 }
 
 export const POST = route(
-  async (request: Request, context: { params: Promise<{ caseId: string; invitationId: string }> }) => {
+  async (
+    request: Request,
+    context: { params: Promise<{ caseId: string; invitationId: string }> },
+  ) => {
     await requireRole('planner', 'admin', 'system_admin');
     const { caseId, invitationId } = await context.params;
     const input = await parseBody(request, invitationSendSchema);
