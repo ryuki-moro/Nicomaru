@@ -30,7 +30,11 @@ export function DevAdminLoginButton() {
             router.replace(result.redirectTo);
             router.refresh();
           } catch (cause) {
-            setError(cause instanceof ApiCallError ? cause.message : '開発用adminでログインできませんでした');
+            setError(
+              cause instanceof ApiCallError
+                ? cause.message
+                : '開発用adminでログインできませんでした',
+            );
             setPending(false);
           }
         }}

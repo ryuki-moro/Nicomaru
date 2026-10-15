@@ -2,7 +2,8 @@ import { expect, test } from '@playwright/test';
 
 // 既存のアカウントを変更せず、dev:admin ランチャーが準備した専用adminで検証する。
 test.skip(process.env.E2E_DEV_ADMIN_MODE !== 'true', 'dev:admin の専用サーバーが必要です');
-if (process.env.E2E_BROWSER_CHANNEL === 'chrome') test.use({ browserName: 'chromium', channel: 'chrome' });
+if (process.env.E2E_BROWSER_CHANNEL === 'chrome')
+  test.use({ browserName: 'chromium', channel: 'chrome' });
 
 test('入力省略で管理画面に入り、再読み込みとログアウトができる', async ({ page }) => {
   await page.goto('/login');
@@ -32,12 +33,14 @@ test('専用APIはGET・Originなし・別Originを拒否する', async ({ reque
   expect((await request.get('/api/auth/dev-admin')).status()).toBe(405);
   expect((await request.post('/api/auth/dev-admin', { data: {} })).status()).toBe(403);
   const denied = await request.post('/api/auth/dev-admin', {
-    data: {}, headers: { origin: 'https://evil.test' },
+    data: {},
+    headers: { origin: 'https://evil.test' },
   });
   expect(denied.status()).toBe(403);
   expect(denied.headers()['set-cookie']).toBeUndefined();
   const accepted = await request.post('/api/auth/dev-admin', {
-    data: {}, headers: { origin: baseURL! },
+    data: {},
+    headers: { origin: baseURL! },
   });
   expect(accepted.status()).toBe(200);
   expect(await accepted.json()).toEqual({ redirectTo: '/dashboard' });

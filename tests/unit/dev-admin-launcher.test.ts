@@ -13,9 +13,11 @@ function launch(envFile: string, nodeEnv?: string, port = '3002') {
     writeFileSync(join(directory, '.env.local'), envFile);
     const environment = { ...process.env };
     Object.assign(environment, { NODE_ENV: nodeEnv });
-    return spawnSync(process.execPath, [
-      resolve('node_modules/tsx/dist/cli.mjs'), resolve('scripts/dev-admin.mts'), '--port', port,
-    ], { cwd: directory, env: environment, encoding: 'utf8', timeout: 15000 });
+    return spawnSync(
+      process.execPath,
+      [resolve('node_modules/tsx/dist/cli.mjs'), resolve('scripts/dev-admin.mts'), '--port', port],
+      { cwd: directory, env: environment, encoding: 'utf8', timeout: 15000 },
+    );
   } finally {
     const target = realpathSync(directory);
     if (!target.startsWith(`${taskTmpRoot}${sep}`)) throw new Error('一時ディレクトリの範囲外です');

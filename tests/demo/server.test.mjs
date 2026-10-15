@@ -17,7 +17,10 @@ const fixtureFiles = {
 
 async function removeFixture(directory) {
   const absolutePath = resolve(directory);
-  if (dirname(absolutePath) !== resolve(tmpdir()) || !basename(absolutePath).startsWith('nicomaru-demo-server-')) {
+  if (
+    dirname(absolutePath) !== resolve(tmpdir()) ||
+    !basename(absolutePath).startsWith('nicomaru-demo-server-')
+  ) {
     throw new Error('テスト用の一時ディレクトリ以外は削除できません。');
   }
   await rm(absolutePath, { recursive: true, force: true });
@@ -46,7 +49,7 @@ async function withServer(run) {
   } finally {
     if (server?.listening) {
       await new Promise((resolveClosed, reject) => {
-        server.close((error) => error ? reject(error) : resolveClosed());
+        server.close((error) => (error ? reject(error) : resolveClosed()));
         server.closeAllConnections();
       });
     }
@@ -56,16 +59,21 @@ async function withServer(run) {
 
 function httpRequest(port, path, method = 'GET') {
   return new Promise((resolveResponse, reject) => {
-    const outgoing = request({ hostname: '127.0.0.1', port, path, method, agent: false }, (response) => {
-      const chunks = [];
-      response.on('data', (chunk) => chunks.push(chunk));
-      response.once('error', reject);
-      response.once('end', () => resolveResponse({
-        status: response.statusCode,
-        headers: response.headers,
-        body: Buffer.concat(chunks).toString('utf8'),
-      }));
-    });
+    const outgoing = request(
+      { hostname: '127.0.0.1', port, path, method, agent: false },
+      (response) => {
+        const chunks = [];
+        response.on('data', (chunk) => chunks.push(chunk));
+        response.once('error', reject);
+        response.once('end', () =>
+          resolveResponse({
+            status: response.statusCode,
+            headers: response.headers,
+            body: Buffer.concat(chunks).toString('utf8'),
+          }),
+        );
+      },
+    );
     outgoing.once('error', reject);
     outgoing.end();
   });
@@ -86,11 +94,23 @@ test('許可したデモファイルだけを正しい MIME と安全なヘッ�
       assert.equal(response.status, 200, path);
       assert.equal(response.body, fixtureFiles[filename], path);
       assert.equal(response.headers['content-type'], contentType, path);
-      assert.equal(response.headers['content-length'], String(Buffer.byteLength(response.body)), path);
+      assert.equal(
+        response.headers['content-length'],
+        String(Buffer.byteLength(response.body)),
+        path,
+      );
       assert.equal(response.headers['x-content-type-options'], 'nosniff');
       assert.match(response.headers['cache-control'], /no-store/);
       const csp = response.headers['content-security-policy'];
-      for (const policy of ["default-src 'self'", "script-src 'self'", "connect-src 'none'", "form-action 'none'", "frame-ancestors 'none'", "base-uri 'none'", "object-src 'none'"]) {
+      for (const policy of [
+        "default-src 'self'",
+        "script-src 'self'",
+        "connect-src 'none'",
+        "form-action 'none'",
+        "frame-ancestors 'none'",
+        "base-uri 'none'",
+        "object-src 'none'",
+      ]) {
         assert.ok(csp.split('; ').includes(policy), policy);
       }
       assert.ok(!csp.includes("script-src 'self' 'unsafe-inline'"));
@@ -115,11 +135,22 @@ test('環境設定・未許可・トラバーサル・エンコードされた�
   await withServer(async (port) => {
     // fetch は ../ を正規化するため、生の request.path を使って実際の攻撃経路を送る。
     const deniedPaths = [
-      '/.env', '/.env.local', '/unlisted.txt', '/scripts/demo-server.mjs',
-      '/../.env.local', '/demo/../.env.local', '/..\\.env.local',
-      '/%2e%2e/.env.local', '/%2E%2E%2F.env.local', '/%252e%252e%252f.env.local',
-      '/%2eenv.local', '/%61pp.mjs', '/app.mjs%00', '//app.mjs',
-      '/app.mjs/../.env.local', '/app.mjs%2f../.env.local',
+      '/.env',
+      '/.env.local',
+      '/unlisted.txt',
+      '/scripts/demo-server.mjs',
+      '/../.env.local',
+      '/demo/../.env.local',
+      '/..\\.env.local',
+      '/%2e%2e/.env.local',
+      '/%2E%2E%2F.env.local',
+      '/%252e%252e%252f.env.local',
+      '/%2eenv.local',
+      '/%61pp.mjs',
+      '/app.mjs%00',
+      '//app.mjs',
+      '/app.mjs/../.env.local',
+      '/app.mjs%2f../.env.local',
     ];
     for (const path of deniedPaths) {
       const response = await httpRequest(port, path);

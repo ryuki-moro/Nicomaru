@@ -24,18 +24,28 @@ export const POST = route(async (request) => {
     password: config.password,
   });
   if (error || !data.user || !data.session) {
-    throw new ApiError('INTERNAL_ERROR', '開発用adminでログインできませんでした。起動設定を確認してください');
+    throw new ApiError(
+      'INTERNAL_ERROR',
+      '開発用adminでログインできませんでした。起動設定を確認してください',
+    );
   }
 
   let accepted = false;
   try {
     if (data.user.id !== config.authUserId) throw forbidden();
-    const profile = await client.from('user_profiles')
+    const profile = await client
+      .from('user_profiles')
       .select('role, status, venue_id')
       .eq('auth_user_id', data.user.id)
       .maybeSingle();
-    if (profile.error || !profile.data || profile.data.role !== 'admin'
-      || profile.data.status !== 'active' || !profile.data.venue_id) throw forbidden();
+    if (
+      profile.error ||
+      !profile.data ||
+      profile.data.role !== 'admin' ||
+      profile.data.status !== 'active' ||
+      !profile.data.venue_id
+    )
+      throw forbidden();
 
     const supabase = await createSupabaseServerClient();
     const established = await supabase.auth.setSession({

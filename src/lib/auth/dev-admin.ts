@@ -14,8 +14,12 @@ export function getDevAdminConfig() {
 export function isLoopbackHost(host: string): boolean {
   try {
     const parsed = new URL(`http://${host}`);
-    return parsed.host === host.toLowerCase() && !parsed.username && !parsed.password
-      && ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname);
+    return (
+      parsed.host === host.toLowerCase() &&
+      !parsed.username &&
+      !parsed.password &&
+      ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname)
+    );
   } catch {
     return false;
   }
@@ -25,11 +29,14 @@ export function isLoopbackHost(host: string): boolean {
 export function isDevAdminRequestAllowed(request: Request): boolean {
   const url = new URL(request.url);
   const host = request.headers.get('host');
-  if (request.method !== 'POST' || !host || !isLoopbackHost(host) || !isLoopbackHost(url.host)) return false;
+  if (request.method !== 'POST' || !host || !isLoopbackHost(host) || !isLoopbackHost(url.host))
+    return false;
   // Next.jsは内部URLをlocalhostに正規化する場合がある。ブラウザのOriginは実際のHostと照合する。
   const browserOrigin = new URL(`${url.protocol}//${host}`);
-  if (browserOrigin.port !== url.port || request.headers.get('origin') !== browserOrigin.origin) return false;
-  if (request.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') return false;
+  if (browserOrigin.port !== url.port || request.headers.get('origin') !== browserOrigin.origin)
+    return false;
+  if (request.headers.get('content-type')?.split(';')[0].trim() !== 'application/json')
+    return false;
 
   const fetchSite = request.headers.get('sec-fetch-site');
   if (fetchSite && fetchSite !== 'same-origin') return false;
@@ -37,8 +44,13 @@ export function isDevAdminRequestAllowed(request: Request): boolean {
   const forwardedHost = request.headers.get('x-forwarded-host');
   if (forwardedHost && forwardedHost.toLowerCase() !== host.toLowerCase()) return false;
   const forwardedFor = request.headers.get('x-forwarded-for');
-  if (forwardedFor && !forwardedFor.split(',').every((ip) =>
-    ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip.trim()))) return false;
+  if (
+    forwardedFor &&
+    !forwardedFor
+      .split(',')
+      .every((ip) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip.trim()))
+  )
+    return false;
 
   return true;
 }

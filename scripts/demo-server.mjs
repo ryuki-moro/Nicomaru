@@ -28,7 +28,14 @@ const securityHeaders = {
   ].join('; '),
 };
 
-function send(request, response, status, body, contentType = 'text/plain; charset=utf-8', headers = {}) {
+function send(
+  request,
+  response,
+  status,
+  body,
+  contentType = 'text/plain; charset=utf-8',
+  headers = {},
+) {
   response.writeHead(status, {
     ...securityHeaders,
     'Content-Type': contentType,
@@ -75,7 +82,12 @@ export function createDemoServer(rootDir = defaultRootDir) {
       send(request, response, 200, body, contentType);
     } catch (error) {
       const missing = error.code === 'ENOENT' || error.code === 'ENOTDIR';
-      send(request, response, missing ? 404 : 500, missing ? 'Not Found\n' : 'Internal Server Error\n');
+      send(
+        request,
+        response,
+        missing ? 404 : 500,
+        missing ? 'Not Found\n' : 'Internal Server Error\n',
+      );
     }
   });
 }
@@ -108,7 +120,9 @@ function startCli() {
   const server = createDemoServer();
   server.once('error', (error) => {
     if (error.code === 'EADDRINUSE') {
-      console.error(`ポート ${port} は使用中です。npm run demo -- --port 3101 などで別のポートを指定してください。`);
+      console.error(
+        `ポート ${port} は使用中です。npm run demo -- --port 3101 などで別のポートを指定してください。`,
+      );
     } else {
       console.error(`デモを起動できませんでした: ${error.message}`);
     }

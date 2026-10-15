@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  createClient: vi.fn(), signIn: vi.fn(), signOut: vi.fn(), profile: vi.fn(),
-  createServerClient: vi.fn(), setSession: vi.fn(),
+  createClient: vi.fn(),
+  signIn: vi.fn(),
+  signOut: vi.fn(),
+  profile: vi.fn(),
+  createServerClient: vi.fn(),
+  setSession: vi.fn(),
 }));
 vi.mock('@supabase/supabase-js', () => ({ createClient: mocks.createClient }));
 vi.mock('@/lib/supabase/server', () => ({ createSupabaseServerClient: mocks.createServerClient }));
@@ -12,8 +16,17 @@ import { POST } from '@/app/api/auth/dev-admin/route';
 function request(headers: Record<string, string> = {}) {
   return new Request('http://127.0.0.1:3002/api/auth/dev-admin', {
     method: 'POST',
-    headers: { host: '127.0.0.1:3002', origin: 'http://127.0.0.1:3002', 'content-type': 'application/json', ...headers },
-    body: JSON.stringify({ role: 'system_admin', email: 'ignored@example.test', redirectTo: 'https://evil.test' }),
+    headers: {
+      host: '127.0.0.1:3002',
+      origin: 'http://127.0.0.1:3002',
+      'content-type': 'application/json',
+      ...headers,
+    },
+    body: JSON.stringify({
+      role: 'system_admin',
+      email: 'ignored@example.test',
+      redirectTo: 'https://evil.test',
+    }),
   });
 }
 
@@ -28,10 +41,17 @@ beforeEach(() => {
   vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-test-key');
   // dev:admin ランチャーは起動URLを APP_BASE_URL として渡す。
   vi.stubEnv('APP_BASE_URL', 'http://127.0.0.1:3002');
-  mocks.signIn.mockResolvedValue({ error: null, data: {
-    user: { id: 'dev-auth-user' }, session: { access_token: 'private-access-token', refresh_token: 'private-refresh-token' },
-  } });
-  mocks.profile.mockResolvedValue({ error: null, data: { role: 'admin', status: 'active', venue_id: 'venue-id' } });
+  mocks.signIn.mockResolvedValue({
+    error: null,
+    data: {
+      user: { id: 'dev-auth-user' },
+      session: { access_token: 'private-access-token', refresh_token: 'private-refresh-token' },
+    },
+  });
+  mocks.profile.mockResolvedValue({
+    error: null,
+    data: { role: 'admin', status: 'active', venue_id: 'venue-id' },
+  });
   mocks.signOut.mockResolvedValue({ error: null });
   mocks.setSession.mockResolvedValue({ error: null });
   mocks.createClient.mockReturnValue({
@@ -48,8 +68,14 @@ describe('POST /api/auth/dev-admin', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ redirectTo: '/dashboard' });
     expect(response.headers.get('cache-control')).toBe('no-store');
-    expect(mocks.signIn).toHaveBeenCalledWith({ email: 'dev@example.test', password: 'private-test-password' });
-    expect(mocks.setSession).toHaveBeenCalledWith({ access_token: 'private-access-token', refresh_token: 'private-refresh-token' });
+    expect(mocks.signIn).toHaveBeenCalledWith({
+      email: 'dev@example.test',
+      password: 'private-test-password',
+    });
+    expect(mocks.setSession).toHaveBeenCalledWith({
+      access_token: 'private-access-token',
+      refresh_token: 'private-refresh-token',
+    });
     expect(mocks.signOut).not.toHaveBeenCalled();
   });
 
@@ -73,16 +99,23 @@ describe('POST /api/auth/dev-admin', () => {
     expect(mocks.createClient).not.toHaveBeenCalled();
   });
   it('認証に失敗した場合はCookieを発行しない', async () => {
-    mocks.signIn.mockResolvedValue({ error: { message: 'private-provider-error' }, data: { user: null, session: null } });
+    mocks.signIn.mockResolvedValue({
+      error: { message: 'private-provider-error' },
+      data: { user: null, session: null },
+    });
     const response = await POST(request());
     expect(response.status).toBe(500);
     expect(await response.text()).not.toContain('private-provider-error');
     expect(mocks.createServerClient).not.toHaveBeenCalled();
   });
   it('指定外のAuthユーザーにはCookieを発行しない', async () => {
-    mocks.signIn.mockResolvedValue({ error: null, data: {
-      user: { id: 'another-user' }, session: { access_token: 'token', refresh_token: 'refresh' },
-    } });
+    mocks.signIn.mockResolvedValue({
+      error: null,
+      data: {
+        user: { id: 'another-user' },
+        session: { access_token: 'token', refresh_token: 'refresh' },
+      },
+    });
     expect((await POST(request())).status).toBe(403);
     expect(mocks.createServerClient).not.toHaveBeenCalled();
     expect(mocks.signOut).toHaveBeenCalledWith({ scope: 'local' });
