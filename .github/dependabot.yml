@@ -12,6 +12,11 @@ updates:
       patch-updates:
         update-types: [patch]
     # メジャー更新は自動マージしない。既存CIとレビューで互換性を確認する。
+    ignore:
+      # eslint-config-next は Next.js 本体と同じ版で揃える。単独のメジャー更新は
+      # 設定形式の変更で lint が停止するため、Next.js のメジャー移行と同時に行う。
+      - dependency-name: eslint-config-next
+        update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     schedule:
