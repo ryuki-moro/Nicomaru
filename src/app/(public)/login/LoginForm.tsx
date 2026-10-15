@@ -189,6 +189,8 @@ export function LoginForm({
     );
 
     if (linkError || (!authCode && !refreshToken)) {
+      // 着地URL（外部状態）の検査結果を初回マウント時に1度だけ反映する
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(
         'ログインリンクが無効か、有効期限が切れています。メールに記載の6桁のコードをご入力ください',
       );
