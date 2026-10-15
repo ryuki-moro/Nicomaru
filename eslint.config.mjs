@@ -10,12 +10,15 @@ const config = [
   {
     ignores: [
       '.next/**',
+      '.next-dev-admin/**',
       'node_modules/**',
       'next-env.d.ts',
       '.env*/**',
       'coverage/**',
       'playwright-report/**',
       'test-results/**',
+      'Nicomaru/**',
+      'Nicomaru-1/**',
     ],
   },
   // The secure Next lint plugin uses legacy rule APIs; preserve them on ESLint 9.
