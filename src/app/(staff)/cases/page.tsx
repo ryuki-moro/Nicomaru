@@ -214,7 +214,8 @@ export default async function CaseListPage({ searchParams }: Props) {
             <tbody>
               {visible.map((row) => (
                 <tr key={row.id}>
-                  <td>
+                  {/* 案件番号は途中で折り返すと読み違えやすいので1行に保つ（スマホでは表を横に送る） */}
+                  <td className="whitespace-nowrap">
                     <Link href={`/cases/${row.id}`} className="text-link hover:underline">
                       {row.caseCode}
                     </Link>

@@ -128,7 +128,7 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
       {!aiAvailable && !job && (
         <AiUnavailable
           lastSeenAt={lastSeenAt}
-          fallback="起票案は出せませんが、宿題は案件詳細（K02）から手で追加できます。"
+          fallback="起票案は出せませんが、宿題は案件詳細から手で追加できます。"
         />
       )}
 
@@ -142,7 +142,7 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
         <AiJobState
           status={job.status}
           errorMessage={job.error_message}
-          fallback="宿題は案件詳細（K02）から手で追加できます。"
+          fallback="宿題は案件詳細から手で追加できます。"
         />
       )}
 

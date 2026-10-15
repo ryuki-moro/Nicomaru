@@ -18,12 +18,14 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { TaskStatusBadge } from '@/components/ui/StatusBadge';
 import {
   LIST_PAGE_SIZE,
+  SUBMISSION_FORMAT_COUPLE_LABEL,
   TASK_FILTER_TABS,
   TASK_STATUSES,
   TASK_STATUSES_EXCLUDED_FROM_ALL,
+  type SubmissionFormat,
   type TaskStatus,
 } from '@/lib/constants';
-import { formatDateJp, todayInJst } from '@/lib/format';
+import { formatDateJp, formatDueRelative, todayInJst } from '@/lib/format';
 import { daysBetween, type IsoDate } from '@/lib/services/schedule';
 import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -38,6 +40,7 @@ interface TaskRow {
   title: string;
   due_date: IsoDate;
   status: TaskStatus;
+  submission_format: SubmissionFormat;
 }
 
 /** ?tab= を TASK_FILTER_TABS のキーへ解決する。未知の値は既定タブへ寄せる。 */
@@ -73,7 +76,7 @@ export default async function TaskListPage({
   const from = (page - 1) * LIST_PAGE_SIZE;
   const { data, error } = await supabase
     .from('case_tasks')
-    .select('id, title, due_date, status')
+    .select('id, title, due_date, status, submission_format')
     .in('status', [...statuses])
     .order('due_date', { ascending: true })
     .order('display_order', { ascending: true })
@@ -103,19 +106,27 @@ export default async function TaskListPage({
       ) : (
         <ul className="flex flex-col gap-[10px]">
           {tasks.map((task) => {
-            const dueSoon =
-              task.status !== 'confirmed' &&
-              task.status !== 'waived' &&
-              daysBetween(task.due_date, today) <= DUE_SOON_DAYS;
+            // 確認済み・対応不要は手を離れているので、期限の近さ（色・相対表示）を出さない
+            const open = task.status !== 'confirmed' && task.status !== 'waived';
+            const dueSoon = open && daysBetween(task.due_date, today) <= DUE_SOON_DAYS;
             return (
               <li key={task.id}>
                 <Link href={`/mypage/tasks/${task.id}`} className="card flex items-center gap-3">
-                  <span className="flex-1">
+                  <span className="min-w-0 flex-1">
                     <span className="block text-base text-text-primary">{task.title}</span>
-                    <span
-                      className={`block text-label ${dueSoon ? 'text-warning-text' : 'text-text-muted'}`}
-                    >
-                      {formatDateJp(task.due_date)}まで
+                    <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-label">
+                      <span className="rounded-badge border border-border-light px-2 text-caption text-text-secondary">
+                        {SUBMISSION_FORMAT_COUPLE_LABEL[task.submission_format]}
+                      </span>
+                      {/* 日付と相対表示はそれぞれ途中で折り返さない（「あと10」「日」に割れないように） */}
+                      <span className={dueSoon ? 'text-warning-text' : 'text-text-muted'}>
+                        <span className="whitespace-nowrap">{formatDateJp(task.due_date)}まで</span>
+                        {open && (
+                          <span className={`whitespace-nowrap ${dueSoon ? 'font-bold' : ''}`}>
+                            （{formatDueRelative(task.due_date, today)}）
+                          </span>
+                        )}
+                      </span>
                     </span>
                   </span>
                   <TaskStatusBadge status={task.status} />

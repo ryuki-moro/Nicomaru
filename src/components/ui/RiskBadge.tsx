@@ -76,7 +76,15 @@ export function RiskSummary({
   );
 }
 
-/** まだ一度も算出されていない案件の表示。空欄にすると「低い」と読まれる。 */
+/**
+ * まだ一度も算出されていない案件の表示。空欄にすると「低い」と読まれるので「—」を置き、
+ * 一覧で目立たないよう文字は出さない。読み上げと title では「未算出」と伝える。
+ */
 export function RiskNotCalculated() {
-  return <span className="text-caption text-text-muted">未算出</span>;
+  return (
+    <span className="text-caption text-text-muted" title="未算出">
+      <span aria-hidden>—</span>
+      <span className="sr-only">未算出</span>
+    </span>
+  );
 }

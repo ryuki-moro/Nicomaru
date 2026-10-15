@@ -56,6 +56,12 @@ function extensionOf(filename: string): string {
   return ext === 'jpeg' ? 'jpg' : ext;
 }
 
+/** 選んだファイルの大きさを KB／MB で示す（5MB の上限と比べやすい単位にする）。 */
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
 function validateFile(file: File, allowed: AllowedFileType[]): string | null {
   if (file.size > INPUT_LIMITS.fileBytes) return 'ファイルは1件5MBまでにしてください';
   if (!allowed.includes(extensionOf(file.name) as AllowedFileType)) {
@@ -211,19 +217,30 @@ export function SubmitForm({
         <fieldset>
           <legend className="field-label">回答</legend>
           <div className="flex flex-col gap-2">
-            {choices.map((choice) => (
-              <label key={choice} className="card flex items-center gap-3 text-base">
-                <input
-                  type="radio"
-                  name="answer-choice"
-                  value={choice}
-                  checked={selected === choice}
-                  onChange={() => setSelected(choice)}
-                  className="accent-primary"
-                />
-                <span>{choice}</span>
-              </label>
-            ))}
+            {choices.map((choice) => {
+              const checked = selected === choice;
+              // 選択中は枠を太く・色を変えるうえで「選択中」の文字も出す（色だけに頼らない）。
+              // native radio はそのまま残し、キーボード操作とフォーカス表示を保つ。
+              return (
+                <label
+                  key={choice}
+                  className={`card flex cursor-pointer items-center gap-3 text-base ${
+                    checked ? 'border-primary bg-info-bg ring-1 ring-primary' : ''
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="answer-choice"
+                    value={choice}
+                    checked={checked}
+                    onChange={() => setSelected(choice)}
+                    className="accent-primary"
+                  />
+                  <span className={`flex-1 ${checked ? 'font-bold' : ''}`}>{choice}</span>
+                  {checked && <span className="badge bg-primary text-white">選択中</span>}
+                </label>
+              );
+            })}
           </div>
           <FieldError message={fieldErrors.selectedValue} />
         </fieldset>
@@ -231,17 +248,41 @@ export function SubmitForm({
 
       {submissionFormat === 'file' && (
         <div>
-          <label className="field-label" htmlFor="answer-file">
+          <p className="field-label" id="answer-file-label">
             添付ファイル（{allowedFileTypes.join('・')}／1件5MBまで）
-          </label>
-          <input
-            id="answer-file"
-            type="file"
-            accept={accept}
-            className="field"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            aria-invalid={fieldErrors.file || fieldErrors.fileId ? true : undefined}
-          />
+          </p>
+          {/*
+            ブラウザ標準の欄は「Choose File／No file chosen」と英語で出るため、input は見た目だけ隠し
+            日本語のボタン（label）から開く。input は sr-only なのでフォーカス・キーボード操作はそのまま効き、
+            フォーカス中はボタン側に枠を出す（peer-focus-visible）。
+          */}
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              id="answer-file"
+              type="file"
+              accept={accept}
+              className="peer sr-only"
+              aria-labelledby="answer-file-label answer-file-button"
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              aria-invalid={fieldErrors.file || fieldErrors.fileId ? true : undefined}
+            />
+            <label
+              id="answer-file-button"
+              htmlFor="answer-file"
+              className="btn-secondary w-auto cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"
+            >
+              ファイルを選ぶ
+            </label>
+            <span className="text-label text-text-secondary" aria-live="polite">
+              {file ? (
+                <>
+                  {file.name}（{formatFileSize(file.size)}）
+                </>
+              ) : (
+                <span className="text-text-muted">まだ選んでいません</span>
+              )}
+            </span>
+          </div>
           {!file && defaultFileName && (
             <p className="mt-1 text-caption text-text-muted">
               現在の添付: {defaultFileName}（選び直さなければこのまま提出されます）

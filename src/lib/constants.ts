@@ -107,6 +107,17 @@ export const SUBMISSION_FORMAT_LABEL: Record<SubmissionFormat, string> = {
   none: '提出不要',
 };
 
+/**
+ * 新郎新婦向けの回答方法の短いラベル（M02 の一覧に出す）。
+ * SUBMISSION_FORMAT_LABEL はプランナー向けの形式名なので、こちらは「何をすればよいか」の言葉にする。
+ */
+export const SUBMISSION_FORMAT_COUPLE_LABEL: Record<SubmissionFormat, string> = {
+  select: '選ぶ',
+  text: '入力する',
+  file: 'ファイルを送る',
+  none: '確認のみ',
+};
+
 /** 受入ファイル拡張子。ファイルの種別は submission_format ではなくこちらで表現する（表5-10）。 */
 export const ALLOWED_FILE_TYPES = ['csv', 'jpg', 'png'] as const;
 export type AllowedFileType = (typeof ALLOWED_FILE_TYPES)[number];
