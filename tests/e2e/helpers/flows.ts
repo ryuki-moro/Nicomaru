@@ -169,7 +169,15 @@ export async function expectTaskStatus(page: Page, title: string, status: string
 /** テキスト形式の宿題を提出する。成功すると一覧へ戻る */
 export async function submitText(page: Page, answer: string): Promise<void> {
   await page.getByLabel('回答').fill(answer);
-  await page.getByRole('button', { name: '提出する' }).click();
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (res) =>
+        /\/api\/tasks\/[^/]+\/submit$/.test(new URL(res.url()).pathname) &&
+        res.request().method() === 'POST',
+    ),
+    page.getByRole('button', { name: '提出する' }).click(),
+  ]);
+  expect(response.ok(), `E2E_SUBMIT_ACCEPTED: HTTP ${response.status()}`).toBe(true);
   await page.waitForURL(/\/mypage\/tasks$/);
 }
 
