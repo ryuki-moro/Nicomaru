@@ -1,0 +1,32 @@
+name: まとめ（親Issue）
+description: PRが2本以上・2日を超える作業を、子Issueに分けて進めるための親
+labels: [epic]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **このIssue自体では作業しません。** 作ったあと、本文の下にある「Create sub-issue」から子Issueを「作業」の形式で作ります。
+        子Issueがすべて閉じたら、このIssueも閉じます。
+  - type: textarea
+    id: goal
+    attributes:
+      label: ゴール
+      description: 何ができたら全部終わりか、1〜2行で書きます。
+      placeholder: 例) 中間発表で、案件登録から提出確認までを止まらずにデモできる
+    validations:
+      required: true
+  - type: textarea
+    id: children
+    attributes:
+      label: 分け方の予定
+      description: 子Issueにする作業を1行に1つ、「〜する」で書きます。作成後に子Issueへ置き換えます。
+      value: |
+        1.
+        2.
+    validations:
+      required: true
+  - type: input
+    id: deadline
+    attributes:
+      label: 期限
+      placeholder: 例) 2026-11-20（中間発表の前日）
