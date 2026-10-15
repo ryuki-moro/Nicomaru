@@ -62,6 +62,8 @@ export function UsageSummary({
     return <p role="alert">容量集計を読み込めませんでした。時間をおいて再度ご確認ください。</p>;
   if (!snapshot)
     return <p>容量の集計記録はまだありません。日次集計の設定・実行状況をご確認ください。</p>;
+  // Server Component はリクエストごとに1度だけ描画されるため、描画中の現在時刻参照で問題ない
+  // eslint-disable-next-line react-hooks/purity
   const stale = Date.now() - Date.parse(snapshot.measured_at) > 2 * 86_400_000;
   return (
     <div className="mt-3 space-y-2">

@@ -76,6 +76,8 @@ export function InvitationSection({ caseId, readOnly }: { caseId: string; readOn
   }, [caseId]);
 
   useEffect(() => {
+    // 表示時に招待状況をAPIから取得する（外部データとの同期）
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
