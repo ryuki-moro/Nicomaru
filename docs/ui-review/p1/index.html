@@ -115,6 +115,7 @@
           <li><a href="#item-5">5. 案件一覧（プランナー）</a></li>
           <li><a href="#item-6">6. 案件詳細の宿題一覧（プランナー）</a></li>
           <li><a href="#item-7">7. 提出物確認（プランナー）</a></li>
+          <li><a href="#item-8">8. グローバルナビ（全画面）</a></li>
         </ol>
       </nav>
       <section id="item-1">
@@ -477,6 +478,73 @@
             <a href="after/23-mobile-submission-review.png"
               >after/23-mobile-submission-review.png</a
             >
+          </p>
+        </figure>
+      </section>
+      <section id="item-8">
+        <h2>8. グローバルナビ（全画面）</h2>
+        <p class="file">
+          src/components/layout/StaffNav.tsx・staffNavItems.ts・AppHeader.tsx・src/components/couple/CoupleNav.tsx
+        </p>
+        <p class="note">
+          プランナー側はロールごとに開ける画面だけを出す（planner:
+          ダッシュボード・案件一覧・提出物確認・通知履歴／admin:
+          ＋宿題テンプレート・プラン種別・利用者管理／system_admin:
+          ＋利用者管理・式場管理・利用状況）。模擬データにはプランナーしかいないため、画像はプランナーのもの。admin・system_admin
+          の項目は単体テストで確認した。新郎新婦側の固定ナビは高さ54pxで、全画面で本文と重ならないことを確認した。1〜7
+          の変更後の画像にもこのナビが写っている。
+        </p>
+        <figure>
+          <figcaption>
+            <strong>8. グローバルナビ・プランナー（PC）</strong
+            ><br />ヘッダー内にダッシュボード・案件一覧・提出物確認・通知履歴を常設（admin・system_admin
+            には管理画面を追加）。現在地は太字と下線のバーで示す
+          </figcaption>
+          <a href="compare/08-global-nav-staff-pc.png"
+            ><img
+              src="compare/08-global-nav-staff-pc.png"
+              srcset="compare/08-global-nav-staff-pc.png 2x"
+              alt="8. グローバルナビ・プランナー（PC） の変更前と変更後"
+              loading="lazy"
+          /></a>
+          <p class="src">
+            変更前: <a href="before/02-planner-dashboard.png">before/02-planner-dashboard.png</a> ／
+            変更後: <a href="after/02-planner-dashboard.png">after/02-planner-dashboard.png</a>
+          </p>
+        </figure>
+        <figure>
+          <figcaption>
+            <strong>8. グローバルナビ・プランナー（スマホ）</strong
+            ><br />スマホ幅でも横スクロールせず、全項目を折り返して表示
+          </figcaption>
+          <a href="compare/08-global-nav-staff-mobile.png"
+            ><img
+              src="compare/08-global-nav-staff-mobile.png"
+              srcset="compare/08-global-nav-staff-mobile.png 2x"
+              alt="8. グローバルナビ・プランナー（スマホ） の変更前と変更後"
+              loading="lazy"
+          /></a>
+          <p class="src">
+            変更前: <a href="before/21-mobile-case-list.png">before/21-mobile-case-list.png</a> ／
+            変更後: <a href="after/21-mobile-case-list.png">after/21-mobile-case-list.png</a>
+          </p>
+        </figure>
+        <figure>
+          <figcaption>
+            <strong>8. グローバルナビ・新郎新婦（スマホ）</strong
+            ><br />下部固定ナビにアイコンを付け、現在地は色に加えて上部のバーと太字で示す。並びはホーム・宿題・準備の流れ・挙式情報・アカウント
+          </figcaption>
+          <a href="compare/08-global-nav-couple-mobile.png"
+            ><img
+              src="compare/08-global-nav-couple-mobile.png"
+              srcset="compare/08-global-nav-couple-mobile.png 2x"
+              alt="8. グローバルナビ・新郎新婦（スマホ） の変更前と変更後"
+              loading="lazy"
+          /></a>
+          <p class="src">
+            変更前:
+            <a href="before/13-mobile-couple-tasks.png">before/13-mobile-couple-tasks.png</a> ／
+            変更後: <a href="after/13-mobile-couple-tasks.png">after/13-mobile-couple-tasks.png</a>
           </p>
         </figure>
       </section>
