@@ -45,15 +45,22 @@ export async function createCase(page: Page, input: CaseInput): Promise<CreatedC
   await page.goto('/cases/new');
   await expect(page.getByRole('heading', { name: '案件登録' })).toBeVisible();
 
-  await page.getByLabel('挙式日（必須）').fill(futureDate(90));
+  await page
+    .getByLabel('プラン種別（必須）')
+    .selectOption({ label: input.planTypeName ?? '少人数婚' });
+  // SSR直後は入力欄が見えてもReactのイベント処理がまだ始まっていないことがある。
+  // 日付がアプリの状態に反映され、宿題プレビューが出るまで入力だけを再試行する。
+  await expect(async () => {
+    await page.getByLabel('挙式日（必須）').fill(futureDate(90));
+    await expect(
+      page.getByRole('heading', { name: '割当宿題プレビュー' }).locator('..').getByRole('list'),
+    ).toBeVisible();
+  }).toPass({ timeout: 20_000 });
   await page.getByLabel('新郎氏名（必須）').fill(input.groomName);
   await page.getByLabel('新婦氏名（必須）').fill(input.brideName);
   await page.getByLabel('主連絡先（必須）').selectOption(input.primaryContact);
   await page.getByLabel('連絡先（メール・必須）').fill(input.contactEmail);
   await page.getByLabel('連絡起点（必須）').selectOption('email');
-  await page
-    .getByLabel('プラン種別（必須）')
-    .selectOption({ label: input.planTypeName ?? '少人数婚' });
   await page.getByRole('button', { name: '登録する' }).click();
 
   await expect(page.getByRole('heading', { name: '案件を登録しました' })).toBeVisible({
@@ -108,9 +115,13 @@ async function fillRegistration(
 ) {
   await page.goto(toPath(inviteUrl));
   await expect(page.getByRole('heading', { name: 'はじめての設定' })).toBeVisible();
-  await page.getByLabel('メールアドレス').fill(who.email);
-  await page.getByLabel('お名前').fill(who.name);
-  await page.getByLabel('利用規約と個人情報の取り扱いに同意します').check();
+  await expect(async () => {
+    await page.getByLabel('お名前').fill(who.name);
+    await page.getByLabel('利用規約と個人情報の取り扱いに同意します').check();
+    await page.getByLabel('メールアドレス').fill(who.email);
+    await expect(page.getByLabel('お名前')).toHaveValue(who.name);
+    await expect(page.getByLabel('利用規約と個人情報の取り扱いに同意します')).toBeChecked();
+  }).toPass({ timeout: 20_000 });
   await page.getByRole('button', { name: '登録してマイページへ' }).click();
 }
 

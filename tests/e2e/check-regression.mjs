@@ -15,6 +15,9 @@ if (!env.CI && existsSync('.env.local')) {
   }
 }
 delete env.E2E_INJECT_SHARED_SUBMIT_CONFLICT;
+delete env.PLAYWRIGHT_JSON_OUTPUT_FILE;
+delete env.PLAYWRIGHT_JSON_OUTPUT_NAME;
+delete env.PLAYWRIGHT_JSON_OUTPUT_DIR;
 
 for (const key of [
   'NEXT_PUBLIC_SUPABASE_URL',
