@@ -144,7 +144,7 @@ export default async function SystemStatusPage() {
       <section>
         <h2 className="section-head">定期処理の直近の実行結果</h2>
         <p className="mt-1 text-caption text-text-muted">
-          pg_net は結果を待たずに送るため、失敗はこの記録でしか分かりません（6-12）。
+          pg_net は結果を待たずに送るため、失敗はこの記録でしか分かりません。
         </p>
         {batches.error ? (
           <p className="mt-2" role="alert">
