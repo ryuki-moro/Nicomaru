@@ -22,6 +22,7 @@
     "bootstrap:admin": "tsx scripts/bootstrap-system-admin.mts",
     "demo:seed": "tsx scripts/seed-demo.mts",
     "demo:reset": "tsx scripts/seed-demo.mts --reset",
+    "screenshots": "tsx scripts/screenshots.mts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:coverage": "vitest run --config vitest.coverage.config.ts",
