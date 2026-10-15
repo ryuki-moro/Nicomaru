@@ -68,7 +68,8 @@ T01〜T03／U01〜U04。Phase 1時点の26テーブル・RLS・業務RPC。現�
 
 - **ジョブキュー**（9-6）: `claim_ai_job`（for update skip locked のプル型）／`complete_ai_job`／
   `reclaim_stalled_ai_jobs`／`enqueue_ai_job`／`review_ai_job`
-- **最小権限**: ワーカーには Service Role Key を配らず、2関数だけを `ai_worker` ロールへ付与。
+- **最小権限**: ワーカーには Service Role Key を配らず、3関数（`claim_ai_job`／`complete_ai_job`／
+  `ai_worker_ping`）だけを `ai_worker` ロールへ付与。
   `ai_jobs` を直接 select すらできない（7-3）
 - **入出力スキーマ**（7-2）: job_type ごとに zod で定義した単一ソース。
   ワーカーは検証を通してからでないと保存できない
