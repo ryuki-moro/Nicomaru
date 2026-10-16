@@ -45,15 +45,22 @@ export async function createCase(page: Page, input: CaseInput): Promise<CreatedC
   await page.goto('/cases/new');
   await expect(page.getByRole('heading', { name: '案件登録' })).toBeVisible();
 
-  await page.getByLabel('挙式日（必須）').fill(futureDate(90));
+  await page
+    .getByLabel('プラン種別（必須）')
+    .selectOption({ label: input.planTypeName ?? '少人数婚' });
+  // SSR直後は入力欄が見えてもReactのイベント処理がまだ始まっていないことがある。
+  // 日付がアプリの状態に反映され、宿題プレビューが出るまで入力だけを再試行する。
+  await expect(async () => {
+    await page.getByLabel('挙式日（必須）').fill(futureDate(90));
+    await expect(
+      page.getByRole('heading', { name: '割当宿題プレビュー' }).locator('..').getByRole('list'),
+    ).toBeVisible();
+  }).toPass({ timeout: 20_000 });
   await page.getByLabel('新郎氏名（必須）').fill(input.groomName);
   await page.getByLabel('新婦氏名（必須）').fill(input.brideName);
   await page.getByLabel('主連絡先（必須）').selectOption(input.primaryContact);
   await page.getByLabel('連絡先（メール・必須）').fill(input.contactEmail);
   await page.getByLabel('連絡起点（必須）').selectOption('email');
-  await page
-    .getByLabel('プラン種別（必須）')
-    .selectOption({ label: input.planTypeName ?? '少人数婚' });
   await page.getByRole('button', { name: '登録する' }).click();
 
   await expect(page.getByRole('heading', { name: '案件を登録しました' })).toBeVisible({
@@ -108,9 +115,13 @@ async function fillRegistration(
 ) {
   await page.goto(toPath(inviteUrl));
   await expect(page.getByRole('heading', { name: 'はじめての設定' })).toBeVisible();
-  await page.getByLabel('メールアドレス').fill(who.email);
-  await page.getByLabel('お名前').fill(who.name);
-  await page.getByLabel('利用規約と個人情報の取り扱いに同意します').check();
+  await expect(async () => {
+    await page.getByLabel('お名前').fill(who.name);
+    await page.getByLabel('利用規約と個人情報の取り扱いに同意します').check();
+    await page.getByLabel('メールアドレス').fill(who.email);
+    await expect(page.getByLabel('お名前')).toHaveValue(who.name);
+    await expect(page.getByLabel('利用規約と個人情報の取り扱いに同意します')).toBeChecked();
+  }).toPass({ timeout: 20_000 });
   await page.getByRole('button', { name: '登録してマイページへ' }).click();
 }
 
@@ -169,7 +180,15 @@ export async function expectTaskStatus(page: Page, title: string, status: string
 /** テキスト形式の宿題を提出する。成功すると一覧へ戻る */
 export async function submitText(page: Page, answer: string): Promise<void> {
   await page.getByLabel('回答').fill(answer);
-  await page.getByRole('button', { name: '提出する' }).click();
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (res) =>
+        /\/api\/tasks\/[^/]+\/submit$/.test(new URL(res.url()).pathname) &&
+        res.request().method() === 'POST',
+    ),
+    page.getByRole('button', { name: '提出する' }).click(),
+  ]);
+  expect(response.ok(), `E2E_SUBMIT_ACCEPTED: HTTP ${response.status()}`).toBe(true);
   await page.waitForURL(/\/mypage\/tasks$/);
 }
 

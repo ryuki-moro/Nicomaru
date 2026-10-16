@@ -72,6 +72,16 @@ test('案件登録から確認までを通しで行える', async ({ page, brows
 });
 
 test('片方が一時保存しても、もう片方が同じ宿題を提出できる', async ({ page, browser }) => {
+  if (process.env.E2E_INJECT_SHARED_SUBMIT_CONFLICT === '1') {
+    for (const value of [
+      process.env.APP_BASE_URL ?? 'http://localhost:3000',
+      process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+    ]) {
+      const url = new URL(value);
+      expect(['localhost', '127.0.0.1', '[::1]']).toContain(url.hostname);
+    }
+  }
+
   const planner = await createPlanner();
   await loginAsPlanner(page, planner);
 
@@ -97,17 +107,46 @@ test('片方が一時保存しても、もう片方が同じ宿題を提出で�
     name: '佐藤 一郎',
   });
 
+  // 負例はローカルの使い捨て環境だけで実行する（check-regression.mjs）。
+  // 新郎のブラウザ内でのみ過去の409を再現し、アプリ・DB・共有環境は変更しない。
+  if (process.env.E2E_INJECT_SHARED_SUBMIT_CONFLICT === '1') {
+    await groom.route('**/api/tasks/*/submit', async (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      await route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: {
+            code: 'CONFLICT',
+            message: 'E2E regression: shared draft conflict',
+            details: [],
+          },
+        }),
+      });
+    });
+  }
+
   // 新婦が書きかけを保存する
   await openTask(bride, TEXT_TASK);
-  await saveDraftText(bride, '（新婦の下書き）入場曲は検討中');
+  const draft = '（新婦の下書き）入場曲は検討中';
+  await saveDraftText(bride, draft);
+  await bride.reload();
+  await expect(bride.getByLabel('回答')).toHaveValue(draft);
 
   // 新郎には下書きは見えないが、提出は通る（以前は 409 で二度と提出できなくなった）
   await openTask(groom, TEXT_TASK);
   await expect(groom.getByLabel('回答')).toHaveValue('');
-  await submitText(groom, '入場: 結婚行進曲');
+  const answer = '入場: 結婚行進曲';
+  await submitText(groom, answer);
 
   await expectTaskStatus(groom, TEXT_TASK, '提出済');
   await expectTaskStatus(bride, TEXT_TASK, '提出済');
+
+  // バッジだけでなく、両者が再取得した最新本文も一致する。
+  await openTask(groom, TEXT_TASK);
+  await expect(groom.getByLabel('回答')).toHaveValue(answer);
+  await openTask(bride, TEXT_TASK);
+  await expect(bride.getByLabel('回答')).toHaveValue(answer);
 
   await brideContext.close();
   await groomContext.close();
