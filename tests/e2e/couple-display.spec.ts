@@ -90,6 +90,11 @@ test('回答方法・期限・状態タブとマイページの導線が表示�
     );
 
     await tabs.getByRole('link', { name: '対応不要' }).click();
+    await expect(couple).toHaveURL(/\/mypage\/tasks\?tab=waived$/);
+    await expect(tabs.getByRole('link', { name: '対応不要' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     await expect(couple.getByText('このタブに表示する宿題はありません。')).toBeVisible();
     await couple.goto(`${appBase}/mypage/tasks?tab=unknown`);
     await expect(tabs.getByRole('link', { name: 'すべて' })).toHaveAttribute(
