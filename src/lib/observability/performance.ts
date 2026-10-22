@@ -6,6 +6,7 @@ const ROUTES = [
   '/api/ai/jobs/[jobId]',
   '/api/ai/status',
   '/api/auth/complete-invite',
+  '/api/auth/dev-admin',
   '/api/auth/initial-register',
   '/api/auth/otp-request',
   '/api/auth/otp-verify',

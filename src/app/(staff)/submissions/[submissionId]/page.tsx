@@ -188,36 +188,31 @@ export default async function SubmissionReviewPage({
 
       <section className="card mt-4">
         <h2 className="text-label font-bold text-text-primary">提出内容</h2>
-        <dl className="mt-2 grid gap-2 text-label text-text-secondary">
-          <Row label="提出形式">{SUBMISSION_FORMAT_LABEL[submission.submission_type]}</Row>
-          <Row label="提出日時">{formatDateTime(submission.submitted_at)}</Row>
-          <Row label="宿題の期限">{formatDate(task.due_date)}</Row>
-          <Row label="宿題の状態">
-            <TaskStatusBadge status={task.status} />
-          </Row>
-        </dl>
 
-        <div className="mt-3 border-t border-border-light pt-3">
+        {/* 確認の主役は回答そのもの。本文を最上部に大きく置き、提出形式・日時などは下に小さく添える */}
+        <div className="mt-2">
           {submission.submission_type === 'text' && (
-            <p className="whitespace-pre-wrap text-label text-text-primary">
+            <p className="whitespace-pre-wrap text-base text-text-primary">
               {textValue || '（入力なし）'}
             </p>
           )}
 
           {submission.submission_type === 'select' && (
-            <p className="text-label text-text-primary">
+            <p className="text-title font-bold text-text-primary">
               {submission.selected_value ?? '（未選択）'}
             </p>
           )}
 
           {submission.submission_type === 'file' &&
             (submission.storage_files ? (
-              <SubmissionFileLink
-                fileId={submission.storage_files.id}
-                fileName={submission.storage_files.original_filename ?? '添付ファイル'}
-              />
+              <div className="text-base">
+                <SubmissionFileLink
+                  fileId={submission.storage_files.id}
+                  fileName={submission.storage_files.original_filename ?? '添付ファイル'}
+                />
+              </div>
             ) : (
-              <p className="text-label text-text-muted">添付ファイルは削除されています。</p>
+              <p className="text-base text-text-muted">添付ファイルは削除されています。</p>
             ))}
 
           {submission.submission_type === 'file' && submission.storage_files?.file_size_bytes && (
@@ -228,7 +223,7 @@ export default async function SubmissionReviewPage({
 
           {/* 6-7: submission_format='none'（確認のみ）も1行の提出として扱う */}
           {submission.submission_type === 'none' && (
-            <p className="text-label text-text-primary">内容を確認した旨の報告を受け取りました。</p>
+            <p className="text-base text-text-primary">内容を確認した旨の報告を受け取りました。</p>
           )}
 
           {/* CSV 等の構造化提出内容。取り込み結果をそのまま確認できるようにしておく（5-3） */}
@@ -238,6 +233,15 @@ export default async function SubmissionReviewPage({
             </pre>
           )}
         </div>
+
+        <dl className="mt-3 grid gap-1 border-t border-border-light pt-3 text-caption text-text-secondary">
+          <Row label="提出形式">{SUBMISSION_FORMAT_LABEL[submission.submission_type]}</Row>
+          <Row label="提出日時">{formatDateTime(submission.submitted_at)}</Row>
+          <Row label="宿題の期限">{formatDate(task.due_date)}</Row>
+          <Row label="宿題の状態">
+            <TaskStatusBadge status={task.status} />
+          </Row>
+        </dl>
 
         {submission.comment && (
           <div className="mt-3 border-t border-border-light pt-3">
@@ -281,7 +285,7 @@ export default async function SubmissionReviewPage({
           </h2>
           <p className="mt-1 text-label text-text-secondary">
             {isWaived
-              ? '案件詳細（K02）で「対応不要」に設定されているため、確認の必要はありません。' +
+              ? '案件詳細で「対応不要」に設定されているため、確認の必要はありません。' +
                 '確認が必要な場合は、案件詳細で対応不要を解除してください。'
               : submission.reviewed_at
                 ? `${formatDateTime(submission.reviewed_at)} に確認結果を登録しました。`
