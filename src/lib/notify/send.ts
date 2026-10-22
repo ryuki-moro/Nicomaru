@@ -17,7 +17,7 @@
  * LINE も同じ形（未構成・HTTPエラー・例外の3経路を SendResult へ畳む）にそろえる。
  */
 import type { ContactChannel } from '@/lib/constants';
-import { sendMail, type SendResult } from '@/lib/notify/mailer';
+import { sendMail, type SendResult, type DeliveryOptions } from '@/lib/notify/mailer';
 
 // 結果の型は mailer.ts に1つだけ置く。呼び出し側が送信手段を意識せず使えるよう再公開する。
 export type { SendResult };
@@ -58,8 +58,13 @@ function buildBody(message: InvitationMessage): string {
  * Resend への POST は mailer.ts の sendMail に一本化してあるので、ここは本文を組んで結果を写すだけ。
  * 未構成・HTTPエラー・例外はすべて sendMail が SendResult へ畳んで返す。
  */
-export function sendEmail(to: string, subject: string, text: string): Promise<SendResult> {
-  return sendMail({ to, subject, text });
+export function sendEmail(
+  to: string,
+  subject: string,
+  text: string,
+  options?: DeliveryOptions,
+): Promise<SendResult> {
+  return sendMail({ to, subject, text }, options);
 }
 
 /**
@@ -68,30 +73,62 @@ export function sendEmail(to: string, subject: string, text: string): Promise<Se
  * 招待URLの送付（Phase 1）と通知（Phase 2、7-1）の両方がここを通る。
  * 用途ごとに fetch を写して持つと、例外の扱いが片方だけ直る事故が起きる。
  */
-export async function sendLine(lineUserId: string, text: string): Promise<SendResult> {
+export async function sendLine(
+  lineUserId: string,
+  text: string,
+  options: DeliveryOptions = {},
+): Promise<SendResult> {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token) {
-    return { delivered: false, reason: 'not_configured', skippedReason: LINE_NOT_CONFIGURED };
+    return {
+      delivered: false,
+      reason: 'not_configured',
+      skippedReason: LINE_NOT_CONFIGURED,
+      outcome: 'not_configured',
+    };
   }
 
   try {
     const response = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+        ...(options.idempotencyKey ? { 'X-Line-Retry-Key': options.idempotencyKey } : {}),
+      },
+      signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({ to: lineUserId, messages: [{ type: 'text', text }] }),
     });
 
+    const acceptedId = response.headers.get('x-line-accepted-request-id');
+    if (options.idempotencyKey && response.status === 409 && acceptedId) {
+      return { delivered: true, outcome: 'accepted', providerMessageId: acceptedId };
+    }
     if (!response.ok) {
       // 本文にはトークンが含まれるためログへ残さない（9章）。状態コードのみ記録する。
       console.error('[notify] line push failed', response.status);
-      return { delivered: false, reason: 'provider_error', skippedReason: LINE_ERROR };
+      return {
+        delivered: false,
+        reason: 'provider_error',
+        skippedReason: LINE_ERROR,
+        outcome: response.status >= 500 ? 'unknown' : 'rejected',
+      };
     }
-    return { delivered: true };
-  } catch (error) {
+    return {
+      delivered: true,
+      outcome: 'accepted',
+      providerMessageId: response.headers.get('x-line-request-id'),
+    };
+  } catch {
     // 例外を素通しすると、招待の発行は成功しているのに 500 になり、
     // その応答でしか返らない平文の招待URLを失う（6-3-6）。送信失敗として畳む。
-    console.error('[notify] line push threw', error);
-    return { delivered: false, reason: 'provider_error', skippedReason: LINE_ERROR };
+    console.error('[notify] line push ended with unknown result');
+    return {
+      delivered: false,
+      reason: 'provider_error',
+      skippedReason: LINE_ERROR,
+      outcome: 'unknown',
+    };
   }
 }
 

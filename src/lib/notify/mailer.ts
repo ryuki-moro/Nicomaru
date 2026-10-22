@@ -13,10 +13,8 @@
  *
  * 【RESEND_API_KEY が無い環境】
  * 13-1 の決定により、Phase 1 の開発段階は「開発者宛送信で検証できる段階」を設ける。
- * キー未設定のときは送信せず、宛先・件名・本文をサーバーログへ出して処理を続行する。
+ * キー未設定のときは送信せず、宛先・件名・本文をログへ出さずに処理を続行する。
  * 送信できなかった事実は SendResult で呼び出し元へ返し、画面に注意文として表示させる。
- * 設定リンクを含む本文をログへ出すのはキー未設定のローカル開発時に限られる（本番では
- * キーが必ず設定されるため到達しない）。
  *
  * 【Resend への POST はこの1箇所だけ】
  * 招待送信（notify/send.ts）にも同じ POST があったが、そちらは fetch の例外を握っておらず、
@@ -54,6 +52,13 @@ export interface SendResult {
   skippedReason?: string;
   /** 送信できたときのプロバイダ側ID。障害時の突き合わせに使う */
   providerMessageId?: string | null;
+  /** acceptedはprovider受付であり、到達・既読を保証しない。 */
+  outcome?: 'accepted' | 'unknown' | 'retryable' | 'rejected' | 'not_configured';
+}
+
+export interface DeliveryOptions {
+  idempotencyKey?: string;
+  from?: string;
 }
 
 const NOT_CONFIGURED_MESSAGE = 'メール送信の設定が未構成のため、送信は行われていません';
@@ -64,22 +69,32 @@ export function appBaseUrl(): string {
   return process.env.APP_BASE_URL ?? 'http://localhost:3000';
 }
 
-export async function sendMail(message: MailMessage): Promise<SendResult> {
+export async function sendMail(
+  message: MailMessage,
+  options: DeliveryOptions = {},
+): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM;
+  const from = options.from ?? process.env.RESEND_FROM;
 
   if (!apiKey || !from) {
-    console.info(
-      '[mail] RESEND_API_KEY／RESEND_FROM が未設定のため送信をスキップしました（13-1 開発者宛検証段階）\n' +
-        `  to: ${message.to}\n  subject: ${message.subject}\n${message.text}`,
-    );
-    return { delivered: false, reason: 'not_configured', skippedReason: NOT_CONFIGURED_MESSAGE };
+    console.info('[mail] メール送信設定が未構成のため送信をスキップしました');
+    return {
+      delivered: false,
+      reason: 'not_configured',
+      skippedReason: NOT_CONFIGURED_MESSAGE,
+      outcome: 'not_configured',
+    };
   }
 
   try {
     const response = await fetch(RESEND_ENDPOINT, {
       method: 'POST',
-      headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        'content-type': 'application/json',
+        ...(options.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
+      },
+      signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({
         from,
         to: [message.to],
@@ -89,19 +104,36 @@ export async function sendMail(message: MailMessage): Promise<SendResult> {
     });
 
     if (!response.ok) {
-      // 本文には宛先が含まれるため、詳細はサーバーログにのみ残す（9章）
-      console.error('[mail] 送信に失敗しました', response.status, await response.text());
-      return { delivered: false, reason: 'provider_error', skippedReason: PROVIDER_ERROR_MESSAGE };
+      console.error('[mail] 送信に失敗しました', response.status);
+      const errorBody = (await response.json().catch(() => ({}))) as { name?: string };
+      const outcome =
+        response.status >= 500
+          ? 'unknown'
+          : response.status === 429 ||
+              (response.status === 409 && errorBody.name === 'concurrent_idempotent_requests')
+            ? 'retryable'
+            : 'rejected';
+      return {
+        delivered: false,
+        reason: 'provider_error',
+        skippedReason: PROVIDER_ERROR_MESSAGE,
+        outcome,
+      };
     }
 
     // 送信自体は成功している。応答本文の解釈に失敗しても「送れなかった」と誤って伝えない。
     const body = (await response.json().catch(() => ({}))) as { id?: string };
-    return { delivered: true, providerMessageId: body.id ?? null };
-  } catch (error) {
+    return { delivered: true, providerMessageId: body.id ?? null, outcome: 'accepted' };
+  } catch {
     // fetch は DNS障害・タイムアウト・接続断で例外になる。ここで throw すると
     // 呼び出し元（招待URLの発行応答など）ごと 500 になり、発行済みの平文URLを失う（6-3-6）。
-    console.error('[mail] 送信要求が例外で終了しました', error);
-    return { delivered: false, reason: 'provider_error', skippedReason: PROVIDER_ERROR_MESSAGE };
+    console.error('[mail] 送信要求が結果不明で終了しました');
+    return {
+      delivered: false,
+      reason: 'provider_error',
+      skippedReason: PROVIDER_ERROR_MESSAGE,
+      outcome: 'unknown',
+    };
   }
 }
 

@@ -65,13 +65,14 @@ export interface SeededUser {
 export class TestDb {
   private constructor(readonly pg: PGlite) {}
 
-  static async create(options: { seed?: boolean } = {}): Promise<TestDb> {
+  static async create(options: { seed?: boolean; beforeMigration?: string } = {}): Promise<TestDb> {
     // Supabase では既定で有効な pgcrypto を PGlite にも読み込ませる
     const pg = new PGlite({ extensions: { pgcrypto } });
     await pg.exec(SUPABASE_STUB);
 
     for (const file of readdirSync(MIGRATIONS_DIR)
       .filter((f) => f.endsWith('.sql'))
+      .filter((f) => !options.beforeMigration || f < options.beforeMigration)
       .sort()) {
       const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf8');
       try {

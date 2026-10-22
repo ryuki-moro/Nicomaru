@@ -78,6 +78,51 @@ afterAll(async () => {
   await db?.close();
 });
 
+d('通知送信の排他と宿題キー', () => {
+  it('同じ通知へ8並列の送信権要求を出しても1件だけ取得する', async () => {
+    const inserted = await db.asOwner((q) =>
+      q(
+        `insert into notifications
+      (venue_id,case_id,recipient_user_id,channel,notification_type,title,body)
+      values ($1,$2,$3,'email','info','件名','本文') returning id`,
+        [venueId, caseId, coupleProfileId],
+      ),
+    );
+    const id = inserted.rows[0].id;
+    const results = await Promise.all(
+      Array.from({ length: 8 }, () =>
+        db.asOwner((q) =>
+          q(`select * from claim_notification_delivery($1,'from@example.test')`, [id]),
+        ),
+      ),
+    );
+    expect(results.filter((r) => r.rows.length === 1)).toHaveLength(1);
+  });
+  it('同じ宿題キーの8並列作成は1件だけで、別宿題の通知を失わない', async () => {
+    const task = await db.asOwner((q) =>
+      q(
+        `insert into case_tasks(case_id,title,due_date) values ($1,'通知競合試験',current_date) returning id`,
+        [caseId],
+      ),
+    );
+    const taskId = task.rows[0].id;
+    const results = await Promise.all(
+      Array.from({ length: 8 }, () =>
+        db.asOwner((q) =>
+          q(
+            `insert into notifications
+      (venue_id,case_id,recipient_user_id,channel,notification_type,title,body,task_id,event_on)
+      values ($1,$2,$3,'in_app','overdue','件名','本文',$4,current_date)
+      on conflict (case_id,task_id,recipient_user_id,notification_type,event_on) do nothing returning id`,
+            [venueId, caseId, coupleProfileId, taskId],
+          ),
+        ),
+      ),
+    );
+    expect(results.reduce((sum, r) => sum + r.rows.length, 0)).toBe(1);
+  });
+});
+
 d('招待トークンの原子的な消費（6-6-1）', () => {
   it('同一トークンへ同時に8リクエストを投げても1つしか通らない', async () => {
     const tokenHash = 'concurrent-token-hash-1';

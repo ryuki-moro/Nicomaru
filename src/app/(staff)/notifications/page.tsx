@@ -32,7 +32,7 @@ const CHANNEL_LABEL: Record<string, string> = {
 
 const STATUS_LABEL: Record<string, string> = {
   queued: '送信待ち',
-  sent: '送信済み',
+  sent: '外部サービス受付済み／アプリ内掲載済み',
   failed: '送信失敗',
   read: '既読',
   cancelled: '取り消し',
@@ -50,6 +50,12 @@ interface NotificationRow {
   created_at: string;
   wedding_cases: { case_code: string } | null;
   notification_logs: { provider: string; status: string; attempt_no: number }[];
+  notification_deliveries: {
+    state: string;
+    attempt_count: number;
+    next_attempt_at: string;
+    last_result: string | null;
+  } | null;
 }
 
 interface Props {
@@ -68,7 +74,8 @@ export default async function NotificationHistoryPage({ searchParams }: Props) {
     .select(
       `id, case_id, channel, notification_type, title, status, sent_at, created_at,
        wedding_cases ( case_code ),
-       notification_logs ( provider, status, attempt_no )`,
+       notification_logs ( provider, status, attempt_no ),
+       notification_deliveries ( state, attempt_count, next_attempt_at, last_result )`,
     )
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
@@ -95,6 +102,9 @@ export default async function NotificationHistoryPage({ searchParams }: Props) {
       </nav>
 
       <h1 className="section-head">通知履歴</h1>
+      <p className="text-caption text-text-muted">
+        受付済みは配信サービスの受付を表し、到達・既読を保証しません。結果不明の通知は同じ送信キーで再確認し、期限を超えたものは自動再送せず要確認になります。
+      </p>
 
       {error && (
         <div role="alert" className="banner-error">
@@ -134,7 +144,35 @@ export default async function NotificationHistoryPage({ searchParams }: Props) {
                   <td>{NOTIFICATION_TYPE_LABEL[row.notification_type]}</td>
                   <td>{row.title}</td>
                   <td>{CHANNEL_LABEL[row.channel] ?? row.channel}</td>
-                  <td>{STATUS_LABEL[row.status] ?? row.status}</td>
+                  <td>
+                    {row.status === 'read'
+                      ? 'アプリ内で既読'
+                      : (STATUS_LABEL[row.status] ?? row.status)}
+                    {row.notification_deliveries && (
+                      <p className="text-caption">
+                        {
+                          (
+                            {
+                              pending: '送信待ち',
+                              processing: '送信処理中',
+                              retry: '再試行待ち',
+                              sent: '受付済み／掲載済み',
+                              review: '要確認（自動再送停止）',
+                              cancelled: '取り消し',
+                            } as Record<string, string>
+                          )[row.notification_deliveries.state]
+                        }
+                        {' / '}
+                        {row.notification_deliveries.attempt_count}回試行
+                        {row.notification_deliveries.last_result === 'unknown' &&
+                          ' / 外部受付の結果不明'}
+                        {row.notification_deliveries.last_result === 'legacy_unverified' &&
+                          ' / 旧版の送信結果を確認してください'}
+                        {row.notification_deliveries.state === 'retry' &&
+                          ` / 次回 ${formatDateTime(row.notification_deliveries.next_attempt_at)}`}
+                      </p>
+                    )}
+                  </td>
                   <td>
                     {row.notification_logs.length === 0
                       ? '—'
@@ -142,7 +180,7 @@ export default async function NotificationHistoryPage({ searchParams }: Props) {
                           .map(
                             (log) =>
                               `${CHANNEL_LABEL[log.provider] ?? log.provider}：` +
-                              `${log.status === 'success' ? '成功' : '失敗'}` +
+                              `${log.status === 'success' ? '受付済み' : '未受付／結果不明'}` +
                               (log.attempt_no > 1 ? `（${log.attempt_no}回目）` : ''),
                           )
                           .join(' / ')}

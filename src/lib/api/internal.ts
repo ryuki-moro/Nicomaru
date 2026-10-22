@@ -136,23 +136,39 @@ export async function forEachActiveCase(
   admin: SupabaseClient,
   handler: (caseId: string, venueId: string) => Promise<void>,
 ): Promise<number> {
-  const venues = await admin.from('venues').select('id').eq('active', true);
-  if (venues.error) throw new Error(venues.error.message);
-
+  let venueCursor: string | undefined;
   let processed = 0;
-  for (const venue of (venues.data ?? []) as { id: string }[]) {
-    const cases = await admin
-      .from('wedding_cases')
-      .select('id')
-      .eq('venue_id', venue.id)
-      .is('archived_at', null)
-      .in('status', ['draft', 'active']);
-    if (cases.error) throw new Error(cases.error.message);
+  while (true) {
+    let venueQuery = admin.from('venues').select('id').eq('active', true).order('id').limit(500);
+    if (venueCursor) venueQuery = venueQuery.gt('id', venueCursor);
+    const venues = await venueQuery;
+    if (venues.error) throw new Error(venues.error.message);
 
-    for (const row of (cases.data ?? []) as { id: string }[]) {
-      await handler(row.id, venue.id);
-      processed += 1;
+    for (const venue of (venues.data ?? []) as { id: string }[]) {
+      let caseCursor: string | undefined;
+      while (true) {
+        let caseQuery = admin
+          .from('wedding_cases')
+          .select('id')
+          .eq('venue_id', venue.id)
+          .is('archived_at', null)
+          .in('status', ['draft', 'active'])
+          .order('id')
+          .limit(500);
+        if (caseCursor) caseQuery = caseQuery.gt('id', caseCursor);
+        const cases = await caseQuery;
+        if (cases.error) throw new Error(cases.error.message);
+
+        for (const row of (cases.data ?? []) as { id: string }[]) {
+          await handler(row.id, venue.id);
+          processed += 1;
+        }
+        if ((cases.data?.length ?? 0) < 500) break;
+        caseCursor = (cases.data as { id: string }[]).at(-1)!.id;
+      }
     }
+    if ((venues.data?.length ?? 0) < 500) break;
+    venueCursor = (venues.data as { id: string }[]).at(-1)!.id;
   }
   return processed;
 }

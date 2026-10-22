@@ -9,11 +9,13 @@
  * 文面は付録D のテンプレートから組み立てる。自由文を直接送らせないのは、
  * 第11章「通知文面レビュー」が求める文面の統制を、送信経路の側で担保するため。
  */
+import { createHash } from 'node:crypto';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireStaff } from '@/lib/auth/session';
 import { COUPLE_PROFILE_COLUMNS } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { badRequest, fromPostgresError, notFound } from '@/lib/errors';
+import { todayInJst } from '@/lib/format';
 import { checkNotificationText, renderNotification } from '@/lib/notify/templates';
 import { dispatchNotification, type NotificationRow } from '@/lib/services/notifications';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
@@ -59,13 +61,37 @@ export const POST = route(async (request: Request) => {
     );
   }
 
-  const created = await supabase.rpc('create_notification', {
+  const requestKey = request.headers.get('Idempotency-Key');
+  if (
+    requestKey &&
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestKey)
+  ) {
+    throw badRequest([], '送信キーはUUIDで指定してください');
+  }
+  // 旧クライアントは同日の同じ内容を同一要求として扱う。意図した別送信は新しいUUIDで指定する。
+  const eventKey =
+    requestKey ??
+    createHash('sha256')
+      .update(
+        JSON.stringify([
+          todayInJst(),
+          input.caseId,
+          input.recipientUserId,
+          input.channel,
+          input.notificationType,
+          rendered.title,
+          rendered.body,
+        ]),
+      )
+      .digest('hex');
+  const created = await supabase.rpc('create_notification_once', {
     p_case_id: input.caseId,
     p_recipient_user_id: input.recipientUserId,
     p_channel: input.channel,
     p_notification_type: input.notificationType,
     p_title: rendered.title,
     p_body: rendered.body,
+    p_event_key: eventKey,
   });
   if (created.error) throw fromPostgresError(created.error);
 
@@ -88,6 +114,7 @@ export const POST = route(async (request: Request) => {
       notificationId: result.notificationId,
       channel: result.channel,
       delivered: result.delivered,
+      outcome: result.outcome ?? null,
       // 6-9「上限到達時はメールへ切り替えて送信し、切替をログに残す」。画面にも理由を出す
       switchedFrom: result.switchedFrom ?? null,
       reason: result.reason ?? null,

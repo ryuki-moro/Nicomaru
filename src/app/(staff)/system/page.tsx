@@ -73,7 +73,7 @@ export default async function SystemStatusPage() {
 
   const supabase = await createSupabaseServerClient();
 
-  const [venues, cases, users, batches, logs, usage, alerts] = await Promise.all([
+  const [venues, cases, users, batches, logs, usage, alerts, deliveries] = await Promise.all([
     supabase.from('venues').select('id', { count: 'exact', head: true }),
     supabase.from('wedding_cases').select('id', { count: 'exact', head: true }),
     supabase
@@ -105,6 +105,12 @@ export default async function SystemStatusPage() {
       .select('alert_key, source, affected_count, last_detected_at, published_at, resolved_at')
       .order('resolved_at', { ascending: true, nullsFirst: true })
       .order('last_detected_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('notification_deliveries')
+      .select('notification_id,state,attempt_count,next_attempt_at,last_result,updated_at')
+      .in('state', ['review', 'retry', 'processing'])
+      .order('updated_at', { ascending: false })
       .limit(50),
   ]);
 
@@ -190,6 +196,35 @@ export default async function SystemStatusPage() {
 
       <section>
         <h2 className="section-head">通知ログ</h2>
+        <p className="text-caption text-text-muted">
+          外部サービスの受付結果であり、到達・既読は未確認。送信結果不明・保存失敗は再試行または要確認として残る。
+        </p>
+        {deliveries.error ? (
+          <p role="alert">通知の再試行状態を取得できませんでした。</p>
+        ) : (
+          <ul className="text-caption">
+            {(
+              (deliveries.data ?? []) as {
+                notification_id: string;
+                state: string;
+                attempt_count: number;
+                next_attempt_at: string;
+                last_result: string | null;
+              }[]
+            ).map((d) => (
+              <li key={d.notification_id}>
+                {d.notification_id}:{' '}
+                {d.state === 'review'
+                  ? '要確認（自動再送停止）'
+                  : d.state === 'retry'
+                    ? '再試行待ち'
+                    : '処理中／結果未確定'}{' '}
+                / {d.attempt_count}回試行 / {d.last_result ?? '結果未確定'}
+                {d.state === 'retry' && ` / 次回 ${formatDateTime(d.next_attempt_at)}`}
+              </li>
+            ))}
+          </ul>
+        )}
         <NotificationLogExportForm />
         {logs.error ? (
           <p className="mt-2" role="alert">
@@ -224,7 +259,9 @@ export default async function SystemStatusPage() {
                         ? NOTIFICATION_TYPE_LABEL[row.notifications.notification_type]
                         : '—'}
                     </td>
-                    <td>{row.status === 'success' ? '成功' : '失敗'}</td>
+                    <td>
+                      {row.status === 'success' ? '外部サービス受付済み' : '未受付／結果不明'}
+                    </td>
                   </tr>
                 ))}
               </tbody>

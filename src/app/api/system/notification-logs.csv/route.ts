@@ -34,7 +34,7 @@ export const GET = route(async (request: Request) => {
       row.notifications?.wedding_cases?.case_code ?? '',
       row.provider === 'line' ? '公式LINE' : 'メール',
       row.notifications ? NOTIFICATION_TYPE_LABEL[row.notifications.notification_type] : '',
-      row.status === 'success' ? '成功' : '失敗',
+      row.status === 'success' ? '外部サービス受付済み' : '未受付／結果不明',
       row.provider_message_id ?? '',
     ]),
   );
