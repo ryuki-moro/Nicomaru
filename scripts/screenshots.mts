@@ -17,7 +17,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { mkdirSync } from 'node:fs';
-import { chromium, devices, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import { chromium, devices, type Locator, type Page } from '@playwright/test';
 
 // .env.local の APP_BASE_URL をそのまま使う（送信元検証は APP_BASE_URL と一致する必要がある）。
 // プロセスに既に値があれば上書きしない（playwright.config.ts と同じ扱い）。
