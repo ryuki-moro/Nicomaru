@@ -21,6 +21,7 @@ import {
   ReviewForm,
   SubmissionFileLink,
 } from '@/app/(staff)/submissions/[submissionId]/ReviewForm';
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { ReviewStatusBadge, TaskStatusBadge } from '@/components/ui/StatusBadge';
 import { fetchAiAssistStatus, latestJobForTask } from '@/lib/ai/assist';
 import type { DefectFinding } from '@/lib/ai/defectCheck';
@@ -159,30 +160,23 @@ export default async function SubmissionReviewPage({
 
   return (
     <div>
-      <nav aria-label="パンくず" className="mb-3">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href="/submissions" className="text-link hover:underline">
-              提出物確認
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page">{task.title}</li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        className="mb-3"
+        items={[
+          DASHBOARD_CRUMB,
+          { label: '提出物確認', href: '/submissions' },
+          { label: task.title },
+        ]}
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="section-head">{task.title}</h1>
         <ReviewStatusBadge status={submission.review_status} />
       </div>
       <p className="mt-1 text-caption text-text-muted">
-        {weddingCase.case_code}
+        <Link href={`/cases/${task.case_id}`} className="text-link hover:underline">
+          {weddingCase.case_code}
+        </Link>
         {coupleName && ` / ${coupleName} さま`}
       </p>
 
@@ -296,9 +290,12 @@ export default async function SubmissionReviewPage({
               {submission.planner_feedback}
             </p>
           )}
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link href="/submissions" className="btn-ghost">
+              提出物確認へ戻る
+            </Link>
             <Link href={`/cases/${task.case_id}`} className="btn-ghost">
-              案件詳細へ戻る
+              案件詳細を見る
             </Link>
           </div>
         </section>

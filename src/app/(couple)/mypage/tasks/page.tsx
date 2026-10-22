@@ -14,6 +14,7 @@
 import Link from 'next/link';
 
 import { TaskFilterTabs } from '@/app/(couple)/mypage/tasks/TaskFilterTabs';
+import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TaskStatusBadge } from '@/components/ui/StatusBadge';
 import {
@@ -29,6 +30,7 @@ import { formatDateJp, formatDueRelative, todayInJst } from '@/lib/format';
 import { daysBetween, type IsoDate } from '@/lib/services/schedule';
 import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { isUuid } from '@/lib/uuid';
 
 export const metadata = { title: '宿題・提出物' };
 
@@ -48,6 +50,29 @@ function resolveTab(raw: string | undefined) {
   return TASK_FILTER_TABS.find((tab) => tab.key === raw) ?? TASK_FILTER_TABS[0];
 }
 
+/**
+ * 提出の直後（M03 から ?submitted=<宿題ID> で戻ってきたとき）の知らせ。
+ *
+ * 文言は URL から受け取らず、ID から引いた宿題名で組み立てる。
+ * 見えない宿題（RLS の範囲外）や、提出済みでない宿題では何も出さない。
+ */
+async function submittedNotice(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  taskId: string | undefined,
+): Promise<string | null> {
+  if (!isUuid(taskId)) return null;
+  const { data } = await supabase
+    .from('case_tasks')
+    .select('title, status, submission_format')
+    .eq('id', taskId)
+    .maybeSingle();
+  const task = data as Pick<TaskRow, 'title' | 'status' | 'submission_format'> | null;
+  if (!task || task.status !== 'submitted') return null;
+  return task.submission_format === 'none'
+    ? `『${task.title}』の確認をプランナーに伝えました。`
+    : `『${task.title}』を提出しました。プランナーの確認をお待ちください。`;
+}
+
 function pageHref(tabKey: string, page: number): string {
   const query = new URLSearchParams();
   if (tabKey !== 'all') query.set('tab', tabKey);
@@ -59,12 +84,13 @@ function pageHref(tabKey: string, page: number): string {
 export default async function TaskListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; page?: string | string[] }>;
+  searchParams: Promise<{ tab?: string; page?: string | string[]; submitted?: string }>;
 }) {
   const query = await searchParams;
   const tab = resolveTab(query.tab);
   const page = resolvePage(query.page);
   const supabase = await createSupabaseServerClient();
+  const notice = await submittedNotice(supabase, query.submitted);
 
   // 「すべて」は waived を除外する。除外リストの補集合を .in() に渡すことで、
   // PostgREST の not.in 記法（値のクォート規則が独特）に依存せず値域を constants 側へ寄せる。
@@ -91,6 +117,11 @@ export default async function TaskListPage({
   return (
     <div>
       <h1 className="section-head mb-3">宿題・提出物</h1>
+      {notice && (
+        <div role="status" className="banner-info mb-3">
+          <span>{notice}</span>
+        </div>
+      )}
       <TaskFilterTabs current={tab.key} />
 
       {error ? (
@@ -111,7 +142,7 @@ export default async function TaskListPage({
             const dueSoon = open && daysBetween(task.due_date, today) <= DUE_SOON_DAYS;
             return (
               <li key={task.id}>
-                <Link href={`/mypage/tasks/${task.id}`} className="card flex items-center gap-3">
+                <Link href={taskDetailHref(task.id)} className="card flex items-center gap-3">
                   <span className="min-w-0 flex-1">
                     <span className="block text-base text-text-primary">{task.title}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-label">

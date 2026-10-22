@@ -13,6 +13,7 @@
  */
 import Link from 'next/link';
 
+import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
   COUPLE_PROFILE_COLUMNS,
@@ -145,7 +146,7 @@ export default async function MyPage() {
             {actions.map((task) => (
               <li key={task.id}>
                 <Link
-                  href={`/mypage/tasks/${task.id}`}
+                  href={taskDetailHref(task.id, 'home')}
                   prefetch={false}
                   className="flex items-center gap-3 rounded-card bg-field-filled-bg px-4 py-[13px]"
                 >

@@ -6,7 +6,7 @@ import { isStaff } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
 
-/** planner／admin／system_admin 向け画面の外枠。パンくずは各画面が自前で描画する（4-3）。 */
+/** planner／admin／system_admin 向け画面の外枠。パンくずは各画面が Breadcrumbs で描画する（4-3）。 */
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const user = await getAppUser();
   if (!user) redirect('/login');

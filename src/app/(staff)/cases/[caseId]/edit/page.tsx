@@ -6,10 +6,10 @@
  *   - 「担当プランナー」を追加し、自式場の planner から選択する（変更は admin のみ）
  *   - 挙式日・プラン種別の変更時は確定前に差分確認ダイアログ（実装は CaseEditForm）
  */
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { CaseEditForm, type CaseEditInitial } from './CaseEditForm';
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { requirePageUser } from '@/lib/auth/session';
 import { COUPLE_PROFILE_COLUMNS, type ContactChannel, type PartnerRole } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
@@ -51,7 +51,7 @@ export default async function CaseEditPage({ params }: { params: Promise<{ caseI
     .eq('id', caseId)
     .maybeSingle();
 
-  if (!data) redirect('/error');
+  if (!data) redirect('/error?code=404');
   const row = data as unknown as CaseRow;
   // アーカイブ済みは内容変更の対象外（K05／2-5）。復元してから編集する導線にする。
   if (row.archived_at !== null) redirect(`/cases/${caseId}`);
@@ -104,23 +104,14 @@ export default async function CaseEditPage({ params }: { params: Promise<{ caseI
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/cases" className="text-link hover:underline">
-              案件一覧
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href={`/cases/${row.id}`} className="text-link hover:underline">
-              {row.case_code}
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page">案件変更</li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        items={[
+          DASHBOARD_CRUMB,
+          { label: '案件一覧', href: '/cases' },
+          { label: row.case_code, href: `/cases/${row.id}` },
+          { label: '案件変更' },
+        ]}
+      />
 
       <h1 className="section-head">案件変更</h1>
 

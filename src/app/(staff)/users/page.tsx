@@ -14,6 +14,7 @@
  */
 import Link from 'next/link';
 
+import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
 import { requirePageUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { loadUserList, sanitizeKeyword, type UserProfileRow } from '@/lib/services/users';
@@ -83,22 +84,7 @@ export default async function UserListPage({
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          {/* system_admin は Phase 1 の着地点が本画面のため、親リンクを出さない（4-2） */}
-          {user.role === 'admin' && (
-            <li className="flex items-center gap-1">
-              <Link href="/dashboard" className="text-link hover:underline">
-                ダッシュボード
-              </Link>
-              <span aria-hidden>/</span>
-            </li>
-          )}
-          <li>
-            <span aria-current="page">利用者管理</span>
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumbs items={[homeCrumbFor(user.role), { label: '利用者管理' }]} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="section-head">利用者管理</h1>

@@ -10,7 +10,8 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
-import { getAppUser, landingPathFor } from '@/lib/auth/session';
+import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
+import { getAppUser } from '@/lib/auth/session';
 import { ROLE_LABEL, type Role, type UserStatus } from '@/lib/constants';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -31,7 +32,7 @@ export default async function UserEditPage({ params }: { params: Promise<{ userI
 
   const user = await getAppUser();
   if (!user) redirect('/login');
-  if (user.role !== 'admin' && user.role !== 'system_admin') redirect(landingPathFor(user.role));
+  if (user.role !== 'admin' && user.role !== 'system_admin') redirect('/error?code=403');
 
   const supabase = await createSupabaseServerClient();
 
@@ -87,28 +88,13 @@ export default async function UserEditPage({ params }: { params: Promise<{ userI
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          {/* system_admin は Phase 1 の着地点が本画面のため、親リンクを出さない（4-2） */}
-          {user.role === 'admin' && (
-            <li className="flex items-center gap-1">
-              <Link href="/dashboard" className="text-link hover:underline">
-                ダッシュボード
-              </Link>
-              <span aria-hidden>/</span>
-            </li>
-          )}
-          <li>
-            <Link href="/users" className="text-link hover:underline">
-              利用者管理
-            </Link>
-          </li>
-          <li className="flex items-center gap-1">
-            <span aria-hidden>/</span>
-            <span aria-current="page">{target.display_name}</span>
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        items={[
+          homeCrumbFor(user.role),
+          { label: '利用者管理', href: '/users' },
+          { label: target.display_name },
+        ]}
+      />
 
       <h1 className="section-head">利用者の変更：{target.display_name}</h1>
 

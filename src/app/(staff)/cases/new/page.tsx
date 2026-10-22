@@ -6,9 +6,9 @@
  * プラン種別の選択肢と割当宿題プレビューの元データ（plan_task_templates → task_templates）を
  * Server Component で読み込み（6-5 の直アクセス原則）、入力と送信だけをクライアントへ渡す。
  */
-import Link from 'next/link';
 
 import { CaseForm, type PlanOption } from './CaseForm';
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { requirePageUser } from '@/lib/auth/session';
 import { todayInJst } from '@/lib/format';
@@ -65,23 +65,9 @@ export default async function CaseCreatePage() {
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href="/cases" className="text-link hover:underline">
-              案件一覧
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page">案件登録</li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        items={[DASHBOARD_CRUMB, { label: '案件一覧', href: '/cases' }, { label: '案件登録' }]}
+      />
 
       <h1 className="section-head">案件登録</h1>
 

@@ -118,15 +118,31 @@ export function landingPathFor(role: Role): string {
   }
 }
 
+/** 着地点の画面名。エラー画面の「◯◯へ戻る」に使う。landingPathFor と対にする。 */
+export function landingLabelFor(role: Role): string {
+  switch (role) {
+    case 'couple':
+      return 'マイページ';
+    case 'planner':
+    case 'admin':
+      return 'ダッシュボード';
+    case 'system_admin':
+      return '利用状況';
+  }
+}
+
 /**
  * 画面（Server Component）から呼ぶ入口（4-2／4-3）。
  *
- * 未ログインは /login、権限が足りなければそのロールの着地点（4-2）へ送る。
- * 各ロールの着地点は landingPathFor に集約する。
+ * 未ログインは /login、権限が足りなければ P04（/error?code=403）へ送る。
+ * 画面遷移図の「権限不足 → P04」に合わせる。以前は黙って着地点へ戻していたが、
+ * 画面によってはエラー画面を出しており、扱いが割れていた（docs/ui-review/p2 低-8）。
+ * P04 には着地点へ戻るボタンがあるので、行き止まりにはならない。
  *
  * (staff)/layout.tsx が「!user → /login」を守っているのに、
- * 配下の画面が同じ判定を書き直していたため、書き方が画面ごとに割れていた
- * （/error と /error?code=403 と landingPathFor が混在）。
+ * 配下の画面が同じ判定を書き直していたため、書き方が画面ごとに割れていた。
+ * なお staff と couple の取り違え（新郎新婦がプランナー画面を開いた等）は、
+ * ここに来る前に各 layout がそれぞれの着地点へ戻す。
  */
 export async function requirePageUser(...roles: Role[]): Promise<AppUser> {
   const resolved = await resolveAppUser();
@@ -136,7 +152,7 @@ export async function requirePageUser(...roles: Role[]): Promise<AppUser> {
 
   const { user } = resolved;
   if (roles.length > 0 && !roles.includes(user.role)) {
-    redirect(landingPathFor(user.role));
+    redirect('/error?code=403');
   }
   return user;
 }
