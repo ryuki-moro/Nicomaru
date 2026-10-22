@@ -7,12 +7,15 @@ const config = [
   {
     ignores: [
       '.next/**',
+      '.next-dev-admin/**',
       'node_modules/**',
       'next-env.d.ts',
       '.env*/**',
       'coverage/**',
       'playwright-report/**',
       'test-results/**',
+      'Nicomaru/**',
+      'Nicomaru-1/**',
     ],
   },
   // Next 16 exports flat configs, but the pinned Next 14 plugin's vitals config is legacy.

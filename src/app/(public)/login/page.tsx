@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
+import { getDevAdminConfig, isLoopbackHost } from '@/lib/auth/dev-admin';
 import { getAppUser, landingPathFor } from '@/lib/auth/session';
 
+import { DevAdminLoginButton } from './DevAdminLoginButton';
 import { LoginForm } from './LoginForm';
 
 // セッションの有無で分岐するため常に動的に評価する
@@ -56,6 +59,9 @@ export default async function LoginPage({
   const user = await getAppUser();
   if (user) redirect(destination ?? landingPathFor(user.role));
 
+  const host = (await headers()).get('host') ?? '';
+  const showDevAdmin = Boolean(getDevAdminConfig()) && isLoopbackHost(host);
+
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -73,6 +79,7 @@ export default async function LoginPage({
         </div>
       )}
 
+      {showDevAdmin && <DevAdminLoginButton />}
       <LoginForm next={destination} initialMode={initialMode} />
     </div>
   );
