@@ -1,10 +1,7 @@
-import { dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-import { FlatCompat } from '@eslint/eslintrc';
 import { fixupConfigRules } from '@eslint/compat';
-
-const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta.url)) });
+import nextConfig from 'eslint-config-next';
+import nextTypescript from 'eslint-config-next/typescript';
+import nextPlugin from '@next/eslint-plugin-next';
 
 const config = [
   {
@@ -21,8 +18,12 @@ const config = [
       'Nicomaru-1/**',
     ],
   },
-  // The secure Next lint plugin uses legacy rule APIs; preserve them on ESLint 9.
-  ...fixupConfigRules(compat.extends('next/core-web-vitals', 'next/typescript')),
+  // 固定済みNextプラグインの旧APIとルールを保ち、legacyのplugins配列だけを持ち込まない。
+  ...fixupConfigRules([
+    ...nextConfig,
+    { rules: nextPlugin.configs['core-web-vitals'].rules },
+    ...nextTypescript,
+  ]),
   {
     // 6-3-5 / 12-2「Service Role 誤用防止」:
     // 使用範囲表を経由しない Service Role Key の参照を機械的に検出する。

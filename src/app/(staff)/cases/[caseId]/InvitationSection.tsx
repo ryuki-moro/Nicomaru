@@ -68,7 +68,6 @@ export function InvitationSection({ caseId, readOnly }: { caseId: string; readOn
       );
       setInvitations(result.invitations);
     } catch (error) {
-      setInvitations([]);
       setSummary(
         error instanceof ApiCallError ? error.message : '招待状況を取得できませんでした。',
       );
@@ -76,8 +75,22 @@ export function InvitationSection({ caseId, readOnly }: { caseId: string; readOn
   }, [caseId]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    void api.get<{ invitations: InvitationSummary[] }>(`/api/cases/${caseId}/invitations`).then(
+      (result) => {
+        if (!cancelled) setInvitations(result.invitations);
+      },
+      (error: unknown) => {
+        if (cancelled) return;
+        setSummary(
+          error instanceof ApiCallError ? error.message : '招待状況を取得できませんでした。',
+        );
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [caseId]);
 
   async function reissueAndReveal(role: PartnerRole) {
     if (busy) return;
@@ -156,7 +169,9 @@ export function InvitationSection({ caseId, readOnly }: { caseId: string; readOn
         </span>
       </div>
 
-      {invitations === null && <p className="text-label text-text-muted">読み込んでいます…</p>}
+      {invitations === null && !summary && (
+        <p className="text-label text-text-muted">読み込んでいます…</p>
+      )}
 
       {invitations !== null && invitations.length === 0 && (
         <p className="text-label text-text-muted">招待はまだ発行されていません。</p>
