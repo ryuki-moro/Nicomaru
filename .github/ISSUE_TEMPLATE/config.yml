@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 今すぐ着手できるIssueを探す
+    url: https://github.com/ryuki-moro/Nicomaru/issues?q=is%3Aissue%20state%3Aopen%20-is%3Ablocked%20-label%3A%E6%B1%BA%E5%AE%9A%E5%BE%85%E3%81%A1%20-label%3Aepic%20no%3Aassignee
+    about: 待ち・決定待ち・まとめ用を除いた、担当者のいないIssueの一覧です。新しく立てる前に、同じものが無いか確かめてください。
+  - name: Issueの立て方
+    url: https://github.com/ryuki-moro/Nicomaru/blob/main/docs/Issueの立て方.md
+    about: 1 Issue = PR 1本、終わりの条件は3つまで、待ちの書き方など
