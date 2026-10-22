@@ -22,9 +22,10 @@ import {
   type TaskStatus,
 } from '@/lib/constants';
 import { isEncrypted, readPii } from '@/lib/crypto';
-import { formatDateJp, formatDueRelative, todayInJst } from '@/lib/format';
+import { formatDateJp, todayInJst } from '@/lib/format';
 import { daysUntilWedding, nextActions, type IsoDate } from '@/lib/services/schedule';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { relativeTaskDeadline } from '@/lib/task-display';
 
 export const metadata = { title: 'マイページ' };
 
@@ -99,7 +100,6 @@ export default async function MyPage() {
     .filter((name) => name !== '' && !isEncrypted(name));
 
   const tasks = (taskResult.data ?? []) as TaskRow[];
-  const today = todayInJst();
   // 「最大3件」の切り出しはサービス層の nextActions() に寄せる（11章の単体テスト対象）。
   // nextActions は「未完了」で絞るが、渡す時点で未提出だけに揃えてあるので結果は変わらない。
   const actions = nextActions(
@@ -107,6 +107,7 @@ export default async function MyPage() {
   );
   const unsubmitted = tasks.length;
 
+  const today = todayInJst();
   const remaining = daysUntilWedding(weddingDate, today);
 
   return (
@@ -142,24 +143,29 @@ export default async function MyPage() {
           <EmptyState message="いまお願いしている宿題はありません。ゆっくり準備を進めましょう。" />
         ) : (
           <ul className="flex flex-col gap-[10px]">
-            {actions.map((task) => (
-              <li key={task.id}>
-                <Link
-                  href={`/mypage/tasks/${task.id}`}
-                  prefetch={false}
-                  className="flex items-center gap-3 rounded-card bg-field-filled-bg px-4 py-[13px]"
-                >
-                  <span className="flex-1">
-                    {/* 相対表示は文字だけで示し、超過を強調する配色にはしない（4-3 M01） */}
-                    <span className="block text-label text-text-muted">
-                      {formatDateJp(task.due_date)}まで（{formatDueRelative(task.due_date, today)}）
+            {actions.map((task) => {
+              const relativeDeadline = relativeTaskDeadline(task.due_date, today, task.status);
+              return (
+                <li key={task.id}>
+                  <Link
+                    href={`/mypage/tasks/${task.id}`}
+                    prefetch={false}
+                    className="flex items-center gap-3 rounded-card bg-field-filled-bg px-4 py-[13px]"
+                  >
+                    <span className="flex-1">
+                      <span className="block text-label text-text-muted">
+                        {formatDateJp(task.due_date)}まで
+                        {relativeDeadline && (
+                          <span className="inline-block">（{relativeDeadline}）</span>
+                        )}
+                      </span>
+                      <span className="block text-base text-text-primary">{task.title}</span>
                     </span>
-                    <span className="block text-base text-text-primary">{task.title}</span>
-                  </span>
-                  <ChevronRight />
-                </Link>
-              </li>
-            ))}
+                    <ChevronRight />
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
@@ -170,18 +176,28 @@ export default async function MyPage() {
         <span className="text-title font-bold text-text-primary">{unsubmitted}件</span>
       </section>
 
-      <div className="mt-1 flex flex-col items-center gap-3">
+      <div className="mt-1 flex flex-col gap-[10px]">
         <Link href="/mypage/tasks" prefetch={false} className="btn-primary block text-center">
           宿題・提出物を見る
         </Link>
-        {/* 主ボタンは1つに絞り、残りの導線は1行のテキストリンクにまとめる */}
-        <nav aria-label="そのほかの画面" className="flex flex-wrap justify-center gap-x-4 gap-y-1">
-          <Link href="/mypage/timeline" prefetch={false} className="btn-ghost">
-            準備タイムライン
+        <nav
+          aria-label="そのほかのメニュー"
+          className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-label"
+        >
+          <Link
+            href="/mypage/timeline"
+            prefetch={false}
+            className="text-link underline underline-offset-2"
+          >
+            準備タイムラインを見る
           </Link>
           {/* 4-3 M01「通知一覧（M05）は Phase 2 で追加する」 */}
-          <Link href="/mypage/notifications" prefetch={false} className="btn-ghost">
-            お知らせ
+          <Link
+            href="/mypage/notifications"
+            prefetch={false}
+            className="text-link underline underline-offset-2"
+          >
+            お知らせを見る
           </Link>
         </nav>
       </div>

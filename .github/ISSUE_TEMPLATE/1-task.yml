@@ -1,0 +1,64 @@
+name: 作業
+description: PR 1本・2日以内で終わる作業（コード・資料・手作業のどれでも）
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **タイトルは「〜する」で終わる30字前後にします。** 例: 「ログイン失敗時にエラー文を表示する」
+        PRが2本以上になりそう・2日で終わらない場合は、先に「まとめ（親Issue）」を立てて小さく分けます。
+        書き方の例は [Issueの立て方](https://github.com/ryuki-moro/Nicomaru/blob/main/docs/Issueの立て方.md) を見てください。
+  - type: textarea
+    id: why
+    attributes:
+      label: なぜやるか
+      description: 1〜2行で書きます。
+      placeholder: 例) 中間発表のデモで、ログインに失敗しても何も表示されず操作が止まるため
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 終わりの条件（3つまで）
+      description: ほかの人が見て「終わった」と判定できる形で書きます。4つ以上になるなら分けます。
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: input
+    id: blocked-by
+    attributes:
+      label: 先に終わっている必要があるIssue
+      description: 例) #12, #15 。書くと自動で「待ち」になり、それが閉じるまで「今できるIssue」の一覧に出ません。無ければ空欄。
+      placeholder: '#12'
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 種類
+      options:
+        - コード
+        - 資料
+        - 手作業（管理画面などの操作）
+    validations:
+      required: true
+  - type: dropdown
+    id: ai
+    attributes:
+      label: Agent AI
+      description: 学校の評価で、AIなしで進められる作業かを区別します。
+      options:
+        - Agent AI不要
+        - Codex使用可
+    validations:
+      required: true
+  - type: textarea
+    id: hint
+    attributes:
+      label: 手がかり
+      description: 関係するファイル・画面・資料へのリンク。長い手順や背景は docs/ に書いてリンクだけ置きます。無ければ空欄。
+  - type: checkboxes
+    id: size
+    attributes:
+      label: 大きさの確認
+      options:
+        - label: PR 1本・2日以内で終わる大きさにした
+          required: true
