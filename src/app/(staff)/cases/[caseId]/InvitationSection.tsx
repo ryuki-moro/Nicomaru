@@ -61,18 +61,16 @@ export function InvitationSection({ caseId, readOnly }: { caseId: string; readOn
   } | null>(null);
   const [copyNote, setCopyNote] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const result = await api.get<{ invitations: InvitationSummary[] }>(
-        `/api/cases/${caseId}/invitations`,
-      );
-      setInvitations(result.invitations);
-    } catch (error) {
-      setInvitations([]);
-      setSummary(
-        error instanceof ApiCallError ? error.message : '招待状況を取得できませんでした。',
-      );
-    }
+  const load = useCallback(() => {
+    return api.get<{ invitations: InvitationSummary[] }>(`/api/cases/${caseId}/invitations`).then(
+      (result) => setInvitations(result.invitations),
+      (error: unknown) => {
+        setInvitations([]);
+        setSummary(
+          error instanceof ApiCallError ? error.message : '招待状況を取得できませんでした。',
+        );
+      },
+    );
   }, [caseId]);
 
   useEffect(() => {
