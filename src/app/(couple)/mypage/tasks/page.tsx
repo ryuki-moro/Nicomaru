@@ -118,11 +118,17 @@ export default async function TaskListPage({
                       <span className="rounded-badge border border-border-light px-2 text-caption text-text-secondary">
                         {SUBMISSION_FORMAT_COUPLE_LABEL[task.submission_format]}
                       </span>
-                      {/* 日付と相対表示はそれぞれ途中で折り返さない（「あと10」「日」に割れないように） */}
-                      <span className={dueSoon ? 'text-warning-text' : 'text-text-muted'}>
+                      {/* 日付と相対表示はそれぞれ途中で折り返さない（「あと10」「日」に割れないように）。
+                          相対表示が次の行に回ったとき全角「（」の左の空きで字下げに見えないよう、
+                          かっこを半角幅で組む（halt） */}
+                      <span
+                        className={`flex flex-wrap gap-x-1 ${dueSoon ? 'text-warning-text' : 'text-text-muted'}`}
+                      >
                         <span className="whitespace-nowrap">{formatDateJp(task.due_date)}まで</span>
                         {open && (
-                          <span className={`whitespace-nowrap ${dueSoon ? 'font-bold' : ''}`}>
+                          <span
+                            className={`whitespace-nowrap [font-feature-settings:'halt'] ${dueSoon ? 'font-bold' : ''}`}
+                          >
                             （{formatDueRelative(task.due_date, today)}）
                           </span>
                         )}

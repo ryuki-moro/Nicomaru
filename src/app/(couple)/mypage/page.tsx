@@ -111,9 +111,12 @@ export default async function MyPage() {
 
   return (
     <div className="flex flex-col gap-[14px]">
+      {/* 見た目上の画面名はヘッダーとナビで足りるので、見出し移動用に読み上げだけに置く */}
+      <h1 className="sr-only">マイページ</h1>
       {/* 挙式カウントダウン（design_guide 5.8） */}
       <section className="card-hero" aria-label="挙式までの残り日数">
-        <p className="text-label text-primary-dark/70">
+        {/* 不透明度で薄めるとトークンのコントラスト検証（QA-08）を外れるので、トークン色をそのまま使う */}
+        <p className="text-label text-primary-dark">
           {names.length > 0 && <>{names.join('・')}　</>}
           {formatDateJp(weddingDate)}
         </p>
