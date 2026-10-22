@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useRef, useState } from 'react';
 
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { api, ApiCallError } from '@/lib/api/client';
@@ -189,17 +189,17 @@ export function LoginForm({
     );
 
     if (linkError || (!authCode && !refreshToken)) {
-      // 着地URL（外部状態）の検査結果を初回マウント時に1度だけ反映する
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setError(
-        'ログインリンクが無効か、有効期限が切れています。メールに記載の6桁のコードをご入力ください',
-      );
-      setCodeSent(true);
+      startTransition(() => {
+        setError(
+          'ログインリンクが無効か、有効期限が切れています。メールに記載の6桁のコードをご入力ください',
+        );
+        setCodeSent(true);
+      });
       return;
     }
 
     let cancelled = false;
-    setPending(true);
+    startTransition(() => setPending(true));
     void (async () => {
       const supabase = createSupabaseBrowserClient();
       const result = authCode

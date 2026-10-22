@@ -1,26 +1,7 @@
-import { fixupPluginRules } from '@eslint/compat';
+import { fixupConfigRules } from '@eslint/compat';
 import nextPlugin from '@next/eslint-plugin-next';
-import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
+import nextBase from 'eslint-config-next';
 import nextTypescript from 'eslint-config-next/typescript';
-
-// eslint-config-next 16 ships flat configs, but @next/eslint-plugin-next stays pinned to the
-// secure 14.2.35 via package.json overrides (docs/依存関係の脆弱性対応.md). That plugin uses
-// legacy rule APIs and only has eslintrc-style configs (`plugins: ['@next/next']`), so:
-// - wrap it with fixupPluginRules so its rules run on ESLint 9,
-// - drop the eslintrc-style core-web-vitals entry and apply its rules in flat form instead.
-const legacyNextPlugin = fixupPluginRules(nextPlugin);
-
-const nextConfigs = [...nextCoreWebVitals, ...nextTypescript]
-  .filter((entry) => !Array.isArray(entry.plugins))
-  .map((entry) =>
-    entry.plugins?.['@next/next']
-      ? {
-          ...entry,
-          plugins: { ...entry.plugins, '@next/next': legacyNextPlugin },
-          rules: { ...entry.rules, ...nextPlugin.configs['core-web-vitals'].rules },
-        }
-      : entry,
-  );
 
 const config = [
   {
@@ -34,7 +15,13 @@ const config = [
       'test-results/**',
     ],
   },
-  ...nextConfigs,
+  // Next 16 exports flat configs, but the pinned Next 14 plugin's vitals config is legacy.
+  // The base config already registers that plugin; apply only its vitals rules here.
+  ...fixupConfigRules([
+    ...nextBase,
+    { rules: nextPlugin.configs['core-web-vitals'].rules },
+    ...nextTypescript,
+  ]),
   {
     // 6-3-5 / 12-2「Service Role 誤用防止」:
     // 使用範囲表を経由しない Service Role Key の参照を機械的に検出する。
