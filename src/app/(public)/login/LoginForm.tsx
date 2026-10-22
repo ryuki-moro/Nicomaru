@@ -112,8 +112,8 @@ type Mode = 'otp' | 'password';
  *   - 「パスワードでログイン」= planner／admin／system_admin 向け
  *
  * 送信要求はレート制限のため /api/auth/otp-request を経由する（4-3 P01）。
- * パスワード認証は表6-6 に無いので Supabase クライアント経由で行う（6-5 の原則）。
- * 連続失敗に対する制限は Supabase Auth 側の既定のレート制限に委ねる。
+ * パスワード認証も /api/auth/password-login を経由する（Origin 検証と失敗の監査記録のため）。
+ * 連続失敗はアプリ側の回数制限（RATE_LIMITS.password_login）と Supabase Auth の既定の制限で抑える。
  */
 export function LoginForm({
   next,
