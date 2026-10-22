@@ -4008,8 +4008,8 @@
       "screens": [],
       "evidence": [
         ".github/pull_request_template.md",
-        ".github/ISSUE_TEMPLATE/task.md",
-        ".github/ISSUE_TEMPLATE/bug.md"
+        ".github/ISSUE_TEMPLATE/1-task.yml",
+        ".github/ISSUE_TEMPLATE/3-bug.yml"
       ],
       "note": "タスク/不具合のIssueテンプレートと、AIなし操作・対象版/未実施欄付きPRテンプレートを作成。",
       "next": "main反映後のGitHub作成画面でメンバーが初期表示を確認。",
