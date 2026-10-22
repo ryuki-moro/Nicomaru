@@ -54,15 +54,17 @@ function Capacity({
 export function UsageSummary({
   snapshot,
   failed,
+  checkedAt,
 }: {
   snapshot: UsageSnapshot | null;
   failed: boolean;
+  checkedAt: number;
 }) {
   if (failed)
     return <p role="alert">容量集計を読み込めませんでした。時間をおいて再度ご確認ください。</p>;
   if (!snapshot)
     return <p>容量の集計記録はまだありません。日次集計の設定・実行状況をご確認ください。</p>;
-  const stale = Date.now() - Date.parse(snapshot.measured_at) > 2 * 86_400_000;
+  const stale = checkedAt - Date.parse(snapshot.measured_at) > 2 * 86_400_000;
   return (
     <div className="mt-3 space-y-2">
       <p className="text-caption text-text-muted">
