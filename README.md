@@ -195,7 +195,7 @@ TEST_PG_URL=postgres://postgres:<password>@127.0.0.1:5433/postgres npm run test:
 | 認証                  | couple=マジックリンク＋6桁ワンタイムコード / staff=メール＋パスワード(12文字以上) | LINE内ブラウザのブラウザ跨ぎ対応                                                                             |
 | 個人情報              | アプリ側 AES-256-GCM ＋ 検索用 HMAC-SHA256 列                                     | 等値一致検索のみ(13-1)                                                                                       |
 | 定期処理              | pg_cron (死活監視のみ GitHub Actions)                                             | 一覧は 6-12                                                                                                  |
-| AI補助                | ローカルLLM (Ollama) をプル型ジョブで内製、RAG は pgvector                        | Phase 3。生成エンジンは校内サーバー非公開。ワーカーには Service Role Key を配らず2関数だけを専用ロールへ付与 |
+| AI補助                | ローカルLLM (Ollama) をプル型ジョブで内製、RAG は pgvector                        | Phase 3。生成エンジンは校内サーバー非公開。ワーカーには Service Role Key を配らず3関数だけを専用ロールへ付与 |
 | 通知                  | LINE Messaging API / メール(Resend)                                               | Auth メールも Resend を Custom SMTP として使用                                                               |
 
 ## 設計上の要点(実装で踏み外しやすいところ)
