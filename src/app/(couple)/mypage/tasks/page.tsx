@@ -21,12 +21,14 @@ import {
   TASK_FILTER_TABS,
   TASK_STATUSES,
   TASK_STATUSES_EXCLUDED_FROM_ALL,
+  type SubmissionFormat,
   type TaskStatus,
 } from '@/lib/constants';
 import { formatDateJp, todayInJst } from '@/lib/format';
 import { daysBetween, type IsoDate } from '@/lib/services/schedule';
 import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { relativeTaskDeadline, TASK_ANSWER_METHOD_LABEL } from '@/lib/task-display';
 
 export const metadata = { title: '宿題・提出物' };
 
@@ -38,6 +40,7 @@ interface TaskRow {
   title: string;
   due_date: IsoDate;
   status: TaskStatus;
+  submission_format: SubmissionFormat;
 }
 
 /** ?tab= を TASK_FILTER_TABS のキーへ解決する。未知の値は既定タブへ寄せる。 */
@@ -73,7 +76,7 @@ export default async function TaskListPage({
   const from = (page - 1) * LIST_PAGE_SIZE;
   const { data, error } = await supabase
     .from('case_tasks')
-    .select('id, title, due_date, status')
+    .select('id, title, due_date, status, submission_format')
     .in('status', [...statuses])
     .order('due_date', { ascending: true })
     .order('display_order', { ascending: true })
@@ -103,6 +106,7 @@ export default async function TaskListPage({
       ) : (
         <ul className="flex flex-col gap-[10px]">
           {tasks.map((task) => {
+            const relativeDeadline = relativeTaskDeadline(task.due_date, today, task.status);
             const dueSoon =
               task.status !== 'confirmed' &&
               task.status !== 'waived' &&
@@ -112,10 +116,16 @@ export default async function TaskListPage({
                 <Link href={`/mypage/tasks/${task.id}`} className="card flex items-center gap-3">
                   <span className="flex-1">
                     <span className="block text-base text-text-primary">{task.title}</span>
+                    <span className="block text-label text-text-secondary">
+                      回答方法：{TASK_ANSWER_METHOD_LABEL[task.submission_format]}
+                    </span>
                     <span
                       className={`block text-label ${dueSoon ? 'text-warning-text' : 'text-text-muted'}`}
                     >
                       {formatDateJp(task.due_date)}まで
+                      {relativeDeadline && (
+                        <span className="inline-block">（{relativeDeadline}）</span>
+                      )}
                     </span>
                   </span>
                   <TaskStatusBadge status={task.status} />
