@@ -152,7 +152,7 @@ export default async function PlannerDashboardPage() {
           label="リスクが高い案件"
           value={highRiskCount}
           unit="件"
-          note="直近の算出結果です（6-8）"
+          note="直近の算出結果です"
         />
       </div>
 
@@ -199,17 +199,17 @@ export default async function PlannerDashboardPage() {
           <NavCard
             href="/cases"
             title="案件一覧"
-            description="担当している案件の進捗を確認します（K01）"
+            description="担当している案件の進捗を確認します"
           />
           <NavCard
             href="/submissions"
             title="提出物確認"
-            description="新郎新婦から届いた提出物を確認します（D02）"
+            description="新郎新婦から届いた提出物を確認します"
           />
           <NavCard
             href="/notifications"
             title="通知履歴"
-            description="送信した通知と送信結果を確認します（N01）"
+            description="送信した通知と送信結果を確認します"
           />
           {/* S01〜S03 は system_admin 専用（4-3）。他のロールには導線を出さない */}
           {user.role === 'system_admin' && (
@@ -217,12 +217,12 @@ export default async function PlannerDashboardPage() {
               <NavCard
                 href="/venues"
                 title="式場管理"
-                description="式場と式場管理者を登録・確認します（S01／S02）"
+                description="式場と式場管理者を登録・確認します"
               />
               <NavCard
                 href="/system"
                 title="利用状況・通知ログ"
-                description="定期処理の実行結果と通知ログを確認します（S03）"
+                description="定期処理の実行結果と通知ログを確認します"
               />
             </>
           )}
