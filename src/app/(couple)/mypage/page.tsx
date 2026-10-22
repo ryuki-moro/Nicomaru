@@ -14,6 +14,7 @@
 import Link from 'next/link';
 
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ReloadButton } from '@/components/ui/ReloadButton';
 import {
   COUPLE_PROFILE_COLUMNS,
   PARTNER_ROLES,
@@ -56,6 +57,7 @@ export default async function MyPage() {
     return (
       <div role="alert" className="banner-error">
         <span>情報を読み込めませんでした。時間をおいて開き直してください。</span>
+        <ReloadButton />
       </div>
     );
   }
@@ -86,6 +88,15 @@ export default async function MyPage() {
       .order('display_order', { ascending: true })
       .order('id', { ascending: true }),
   ]);
+
+  if (profileResult.error || taskResult.error) {
+    return (
+      <div role="alert" className="banner-error">
+        <span>情報を読み込めませんでした。時間をおいて開き直してください。</span>
+        <ReloadButton />
+      </div>
+    );
+  }
 
   // COUPLE_PROFILE_COLUMNS は連結で組み立てた string のため supabase-js の
   // 型レベル select パーサが解決できない。行の形は上の ProfileRow が正本。

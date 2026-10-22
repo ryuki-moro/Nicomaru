@@ -27,203 +27,49 @@
  */
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
 
+import { recordSheet, requestSheetDraft } from './actions';
 import { PrintButton } from './PrintButton';
+import { SheetActionForm } from './SheetActionForm';
 import { SheetDraftPanel } from './SheetDraftPanel';
+import { ReloadButton } from '@/components/ui/ReloadButton';
 import { adoptedOutput, AI_JOB_COLUMNS, fetchAiAssistStatus, type AiJobRow } from '@/lib/ai/assist';
-import { getAppUser, requirePageUser } from '@/lib/auth/session';
-import {
-  COUPLE_PROFILE_COLUMNS,
-  FOLLOW_METHOD_LABEL,
-  INCOMPLETE_TASK_STATUSES,
-  TASK_STATUS_LABEL,
-  type FollowMethod,
-  type TaskStatus,
-} from '@/lib/constants';
+import { requirePageUser } from '@/lib/auth/session';
+import { FOLLOW_METHOD_LABEL, TASK_STATUS_LABEL } from '@/lib/constants';
+import { ApiError } from '@/lib/errors';
 import { readPii } from '@/lib/crypto';
-import { formatDate, formatDateJp, formatDateTime, todayInJst } from '@/lib/format';
+import { formatDate, formatDateJp, formatDateTime } from '@/lib/format';
+import { loadMeetingSheet } from '@/lib/services/meeting-sheets';
 import { daysBetween } from '@/lib/services/schedule';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
-
-interface TaskRow {
-  id: string;
-  title: string;
-  due_date: string;
-  status: TaskStatus;
-  display_order: number;
-}
-
-interface FollowRow {
-  id: string;
-  method: FollowMethod;
-  note: string | null;
-  followed_at: string;
-  user_profiles: { display_name: string } | null;
-}
-
-interface CommRow {
-  id: string;
-  channel: string;
-  direction: string;
-  source: string;
-  summary: string;
-  occurred_at: string;
-}
-
-/**
- * 生成した内容を meeting_sheets に残す（機能4-5）。
- * 印刷の直前に呼ぶ想定だが、印刷はクライアント側の操作なので
- * 「記録する」を明示的な操作として置く。
- */
-async function recordSheet(formData: FormData) {
-  'use server';
-
-  const caseId = String(formData.get('caseId') ?? '');
-  const summary = String(formData.get('summary') ?? '{}');
-  if (!caseId) return;
-
-  const actor = await getAppUser();
-  if (!actor) redirect('/login');
-
-  const supabase = await createSupabaseServerClient();
-  // meeting_sheets_all は staff 限定かつ案件スコープ（付録A）。権限は RLS が担保する。
-  await supabase.from('meeting_sheets').insert({
-    case_id: caseId,
-    generated_by: actor.id,
-    summary_json: JSON.parse(summary),
-  });
-
-  revalidatePath(`/cases/${caseId}/sheet`);
-}
-
-/**
- * 9-2 の下書きを依頼する（7-2／7-3）。
- *
- * LLM へ渡す文面をここで作るのがこの関数の要点。
- * 画面から文字列を受け取らないので、7-4「LLMへの入力は処理に必要な最小限の項目に限定する」を
- * クライアントの実装に依存せず守れる。
- * 渡すのは未提出宿題の件名・期限と連絡の要約だけで、氏名・連絡先は含めない。
- */
-async function requestSheetDraft(formData: FormData) {
-  'use server';
-
-  const caseId = String(formData.get('caseId') ?? '');
-  if (!caseId) return;
-
-  const actor = await getAppUser();
-  if (!actor) redirect('/login');
-
-  const supabase = await createSupabaseServerClient();
-  const today = todayInJst();
-
-  const [tasks, comms] = await Promise.all([
-    supabase
-      .from('case_tasks')
-      .select('title, due_date, status')
-      .eq('case_id', caseId)
-      .in('status', INCOMPLETE_TASK_STATUSES as unknown as string[])
-      .order('due_date')
-      .limit(20),
-    supabase
-      .from('communication_logs')
-      .select('summary, occurred_at')
-      .eq('case_id', caseId)
-      .order('occurred_at', { ascending: false })
-      .limit(10),
-  ]);
-
-  const pendingLines = (
-    (tasks.data ?? []) as { title: string; due_date: string; status: TaskStatus }[]
-  ).map(
-    (t) =>
-      `・${t.title}（期限 ${formatDate(t.due_date.slice(0, 10))}／` +
-      `${TASK_STATUS_LABEL[t.status]}）`,
-  );
-  const commLines = ((comms.data ?? []) as { summary: string; occurred_at: string }[]).map(
-    (c) => `・${formatDate(c.occurred_at.slice(0, 10))} ${c.summary}`,
-  );
-
-  const text = [
-    `本日: ${formatDate(today)}`,
-    pendingLines.length > 0 ? `未提出の宿題:\n${pendingLines.join('\n')}` : '未提出の宿題: なし',
-    commLines.length > 0 ? `直近の連絡:\n${commLines.join('\n')}` : '直近の連絡: なし',
-  ].join('\n\n');
-
-  const { error } = await supabase.rpc('enqueue_ai_job', {
-    p_case_id: caseId,
-    p_job_type: 'draft',
-    p_input_ref: { text, params: { purpose: 'meeting_sheet_summary' } },
-    p_related_task_id: null,
-  });
-  if (error) console.warn('[sheet] 下書きを依頼できませんでした', error);
-
-  revalidatePath(`/cases/${caseId}/sheet`);
-}
 
 export default async function MeetingSheetPage({
   params,
 }: {
   params: Promise<{ caseId: string }>;
 }) {
-  await requirePageUser();
+  await requirePageUser('planner', 'admin', 'system_admin');
 
   const { caseId } = await params;
   const supabase = await createSupabaseServerClient();
-  const today = todayInJst();
+  let sheet: Awaited<ReturnType<typeof loadMeetingSheet>>;
+  try {
+    sheet = await loadMeetingSheet(supabase, caseId);
+  } catch (cause) {
+    if (cause instanceof ApiError && cause.code === 'NOT_FOUND') redirect('/error?code=404');
+    return (
+      <div role="alert" className="banner-error">
+        <span>準備シートの情報を読み込めませんでした。時間をおいて開き直してください。</span>
+        <ReloadButton />
+      </div>
+    );
+  }
+  const { target, profiles, taskRows, done, pending, followRows, commRows, lastSheet, today } =
+    sheet;
 
-  const caseResult = await supabase
-    .from('wedding_cases')
-    .select(
-      'id, case_code, wedding_date, venue_room, guest_count, plan_types ( name ), user_profiles ( display_name )',
-    )
-    .eq('id', caseId)
-    .maybeSingle();
-  if (!caseResult.data) redirect('/error?code=404');
-  const target = caseResult.data as unknown as {
-    id: string;
-    case_code: string;
-    wedding_date: string;
-    venue_room: string | null;
-    guest_count: number | null;
-    plan_types: { name: string } | null;
-    user_profiles: { display_name: string } | null;
-  };
-
-  const [profiles, tasks, follows, comms, sheets] = await Promise.all([
-    supabase.from('couple_profiles').select(COUPLE_PROFILE_COLUMNS).eq('case_id', caseId),
-    supabase
-      .from('case_tasks')
-      .select('id, title, due_date, status, display_order')
-      .eq('case_id', caseId)
-      .order('due_date')
-      .order('display_order')
-      .order('id'),
-    supabase
-      .from('follow_logs')
-      .select('id, method, note, followed_at, user_profiles ( display_name )')
-      .eq('case_id', caseId)
-      .order('followed_at', { ascending: false })
-      .limit(10),
-    supabase
-      .from('communication_logs')
-      .select('id, channel, direction, source, summary, occurred_at')
-      .eq('case_id', caseId)
-      .order('occurred_at', { ascending: false })
-      .limit(15),
-    supabase
-      .from('meeting_sheets')
-      .select('id, generated_at')
-      .eq('case_id', caseId)
-      .order('generated_at', { ascending: false })
-      .limit(1),
-  ]);
-
-  const coupleName = (
-    (profiles.data ?? []) as unknown as { full_name: string; is_primary_contact: boolean }[]
-  )
+  const coupleName = profiles
     .slice()
     .sort((a, b) => Number(b.is_primary_contact) - Number(a.is_primary_contact))
     .map((p) => readPii(p.full_name))
@@ -245,21 +91,6 @@ export default async function MeetingSheetPage({
   ]);
   const draftJob = ((draftJobs.data ?? []) as unknown as AiJobRow[])[0] ?? null;
   const sheetDraft = draftJob?.status === 'confirmed' ? adoptedOutput('draft', draftJob) : null;
-
-  const taskRows = (tasks.data ?? []) as unknown as TaskRow[];
-  const done = taskRows.filter((t) => !INCOMPLETE_TASK_STATUSES.includes(t.status));
-  const pending = taskRows.filter((t) => INCOMPLETE_TASK_STATUSES.includes(t.status));
-  const followRows = (follows.data ?? []) as unknown as FollowRow[];
-  const commRows = (comms.data ?? []) as unknown as CommRow[];
-  const lastSheet = ((sheets.data ?? []) as { generated_at: string }[])[0] ?? null;
-
-  const summary = {
-    caseCode: target.case_code,
-    generatedFor: today,
-    totalTasks: taskRows.length,
-    doneTasks: done.length,
-    pendingTasks: pending.map((t) => ({ title: t.title, dueDate: t.due_date, status: t.status })),
-  };
 
   return (
     <div className="space-y-4">
@@ -286,13 +117,7 @@ export default async function MeetingSheetPage({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="section-head">打ち合わせ前準備シート</h1>
           <div className="flex flex-wrap gap-3">
-            <form action={recordSheet}>
-              <input type="hidden" name="caseId" value={caseId} />
-              <input type="hidden" name="summary" value={JSON.stringify(summary)} />
-              <button type="submit" className="btn-secondary w-auto px-5">
-                この内容を記録する
-              </button>
-            </form>
+            <SheetActionForm action={recordSheet} caseId={caseId} label="最新の内容を記録する" />
             {/* 6-11: 第一手段はブラウザ印刷。印刷ダイアログから PDF として保存もできる */}
             <PrintButton />
           </div>
@@ -304,17 +129,21 @@ export default async function MeetingSheetPage({
           </p>
         )}
 
+        {draftJobs.error && (
+          <p role="alert" className="banner-error">
+            AIの履歴を読み込めませんでした。通常のシートはそのまま印刷できます。
+          </p>
+        )}
         <SheetDraftPanel
           initialJob={draftJob}
           aiAvailable={aiStatus.available}
           lastSeenAt={aiStatus.lastSeenAt}
           requestSlot={
-            <form action={requestSheetDraft}>
-              <input type="hidden" name="caseId" value={caseId} />
-              <button type="submit" className="btn-secondary w-auto px-5">
-                AIに要点の下書きを頼む
-              </button>
-            </form>
+            <SheetActionForm
+              action={requestSheetDraft}
+              caseId={caseId}
+              label="AIに要点の下書きを頼む"
+            />
           }
         />
       </div>
