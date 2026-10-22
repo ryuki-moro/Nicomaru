@@ -47,6 +47,9 @@ export const SERVICE_ROLE_USE_CASES = {
     'system_admin 初期アカウントの作成（12章 (b)）。CLI から手で1回だけ実行する。' +
     '呼び出し元のJWTが無いため、既に system_admin が存在する場合は作成せず中止することで' +
     '二重作成を防ぐ。パスワードは扱わず、初回設定リンクの発行に留める（6-3-1）',
+  'setup.development-admin':
+    '開発専用ランチャーでのみ使用（docs/開発用管理者モード.md）。既存の式場へ専用adminを作成し、' +
+    '既存利用者の権限・パスワードは変更しない。WebのログインAPIではService Roleを使用しない',
   'line.webhook':
     'LINE からの Webhook。署名検証（raw body）を通過したリクエストのみ。' +
     '受信イベントIDの重複排除と、連携完了の書き込みに限る（6-10）',
