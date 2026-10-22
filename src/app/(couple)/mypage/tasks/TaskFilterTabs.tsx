@@ -17,8 +17,8 @@ import { TASK_FILTER_TABS } from '@/lib/constants';
 
 export function TaskFilterTabs({ current }: { current: string }) {
   return (
-    <nav aria-label="状態で絞り込む" className="-mx-screen mb-3 overflow-x-auto px-screen">
-      <ul className="flex w-max gap-2">
+    <nav aria-label="状態で絞り込む" className="mb-3">
+      <ul className="flex flex-wrap gap-2">
         {TASK_FILTER_TABS.map((tab) => {
           const active = tab.key === current;
           return (
