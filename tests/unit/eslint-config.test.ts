@@ -19,6 +19,12 @@ describe('lint security and legacy Next rule compatibility', () => {
       2,
     ],
     [
+      'src/pages/sync.tsx',
+      'export default function Page() { return <script src="/script.js" />; }',
+      '@next/next/no-sync-scripts',
+      2,
+    ],
+    [
       'src/pages/example.tsx',
       'export default function Page() { return <link href="https://fonts.googleapis.com/css2?family=Roboto" rel="stylesheet" />; }',
       '@next/next/no-page-custom-font',

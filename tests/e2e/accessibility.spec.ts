@@ -69,3 +69,15 @@ test('パスワード方式への切替と入力をキーボードだけで操�
     true,
   );
 });
+
+test('無効なログインリンクはURLからエラーを除き、コード入力へ案内する', async ({ page }) => {
+  await page.goto('/login#error_description=expired');
+  await expect(
+    page.getByText(
+      'ログインリンクが無効か、有効期限が切れています。メールに記載の6桁のコードをご入力ください',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(page.getByRole('group', { name: 'ワンタイムコード' })).toBeVisible();
+  await expect.poll(() => new URL(page.url()).hash).toBe('');
+});
