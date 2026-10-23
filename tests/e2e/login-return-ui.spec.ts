@@ -24,7 +24,10 @@ for (const mode of ['otp', 'password'] as const) {
     });
     await page.route('**/mypage/tasks**', async (route) => {
       if (authenticated) {
-        await route.fulfill({ contentType: 'text/html; charset=utf-8', body: '<h1>復帰先</h1>' });
+        await route.fulfill({
+          contentType: 'text/html; charset=utf-8',
+          body: '<meta charset="utf-8"><h1>復帰先</h1>',
+        });
       } else {
         await route.continue();
       }

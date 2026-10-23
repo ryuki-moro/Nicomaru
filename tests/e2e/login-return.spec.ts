@@ -67,7 +67,7 @@ test.describe('未ログインからログインして元の画面へ戻る', ()
 
   let groomEmail: string;
 
-  test.beforeAll(async ({ browser }) => {
+  test.beforeEach(async ({ browser }) => {
     groomEmail = await registeredGroom(browser);
   });
 

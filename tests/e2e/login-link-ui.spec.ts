@@ -15,7 +15,10 @@ test('別コンテキストでリンクを開いても、押下まで検証せ�
     await route.fulfill({ json: { redirectTo: '/mypage' } });
   });
   await page.route('**/mypage/tasks**', (route) =>
-    route.fulfill({ contentType: 'text/html; charset=utf-8', body: '<h1>復帰先</h1>' }),
+    route.fulfill({
+      contentType: 'text/html; charset=utf-8',
+      body: '<meta charset="utf-8"><h1>復帰先</h1>',
+    }),
   );
   try {
     await page.goto(

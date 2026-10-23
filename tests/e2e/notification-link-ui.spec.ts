@@ -25,7 +25,7 @@ for (const method of ['code', 'email-link'] as const) {
         verified
           ? route.fulfill({
               contentType: 'text/html; charset=utf-8',
-              body: '<h1>通知の対象宿題</h1>',
+              body: '<meta charset="utf-8"><h1>通知の対象宿題</h1>',
             })
           : route.continue(),
       );
