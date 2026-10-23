@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-09T03:26:51.207Z",
+  "updatedAt": "2026-10-23T02:30:04.558Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "214b041d6965bd335d596b5791b261a5671696a2",
   "implementationCommit": "c6048b2acef8449d4bf99d80ce32880ae98ae46b",
@@ -26,7 +26,8 @@
     "2026-10-09 実装再開・GAP-06全28更新API/内部5件/Webhookの検証、PR66/68とmainの再確認",
     "2026-10-09 GAP-11/Issue47修正、失敗注入52件・全649件・Chrome28件、PR70 CIのverify/実PG/security成功を確認",
     "2026-10-09 PR79へ残実装8項目/既存8PRを統合。詳細設計・発表PPTX/PDF・試験仕様Excel・WBS・評価/引継ぎを作成。人の実施と共有DB更新を区別。",
-    "2026-10-09 最終CI・4観点レビュー・実PG/ブラウザー/負荷の実行結果を確認してPR79をmainへ統合。完成したコードと人の実施/環境反映待ちを分離。"
+    "2026-10-09 最終CI・4観点レビュー・実PG/ブラウザー/負荷の実行結果を確認してPR79をmainへ統合。完成したコードと人の実施/環境反映待ちを分離。",
+    "2026-10-23 未完了実装を調査。origin/main b426e99からIssue123のホーム画面追加案内を再開。既存の認証・通知・招待・AI拡張は作業用チェックアウトに残り、main未反映。"
   ],
   "ci": {
     "run": 37878283145,
@@ -491,6 +492,12 @@
       "title": "共通のコード整形とコア分岐網羅をCIで検査する（GAP-10）",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/78",
       "state": "closed"
+    },
+    {
+      "number": 123,
+      "title": "マイページにホーム画面追加の案内を表示する",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/123",
+      "state": "open"
     }
   ],
   "nextOrder": [
@@ -3660,7 +3667,7 @@
         "docs/screenshots/",
         "docs/テスト/テスト仕様書_校内デモ.xlsx"
       ],
-      "note": "実端末の環境/操作/証拠欄を試験ブックへ用意。エミュレーションは実端末の代替実績にしない。",
+      "note": "実端末の環境/操作/証拠欄を試験ブックへ用意。エミュレーションは実端末の代替実績にしない。 Issue123の案内をブラウザー相当で検証。実機のインストールと再ログインは未確認。",
       "next": "メンバー所有のiOS/Android/タブレット/LINE内ブラウザーで試用し記録。",
       "issues": [],
       "prs": [
@@ -4693,6 +4700,34 @@
       "latestBy": "2027-02-28",
       "ownerMode": "メンバー（記録担当）＋全員（実績入力）",
       "workMode": "Agent AI不要"
+    },
+    {
+      "id": "PWA-INSTALL-GUIDE",
+      "title": "マイページに閉じられるホーム画面追加案内を表示する",
+      "category": "追加実装",
+      "phase": "2",
+      "status": "review",
+      "design": "Issue #123 / メール式場導線 Step10",
+      "screens": [
+        "M01"
+      ],
+      "evidence": [
+        "src/components/InstallGuide.tsx",
+        "src/lib/install-guide.ts",
+        "src/app/(couple)/mypage/page.tsx",
+        "tests/unit/pwa.test.ts",
+        "docs/検証/ホーム画面追加案内_20261023.md"
+      ],
+      "note": "origin/main b426e99に既存の未完了実装を移植。iOS SafariとAndroid Chromeに案内し、LINE内ブラウザ・追加済み・閉じた端末では非表示。保存するのは案内を閉じたフラグだけ。ブラウザー相当の操作検証を実施し、実機確認はQA-07として残す。",
+      "next": "差分をレビューしてmainへ統合し、QA-07で実機の追加・再ログインを確認する。",
+      "issues": [
+        123
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
     }
   ],
   "schoolSchedule": {

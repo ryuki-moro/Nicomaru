@@ -13,6 +13,7 @@
  */
 import Link from 'next/link';
 
+import { InstallGuide } from '@/components/InstallGuide';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
   COUPLE_PROFILE_COLUMNS,
@@ -172,6 +173,8 @@ export default async function MyPage() {
         <span className="text-label text-text-secondary">これから提出する宿題</span>
         <span className="text-title font-bold text-text-primary">{unsubmitted}件</span>
       </section>
+
+      <InstallGuide />
 
       <div className="mt-1 flex flex-col gap-[10px]">
         <Link href="/mypage/tasks" prefetch={false} className="btn-primary block text-center">
