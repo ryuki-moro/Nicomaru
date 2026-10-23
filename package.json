@@ -22,7 +22,7 @@
     "test:e2e": "playwright test",
     "db:types": "supabase gen types typescript --local > src/lib/db/database.types.ts",
     "test:pg": "vitest run tests/db/concurrency.test.ts tests/db/demo-seed-pg.test.ts",
-    "worker:ai": "tsx worker/ai-worker.ts",
+    "worker:ai": "node --env-file-if-exists=.env.ai-worker --import tsx worker/ai-worker.ts",
     "bootstrap:admin": "tsx scripts/bootstrap-system-admin.mts",
     "demo:seed": "tsx scripts/seed-demo.mts",
     "demo:reset": "tsx scripts/seed-demo.mts --reset",
@@ -30,7 +30,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:coverage": "vitest run --config vitest.coverage.config.ts",
-    "progress:check": "node scripts/render-progress.mjs --check"
+    "progress:check": "node scripts/render-progress.mjs --check",
+    "test:ai:live": "node --env-file-if-exists=.env.local --import tsx scripts/check-ollama.mts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

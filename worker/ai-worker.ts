@@ -26,6 +26,8 @@ import { hostname } from 'node:os';
 
 import { Client } from 'pg';
 
+import { callOllama } from './ollama';
+
 import { AI_JOB_TYPES, validateAiOutput, type AiJobType } from '../src/lib/ai/schemas';
 
 /** 7-3「ポーリング間隔は30秒」。 */
@@ -67,44 +69,6 @@ let stopping = false;
 function log(message: string, extra?: unknown) {
   // 本文や個人情報は出さない（7-4）。出すのは job_type と id まで。
   console.log(`[ai-worker ${workerId}] ${message}`, extra ?? '');
-}
-
-/**
- * Ollama を呼ぶ（7-6 生成エンジン）。
- *
- * format: 'json' を付けるのは、出力を zod で検証する前提だから（7-6 出力検証）。
- * 自由文で返させると検証がほぼ必ず落ち、リトライを空振りさせる。
- */
-async function callOllama(model: string, prompt: string, input: string): Promise<unknown> {
-  const endpoint = process.env.OLLAMA_ENDPOINT ?? 'http://localhost:11434';
-  const apiKey = process.env.OLLAMA_API_KEY;
-
-  const response = await fetch(`${endpoint}/api/generate`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
-    },
-    body: JSON.stringify({
-      model,
-      prompt: `${prompt}\n\n---\n${input}`,
-      format: 'json',
-      stream: false,
-      options: { temperature: 0.2 },
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Ollama がエラーを返しました: ${response.status}`);
-  }
-  const body = (await response.json()) as { response?: string };
-  if (!body.response) throw new Error('Ollama の応答が空でした');
-
-  try {
-    return JSON.parse(body.response);
-  } catch {
-    throw new Error('Ollama の出力がJSONとして読めませんでした');
-  }
 }
 
 /**
