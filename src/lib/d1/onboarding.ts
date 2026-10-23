@@ -171,8 +171,8 @@ export async function assignTasks(db: D1Database, user: AppUser, id: string) {
       const template = templates.find((t) => t.taskTemplateId === task.taskTemplateId)!;
       return db
         .prepare(
-          `INSERT INTO case_tasks(id,case_id,task_template_id,title,due_date,due_offset_days,importance,display_order,submission_format,phase_name)
-      SELECT ?,?,?,?,?,?,?,?,?,? WHERE ${existsCase} AND EXISTS (SELECT 1 FROM wedding_cases current WHERE current.id=? AND current.version=?)
+          `INSERT INTO case_tasks(id,case_id,task_template_id,title,due_date,due_offset_days,importance,display_order,submission_format,phase_name,description,options,allowed_file_types,is_required)
+      SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE ${existsCase} AND EXISTS (SELECT 1 FROM wedding_cases current WHERE current.id=? AND current.version=?)
       ON CONFLICT(case_id,task_template_id) WHERE task_template_id IS NOT NULL DO NOTHING RETURNING id`,
         )
         .bind(
@@ -186,6 +186,10 @@ export async function assignTasks(db: D1Database, user: AppUser, id: string) {
           task.displayOrder,
           task.submissionFormat,
           phaseNameFor(row.wedding_date, task.dueDate),
+          task.description,
+          JSON.stringify(task.options),
+          JSON.stringify(task.allowedFileTypes),
+          Number(task.isRequired),
           id,
           user.id,
           user.id,

@@ -10,7 +10,9 @@ import type { Role } from '@/lib/constants';
 export function StaffNav({ role }: { role: Role }) {
   const pathname = usePathname();
   const items = staffNavItemsFor(role).filter(
-    (item) => process.env.NEXT_PUBLIC_NICOMARU_DB !== 'd1-local' || item.href === '/cases',
+    (item) =>
+      process.env.NEXT_PUBLIC_NICOMARU_DB !== 'd1-local' ||
+      ['/cases', '/submissions'].includes(item.href),
   );
 
   return (
