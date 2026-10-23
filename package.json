@@ -9,6 +9,10 @@
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || exit 0",
     "dev": "next dev",
+    "dev:admin": "tsx scripts/dev-admin.mts",
+    "demo": "node scripts/demo-server.mjs",
+    "test:demo": "node --test tests/demo/*.test.mjs",
+    "test:demo:browser": "node --test tests/demo/browser-smoke.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -47,7 +51,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.1.2",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "4.1.12",
     "eslint": "^9.39.0",
     "eslint-config-next": "16.3.8",
     "pg": "^8.23.1",
@@ -56,7 +60,7 @@
     "tailwindcss": "4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.11"
+    "vitest": "4.1.12"
   },
   "overrides": {
     "postcss": "$postcss",

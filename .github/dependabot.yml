@@ -1,22 +1,32 @@
 version: 2
+# PRを増やさないため、通常の更新は月1回（毎月1日）・種類ごとに1本へまとめる。
+# 脆弱性を直すセキュリティ更新はこの設定の対象外で、見つかりしだい個別のPRが届く。
+# 運用ルールは docs/Issueの立て方.md の「依存関係の自動更新PR」を参照。
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: '09:00'
       timezone: Asia/Tokyo
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     groups:
-      patch-updates:
-        update-types: [patch]
-    # メジャー更新は自動マージしない。既存CIとレビューで互換性を確認する。
+      npm-monthly:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      # メジャー更新は互換性の確認が要る（例: eslint-config-next は Next.js 本体の版に合わせる）。
+      # 必要になったらIssueを立てて手で上げる。update-types の指定はセキュリティ更新には効かない。
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: '09:30'
       timezone: Asia/Tokyo
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    groups:
+      # Actions はCI自身がそのPRで動くため、メジャー更新も含めて1本にまとめて確かめる。
+      actions-monthly:
+        patterns: ['*']

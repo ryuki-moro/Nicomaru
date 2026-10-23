@@ -48,20 +48,3 @@ export function formatDateTime(value: string | null | undefined): string {
     parts.find((p) => p.type === type)?.value ?? '';
   return `${get('year')}/${get('month')}/${get('day')} ${get('hour')}:${get('minute')}`;
 }
-
-/**
- * 期限までの残り日数を、新郎新婦向けのやわらかい言葉で返す。
- * 'あと3日'／'今日まで'／'2日過ぎています'。色だけに頼らず期限の近さを伝えるために使う。
- * 期限・今日はどちらも 'YYYY-MM-DD'（日本時間の暦日）で渡す。
- */
-export function formatDueRelative(dueDate: string, today: string): string {
-  const MS_PER_DAY = 24 * 60 * 60 * 1000;
-  const toUtc = (iso: string) => {
-    const [year, month, day] = iso.split('-').map(Number);
-    return Date.UTC(year, month - 1, day);
-  };
-  const days = Math.round((toUtc(dueDate) - toUtc(today)) / MS_PER_DAY);
-  if (days > 0) return `あと${days}日`;
-  if (days === 0) return '今日まで';
-  return `${-days}日過ぎています`;
-}

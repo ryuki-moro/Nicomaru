@@ -68,6 +68,11 @@ interface NotificationLogRow {
   } | null;
 }
 
+// 動的なサーバーリクエストの時刻を、表示コンポーネントへの入力として固定する。
+function requestTime(): number {
+  return Date.now();
+}
+
 export default async function SystemStatusPage() {
   const user = await getAppUser();
   if (!user || user.role !== 'system_admin') redirect('/error?code=403');
@@ -111,6 +116,7 @@ export default async function SystemStatusPage() {
 
   const batchRows = (batches.data ?? []) as unknown as BatchRunRow[];
   const logRows = (logs.data ?? []) as unknown as NotificationLogRow[];
+  const checkedAt = requestTime();
 
   return (
     <div className="space-y-6">
@@ -130,7 +136,11 @@ export default async function SystemStatusPage() {
           <Summary label="案件数" value={cases.error ? null : cases.count} />
           <Summary label="利用者数" value={users.error ? null : users.count} />
         </div>
-        <UsageSummary snapshot={usage.data as UsageSnapshot | null} failed={Boolean(usage.error)} />
+        <UsageSummary
+          snapshot={usage.data as UsageSnapshot | null}
+          failed={Boolean(usage.error)}
+          checkedAt={checkedAt}
+        />
       </section>
 
       <MonitoringSummary
