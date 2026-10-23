@@ -14,6 +14,7 @@
 import Link from 'next/link';
 import { requirePageUser } from '@/lib/auth/session';
 
+import { InstallGuide } from '@/components/InstallGuide';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
   COUPLE_PROFILE_COLUMNS,
@@ -194,6 +195,8 @@ export default async function MyPage() {
         <span className="text-label text-text-secondary">これから提出する宿題</span>
         <span className="text-title font-bold text-text-primary">{unsubmitted}件</span>
       </section>
+
+      <InstallGuide />
 
       {!d1 && (
         <div className="mt-1 flex flex-col gap-[10px]">

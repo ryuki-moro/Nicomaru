@@ -37,6 +37,19 @@ export const POST = route(async (request: Request) => {
   if (profile.error) throw fromPostgresError(profile.error);
   if (!profile.data) throw notFound('宛先が見つかりません');
 
+  let linkPath = '/mypage/tasks';
+  if (input.taskId) {
+    const task = await supabase
+      .from('case_tasks')
+      .select('id')
+      .eq('id', input.taskId)
+      .eq('case_id', input.caseId)
+      .maybeSingle();
+    if (task.error) throw fromPostgresError(task.error);
+    if (!task.data) throw notFound('宿題が見つかりません');
+    linkPath = `/mypage/tasks/${input.taskId}`;
+  }
+
   const rendered = renderNotification(input.notificationType, {
     coupleName: readPii((profile.data as unknown as { full_name: string }).full_name),
     plannerName: user.displayName,
@@ -66,6 +79,7 @@ export const POST = route(async (request: Request) => {
     p_notification_type: input.notificationType,
     p_title: rendered.title,
     p_body: rendered.body,
+    p_link_path: linkPath,
   });
   if (created.error) throw fromPostgresError(created.error);
 
@@ -75,7 +89,7 @@ export const POST = route(async (request: Request) => {
   const row = await admin
     .from('notifications')
     .select(
-      'id, venue_id, case_id, recipient_user_id, channel, notification_type, title, body, status',
+      'id, venue_id, case_id, recipient_user_id, channel, notification_type, title, body, status, link_path',
     )
     .eq('id', created.data as string)
     .single();

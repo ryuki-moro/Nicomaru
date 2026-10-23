@@ -126,6 +126,7 @@ export const POST = route(
                 notification_type: type,
                 title: rendered.title,
                 body: rendered.body,
+                link_path: `/mypage/tasks/${task.id}`,
                 status: 'queued',
               })
               .select('id')
@@ -139,7 +140,7 @@ export const POST = route(
       const queued = await admin
         .from('notifications')
         .select(
-          'id, venue_id, case_id, recipient_user_id, channel, notification_type, title, body, status',
+          'id, venue_id, case_id, recipient_user_id, channel, notification_type, title, body, status, link_path',
         )
         .in('status', ['queued', 'failed'])
         .limit(500);

@@ -215,7 +215,7 @@ interface Invitation {
 }
 export async function listInvitations(db: D1Database, user: AppUser, id: string) {
   if (user.role === 'couple') throw forbidden();
-  await caseRow(db, user, id);
+  const weddingCase = await caseRow(db, user, id);
   const result = await db
     .prepare(
       `SELECT i.* FROM case_invitations i JOIN wedding_cases c ON c.id=i.case_id WHERE i.case_id=? AND ${scope} ORDER BY i.created_at DESC,i.rowid DESC`,
@@ -229,6 +229,9 @@ export async function listInvitations(db: D1Database, user: AppUser, id: string)
     invitations: [...latest.values()].map((row) => ({
       id: row.id,
       targetPartnerRole: row.target_partner_role,
+      hasEmail: Boolean(
+        weddingCase.couple_profiles.find((p) => p.partner_role === row.target_partner_role)?.email,
+      ),
       channel: row.channel,
       state: invitationState(row),
       createdAt: row.created_at,

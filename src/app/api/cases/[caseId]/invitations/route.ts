@@ -18,7 +18,8 @@ import {
   type PartnerRole,
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
-import { fromPostgresError, notFound } from '@/lib/errors';
+import { saveInvitationRecipient } from '@/lib/services/invitation-recipient';
+import { fromPostgresError, notFound, unprocessable } from '@/lib/errors';
 import { sendInvitation } from '@/lib/notify/send';
 import {
   buildInvitationUrl,
@@ -122,7 +123,19 @@ export const GET = route(
       .eq('purpose', 'initial_registration');
     if (error) throw fromPostgresError(error);
 
-    return ok({ invitations: summarize((data ?? []) as unknown as InvitationRow[]) });
+    const { data: partners, error: partnerError } = await supabase
+      .from('couple_profiles')
+      .select('partner_role, email')
+      .eq('case_id', caseId);
+    if (partnerError) throw fromPostgresError(partnerError);
+    return ok({
+      invitations: summarize((data ?? []) as unknown as InvitationRow[]).map((item) => ({
+        ...item,
+        hasEmail: (partners ?? []).some(
+          (p) => p.partner_role === item.targetPartnerRole && p.email !== null,
+        ),
+      })),
+    });
   },
 );
 
@@ -132,6 +145,7 @@ export const POST = route(
     const { caseId } = await context.params;
     if (process.env.NICOMARU_DB === 'd1-local') {
       const input = await parseBody(request, invitationIssueSchema.strict());
+      if (input.recipientEmail) throw unprocessable('D1ローカルでは招待先メールの追加は未対応です');
       const { localDB } = await import('@/lib/d1/runtime');
       return ok(
         await (
@@ -160,6 +174,19 @@ export const POST = route(
 
     const partner = target.couple_profiles.find((p) => p.partner_role === input.targetPartnerRole);
     if (!partner) throw notFound('対象の新郎新婦プロフィールが見つかりません');
+
+    if (input.recipientEmail) {
+      const saved = await saveInvitationRecipient(
+        supabase,
+        caseId,
+        partner.partner_role,
+        partner,
+        target.couple_profiles,
+        input.recipientEmail,
+      );
+      partner.email = saved.email;
+      partner.email_hash = saved.email_hash;
+    }
 
     const token = generateInvitationToken();
     const expiresAt = invitationExpiresAt('initial_registration');
