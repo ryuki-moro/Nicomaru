@@ -78,11 +78,12 @@ test.describe('未ログインからログインして元の画面へ戻る', ()
 
     // メールのリンク経路にも戻り先が載っている。Supabase は戻り先のホスト名が Site URL と
     // 違うと黙って Site URL に落とすので、ここで設定のずれ（next の消失）を検知する
-    const link = mail.links.find((href) => href.includes('redirect_to='));
+    const link = mail.links.find((href) => new URL(href).pathname === '/login/link');
     expect(link).toBeDefined();
-    expect(new URL(link!).searchParams.get('redirect_to')).toBe(
-      `${new URL(baseURL!).origin}/login?next=${encodeURIComponent(DESTINATION)}`,
-    );
+    expect(new URL(link!).origin).toBe(new URL(baseURL!).origin);
+    expect(new URL(link!).searchParams.get('next')).toBe(DESTINATION);
+    expect(new URLSearchParams(new URL(link!).hash.slice(1)).get('e')).toBe(groomEmail);
+    expect(new URLSearchParams(new URL(link!).hash.slice(1)).get('c')).toBe(mail.code);
 
     await page.getByLabel('ワンタイムコード 1桁目').click();
     await page.keyboard.type(mail.code);
@@ -95,8 +96,10 @@ test.describe('未ログインからログインして元の画面へ戻る', ()
     const page = await context.newPage();
     const mail = await requestCodeFromProtectedPage(page, groomEmail);
 
-    const link = mail.links.find((href) => href.includes('redirect_to='));
+    const link = mail.links.find((href) => new URL(href).pathname === '/login/link');
+    expect(link).toBeDefined();
     await page.goto(link!);
+    await page.getByRole('button', { name: 'ログインする', exact: true }).click();
     await expectBackOnDestination(page);
     await context.close();
   });

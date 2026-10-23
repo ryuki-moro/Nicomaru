@@ -82,7 +82,7 @@ describe('実Supabase SDKを使ったOTP送信前のレート制限', () => {
     expect(completedChecks).toBe(1);
     expect(signInWithOtp).toHaveBeenCalledExactlyOnceWith({
       email: EMAIL,
-      options: { shouldCreateUser: false, emailRedirectTo: 'http://app.test/login' },
+      options: { shouldCreateUser: false, emailRedirectTo: 'http://app.test/login/link' },
     });
   });
 
@@ -252,27 +252,27 @@ describe('ワンタイム認証メールの戻り先（emailRedirectTo）', () =
     return signInWithOtp.mock.calls[0][0].options.emailRedirectTo as string;
   }
 
-  it('next が無ければ従来どおりログイン画面', async () => {
-    expect(await redirectFor()).toBe('http://app.test/login');
+  it('next が無ければ着地画面（/login/link）だけ', async () => {
+    expect(await redirectFor()).toBe('http://app.test/login/link');
   });
 
   it('検証済みの next をエンコードして載せる', async () => {
     expect(await redirectFor('/mypage/tasks/task-id?tab=needs_fix')).toBe(
-      'http://app.test/login?next=%2Fmypage%2Ftasks%2Ftask-id%3Ftab%3Dneeds_fix',
+      'http://app.test/login/link?next=%2Fmypage%2Ftasks%2Ftask-id%3Ftab%3Dneeds_fix',
     );
   });
 
   it('許可していないクエリは戻り先に載せない', async () => {
     const redirect = await redirectFor('/mypage/account?linkToken=private-token&tab=line');
 
-    expect(redirect).toBe('http://app.test/login?next=%2Fmypage%2Faccount%3Ftab%3Dline');
+    expect(redirect).toBe('http://app.test/login/link?next=%2Fmypage%2Faccount%3Ftab%3Dline');
     expect(redirect).not.toContain('private-token');
   });
 
   it.each(['//evil.example.test', '/\\evil.example.test', 'https://evil.example.test', '/'])(
-    '不正・不要な next %s は黙って捨ててログイン画面へ戻す',
+    '不正・不要な next %s は黙って捨てて着地画面だけにする',
     async (next) => {
-      expect(await redirectFor(next)).toBe('http://app.test/login');
+      expect(await redirectFor(next)).toBe('http://app.test/login/link');
     },
   );
 

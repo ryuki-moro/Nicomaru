@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-23T02:45:55.759Z",
+  "updatedAt": "2026-10-23T03:01:20.160Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "214b041d6965bd335d596b5791b261a5671696a2",
   "implementationCommit": "c6048b2acef8449d4bf99d80ce32880ae98ae46b",
@@ -28,7 +28,8 @@
     "2026-10-09 PR79へ残実装8項目/既存8PRを統合。詳細設計・発表PPTX/PDF・試験仕様Excel・WBS・評価/引継ぎを作成。人の実施と共有DB更新を区別。",
     "2026-10-09 最終CI・4観点レビュー・実PG/ブラウザー/負荷の実行結果を確認してPR79をmainへ統合。完成したコードと人の実施/環境反映待ちを分離。",
     "2026-10-23 未完了実装を調査。origin/main b426e99からIssue123のホーム画面追加案内を再開。既存の認証・通知・招待・AI拡張は作業用チェックアウトに残り、main未反映。",
-    "2026-10-23 Issue104の既存実装551a60fをorigin/main b426e99とIssue123の統合ブランチへ移植。単体968件、模擬認証のPC/モバイル寸法Chromium各4件を確認。実Supabase/MailpitとWebKitは未検証。"
+    "2026-10-23 Issue104の既存実装551a60fをorigin/main b426e99とIssue123の統合ブランチへ移植。単体968件、模擬認証のPC/モバイル寸法Chromium各4件を確認。実Supabase/MailpitとWebKitは未検証。",
+    "2026-10-23 Issue105の実装3690050と未コミット試験をIssue104・123の統合ブランチへ取り込んだ。単体990件、模擬認証UIのPC・スマートフォン寸法Chromium各10件が成功。共有設定・実認証・実機は未確認。"
   ],
   "ci": {
     "run": 37878283145,
@@ -505,6 +506,12 @@
       "title": "ログインをまたいで元の画面(パスと絞り込み)へ戻す",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/104"
+    },
+    {
+      "number": 105,
+      "title": "メールのログインリンクを別ブラウザでも使えるようにする(/login/link)",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/105"
     }
   ],
   "nextOrder": [
@@ -4764,6 +4771,39 @@
       ],
       "prs": [],
       "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-105",
+      "title": "メールのログインリンクを別ブラウザでも使えるようにする",
+      "category": "改善",
+      "phase": "改善",
+      "status": "review",
+      "design": "基本設計6-3-1/4-3 P01/9章（改訂差分）",
+      "screens": [
+        "P01"
+      ],
+      "evidence": [
+        "src/app/(public)/login/link/LoginLinkForm.tsx",
+        "src/lib/auth/login-link.ts",
+        "supabase/templates/magic_link.html",
+        "tests/unit/login-link.test.ts",
+        "tests/e2e/login-link-ui.spec.ts",
+        "tests/e2e/login-link.spec.ts",
+        "docs/検証/メールリンクの別ブラウザ対応_20261023.md",
+        "docs/詳細設計/APIと更新境界.md"
+      ],
+      "note": "フラグメント着地・明示ボタンによる既存OTP検証・ログイン中の切替案内・失敗後の再送と旧リンクの再入力を統合。単体990件、模擬認証UI各10件成功。実OTP消費・実アカウント切替・Mailpitは未確認。共有テンプレートは未変更。",
+      "next": "ローカルSupabase・Mailpitで実認証2件を実施し、実機Safari/Gmail内ブラウザーを確認する。基本設計DOCXを改訂してレビューし、コードとテンプレートを同じ版で反映する。共有設定変更はユーザー確認後。",
+      "issues": [
+        105
+      ],
+      "prs": [],
+      "dependsOn": [
+        "FIX-104"
+      ],
       "requiresAi": false,
       "scope": "active",
       "kind": "work_item"
