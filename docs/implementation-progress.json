@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-23T03:16:11.737Z",
+  "updatedAt": "2026-10-23T03:28:19.902Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "214b041d6965bd335d596b5791b261a5671696a2",
   "implementationCommit": "c6048b2acef8449d4bf99d80ce32880ae98ae46b",
@@ -30,7 +30,8 @@
     "2026-10-23 未完了実装を調査。origin/main b426e99からIssue123のホーム画面追加案内を再開。既存の認証・通知・招待・AI拡張は作業用チェックアウトに残り、main未反映。",
     "2026-10-23 Issue104の既存実装551a60fをorigin/main b426e99とIssue123の統合ブランチへ移植。単体968件、模擬認証のPC/モバイル寸法Chromium各4件を確認。実Supabase/MailpitとWebKitは未検証。",
     "2026-10-23 Issue105の実装3690050と未コミット試験をIssue104・123の統合ブランチへ取り込んだ。単体990件、模擬認証UIのPC・スマートフォン寸法Chromium各10件が成功。共有設定・実認証・実機は未確認。",
-    "2026-10-23 Issue120のStep4だけをIssue104・105・123統合ブランチへ取り込み。単体/PGlite1017件、ビルド版の模擬認証ブラウザーPC・スマートフォン寸法各12件が成功。共有DB適用・実送信・実認証通しは未実施。"
+    "2026-10-23 Issue120のStep4だけをIssue104・105・123統合ブランチへ取り込み。単体/PGlite1017件、ビルド版の模擬認証ブラウザーPC・スマートフォン寸法各12件が成功。共有DB適用・実送信・実認証通しは未実施。",
+    "2026-10-23 Issue121のAuth成功時刻同期とリスク入力試験をIssue120までの統合ブランチへ取り込み。停止解除による活動誤認とJST日付境界を修正。単体1033件成功、実PostgreSQL15件skip。共有DB適用・実Auth・保存済みリスク再計算は未実施。"
   ],
   "ci": {
     "run": 37878283145,
@@ -519,6 +520,12 @@
       "title": "通知から該当する宿題画面を開けるようにする",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/120"
+    },
+    {
+      "number": 121,
+      "title": "成功ログイン時刻を記録してリスク集計の無反応判定へ反映する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/121"
     }
   ],
   "nextOrder": [
@@ -4845,6 +4852,32 @@
       "dependsOn": [
         "FIX-104"
       ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-121",
+      "title": "成功ログイン時刻を記録してリスク集計の無反応判定へ反映する",
+      "category": "改善",
+      "phase": "改善",
+      "status": "review",
+      "design": "基本設計5-3/6-8（改訂差分）",
+      "screens": [],
+      "evidence": [
+        "supabase/migrations/20261015000100_record_last_login.sql",
+        "src/lib/services/riskStore.ts",
+        "tests/db/last-login.test.ts",
+        "tests/unit/risk-store-login.test.ts",
+        "docs/検証/成功ログイン時刻とリスク集計_20261023.md"
+      ],
+      "note": "Authのlast_sign_in_atをactive本人へ同期し、初回プロフィール作成と招待有効化を扱う。停止解除・直接日時更新では活動を進めない。リスク入力の活動日をJSTへ統一。全単体1033件成功。認証UIと閾値は未変更、実Auth・共有DB・保存済みsnapshotの再計算は未実施。",
+      "next": "検証環境のmigration履歴とAuthトリガー作成権限を確認し、実Authの全入口・refresh・停止中の非更新を試験する。既存のリスク再計算で保存済みsnapshotへの反映を確認し、設計DOCXを改訂してレビュー後にmainへ統合する。",
+      "issues": [
+        121
+      ],
+      "prs": [],
+      "dependsOn": [],
       "requiresAi": false,
       "scope": "active",
       "kind": "work_item"
