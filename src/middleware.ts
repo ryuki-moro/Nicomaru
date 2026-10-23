@@ -46,6 +46,9 @@ export async function middleware(request: NextRequest) {
       '/error',
       '/cases',
       '/mypage',
+      '/mypage/tasks',
+      '/submissions',
+      '/api/files/upload',
       '/api/cases',
       '/api/mypage/case',
       '/api/auth/password-login',
@@ -60,12 +63,17 @@ export async function middleware(request: NextRequest) {
     const casePage = /^\/cases\/[^/]+(?:\/edit)?$/.test(path) && path !== '/cases/new';
     const caseApi =
       /^\/api\/cases\/[^/]+(?:\/(?:assign-tasks|invitations)(?:\/[^/]+\/send)?)?$/.test(path);
+    const tasks =
+      /^\/(?:mypage\/tasks\/[^/]+|submissions\/[^/]+|api\/tasks\/[^/]+\/submit|api\/submissions\/[^/]+\/review|api\/cases\/[^/]+\/tasks(?:\/[^/]+)?|api\/files\/[^/]+\/download)$/.test(
+        path,
+      );
     const registration = /^\/register\/[^/]+$/.test(path);
     if (
       !allowed.includes(path) &&
       !casePage &&
       !caseApi &&
       !registration &&
+      !tasks &&
       !path.startsWith('/_next/')
     ) {
       return NextResponse.json(

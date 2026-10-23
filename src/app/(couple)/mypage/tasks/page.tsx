@@ -12,6 +12,9 @@
  * 「自分の案件だけ」の絞り込みは付録A の RLS が担保するため、ここでは case_id を指定しない。
  */
 import Link from 'next/link';
+import { requireRole } from '@/lib/auth/session';
+import { usingD1, localDB } from '@/lib/d1/runtime';
+import { taskList } from '@/lib/d1/tasks';
 
 import { TaskFilterTabs } from '@/app/(couple)/mypage/tasks/TaskFilterTabs';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -64,7 +67,7 @@ export default async function TaskListPage({
   const query = await searchParams;
   const tab = resolveTab(query.tab);
   const page = resolvePage(query.page);
-  const supabase = await createSupabaseServerClient();
+  const supabase = usingD1() ? null : await createSupabaseServerClient();
 
   // 「すべて」は waived を除外する。除外リストの補集合を .in() に渡すことで、
   // PostgREST の not.in 記法（値のクォート規則が独特）に依存せず値域を constants 側へ寄せる。
@@ -74,14 +77,19 @@ export default async function TaskListPage({
   // 既定の表示件数は50件、以降はページング（4-3 一覧画面共通）。
   // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する。
   const from = (page - 1) * LIST_PAGE_SIZE;
-  const { data, error } = await supabase
-    .from('case_tasks')
-    .select('id, title, due_date, status, submission_format')
-    .in('status', [...statuses])
-    .order('due_date', { ascending: true })
-    .order('display_order', { ascending: true })
-    .order('id', { ascending: true })
-    .range(from, from + LIST_PAGE_SIZE);
+  const { data, error } = usingD1()
+    ? {
+        data: await taskList(await localDB(), await requireRole('couple'), statuses, from),
+        error: null,
+      }
+    : await supabase!
+        .from('case_tasks')
+        .select('id, title, due_date, status, submission_format')
+        .in('status', [...statuses])
+        .order('due_date', { ascending: true })
+        .order('display_order', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, from + LIST_PAGE_SIZE);
 
   const fetched = (data ?? []) as TaskRow[];
   const hasNext = fetched.length > LIST_PAGE_SIZE;

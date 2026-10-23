@@ -316,14 +316,14 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
 
       <InvitationSection caseId={row.id} readOnly={archived} />
 
-      {!d1 && (
+      {
         <TaskSection
           caseId={row.id}
           tasks={tasks}
           hasPlanType={row.plan_type_id !== null}
           readOnly={archived}
         />
-      )}
+      }
     </div>
   );
 }

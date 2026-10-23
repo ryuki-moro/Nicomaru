@@ -167,7 +167,7 @@ export default async function MyPage() {
               return (
                 <li key={task.id}>
                   <Link
-                    href={d1 ? '/mypage' : `/mypage/tasks/${task.id}`}
+                    href={`/mypage/tasks/${task.id}`}
                     prefetch={false}
                     className="flex items-center gap-3 rounded-card bg-field-filled-bg px-4 py-[13px]"
                   >
@@ -195,33 +195,35 @@ export default async function MyPage() {
         <span className="text-title font-bold text-text-primary">{unsubmitted}件</span>
       </section>
 
-      {!d1 && (
+      {
         <div className="mt-1 flex flex-col gap-[10px]">
           <Link href="/mypage/tasks" prefetch={false} className="btn-primary block text-center">
             宿題・提出物を見る
           </Link>
-          <nav
-            aria-label="そのほかのメニュー"
-            className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-label"
-          >
-            <Link
-              href="/mypage/timeline"
-              prefetch={false}
-              className="text-link underline underline-offset-2"
+          {!d1 && (
+            <nav
+              aria-label="そのほかのメニュー"
+              className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-label"
             >
-              準備タイムラインを見る
-            </Link>
-            {/* 4-3 M01「通知一覧（M05）は Phase 2 で追加する」 */}
-            <Link
-              href="/mypage/notifications"
-              prefetch={false}
-              className="text-link underline underline-offset-2"
-            >
-              お知らせを見る
-            </Link>
-          </nav>
+              <Link
+                href="/mypage/timeline"
+                prefetch={false}
+                className="text-link underline underline-offset-2"
+              >
+                準備タイムラインを見る
+              </Link>
+              {/* 4-3 M01「通知一覧（M05）は Phase 2 で追加する」 */}
+              <Link
+                href="/mypage/notifications"
+                prefetch={false}
+                className="text-link underline underline-offset-2"
+              >
+                お知らせを見る
+              </Link>
+            </nav>
+          )}
         </div>
-      )}
+      }
     </div>
   );
 }

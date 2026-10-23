@@ -31,6 +31,17 @@ export const GET = route(
     const user = await requireAppUser();
     if (!isUuid(fileId)) throw notFound();
 
+    if (process.env.NICOMARU_DB === 'd1-local') {
+      const { localDB, localFiles } = await import('@/lib/d1/runtime');
+      const { downloadFile } = await import('@/lib/d1/files');
+      return downloadFile(
+        await localDB(),
+        await localFiles(),
+        user,
+        fileId,
+        new URL(_request.url).searchParams.get('raw') === '1',
+      );
+    }
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from('storage_files')

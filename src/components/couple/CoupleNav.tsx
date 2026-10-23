@@ -67,7 +67,9 @@ export function CoupleNav() {
     >
       <ul className="mx-auto flex max-w-phone">
         {ITEMS.filter(
-          (item) => process.env.NEXT_PUBLIC_NICOMARU_DB !== 'd1-local' || item.href === '/mypage',
+          (item) =>
+            process.env.NEXT_PUBLIC_NICOMARU_DB !== 'd1-local' ||
+            ['/mypage', '/mypage/tasks'].includes(item.href),
         ).map((item) => {
           const active =
             pathname === item.href || (item.href !== '/mypage' && pathname.startsWith(item.href));

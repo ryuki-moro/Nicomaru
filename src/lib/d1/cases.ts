@@ -339,14 +339,16 @@ export async function patchCase(
     statements.push(
       db
         .prepare(
-          `UPDATE case_tasks SET due_date=?,phase_name=? WHERE id=? AND case_id=? AND ${guard}`,
+          `UPDATE case_tasks SET due_date=?,phase_name=?,version=version+1 WHERE id=? AND case_id=? AND ${guard}`,
         )
         .bind(change.to, phaseNameFor(date, change.to), change.id, id, ...args),
     );
   for (const task of changes.waived)
     statements.push(
       db
-        .prepare(`UPDATE case_tasks SET status='waived' WHERE id=? AND case_id=? AND ${guard}`)
+        .prepare(
+          `UPDATE case_tasks SET status='waived',version=version+1 WHERE id=? AND case_id=? AND ${guard}`,
+        )
         .bind(task.id, id, ...args),
     );
   const newTasks = changedPlan
@@ -361,7 +363,7 @@ export async function patchCase(
     statements.push(
       db
         .prepare(
-          `INSERT INTO case_tasks(id,case_id,task_template_id,title,due_date,due_offset_days,status,importance,display_order,submission_format,phase_name) SELECT ?,?,?,?,?,?,'not_started',?,?,?,? WHERE ${guard}`,
+          `INSERT INTO case_tasks(id,case_id,task_template_id,title,due_date,due_offset_days,status,importance,display_order,submission_format,phase_name,description,options,allowed_file_types,is_required) SELECT ?,?,?,?,?,?,'not_started',?,?,?,?,?,?,?,? WHERE ${guard}`,
         )
         .bind(
           crypto.randomUUID(),
@@ -374,6 +376,10 @@ export async function patchCase(
           task.displayOrder,
           task.submissionFormat,
           phaseNameFor(date, task.dueDate),
+          task.description,
+          JSON.stringify(task.options),
+          JSON.stringify(task.allowedFileTypes),
+          Number(task.isRequired),
           ...args,
         ),
     );

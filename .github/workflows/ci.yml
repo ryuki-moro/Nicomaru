@@ -38,6 +38,9 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: D1 local tests
+        run: npm run test:d1
+
       - name: Core branch coverage
         run: npm run test:coverage
 

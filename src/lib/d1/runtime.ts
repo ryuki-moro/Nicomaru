@@ -1,5 +1,5 @@
 import { getPlatformProxy } from 'wrangler';
-import type { D1Database } from '@cloudflare/workers-types';
+import type { D1Database, R2Bucket } from '@cloudflare/workers-types';
 
 export const usingD1 = () => process.env.NICOMARU_DB === 'd1-local';
 const local = globalThis as typeof globalThis & {
@@ -20,4 +20,9 @@ export async function localDB(): Promise<D1Database> {
     persist: { path: '.wrangler/app-local/v3' },
   });
   return ((await local.nicomaruD1).env as { DB: D1Database }).DB;
+}
+
+export async function localFiles(): Promise<R2Bucket> {
+  await localDB();
+  return ((await local.nicomaruD1!).env as { FILES: R2Bucket }).FILES;
 }
