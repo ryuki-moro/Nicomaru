@@ -119,12 +119,16 @@ export default async function TaskListPage({
                     <span className="block text-label text-text-secondary">
                       回答方法：{TASK_ANSWER_METHOD_LABEL[task.submission_format]}
                     </span>
+                    {/* 相対期限が次の行に回ったとき全角「（」の左の空きで字下げに見えないよう、
+                        かっこを半角幅（halt）で組む。同じ行に並ぶときの空きは gap で取る */}
                     <span
-                      className={`block text-label ${dueSoon ? 'text-warning-text' : 'text-text-muted'}`}
+                      className={`flex flex-wrap gap-x-1 text-label ${dueSoon ? 'text-warning-text' : 'text-text-muted'}`}
                     >
-                      {formatDateJp(task.due_date)}まで
+                      <span>{formatDateJp(task.due_date)}まで</span>
                       {relativeDeadline && (
-                        <span className="inline-block">（{relativeDeadline}）</span>
+                        <span className="inline-block [font-feature-settings:'halt']">
+                          （{relativeDeadline}）
+                        </span>
                       )}
                     </span>
                   </span>

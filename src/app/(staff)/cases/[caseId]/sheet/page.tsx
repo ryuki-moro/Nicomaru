@@ -268,6 +268,12 @@ export default async function MeetingSheetPage({
         <nav aria-label="パンくず">
           <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
             <li>
+              <Link href="/dashboard" className="text-link hover:underline">
+                ダッシュボード
+              </Link>
+            </li>
+            <li aria-hidden>/</li>
+            <li>
               <Link href="/cases" className="text-link hover:underline">
                 案件一覧
               </Link>
