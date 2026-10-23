@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-23T02:30:04.558Z",
+  "updatedAt": "2026-10-23T02:45:55.759Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "214b041d6965bd335d596b5791b261a5671696a2",
   "implementationCommit": "c6048b2acef8449d4bf99d80ce32880ae98ae46b",
@@ -27,7 +27,8 @@
     "2026-10-09 GAP-11/Issue47修正、失敗注入52件・全649件・Chrome28件、PR70 CIのverify/実PG/security成功を確認",
     "2026-10-09 PR79へ残実装8項目/既存8PRを統合。詳細設計・発表PPTX/PDF・試験仕様Excel・WBS・評価/引継ぎを作成。人の実施と共有DB更新を区別。",
     "2026-10-09 最終CI・4観点レビュー・実PG/ブラウザー/負荷の実行結果を確認してPR79をmainへ統合。完成したコードと人の実施/環境反映待ちを分離。",
-    "2026-10-23 未完了実装を調査。origin/main b426e99からIssue123のホーム画面追加案内を再開。既存の認証・通知・招待・AI拡張は作業用チェックアウトに残り、main未反映。"
+    "2026-10-23 未完了実装を調査。origin/main b426e99からIssue123のホーム画面追加案内を再開。既存の認証・通知・招待・AI拡張は作業用チェックアウトに残り、main未反映。",
+    "2026-10-23 Issue104の既存実装551a60fをorigin/main b426e99とIssue123の統合ブランチへ移植。単体968件、模擬認証のPC/モバイル寸法Chromium各4件を確認。実Supabase/MailpitとWebKitは未検証。"
   ],
   "ci": {
     "run": 37878283145,
@@ -498,6 +499,12 @@
       "title": "マイページにホーム画面追加の案内を表示する",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/123",
       "state": "open"
+    },
+    {
+      "number": 104,
+      "title": "ログインをまたいで元の画面(パスと絞り込み)へ戻す",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/104"
     }
   ],
   "nextOrder": [
@@ -4722,6 +4729,38 @@
       "next": "差分をレビューしてmainへ統合し、QA-07で実機の追加・再ログインを確認する。",
       "issues": [
         123
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-104",
+      "title": "ログインをまたいで元の画面（パスと絞り込み）へ戻す",
+      "category": "改善",
+      "phase": "改善",
+      "status": "review",
+      "design": "基本設計4-2/6-5/12-1",
+      "screens": [
+        "P01"
+      ],
+      "evidence": [
+        "src/lib/auth/next.ts",
+        "src/middleware.ts",
+        "src/app/api/auth/otp-request/route.ts",
+        "tests/unit/auth-next.test.ts",
+        "tests/e2e/login-return.spec.ts",
+        "docs/環境の使い分け.md",
+        "tests/e2e/login-return-ui.spec.ts",
+        "docs/詳細設計/APIと更新境界.md",
+        "docs/検証/ログイン後の復帰_20261023.md"
+      ],
+      "note": "戻り先（next）の検証と組み立てをsrc/lib/auth/next.tsに集約。クエリは一覧の絞り込み（tab・page）だけを残し、トークン類は持ち出さない。ワンタイム認証メールの戻り先にもnextを載せ、メールのリンク経由でも元の画面へ戻る。 2026-10-23に最新main基点へ統合。単体968件と模擬認証UIのPC・スマートフォン寸法Chromium各4件が成功。実Supabase/Mailpit試験は接続環境なしでskip、WebKitは起動直後に終了。",
+      "next": "ローカルSupabase・Mailpitで実認証の復帰2件を再実行し、WebKit起動環境を整備する。基本設計DOCXの4-2・P01を改訂し、レビュー後にmainへ統合する。共有環境の設定は未変更。",
+      "issues": [
+        104
       ],
       "prs": [],
       "dependsOn": [],

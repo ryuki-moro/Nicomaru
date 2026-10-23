@@ -9,6 +9,7 @@
  * check_rate_limit（Service Role 専用RPC）で 429 を返せるようにするためである（4-3 P01）。
  */
 import { noContent, parseBody, route } from '@/lib/api/route';
+import { normalizeNext } from '@/lib/auth/next';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { otpRequestSchema } from '@/lib/validation';
 
@@ -20,16 +21,24 @@ export const POST = route(async (request) => {
 
   const supabase = await createSupabaseServerClient();
 
+  // 戻り先はログイン画面と同じ規則で検証し直す（本文は利用者が書き換えられる）。
+  // 不正な next は黙って捨て、従来どおりログイン画面へ戻す。
+  const next = normalizeNext(body.next);
+  const loginUrl = `${appBaseUrl(request)}/login`;
+
   // shouldCreateUser: false —— 本APIはログイン用であり、ここでアカウントを作らせない。
   // couple の Auth ユーザーは招待トークンを消費する /api/auth/initial-register でのみ作成する（6-6-1）。
   //
   // emailRedirectTo をログイン画面自身にするのは、リンクを踏んだブラウザが
   // 要求元と別ブラウザでも「同じ画面で6桁コードを入力し直せる」着地にするため（6-3-1 の方針(1)）。
+  // next を載せるのは、メールのリンク経由でもログイン後に元の画面へ戻すため（4-2）。
+  // Supabase は戻り先のホスト名が Site URL と違うと黙って Site URL へ落とすので、
+  // 共有環境では Site URL を APP_BASE_URL と同じホスト名にする（docs/環境の使い分け.md 3-1）。
   const { error } = await supabase.auth.signInWithOtp({
     email: body.email,
     options: {
       shouldCreateUser: false,
-      emailRedirectTo: `${appBaseUrl(request)}/login`,
+      emailRedirectTo: next ? `${loginUrl}?next=${encodeURIComponent(next)}` : loginUrl,
     },
   });
 

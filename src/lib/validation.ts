@@ -66,6 +66,8 @@ const notPastDate = (value: string) => value >= todayInJst();
 // ------------------------------------------------------------------ 認証（P01〜P03）
 export const otpRequestSchema = z.object({
   email,
+  /** ログイン後の戻り先（P01 の ?next=）。形の検証と許可キーへの絞り込みは route 側で行う */
+  next: z.string().max(2048).optional(),
 });
 
 export const otpVerifySchema = z.object({

@@ -11,7 +11,7 @@ const EMAIL = 'private-email@example.test';
 const IP = '192.0.2.45';
 const SERVICE_KEY = 'private-service-role-key';
 
-function request() {
+function request(body: Record<string, unknown> = { email: EMAIL }) {
   return new Request('http://app.test/api/auth/otp-request', {
     method: 'POST',
     headers: {
@@ -19,7 +19,7 @@ function request() {
       'x-forwarded-for': IP,
       origin: 'http://app.test',
     },
-    body: JSON.stringify({ email: EMAIL }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -46,9 +46,9 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-async function sendOtp() {
+async function sendOtp(body?: Record<string, unknown>) {
   const { POST } = await import('@/app/api/auth/otp-request/route');
-  return POST(request());
+  return POST(request(body));
 }
 
 function assertNoOtp() {
@@ -234,5 +234,52 @@ describe('実Supabase SDKを使ったOTP送信前のレート制限', () => {
     const logs = JSON.stringify(vi.mocked(console.warn).mock.calls);
     for (const secret of [EMAIL, IP, SERVICE_KEY, 'private-hash'])
       expect(logs).not.toContain(secret);
+  });
+});
+
+describe('ワンタイム認証メールの戻り先（emailRedirectTo）', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>().mockImplementation(async () => Response.json(true)),
+    );
+  });
+
+  async function redirectFor(next?: unknown) {
+    const response = await sendOtp(next === undefined ? { email: EMAIL } : { email: EMAIL, next });
+    expect(response.status).toBe(204);
+    expect(signInWithOtp).toHaveBeenCalledOnce();
+    return signInWithOtp.mock.calls[0][0].options.emailRedirectTo as string;
+  }
+
+  it('next が無ければ従来どおりログイン画面', async () => {
+    expect(await redirectFor()).toBe('http://app.test/login');
+  });
+
+  it('検証済みの next をエンコードして載せる', async () => {
+    expect(await redirectFor('/mypage/tasks/task-id?tab=needs_fix')).toBe(
+      'http://app.test/login?next=%2Fmypage%2Ftasks%2Ftask-id%3Ftab%3Dneeds_fix',
+    );
+  });
+
+  it('許可していないクエリは戻り先に載せない', async () => {
+    const redirect = await redirectFor('/mypage/account?linkToken=private-token&tab=line');
+
+    expect(redirect).toBe('http://app.test/login?next=%2Fmypage%2Faccount%3Ftab%3Dline');
+    expect(redirect).not.toContain('private-token');
+  });
+
+  it.each(['//evil.example.test', '/\\evil.example.test', 'https://evil.example.test', '/'])(
+    '不正・不要な next %s は黙って捨ててログイン画面へ戻す',
+    async (next) => {
+      expect(await redirectFor(next)).toBe('http://app.test/login');
+    },
+  );
+
+  it('文字列でない next は入力エラーにしてメールを送らない', async () => {
+    const response = await sendOtp({ email: EMAIL, next: 123 });
+
+    expect(response.status).toBe(400);
+    assertNoOtp();
   });
 });

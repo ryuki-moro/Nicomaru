@@ -232,7 +232,8 @@ export function LoginForm({
     setError(null);
     setFieldErrors({});
     try {
-      await api.post('/api/auth/otp-request', { email });
+      // 戻り先をメールのリンクにも載せる（4-2）。サーバー側で同じ規則で検証し直す
+      await api.post('/api/auth/otp-request', { email, next: next ?? undefined });
       setCodeSent(true);
       setCode('');
       setResendIn(OTP.resendIntervalSeconds);
