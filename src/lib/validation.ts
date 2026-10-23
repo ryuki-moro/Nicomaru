@@ -248,15 +248,27 @@ export const reviewSubmissionSchema = z
   });
 
 // ------------------------------------------------------ 招待・フォロー・利用者
-export const invitationIssueSchema = z.object({
-  targetPartnerRole: z.enum(PARTNER_ROLES),
-  /** 発行と同時に送信する場合に指定する。省略時は発行のみ（URLを応答で1度だけ返す） */
-  send: z.enum(CONTACT_CHANNELS).optional(),
-});
+export const invitationIssueSchema = z
+  .object({
+    targetPartnerRole: z.enum(PARTNER_ROLES),
+    /** 発行と同時に送信する場合に指定する。省略時は発行のみ（URLを応答で1度だけ返す） */
+    send: z.enum(CONTACT_CHANNELS).optional(),
+    recipientEmail: email.optional(),
+  })
+  .refine((v) => !v.recipientEmail || v.send === 'email', {
+    path: ['recipientEmail'],
+    message: 'メール送信時のみ宛先を指定できます',
+  });
 
-export const invitationSendSchema = z.object({
-  channel: z.enum(CONTACT_CHANNELS),
-});
+export const invitationSendSchema = z
+  .object({
+    channel: z.enum(CONTACT_CHANNELS),
+    recipientEmail: email.optional(),
+  })
+  .refine((v) => !v.recipientEmail || v.channel === 'email', {
+    path: ['recipientEmail'],
+    message: 'メール送信時のみ宛先を指定できます',
+  });
 
 export const followLogSchema = z.object({
   method: z.enum(FOLLOW_METHODS),

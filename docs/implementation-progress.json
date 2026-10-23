@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-23T03:28:19.902Z",
+  "updatedAt": "2026-10-23T03:45:59.089Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "214b041d6965bd335d596b5791b261a5671696a2",
   "implementationCommit": "c6048b2acef8449d4bf99d80ce32880ae98ae46b",
@@ -31,7 +31,8 @@
     "2026-10-23 Issue104の既存実装551a60fをorigin/main b426e99とIssue123の統合ブランチへ移植。単体968件、模擬認証のPC/モバイル寸法Chromium各4件を確認。実Supabase/MailpitとWebKitは未検証。",
     "2026-10-23 Issue105の実装3690050と未コミット試験をIssue104・123の統合ブランチへ取り込んだ。単体990件、模擬認証UIのPC・スマートフォン寸法Chromium各10件が成功。共有設定・実認証・実機は未確認。",
     "2026-10-23 Issue120のStep4だけをIssue104・105・123統合ブランチへ取り込み。単体/PGlite1017件、ビルド版の模擬認証ブラウザーPC・スマートフォン寸法各12件が成功。共有DB適用・実送信・実認証通しは未実施。",
-    "2026-10-23 Issue121のAuth成功時刻同期とリスク入力試験をIssue120までの統合ブランチへ取り込み。停止解除による活動誤認とJST日付境界を修正。単体1033件成功、実PostgreSQL15件skip。共有DB適用・実Auth・保存済みリスク再計算は未実施。"
+    "2026-10-23 Issue121のAuth成功時刻同期とリスク入力試験をIssue120までの統合ブランチへ取り込み。停止解除による活動誤認とJST日付境界を修正。単体1033件成功、実PostgreSQL15件skip。共有DB適用・実Auth・保存済みリスク再計算は未実施。",
+    "2026-10-23 Issue122のStep7をIssue121までの統合ブランチへ取り込み。二重入力・RLS経由の暗号化保存・発行と再送を実装。失敗後の再試行とDBの宛先重複防止を追加。PC・スマートフォン幅の模擬API操作を確認。実送信・共有DBは未実施。 全単体/PGlite1069件成功、実PostgreSQL15件skip。型・lint・整形・進捗・本番ビルド成功。"
   ],
   "ci": {
     "run": 37878283145,
@@ -526,6 +527,12 @@
       "title": "成功ログイン時刻を記録してリスク集計の無反応判定へ反映する",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/121"
+    },
+    {
+      "number": 122,
+      "title": "新郎新婦の2人目へメール招待を送れるようにする",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/122"
     }
   ],
   "nextOrder": [
@@ -4875,6 +4882,38 @@
       "next": "検証環境のmigration履歴とAuthトリガー作成権限を確認し、実Authの全入口・refresh・停止中の非更新を試験する。既存のリスク再計算で保存済みsnapshotへの反映を確認し、設計DOCXを改訂してレビュー後にmainへ統合する。",
       "issues": [
         121
+      ],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-122",
+      "title": "新郎新婦の2人目へメール招待を送れるようにする",
+      "category": "改善",
+      "phase": "改善",
+      "status": "review",
+      "design": "基本設計6-6-1/13-1（改訂差分）",
+      "screens": [
+        "K02",
+        "K03"
+      ],
+      "evidence": [
+        "src/lib/services/invitation-recipient.ts",
+        "src/app/api/cases/[caseId]/invitations/route.ts",
+        "src/app/api/cases/[caseId]/invitations/[invitationId]/send/route.ts",
+        "supabase/migrations/20261023000200_invitation_recipient_guard.sql",
+        "tests/unit/invitation-recipient.test.ts",
+        "tests/unit/invitation-api-combination.test.ts",
+        "tests/db/invitation-recipient-rls.test.ts",
+        "docs/検証/2人目へのメール招待_20261023.md"
+      ],
+      "note": "未登録相手のメールを二重入力・暗号化保存し、発行・再送へ引き継ぐ。別パートナーのプロフィール・有効招待との重複をRLS照会とDBロックで拒否。同じ宛先で失敗後の再試行が可能。実送信・共有DB・実PostgreSQL並行接続は未実施。 全単体/PGlite1069件、型・lint・整形・進捗・本番ビルド成功。",
+      "next": "検証環境でmigration履歴・既存重複を照合し、実メール送信と登録完了まで確認する。設計DOCXを改訂してレビュー後にmainへ統合する。",
+      "issues": [
+        122
       ],
       "prs": [],
       "dependsOn": [],

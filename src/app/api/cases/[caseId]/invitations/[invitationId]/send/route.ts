@@ -19,6 +19,7 @@ import {
   type PartnerRole,
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
+import { saveInvitationRecipient } from '@/lib/services/invitation-recipient';
 import { fromPostgresError, notFound } from '@/lib/errors';
 import { sendInvitation } from '@/lib/notify/send';
 import {
@@ -81,6 +82,19 @@ export const POST = route(
       (p) => p.partner_role === invitation.target_partner_role,
     );
     if (!partner) throw notFound('対象の新郎新婦プロフィールが見つかりません');
+
+    if (input.recipientEmail) {
+      const saved = await saveInvitationRecipient(
+        supabase,
+        caseId,
+        partner.partner_role,
+        partner,
+        target.couple_profiles,
+        input.recipientEmail,
+      );
+      partner.email = saved.email;
+      partner.email_hash = saved.email_hash;
+    }
 
     const channel: ContactChannel = input.channel;
     const token = generateInvitationToken();

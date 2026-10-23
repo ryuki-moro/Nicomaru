@@ -18,6 +18,7 @@ import {
   type PartnerRole,
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
+import { saveInvitationRecipient } from '@/lib/services/invitation-recipient';
 import { fromPostgresError, notFound } from '@/lib/errors';
 import { sendInvitation } from '@/lib/notify/send';
 import {
@@ -116,7 +117,19 @@ export const GET = route(
       .eq('purpose', 'initial_registration');
     if (error) throw fromPostgresError(error);
 
-    return ok({ invitations: summarize((data ?? []) as unknown as InvitationRow[]) });
+    const { data: partners, error: partnerError } = await supabase
+      .from('couple_profiles')
+      .select('partner_role, email')
+      .eq('case_id', caseId);
+    if (partnerError) throw fromPostgresError(partnerError);
+    return ok({
+      invitations: summarize((data ?? []) as unknown as InvitationRow[]).map((item) => ({
+        ...item,
+        hasEmail: (partners ?? []).some(
+          (p) => p.partner_role === item.targetPartnerRole && p.email !== null,
+        ),
+      })),
+    });
   },
 );
 
@@ -144,6 +157,19 @@ export const POST = route(
 
     const partner = target.couple_profiles.find((p) => p.partner_role === input.targetPartnerRole);
     if (!partner) throw notFound('対象の新郎新婦プロフィールが見つかりません');
+
+    if (input.recipientEmail) {
+      const saved = await saveInvitationRecipient(
+        supabase,
+        caseId,
+        partner.partner_role,
+        partner,
+        target.couple_profiles,
+        input.recipientEmail,
+      );
+      partner.email = saved.email;
+      partner.email_hash = saved.email_hash;
+    }
 
     const token = generateInvitationToken();
     const expiresAt = invitationExpiresAt('initial_registration');
