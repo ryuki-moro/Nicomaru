@@ -15,6 +15,7 @@ import { redirect } from 'next/navigation';
 
 import { InvitationSection } from './InvitationSection';
 import { RiskSection, type CaseRisk } from './RiskSection';
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import type { RiskReasonView } from '@/components/ui/RiskBadge';
 import { TaskSection, type CaseTaskRow } from './TaskSection';
 import { adoptedOutput, AI_JOB_COLUMNS, type AiJobRow } from '@/lib/ai/assist';
@@ -98,7 +99,8 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
 
   // 権限外・不存在はどちらも P04 エラーページへ（4-3 エラー表示規約）。
   // RLS により権限外は 0 行として返るため、ここで区別しない（存在の有無を漏らさない）。
-  if (!data) redirect('/error');
+  // どちらも「見つからない」（404）の文言にする。コードを付けないと「一時的な問題」と出てしまう。
+  if (!data) redirect('/error?code=404');
   const row = data as unknown as CaseRow;
 
   // 6-8: 現在値を読むだけ。表示のたびに再計算はしない。
@@ -169,23 +171,9 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
 
   return (
     <div className="space-y-5">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href="/cases" className="text-link hover:underline">
-              案件一覧
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page">{row.case_code}</li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        items={[DASHBOARD_CRUMB, { label: '案件一覧', href: '/cases' }, { label: row.case_code }]}
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="section-head">

@@ -13,6 +13,7 @@
  */
 import Link from 'next/link';
 
+import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
   COUPLE_PROFILE_COLUMNS,
@@ -148,7 +149,7 @@ export default async function MyPage() {
               return (
                 <li key={task.id}>
                   <Link
-                    href={`/mypage/tasks/${task.id}`}
+                    href={taskDetailHref(task.id, 'home')}
                     prefetch={false}
                     className="flex items-center gap-3 rounded-card bg-field-filled-bg px-4 py-[13px]"
                   >
@@ -180,23 +181,12 @@ export default async function MyPage() {
         <Link href="/mypage/tasks" prefetch={false} className="btn-primary block text-center">
           宿題・提出物を見る
         </Link>
-        <nav
-          aria-label="そのほかのメニュー"
-          className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-label"
-        >
-          <Link
-            href="/mypage/timeline"
-            prefetch={false}
-            className="text-link underline underline-offset-2"
-          >
+        <nav aria-label="そのほかのメニュー" className="flex flex-wrap justify-center gap-2">
+          <Link href="/mypage/timeline" prefetch={false} className="btn-ghost">
             準備タイムラインを見る
           </Link>
           {/* 4-3 M01「通知一覧（M05）は Phase 2 で追加する」 */}
-          <Link
-            href="/mypage/notifications"
-            prefetch={false}
-            className="text-link underline underline-offset-2"
-          >
+          <Link href="/mypage/notifications" prefetch={false} className="btn-ghost">
             お知らせを見る
           </Link>
         </nav>

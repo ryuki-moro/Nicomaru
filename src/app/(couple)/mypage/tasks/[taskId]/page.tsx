@@ -9,9 +9,11 @@
  * 読み取りは Supabase クライアントから直接行い（6-5）、書き込みだけを
  * /api/tasks/{taskId}/submit に寄せる。どの宿題が見えるかは付録A の RLS が決める。
  */
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { SubmitForm } from '@/app/(couple)/mypage/tasks/[taskId]/SubmitForm';
+import { taskBackHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { TaskStatusBadge } from '@/components/ui/StatusBadge';
 import {
   ALLOWED_FILE_TYPES,
@@ -75,8 +77,16 @@ function allowedTypesOf(raw: unknown): AllowedFileType[] {
   );
 }
 
-export default async function TaskDetailPage({ params }: { params: Promise<{ taskId: string }> }) {
+export default async function TaskDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ taskId: string }>;
+  searchParams: Promise<{ from?: string | string[] }>;
+}) {
   const { taskId } = await params;
+  // 「戻る」は来た画面へ（マイページ・準備タイムライン・宿題一覧）
+  const backHref = taskBackHref((await searchParams).from);
   const supabase = await createSupabaseServerClient();
 
   const taskResult = await supabase
@@ -154,9 +164,14 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ tas
 
       {task.status === 'waived' ? (
         // waived（マイページ表示は「対応不要」）は提出の対象外（表6-9）
-        <p className="card text-label text-text-secondary">
-          この宿題は対応不要になりました。提出は必要ありません。
-        </p>
+        <>
+          <p className="card text-label text-text-secondary">
+            この宿題は対応不要になりました。提出は必要ありません。
+          </p>
+          <Link href={backHref} className="btn-ghost self-center">
+            戻る
+          </Link>
+        </>
       ) : (
         <SubmitForm
           taskId={task.id}
@@ -171,6 +186,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ tas
           // submission_format='none' はボタンのラベルだけを差し替える（表4-13）
           submitLabel={format === 'none' ? '確認しました' : '提出する'}
           canSaveDraft={latest?.review_status !== 'submitted'}
+          backHref={backHref}
         />
       )}
     </div>

@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { CASE_STATUS_LABEL, LIST_PAGE_SIZE } from '@/lib/constants';
@@ -44,7 +45,8 @@ async function restoreCase(formData: FormData) {
   if (!caseId) return;
 
   const actor = await getAppUser();
-  if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin')) redirect('/error');
+  if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin'))
+    redirect('/error?code=403');
 
   const supabase = await createSupabaseServerClient();
   try {
@@ -117,17 +119,7 @@ export default async function CaseListPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page">案件一覧</li>
-        </ol>
-      </nav>
+      <Breadcrumbs items={[DASHBOARD_CRUMB, { label: '案件一覧' }]} />
 
       <div className="flex items-center justify-between gap-3">
         <h1 className="section-head">案件一覧</h1>

@@ -14,8 +14,9 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { getAppUser, landingPathFor } from '@/lib/auth/session';
+import { getAppUser } from '@/lib/auth/session';
 import {
   IMPORTANCE_LABEL,
   LIST_PAGE_SIZE,
@@ -68,7 +69,7 @@ export default async function TemplateListPage({
   const user = await getAppUser();
   // テンプレートは式場ごとの運用差を吸収する仕組み（11章）であり、管理者のみが編集する（表4-10 T01）
   if (!user) redirect('/login');
-  if (user.role !== 'admin') redirect(landingPathFor(user.role));
+  if (user.role !== 'admin') redirect('/error?code=403');
 
   const supabase = await createSupabaseServerClient();
 
@@ -110,19 +111,7 @@ export default async function TemplateListPage({
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li className="flex items-center gap-1">
-            <span aria-hidden>/</span>
-            <span aria-current="page">宿題テンプレート</span>
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumbs items={[DASHBOARD_CRUMB, { label: '宿題テンプレート' }]} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="section-head">宿題テンプレート</h1>

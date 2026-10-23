@@ -15,6 +15,7 @@
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
@@ -279,19 +280,7 @@ export default async function PlanTypesPage({
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li className="flex items-center gap-1">
-            <span aria-hidden>/</span>
-            <span aria-current="page">プラン種別管理</span>
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumbs items={[DASHBOARD_CRUMB, { label: 'プラン種別管理' }]} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="section-head">プラン種別管理</h1>

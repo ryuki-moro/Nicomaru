@@ -14,6 +14,7 @@
  */
 import Link from 'next/link';
 
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { requireStaff } from '@/lib/auth/session';
 import { CONTACT_CHANNEL_LABEL, LIST_PAGE_SIZE } from '@/lib/constants';
@@ -82,17 +83,7 @@ export default async function NotificationHistoryPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page">通知履歴</li>
-        </ol>
-      </nav>
+      <Breadcrumbs items={[DASHBOARD_CRUMB, { label: '通知履歴' }]} />
 
       <h1 className="section-head">通知履歴</h1>
 

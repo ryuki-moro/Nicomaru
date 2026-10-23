@@ -12,6 +12,7 @@
  */
 import Link from 'next/link';
 
+import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { formatDateJp } from '@/lib/format';
@@ -112,8 +113,8 @@ export default async function TimelinePage({
                     )}
                     {item.related_task_id && (
                       <Link
-                        href={`/mypage/tasks/${item.related_task_id}`}
-                        className="btn-ghost mt-2 inline-block"
+                        href={taskDetailHref(item.related_task_id, 'timeline')}
+                        className="btn-ghost mt-2"
                       >
                         関連宿題を見る
                       </Link>

@@ -83,7 +83,7 @@ export async function createCase(page: Page, input: CaseInput): Promise<CreatedC
   return { caseId, caseCode, assignedCount, inviteUrls };
 }
 
-/** D02 提出物確認。案件番号で行を特定し、確認結果を登録して案件詳細へ戻るまで */
+/** D02 提出物確認。案件番号で行を特定し、確認結果を登録して一覧へ戻り、結果の知らせが出るまで */
 export async function reviewLatestSubmission(
   page: Page,
   kase: Pick<CreatedCase, 'caseId' | 'caseCode'>,
@@ -96,7 +96,13 @@ export async function reviewLatestSubmission(
   await page.getByLabel(result.decision === 'needs_fix' ? '不備あり' : '確認済').check();
   if (result.comment) await page.getByLabel(/^コメント（/).fill(result.comment);
   await page.getByRole('button', { name: '確定する' }).click();
-  await page.waitForURL(new RegExp(`/cases/${kase.caseId}$`));
+  await page.waitForURL(/\/submissions\?reviewed=[0-9a-f-]{36}$/);
+  const label = result.decision === 'needs_fix' ? '不備あり' : '確認済';
+  await expect(
+    page
+      .getByRole('status')
+      .filter({ hasText: `（${kase.caseCode}）の確認結果を「${label}」で登録しました` }),
+  ).toBeVisible();
 }
 
 // ------------------------------------------------------------------ 新郎新婦側
@@ -166,11 +172,12 @@ export async function expectTaskStatus(page: Page, title: string, status: string
   await expect(page.getByRole('link', { name: new RegExp(title) })).toContainText(status);
 }
 
-/** テキスト形式の宿題を提出する。成功すると一覧へ戻る */
+/** テキスト形式の宿題を提出する。成功すると一覧へ戻り、一覧の上に提出した旨が出る */
 export async function submitText(page: Page, answer: string): Promise<void> {
   await page.getByLabel('回答').fill(answer);
   await page.getByRole('button', { name: '提出する' }).click();
-  await page.waitForURL(/\/mypage\/tasks$/);
+  await page.waitForURL(/\/mypage\/tasks\?submitted=[0-9a-f-]{36}$/);
+  await expect(page.getByRole('status').filter({ hasText: 'を提出しました' })).toBeVisible();
 }
 
 /** テキスト形式の宿題を一時保存する。画面に留まり、保存した旨が出る */
