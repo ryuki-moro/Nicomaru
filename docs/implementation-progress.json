@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-23T03:01:20.160Z",
+  "updatedAt": "2026-10-23T03:16:11.737Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "214b041d6965bd335d596b5791b261a5671696a2",
   "implementationCommit": "c6048b2acef8449d4bf99d80ce32880ae98ae46b",
@@ -29,7 +29,8 @@
     "2026-10-09 最終CI・4観点レビュー・実PG/ブラウザー/負荷の実行結果を確認してPR79をmainへ統合。完成したコードと人の実施/環境反映待ちを分離。",
     "2026-10-23 未完了実装を調査。origin/main b426e99からIssue123のホーム画面追加案内を再開。既存の認証・通知・招待・AI拡張は作業用チェックアウトに残り、main未反映。",
     "2026-10-23 Issue104の既存実装551a60fをorigin/main b426e99とIssue123の統合ブランチへ移植。単体968件、模擬認証のPC/モバイル寸法Chromium各4件を確認。実Supabase/MailpitとWebKitは未検証。",
-    "2026-10-23 Issue105の実装3690050と未コミット試験をIssue104・123の統合ブランチへ取り込んだ。単体990件、模擬認証UIのPC・スマートフォン寸法Chromium各10件が成功。共有設定・実認証・実機は未確認。"
+    "2026-10-23 Issue105の実装3690050と未コミット試験をIssue104・123の統合ブランチへ取り込んだ。単体990件、模擬認証UIのPC・スマートフォン寸法Chromium各10件が成功。共有設定・実認証・実機は未確認。",
+    "2026-10-23 Issue120のStep4だけをIssue104・105・123統合ブランチへ取り込み。単体/PGlite1017件、ビルド版の模擬認証ブラウザーPC・スマートフォン寸法各12件が成功。共有DB適用・実送信・実認証通しは未実施。"
   ],
   "ci": {
     "run": 37878283145,
@@ -512,6 +513,12 @@
       "title": "メールのログインリンクを別ブラウザでも使えるようにする(/login/link)",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/105"
+    },
+    {
+      "number": 120,
+      "title": "通知から該当する宿題画面を開けるようにする",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/120"
     }
   ],
   "nextOrder": [
@@ -4799,6 +4806,40 @@
       "next": "ローカルSupabase・Mailpitで実認証2件を実施し、実機Safari/Gmail内ブラウザーを確認する。基本設計DOCXを改訂してレビューし、コードとテンプレートを同じ版で反映する。共有設定変更はユーザー確認後。",
       "issues": [
         105
+      ],
+      "prs": [],
+      "dependsOn": [
+        "FIX-104"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-120",
+      "title": "通知から該当する宿題画面を開けるようにする",
+      "category": "改善",
+      "phase": "改善",
+      "status": "review",
+      "design": "基本設計5-3/4-3 M05/付録D（改訂差分）",
+      "screens": [
+        "M05"
+      ],
+      "evidence": [
+        "supabase/migrations/20261023000100_notification_link_path.sql",
+        "src/lib/services/notifications.ts",
+        "src/app/api/notifications/send/route.ts",
+        "src/app/(couple)/mypage/notifications/page.tsx",
+        "tests/db/notifications.test.ts",
+        "tests/unit/notification-send-route.test.ts",
+        "tests/unit/notification-page.test.ts",
+        "tests/e2e/notification-link-ui.spec.ts",
+        "docs/検証/通知から宿題へのリンク_20261023.md"
+      ],
+      "note": "NULL可のlink_pathと旧6引数互換RPC、同一案件のtaskId確認、通知送信時の絶対URL付与、M05の詳細リンクと旧行の戻り先を統合。単体1017件とビルド版模擬ブラウザー各12件成功。差戻し・期限頻度変更は含めず、共有DB・実配信・実認証は未確認。",
+      "next": "検証環境でDB追加migrationをアプリ反映より先に適用し、PostgRESTと旧RPC互換を確認する。実通知のM05クリックから認証を経た宿題復帰を確認し、設計DOCXを改訂してレビュー後にmainへ統合する。",
+      "issues": [
+        120
       ],
       "prs": [],
       "dependsOn": [

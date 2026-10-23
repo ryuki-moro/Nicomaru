@@ -382,6 +382,7 @@ export const notificationSendSchema = z
     recipientUserId: z.string().uuid(),
     channel: z.enum(['line', 'email', 'in_app']),
     notificationType: z.enum(NOTIFICATION_TYPES),
+    taskId: z.string().uuid().optional().nullable(),
     taskName: z.string().trim().max(120).optional().nullable(),
     dueDate: z.string().trim().max(40).optional().nullable(),
     comment: z.string().trim().max(INPUT_LIMITS.textArea).optional().nullable(),
