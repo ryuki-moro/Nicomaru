@@ -13,6 +13,9 @@ import { createAuthRateLimitFetch } from './auth-rate-limit-fetch';
 
 /** 表6-4 に列挙された使用箇所と、そのときAPI層で担保すべき権限検証。 */
 export const SERVICE_ROLE_USE_CASES = {
+  'auth.invitation-peek':
+    'P02で形式確認済みのトークンハッシュとinitial_registration目的で状態列のみ参照する。更新・消費はしない。案件/相手区分は本人判定に限り画面へ出さない（表6-4改訂案参照）',
+
   'auth.initial-register':
     'case_invitations の token_hash 照合と expires_at／used_at／revoked_at／purpose／max_uses チェックを必須実施。' +
     'recipient_email が設定された招待は入力メールとの一致も必須。検証と消費は単一 UPDATE ... RETURNING（6-6-1）',

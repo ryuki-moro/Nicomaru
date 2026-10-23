@@ -50,6 +50,7 @@ const ROUTES = [
   '/api/venues/[venueId]',
   '/',
   '/login',
+  '/login/link',
   '/dev/mailbox',
   '/password',
   '/register/[token]',

@@ -35,6 +35,7 @@ interface InvitationSummary {
   createdAt: string;
   expiresAt: string;
   lastSentAt: string | null;
+  hasEmail: boolean;
 }
 
 interface IssueResponse {
@@ -51,6 +52,8 @@ export function InvitationSection({ caseId, readOnly }: { caseId: string; readOn
   const [invitations, setInvitations] = useState<InvitationSummary[] | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [recipientEmails, setRecipientEmails] = useState<Record<string, string>>({});
+  const [confirmEmails, setConfirmEmails] = useState<Record<string, string>>({});
   const [channel, setChannel] = useState<ContactChannel>('email');
   /** 平文URLは1度だけ表示する（6-3-6）。閉じると再表示できない。 */
   const [revealed, setRevealed] = useState<{
@@ -97,13 +100,23 @@ export function InvitationSection({ caseId, readOnly }: { caseId: string; readOn
 
   async function reissueAndSend(invitation: InvitationSummary) {
     if (busy) return;
+    const needsEmail = channel === 'email' && !invitation.hasEmail;
+    const recipientEmail = recipientEmails[invitation.id]?.trim() ?? '';
+    if (
+      needsEmail &&
+      (!recipientEmail ||
+        recipientEmail.toLowerCase() !== confirmEmails[invitation.id]?.trim().toLowerCase())
+    ) {
+      setSummary('メールアドレスと確認用メールアドレスを同じ内容で入力してください。');
+      return;
+    }
     setBusy(true);
     setSummary(null);
     setCopyNote(null);
     try {
       const sent = await api.post<IssueResponse>(
         `/api/cases/${caseId}/invitations/${invitation.id}/send`,
-        { channel },
+        { channel, ...(needsEmail ? { recipientEmail } : {}) },
       );
       // 送信が未構成でスキップされた場合、URLを見せないと誰も招待に到達できなくなる（13-1）
       setRevealed(
@@ -193,6 +206,40 @@ export function InvitationSection({ caseId, readOnly }: { caseId: string; readOn
                         <span className="text-caption text-text-muted">登録済み</span>
                       ) : (
                         <div className="flex flex-wrap gap-2">
+                          {channel === 'email' && !invitation.hasEmail && (
+                            <div className="w-full space-y-2">
+                              <label className="block text-caption">
+                                メールアドレス
+                                <input
+                                  type="email"
+                                  autoComplete="off"
+                                  className="field"
+                                  value={recipientEmails[invitation.id] ?? ''}
+                                  onChange={(e) =>
+                                    setRecipientEmails((v) => ({
+                                      ...v,
+                                      [invitation.id]: e.target.value,
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="block text-caption">
+                                メールアドレス（確認用）
+                                <input
+                                  type="email"
+                                  autoComplete="off"
+                                  className="field"
+                                  value={confirmEmails[invitation.id] ?? ''}
+                                  onChange={(e) =>
+                                    setConfirmEmails((v) => ({
+                                      ...v,
+                                      [invitation.id]: e.target.value,
+                                    }))
+                                  }
+                                />
+                              </label>
+                            </div>
+                          )}
                           <button
                             type="button"
                             className="btn-ghost"

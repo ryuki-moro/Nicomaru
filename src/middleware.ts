@@ -11,6 +11,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { createServerClient } from '@supabase/ssr';
 
+import { buildNext } from '@/lib/auth/next';
+
 /**
  * 未ログインでもアクセスできるパス（4-2）。
  *
@@ -140,7 +142,9 @@ export async function middleware(request: NextRequest) {
       });
     }
     const loginUrl = new URL('/login', baseUrl.origin);
-    if (path !== '/') loginUrl.searchParams.set('next', path);
+    // 戻り先はパスと、一覧の絞り込みに要る許可キーだけ。トークン類のクエリは引き継がない
+    const next = buildNext(path, request.nextUrl.searchParams);
+    if (next) loginUrl.searchParams.set('next', next);
     return NextResponse.redirect(loginUrl);
   }
 

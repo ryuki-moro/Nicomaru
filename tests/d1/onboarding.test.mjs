@@ -102,6 +102,9 @@ test('案件登録は自式場・自身担当で2招待を発行し、宿題割�
   assert.equal(row.primary_planner_id, ids.plannerA);
   assert.match(created.caseCode, /^VENUEA-2028-\d{4}$/);
   assert.equal(created.invitations.length, 2);
+  const invitations = (await listInvitations(db, planner, created.caseId)).invitations;
+  assert.equal(invitations.find((i) => i.targetPartnerRole === 'bride').hasEmail, true);
+  assert.equal(invitations.find((i) => i.targetPartnerRole === 'groom').hasEmail, false);
   const stored = await db
     .prepare('SELECT token_hash FROM case_invitations WHERE id=?')
     .bind(inv.id)
