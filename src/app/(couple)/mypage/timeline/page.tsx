@@ -114,7 +114,7 @@ export default async function TimelinePage({
                     {item.related_task_id && (
                       <Link
                         href={taskDetailHref(item.related_task_id, 'timeline')}
-                        className="btn-ghost mt-2 inline-block"
+                        className="btn-ghost mt-2"
                       >
                         関連宿題を見る
                       </Link>

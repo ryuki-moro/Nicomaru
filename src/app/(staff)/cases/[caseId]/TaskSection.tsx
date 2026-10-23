@@ -318,7 +318,7 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
                               <span className="text-caption text-danger">対応不要にしますか？</span>
                               <button
                                 type="button"
-                                className="rounded-button bg-danger px-3 py-1 text-caption text-white disabled:opacity-50"
+                                className="btn-ghost border-danger bg-danger text-white hover:bg-danger hover:opacity-90"
                                 disabled={busy}
                                 onClick={() => setWaived(task.id, true)}
                               >
@@ -326,7 +326,7 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
                               </button>
                               <button
                                 type="button"
-                                className="btn-ghost text-caption"
+                                className="btn-ghost"
                                 disabled={busy}
                                 onClick={() => setConfirmingWaiveId(null)}
                               >
@@ -334,10 +334,10 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
                               </button>
                             </span>
                           ) : (
-                            // 「期限を変更」（リンク風）と見分けられるよう、注意色の枠付きボタンにする
+                            // 「期限を変更」（灰色の枠）と見分けられるよう、注意色の枠付きボタンにする
                             <button
                               type="button"
-                              className="rounded-button border border-danger px-3 py-1 text-caption text-danger transition-colors hover:bg-danger-bg disabled:opacity-50"
+                              className="btn-ghost border-danger text-danger hover:bg-danger-bg"
                               disabled={busy}
                               onClick={() => setConfirmingWaiveId(task.id)}
                             >

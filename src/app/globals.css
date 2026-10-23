@@ -35,8 +35,13 @@
            disabled:cursor-not-allowed disabled:opacity-50;
   }
 
+  /* 補助的な操作（戻る・ページ送り・再送信など）。テキストリンク風だと押せる場所が
+     分かりにくいため、控えめな枠付きボタンにそろえる。タップ領域は 44px を確保する */
   .btn-ghost {
-    @apply text-body text-link underline underline-offset-2 hover:opacity-80;
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-button border
+           border-border-mid bg-surface px-4 py-2 text-label text-text-primary
+           transition-colors hover:bg-field-filled-bg
+           disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   /* ---- 入力欄（design_guide 5.3） ---- */
