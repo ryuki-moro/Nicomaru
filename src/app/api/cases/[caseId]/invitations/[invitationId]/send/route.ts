@@ -44,8 +44,17 @@ export const POST = route(
     request: Request,
     context: { params: Promise<{ caseId: string; invitationId: string }> },
   ) => {
-    await requireRole('planner', 'admin', 'system_admin');
+    const actor = await requireRole('planner', 'admin', 'system_admin');
     const { caseId, invitationId } = await context.params;
+    if (process.env.NICOMARU_DB === 'd1-local') {
+      const input = await parseBody(request, invitationSendSchema.strict());
+      const { localDB } = await import('@/lib/d1/runtime');
+      return ok(
+        await (
+          await import('@/lib/d1/onboarding')
+        ).issueInvitation(await localDB(), actor, caseId, 'bride', input.channel, invitationId),
+      );
+    }
     const input = await parseBody(request, invitationSendSchema);
     const supabase = await createSupabaseServerClient();
 

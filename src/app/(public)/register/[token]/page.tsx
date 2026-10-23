@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 import { RegisterForm } from './RegisterForm';
 
-export const metadata: Metadata = { title: '初回登録' };
+export const metadata: Metadata = { title: '初回登録', referrer: 'no-referrer' };
 
 /**
  * P02 初回登録画面（couple）。
@@ -35,6 +35,16 @@ export default async function RegisterPage({ params }: { params: Promise<{ token
         </span>
       </div>
 
+      {process.env.NICOMARU_DB === 'd1-local' && (
+        <a
+          href="/dev/mailbox"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-link underline"
+        >
+          ローカル受信箱で確認コードを見る
+        </a>
+      )}
       <RegisterForm token={token} />
     </div>
   );

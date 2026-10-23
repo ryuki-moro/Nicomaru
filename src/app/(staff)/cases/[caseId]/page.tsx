@@ -86,20 +86,30 @@ interface CaseRow {
 }
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ caseId: string }> }) {
-  const user = await requirePageUser();
+  const user = await requirePageUser('planner', 'admin', 'system_admin');
 
   const { caseId } = await params;
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from('wedding_cases')
-    .select(CASE_SELECT)
-    .eq('id', caseId)
-    .maybeSingle();
-
-  // 権限外・不存在はどちらも P04 エラーページへ（4-3 エラー表示規約）。
-  // RLS により権限外は 0 行として返るため、ここで区別しない（存在の有無を漏らさない）。
-  if (!data) redirect('/error');
-  const row = data as unknown as CaseRow;
+  const d1 = process.env.NICOMARU_DB === 'd1-local';
+  let row: CaseRow;
+  if (d1) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { caseRow } = await import('@/lib/d1/cases');
+    try {
+      row = await caseRow(await localDB(), user, caseId);
+    } catch (error) {
+      if ((error as { code?: string }).code === 'NOT_FOUND') redirect('/error');
+      throw error;
+    }
+  } else {
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase
+      .from('wedding_cases')
+      .select(CASE_SELECT)
+      .eq('id', caseId)
+      .maybeSingle();
+    if (!data) redirect('/error');
+    row = data as unknown as CaseRow;
+  }
 
   // 6-8: 現在値を読むだけ。表示のたびに再計算はしない。
   const snapshot = row.risk_score_snapshots?.find((r) => r.is_current) ?? null;
@@ -126,21 +136,24 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
   // 9-1 の分類（7-2「画面: D02, K02」）。
   // 一覧の補助表示なので、取得に失敗しても案件詳細は出す。
   const classifications = new Map<string, string[]>();
-  const { data: aiJobs, error: aiError } = await supabase
-    .from('ai_jobs')
-    .select(AI_JOB_COLUMNS)
-    .eq('case_id', caseId)
-    .eq('job_type', 'classification')
-    .in('status', ['done', 'confirmed'])
-    .order('created_at', { ascending: true });
-  if (aiError) {
-    console.warn('[case] 分類を取得できませんでした', aiError);
-  } else {
-    // created_at 昇順で回して上書きするので、宿題ごとに最新のジョブが残る
-    for (const job of (aiJobs ?? []) as unknown as AiJobRow[]) {
-      if (!job.related_task_id) continue;
-      const labels = adoptedOutput('classification', job)?.labels;
-      if (labels && labels.length > 0) classifications.set(job.related_task_id, [...labels]);
+  if (!d1) {
+    const supabase = await createSupabaseServerClient();
+    const { data: aiJobs, error: aiError } = await supabase
+      .from('ai_jobs')
+      .select(AI_JOB_COLUMNS)
+      .eq('case_id', caseId)
+      .eq('job_type', 'classification')
+      .in('status', ['done', 'confirmed'])
+      .order('created_at', { ascending: true });
+    if (aiError) {
+      console.warn('[case] 分類を取得できませんでした', aiError);
+    } else {
+      // created_at 昇順で回して上書きするので、宿題ごとに最新のジョブが残る
+      for (const job of (aiJobs ?? []) as unknown as AiJobRow[]) {
+        if (!job.related_task_id) continue;
+        const labels = adoptedOutput('classification', job)?.labels;
+        if (labels && labels.length > 0) classifications.set(job.related_task_id, [...labels]);
+      }
     }
   }
 
@@ -201,12 +214,12 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
             </Link>
           )}
           {/* 4-3 K02 のボタン「打ち合わせ前準備シート（D03、Phase 2）」 */}
-          {!archived && (
+          {!archived && !d1 && (
             <Link href={`/cases/${row.id}/sheet`} className="btn-secondary w-auto px-5 text-center">
               打ち合わせ前準備シート
             </Link>
           )}
-          {!archived && (
+          {!archived && !d1 && (
             <Link
               href={`/cases/${row.id}/follow`}
               className="btn-secondary w-auto px-5 text-center"
@@ -216,7 +229,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
           )}
           {/* 4-3 D05 打ち合わせ記録・宿題起票（Phase 3）。
               D04 フォロー記録が「連絡したこと」、こちらが「決まったこと」 */}
-          {!archived && (
+          {!archived && !d1 && (
             <Link
               href={`/cases/${row.id}/meeting-notes`}
               className="btn-secondary w-auto px-5 text-center"
@@ -224,7 +237,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
               打ち合わせ記録
             </Link>
           )}
-          {isAdmin && !archived && (
+          {isAdmin && !archived && !d1 && (
             <Link
               href={`/cases/${row.id}/archive`}
               className="btn-secondary w-auto px-5 text-center"
@@ -242,7 +255,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
       )}
 
       {/* 4-3 K02: リスクは planner／admin のみ。couple 向けの案件詳細では表示しない（6-3） */}
-      <RiskSection caseId={row.id} risk={currentRisk} />
+      {!d1 && <RiskSection caseId={row.id} risk={currentRisk} />}
 
       <section className="card space-y-2">
         <h2 className="section-head">基本情報</h2>
@@ -303,12 +316,14 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
 
       <InvitationSection caseId={row.id} readOnly={archived} />
 
-      <TaskSection
-        caseId={row.id}
-        tasks={tasks}
-        hasPlanType={row.plan_type_id !== null}
-        readOnly={archived}
-      />
+      {!d1 && (
+        <TaskSection
+          caseId={row.id}
+          tasks={tasks}
+          hasPlanType={row.plan_type_id !== null}
+          readOnly={archived}
+        />
+      )}
     </div>
   );
 }

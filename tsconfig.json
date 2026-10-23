@@ -15,15 +15,22 @@
     "jsx": "preserve",
     "incremental": true,
     "verbatimModuleSyntax": false,
-    "plugins": [{ "name": "next" }],
-    "paths": { "@/*": ["./src/*"] }
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": [
-    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
+    ".next-dev-admin/types/**/*.ts",
     ".next/types/**/*.ts",
-    ".next-dev-admin/types/**/*.ts"
+    "next-env.d.ts",
+    ".next-d1/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "Nicomaru", "Nicomaru-1"]
+  "exclude": ["node_modules", "Nicomaru", "Nicomaru-1", "spikes"]
 }

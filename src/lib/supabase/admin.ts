@@ -64,6 +64,7 @@ let cachedRateLimit: SupabaseClient | null = null;
  * @param useCase 表6-4 のどの行にあたる使用かを明示する。
  */
 export function createSupabaseAdminClient(useCase: ServiceRoleUseCase): SupabaseClient {
+  if (process.env.NICOMARU_DB === 'd1-local') throw new Error('D1検証中はSupabaseへ接続できません');
   if (!(useCase in SERVICE_ROLE_USE_CASES)) {
     throw new Error(
       `Service Role の使用範囲表（6-3-5 表6-4）にない用途です: ${useCase}。` +

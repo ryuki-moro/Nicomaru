@@ -171,6 +171,7 @@ export function LoginForm({
    * その場合は同一画面で完結する6桁コード入力へ誘導する（6-3-1 方針(1)）。
    */
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1-local') return;
     const url = new URL(window.location.href);
     const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
     const authCode = url.searchParams.get('code');
@@ -237,8 +238,10 @@ export function LoginForm({
       setCode('');
       setResendIn(OTP.resendIntervalSeconds);
       setNotice(
-        `${email} 宛にログインリンクと6桁のコードをお送りしました。` +
-          `どちらでもログインできます（有効期限は${Math.round(OTP.ttlSeconds / 60)}分）。`,
+        process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1-local'
+          ? `${email} 宛の6桁の確認コードをローカル受信箱に保存しました（外部送信なし）。`
+          : `${email} 宛にログインリンクと6桁のコードをお送りしました。` +
+              `どちらでもログインできます（有効期限は${Math.round(OTP.ttlSeconds / 60)}分）。`,
       );
     } catch (cause) {
       handleFailure(cause, 'メールを送信できませんでした。時間をおいてお試しください');
@@ -371,7 +374,9 @@ export function LoginForm({
             ? 'パスワードでログイン'
             : codeSent
               ? '認証してログイン'
-              : 'ログインリンクを送信'}
+              : process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1-local'
+                ? '確認コードを送信'
+                : 'ログインリンクを送信'}
         </button>
       </form>
 
@@ -397,25 +402,29 @@ export function LoginForm({
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        <span className="h-px flex-1 bg-border-light" />
-        <span className="text-caption text-text-muted">または</span>
-        <span className="h-px flex-1 bg-border-light" />
-      </div>
+      <>
+        <div className="flex items-center gap-2">
+          <span className="h-px flex-1 bg-border-light" />
+          <span className="text-caption text-text-muted">または</span>
+          <span className="h-px flex-1 bg-border-light" />
+        </div>
 
-      {mode === 'otp' ? (
-        <button type="button" className="btn-secondary" onClick={() => switchMode('password')}>
-          パスワードでログイン（プランナー・管理者）
-        </button>
-      ) : (
-        <button type="button" className="btn-secondary" onClick={() => switchMode('otp')}>
-          メールでログイン（新郎新婦）
-        </button>
-      )}
+        {mode === 'otp' ? (
+          <button type="button" className="btn-secondary" onClick={() => switchMode('password')}>
+            パスワードでログイン（プランナー・管理者）
+          </button>
+        ) : (
+          <button type="button" className="btn-secondary" onClick={() => switchMode('otp')}>
+            メールでログイン（新郎新婦）
+          </button>
+        )}
 
-      <Link href="/password" className="btn-ghost self-center">
-        パスワードをお忘れの方
-      </Link>
+        {process.env.NEXT_PUBLIC_NICOMARU_DB !== 'd1-local' && (
+          <Link href="/password" className="btn-ghost self-center">
+            パスワードをお忘れの方
+          </Link>
+        )}
+      </>
     </div>
   );
 }

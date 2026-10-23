@@ -67,9 +67,11 @@ export default async function LoginPage({
       <div>
         <h1 className="text-title font-bold text-text-primary">ログイン</h1>
         <p className="mt-1 text-label text-text-muted">
-          {initialMode === 'password'
-            ? 'プランナー・管理者はメールアドレスとパスワードでログインしてください。'
-            : '新郎新婦さまはメールアドレスだけでログインできます。'}
+          {process.env.NICOMARU_DB === 'd1-local'
+            ? '新郎新婦は確認コード、プランナー・管理者はパスワードでログインできます。'
+            : initialMode === 'password'
+              ? 'プランナー・管理者はメールアドレスとパスワードでログインしてください。'
+              : '新郎新婦さまはメールアドレスだけでログインできます。'}
         </p>
       </div>
 
@@ -80,6 +82,16 @@ export default async function LoginPage({
       )}
 
       {showDevAdmin && <DevAdminLoginButton />}
+      {process.env.NICOMARU_DB === 'd1-local' && (
+        <a
+          href="/dev/mailbox"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-link underline"
+        >
+          ローカル受信箱で確認コードを見る
+        </a>
+      )}
       <LoginForm next={destination} initialMode={initialMode} />
     </div>
   );
