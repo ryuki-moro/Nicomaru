@@ -32,6 +32,55 @@ const PUBLIC_PREFIXES = [
 ];
 
 export async function middleware(request: NextRequest) {
+  if (process.env.NICOMARU_DB === 'd1-local') {
+    const path = request.nextUrl.pathname;
+    const origin = process.env.APP_BASE_URL;
+    if (origin !== 'http://127.0.0.1:3104' || request.headers.get('host') !== '127.0.0.1:3104') {
+      return new NextResponse('ローカル検証専用です', { status: 403 });
+    }
+    if (path === '/dashboard' || path === '/system')
+      return NextResponse.redirect(new URL('/cases', origin));
+    const allowed = [
+      '/',
+      '/login',
+      '/error',
+      '/cases',
+      '/mypage',
+      '/api/cases',
+      '/api/mypage/case',
+      '/api/auth/password-login',
+      '/api/auth/sign-out',
+      '/api/auth/initial-register',
+      '/api/auth/otp-request',
+      '/api/auth/otp-verify',
+      '/cases/new',
+      '/dev/mailbox',
+      '/api/dev/mailbox',
+    ];
+    const casePage = /^\/cases\/[^/]+(?:\/edit)?$/.test(path) && path !== '/cases/new';
+    const caseApi =
+      /^\/api\/cases\/[^/]+(?:\/(?:assign-tasks|invitations)(?:\/[^/]+\/send)?)?$/.test(path);
+    const registration = /^\/register\/[^/]+$/.test(path);
+    if (
+      !allowed.includes(path) &&
+      !casePage &&
+      !caseApi &&
+      !registration &&
+      !path.startsWith('/_next/')
+    ) {
+      return NextResponse.json(
+        {
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: 'この機能はD1への移行検証の対象外です',
+            details: [],
+          },
+        },
+        { status: 503 },
+      );
+    }
+    return NextResponse.next({ request });
+  }
   let response = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

@@ -1,0 +1,16 @@
+{
+  "name": "nicomaru-local",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nicomaru-local",
+      "database_id": "00000000-0000-0000-0000-000000000002",
+      "migrations_dir": "migrations",
+      "remote": false,
+    },
+  ],
+}
