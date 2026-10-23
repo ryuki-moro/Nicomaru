@@ -18,6 +18,18 @@ import { appBaseUrl, enforceAuthRateLimit } from '../shared';
 
 export const POST = route(async (request) => {
   const body = await parseBody(request, otpRequestSchema);
+  if (process.env.NICOMARU_DB === 'd1-local') {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const db = await localDB();
+    await (await import('@/lib/d1/auth-limits')).authLimit(db, 'otp_request', body.email);
+    if (await (await import('@/lib/d1/onboarding')).otpEligible(db, body.email)) {
+      const auth = await (await import('@/lib/d1/auth')).d1Auth();
+      await auth.api.sendVerificationOTP({
+        body: { email: body.email.trim().toLowerCase(), type: 'sign-in' },
+      });
+    }
+    return noContent();
+  }
   await enforceAuthRateLimit(request, 'otp_request', body.email);
 
   const supabase = await createSupabaseServerClient();

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { getAppUser } from '@/lib/auth/session';
+import { getAppUser, type AppUser } from '@/lib/auth/session';
 import {
   hashInvitationToken,
   invitationState,
@@ -12,13 +12,15 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { RegisterForm } from './RegisterForm';
 
-export const metadata: Metadata = { title: '初回登録' };
+export const metadata: Metadata = { title: '初回登録', referrer: 'no-referrer' };
 export const dynamic = 'force-dynamic';
 
 /** P02の先読みは案内だけ。消費・宛先照合の最終判定はinitial-registerの原子処理に任せる。 */
 export default async function RegisterPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return <InvalidInvitation />;
+  if (process.env.NICOMARU_DB === 'd1-local')
+    return <RegistrationContent token={token} user={await getAppUser()} />;
   const admin = createSupabaseAdminClient('auth.invitation-peek');
   const { data, error } = await admin
     .from('case_invitations')
@@ -62,6 +64,10 @@ export default async function RegisterPage({ params }: { params: Promise<{ token
         </Link>
       </div>
     );
+  return <RegistrationContent token={token} user={user} />;
+}
+
+function RegistrationContent({ token, user }: { token: string; user: AppUser | null }) {
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -80,6 +86,16 @@ export default async function RegisterPage({ params }: { params: Promise<{ token
           プランナーからお送りした招待URLです。挙式日やお名前などの情報は登録済みですので、ご連絡先だけご入力ください。パスワードの設定は不要です。
         </span>
       </div>
+      {process.env.NICOMARU_DB === 'd1-local' && (
+        <a
+          href="/dev/mailbox"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-link underline"
+        >
+          ローカル受信箱で確認コードを見る
+        </a>
+      )}
       <RegisterForm token={token} />
     </div>
   );

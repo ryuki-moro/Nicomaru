@@ -4,6 +4,7 @@ const m = vi.hoisted(() => ({
   client: vi.fn(),
   send: vi.fn(),
   rpc: vi.fn(),
+  d1Issue: vi.fn(),
   savedEmail: null as string | null,
   savedHash: null as string | null,
   otherHash: 'hash:other@example.test',
@@ -12,6 +13,8 @@ const m = vi.hoisted(() => ({
 vi.mock('@/lib/auth/session', () => ({ requireRole: m.role }));
 vi.mock('@/lib/supabase/server', () => ({ createSupabaseServerClient: m.client }));
 vi.mock('@/lib/notify/send', () => ({ sendInvitation: m.send }));
+vi.mock('@/lib/d1/runtime', () => ({ localDB: async () => ({}) }));
+vi.mock('@/lib/d1/onboarding', () => ({ issueInvitation: m.d1Issue }));
 vi.mock('@/lib/crypto', () => ({
   normalizeEmail: (v: string) => v.trim().toLowerCase(),
   emailHash: (v: string) => 'hash:' + v,
@@ -39,6 +42,7 @@ beforeEach(() => {
   m.activeDuplicate = false;
   m.role.mockResolvedValue({ id: 'staff' });
   m.send.mockResolvedValue({ delivered: true });
+  m.d1Issue.mockResolvedValue({ id: 'd1' });
   m.rpc.mockImplementation(async (name: string) => ({
     data:
       name === 'mark_invitation_sent'
@@ -168,6 +172,7 @@ describe.each([
     expect((await post(request(payload('new@example.test')), context())).status).toBe(422);
     expect(m.rpc).not.toHaveBeenCalled();
     expect(m.send).not.toHaveBeenCalled();
+    expect(m.d1Issue).not.toHaveBeenCalled();
   });
   it('宛先保存後に発行が失敗しても同じ宛先で再試行できる', async () => {
     m.rpc.mockResolvedValueOnce({ data: null, error: { code: 'XX000' } });
@@ -209,6 +214,13 @@ describe.each([
         : { channel: 'line', recipientEmail: 'bride@example.test' };
     expect((await post(request(p), context())).status).toBe(400);
     expect(m.client).not.toHaveBeenCalled();
+  });
+  it('D1ローカルで未対応の宛先入力を黙って無視しない', async () => {
+    vi.stubEnv('NICOMARU_DB', 'd1-local');
+    expect((await post(request(payload('bride@example.test')), context())).status).toBe(422);
+    expect(m.client).not.toHaveBeenCalled();
+    expect(m.send).not.toHaveBeenCalled();
+    expect(m.d1Issue).not.toHaveBeenCalled();
   });
 });
 

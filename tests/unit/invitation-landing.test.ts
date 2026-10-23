@@ -64,11 +64,18 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 async function html(value = token) {
   return renderToStaticMarkup(await Page({ params: Promise.resolve({ token: value }) }));
 }
 describe('招待状態表示', () => {
+  it('D1ローカルの登録フォームではSupabaseを参照しない', async () => {
+    vi.stubEnv('NICOMARU_DB', 'd1-local');
+    expect(await html()).toContain('登録フォーム');
+    expect(m.admin).not.toHaveBeenCalled();
+    expect(m.server).not.toHaveBeenCalled();
+  });
   it.each(['bad', 'A'.repeat(42), 'A'.repeat(44), '+'.repeat(43), ' '.repeat(43)])(
     '不正形式%sはDBを参照しない',
     async (value) => {

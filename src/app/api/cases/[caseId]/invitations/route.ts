@@ -19,7 +19,7 @@ import {
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { saveInvitationRecipient } from '@/lib/services/invitation-recipient';
-import { fromPostgresError, notFound } from '@/lib/errors';
+import { fromPostgresError, notFound, unprocessable } from '@/lib/errors';
 import { sendInvitation } from '@/lib/notify/send';
 import {
   buildInvitationUrl,
@@ -106,8 +106,14 @@ function summarize(rows: InvitationRow[], now = new Date()): InvitationSummary[]
 
 export const GET = route(
   async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
-    await requireRole('planner', 'admin', 'system_admin');
+    const actor = await requireRole('planner', 'admin', 'system_admin');
     const { caseId } = await context.params;
+    if (process.env.NICOMARU_DB === 'd1-local') {
+      const { localDB } = await import('@/lib/d1/runtime');
+      return ok(
+        await (await import('@/lib/d1/onboarding')).listInvitations(await localDB(), actor, caseId),
+      );
+    }
     const supabase = await createSupabaseServerClient();
 
     const { data, error } = await supabase
@@ -135,8 +141,19 @@ export const GET = route(
 
 export const POST = route(
   async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
-    await requireRole('planner', 'admin', 'system_admin');
+    const actor = await requireRole('planner', 'admin', 'system_admin');
     const { caseId } = await context.params;
+    if (process.env.NICOMARU_DB === 'd1-local') {
+      const input = await parseBody(request, invitationIssueSchema.strict());
+      if (input.recipientEmail) throw unprocessable('D1ローカルでは招待先メールの追加は未対応です');
+      const { localDB } = await import('@/lib/d1/runtime');
+      return ok(
+        await (
+          await import('@/lib/d1/onboarding')
+        ).issueInvitation(await localDB(), actor, caseId, input.targetPartnerRole, input.send),
+        201,
+      );
+    }
     const input = await parseBody(request, invitationIssueSchema);
     const supabase = await createSupabaseServerClient();
 
