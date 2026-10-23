@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-23T03:45:59.089Z",
+  "updatedAt": "2026-10-23T03:54:06.384Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "214b041d6965bd335d596b5791b261a5671696a2",
   "implementationCommit": "c6048b2acef8449d4bf99d80ce32880ae98ae46b",
@@ -32,7 +32,8 @@
     "2026-10-23 Issue105の実装3690050と未コミット試験をIssue104・123の統合ブランチへ取り込んだ。単体990件、模擬認証UIのPC・スマートフォン寸法Chromium各10件が成功。共有設定・実認証・実機は未確認。",
     "2026-10-23 Issue120のStep4だけをIssue104・105・123統合ブランチへ取り込み。単体/PGlite1017件、ビルド版の模擬認証ブラウザーPC・スマートフォン寸法各12件が成功。共有DB適用・実送信・実認証通しは未実施。",
     "2026-10-23 Issue121のAuth成功時刻同期とリスク入力試験をIssue120までの統合ブランチへ取り込み。停止解除による活動誤認とJST日付境界を修正。単体1033件成功、実PostgreSQL15件skip。共有DB適用・実Auth・保存済みリスク再計算は未実施。",
-    "2026-10-23 Issue122のStep7をIssue121までの統合ブランチへ取り込み。二重入力・RLS経由の暗号化保存・発行と再送を実装。失敗後の再試行とDBの宛先重複防止を追加。PC・スマートフォン幅の模擬API操作を確認。実送信・共有DBは未実施。 全単体/PGlite1069件成功、実PostgreSQL15件skip。型・lint・整形・進捗・本番ビルド成功。"
+    "2026-10-23 Issue122のStep7をIssue121までの統合ブランチへ取り込み。二重入力・RLS経由の暗号化保存・発行と再送を実装。失敗後の再試行とDBの宛先重複防止を追加。PC・スマートフォン幅の模擬API操作を確認。実送信・共有DBは未実施。 全単体/PGlite1069件成功、実PostgreSQL15件skip。型・lint・整形・進捗・本番ビルド成功。",
+    "2026-10-23 ユーザー直接依頼のStep8招待状態先読みをIssue122までの累積ブランチへ統合。単体/PGlite1091件成功、実PostgreSQL15件skip。ビルド版のPC・スマートフォン幅で状態表示とハッシュによるGET14件だけを確認。実認証・共有環境は未確認。"
   ],
   "ci": {
     "run": 37878283145,
@@ -4917,6 +4918,34 @@
       ],
       "prs": [],
       "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "INVITATION-PEEK",
+      "title": "Step8 招待状態の先読み",
+      "category": "改善",
+      "phase": "改善",
+      "status": "review",
+      "design": "基本設計P02/6-6-1/表6-4（改訂差分）",
+      "screens": [
+        "P02"
+      ],
+      "evidence": [
+        "src/app/(public)/register/[token]/page.tsx",
+        "src/lib/services/invitations.ts",
+        "src/lib/supabase/admin.ts",
+        "tests/unit/invitation-landing.test.ts",
+        "docs/検証/招待状態の先読み_20261023.md"
+      ],
+      "note": "表示専用のハッシュ照会で未使用・登録済み・無効・障害を案内。使用済みのactiveな本人だけRLSの案件・相手区分一致で復帰する。未使用は共用端末や紐付け前でもフォームを維持。全単体1091件、ビルド版のPC・スマートフォン幅で模擬DB14照会を確認。実Auth・共有環境は未確認。",
+      "next": "検証環境で使用済み本人・共用端末・LINE紐付け前と表示後の失効を実Auth/RLSで確認する。設計DOCXに表6-4等の改訂を反映し、レビュー後にmainへ統合する。",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [
+        "FIX-122"
+      ],
       "requiresAi": false,
       "scope": "active",
       "kind": "work_item"
