@@ -147,6 +147,12 @@ export default async function MeetingNotesPage({
       <nav aria-label="パンくず">
         <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
           <li>
+            <Link href="/dashboard" className="text-link hover:underline">
+              ダッシュボード
+            </Link>
+          </li>
+          <li aria-hidden>/</li>
+          <li>
             <Link href="/cases" className="text-link hover:underline">
               案件一覧
             </Link>
@@ -162,7 +168,8 @@ export default async function MeetingNotesPage({
         </ol>
       </nav>
 
-      <h1 className="section-head">打ち合わせ記録・宿題起票</h1>
+      {/* 案件詳細の入口リンク・パンくずと同じ画面名にする（宿題の起票はこの画面の中の機能） */}
+      <h1 className="section-head">打ち合わせ記録</h1>
 
       {archived ? (
         <p className="banner-info">
