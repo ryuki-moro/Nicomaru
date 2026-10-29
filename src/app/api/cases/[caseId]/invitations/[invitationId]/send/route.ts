@@ -19,7 +19,8 @@ import {
   type PartnerRole,
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
-import { fromPostgresError, notFound } from '@/lib/errors';
+import { saveInvitationRecipient } from '@/lib/services/invitation-recipient';
+import { fromPostgresError, notFound, unprocessable } from '@/lib/errors';
 import { sendInvitation } from '@/lib/notify/send';
 import {
   buildInvitationUrl,
@@ -44,8 +45,18 @@ export const POST = route(
     request: Request,
     context: { params: Promise<{ caseId: string; invitationId: string }> },
   ) => {
-    await requireRole('planner', 'admin', 'system_admin');
+    const actor = await requireRole('planner', 'admin', 'system_admin');
     const { caseId, invitationId } = await context.params;
+    if (process.env.NICOMARU_DB === 'd1-local') {
+      const input = await parseBody(request, invitationSendSchema.strict());
+      if (input.recipientEmail) throw unprocessable('D1ローカルでは招待先メールの追加は未対応です');
+      const { localDB } = await import('@/lib/d1/runtime');
+      return ok(
+        await (
+          await import('@/lib/d1/onboarding')
+        ).issueInvitation(await localDB(), actor, caseId, 'bride', input.channel, invitationId),
+      );
+    }
     const input = await parseBody(request, invitationSendSchema);
     const supabase = await createSupabaseServerClient();
 
@@ -81,6 +92,19 @@ export const POST = route(
       (p) => p.partner_role === invitation.target_partner_role,
     );
     if (!partner) throw notFound('対象の新郎新婦プロフィールが見つかりません');
+
+    if (input.recipientEmail) {
+      const saved = await saveInvitationRecipient(
+        supabase,
+        caseId,
+        partner.partner_role,
+        partner,
+        target.couple_profiles,
+        input.recipientEmail,
+      );
+      partner.email = saved.email;
+      partner.email_hash = saved.email_hash;
+    }
 
     const channel: ContactChannel = input.channel;
     const token = generateInvitationToken();

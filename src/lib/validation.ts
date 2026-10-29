@@ -66,6 +66,8 @@ const notPastDate = (value: string) => value >= todayInJst();
 // ------------------------------------------------------------------ 認証（P01〜P03）
 export const otpRequestSchema = z.object({
   email,
+  /** ログイン後の戻り先（P01 の ?next=）。形の検証と許可キーへの絞り込みは route 側で行う */
+  next: z.string().max(2048).optional(),
 });
 
 export const otpVerifySchema = z.object({
@@ -246,15 +248,27 @@ export const reviewSubmissionSchema = z
   });
 
 // ------------------------------------------------------ 招待・フォロー・利用者
-export const invitationIssueSchema = z.object({
-  targetPartnerRole: z.enum(PARTNER_ROLES),
-  /** 発行と同時に送信する場合に指定する。省略時は発行のみ（URLを応答で1度だけ返す） */
-  send: z.enum(CONTACT_CHANNELS).optional(),
-});
+export const invitationIssueSchema = z
+  .object({
+    targetPartnerRole: z.enum(PARTNER_ROLES),
+    /** 発行と同時に送信する場合に指定する。省略時は発行のみ（URLを応答で1度だけ返す） */
+    send: z.enum(CONTACT_CHANNELS).optional(),
+    recipientEmail: email.optional(),
+  })
+  .refine((v) => !v.recipientEmail || v.send === 'email', {
+    path: ['recipientEmail'],
+    message: 'メール送信時のみ宛先を指定できます',
+  });
 
-export const invitationSendSchema = z.object({
-  channel: z.enum(CONTACT_CHANNELS),
-});
+export const invitationSendSchema = z
+  .object({
+    channel: z.enum(CONTACT_CHANNELS),
+    recipientEmail: email.optional(),
+  })
+  .refine((v) => !v.recipientEmail || v.channel === 'email', {
+    path: ['recipientEmail'],
+    message: 'メール送信時のみ宛先を指定できます',
+  });
 
 export const followLogSchema = z.object({
   method: z.enum(FOLLOW_METHODS),
@@ -380,6 +394,7 @@ export const notificationSendSchema = z
     recipientUserId: z.string().uuid(),
     channel: z.enum(['line', 'email', 'in_app']),
     notificationType: z.enum(NOTIFICATION_TYPES),
+    taskId: z.string().uuid().optional().nullable(),
     taskName: z.string().trim().max(120).optional().nullable(),
     dueDate: z.string().trim().max(40).optional().nullable(),
     comment: z.string().trim().max(INPUT_LIMITS.textArea).optional().nullable(),

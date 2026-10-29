@@ -280,6 +280,17 @@ describe('handleApiError の分岐', () => {
     expect(handlers.onFieldErrors).not.toHaveBeenCalled();
   });
 
+  it('401 では一覧の絞り込み（許可キー）だけを next に引き継ぐ', async () => {
+    vi.stubGlobal('window', {
+      location: { pathname: '/mypage/tasks', search: '?tab=needs_fix&token=private' },
+    });
+    const error = await responseError(401, '<html>Unauthorized</html>');
+    const { router, handlers } = errorHandlers();
+
+    expect(handleApiError(error, router, handlers)).toBe(true);
+    expect(router.push).toHaveBeenCalledWith('/login?next=%2Fmypage%2Ftasks%3Ftab%3Dneeds_fix');
+  });
+
   it('window がない場合の 401 はログインへ遷移する', () => {
     vi.stubGlobal('window', undefined);
     const { router, handlers } = errorHandlers();

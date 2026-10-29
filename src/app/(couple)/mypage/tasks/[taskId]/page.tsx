@@ -10,6 +10,9 @@
  * /api/tasks/{taskId}/submit に寄せる。どの宿題が見えるかは付録A の RLS が決める。
  */
 import { notFound } from 'next/navigation';
+import { requireRole } from '@/lib/auth/session';
+import { usingD1, localDB } from '@/lib/d1/runtime';
+import { taskRow, latestSubmission } from '@/lib/d1/tasks';
 
 import { SubmitForm } from '@/app/(couple)/mypage/tasks/[taskId]/SubmitForm';
 import { TaskStatusBadge } from '@/components/ui/StatusBadge';
@@ -77,15 +80,25 @@ function allowedTypesOf(raw: unknown): AllowedFileType[] {
 
 export default async function TaskDetailPage({ params }: { params: Promise<{ taskId: string }> }) {
   const { taskId } = await params;
-  const supabase = await createSupabaseServerClient();
+  const user = await requireRole('couple');
+  const supabase = usingD1() ? null : await createSupabaseServerClient();
 
-  const taskResult = await supabase
-    .from('case_tasks')
-    .select(
-      'id, title, description, submission_format, allowed_file_types, options, due_date, status',
-    )
-    .eq('id', taskId)
-    .maybeSingle();
+  const taskResult = usingD1()
+    ? {
+        data: await taskRow(await localDB(), user, taskId).catch((error: unknown) => {
+          if (error && typeof error === 'object' && 'status' in error && error.status === 404)
+            notFound();
+          throw error;
+        }),
+        error: null,
+      }
+    : await supabase!
+        .from('case_tasks')
+        .select(
+          'id, title, description, submission_format, allowed_file_types, options, due_date, status',
+        )
+        .eq('id', taskId)
+        .maybeSingle();
 
   // 不存在・権限外はいずれも 404 として扱う（4-3 エラー表示規約）。
   // RLS で弾かれた場合も 0 行として返るため、存在の有無を推測させない。
@@ -93,21 +106,32 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ tas
   const task = taskResult.data as TaskRow;
 
   // 最新提出。draft は本人にしか見えない（付録A task_submissions_hide_draft）。
-  const submissionResult = await supabase
-    .from('task_submissions')
-    .select('id, text_value, selected_value, file_id, comment, review_status, planner_feedback')
-    .eq('case_task_id', taskId)
-    .eq('is_latest', true)
-    .maybeSingle();
+  const submissionResult = usingD1()
+    ? { data: await latestSubmission(await localDB(), user, taskId) }
+    : await supabase!
+        .from('task_submissions')
+        .select('id, text_value, selected_value, file_id, comment, review_status, planner_feedback')
+        .eq('case_task_id', taskId)
+        .eq('is_latest', true)
+        .maybeSingle();
   const latest = (submissionResult.data ?? null) as SubmissionRow | null;
 
   let attachedFileName: string | null = null;
   if (latest?.file_id) {
-    const fileResult = await supabase
-      .from('storage_files')
-      .select('original_filename')
-      .eq('id', latest.file_id)
-      .maybeSingle();
+    const fileResult = usingD1()
+      ? {
+          data: await (
+            await localDB()
+          )
+            .prepare('SELECT original_filename FROM storage_files WHERE id=? AND case_id=?')
+            .bind(latest.file_id, (taskResult.data as { case_id?: string }).case_id ?? '')
+            .first(),
+        }
+      : await supabase!
+          .from('storage_files')
+          .select('original_filename')
+          .eq('id', latest.file_id)
+          .maybeSingle();
     attachedFileName =
       (fileResult.data as { original_filename: string | null } | null)?.original_filename ?? null;
   }

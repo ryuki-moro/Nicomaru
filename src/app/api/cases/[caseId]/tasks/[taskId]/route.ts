@@ -17,9 +17,15 @@ import { caseTaskUpdateSchema } from '@/lib/validation';
 
 export const PATCH = route(
   async (request: Request, context: { params: Promise<{ caseId: string; taskId: string }> }) => {
-    await requireRole('planner', 'admin', 'system_admin');
+    const user = await requireRole('planner', 'admin', 'system_admin');
     const { caseId, taskId } = await context.params;
     const input = await parseBody(request, caseTaskUpdateSchema);
+    if (process.env.NICOMARU_DB === 'd1-local') {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { updateTask } = await import('@/lib/d1/tasks');
+      await updateTask(await localDB(), user, caseId, taskId, input);
+      return noContent();
+    }
     const supabase = await createSupabaseServerClient();
 
     if (Object.keys(input).length === 0) {
