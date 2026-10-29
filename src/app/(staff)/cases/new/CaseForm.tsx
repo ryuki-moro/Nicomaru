@@ -268,10 +268,15 @@ export function CaseForm({ plans, today }: Props) {
               type="number"
               min={0}
               step={1}
+              inputMode="numeric"
               className="field"
               value={form.guestCount}
               onChange={(e) => update('guestCount', e.target.value)}
+              aria-describedby="guest-count-help"
             />
+            <p id="guest-count-help" className="mt-1 text-caption text-text-muted">
+              人数が未定の場合は空欄にしてください。
+            </p>
             <FieldError message={fieldErrors.guestCount} />
           </div>
 
