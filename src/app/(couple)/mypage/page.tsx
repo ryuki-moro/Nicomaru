@@ -12,7 +12,9 @@
  * 本画面では case_id の絞り込みを自前で書かず RLS に委ねる。
  */
 import Link from 'next/link';
+import { requirePageUser } from '@/lib/auth/session';
 
+import { InstallGuide } from '@/components/InstallGuide';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
   COUPLE_PROFILE_COLUMNS,
@@ -43,15 +45,27 @@ interface ProfileRow {
 }
 
 export default async function MyPage() {
-  const supabase = await createSupabaseServerClient();
+  const d1 = process.env.NICOMARU_DB === 'd1-local';
+  const user = await requirePageUser('couple');
+  let local: Awaited<ReturnType<(typeof import('@/lib/d1/cases'))['caseRow']>> | null = null;
+  if (d1) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { listCases, caseRow } = await import('@/lib/d1/cases');
+    const db = await localDB();
+    const id = (await listCases(db, user)).items[0]?.id;
+    if (id) local = await caseRow(db, user, id);
+  }
+  const supabase = d1 ? null : await createSupabaseServerClient();
 
   // RLS により couple には自分の案件しか見えない。複数ある場合は挙式日が近いものを主とする。
-  const { data: weddingCase, error } = await supabase
-    .from('wedding_cases')
-    .select('id, wedding_date')
-    .order('wedding_date', { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const { data: weddingCase, error } = d1
+    ? { data: local, error: null }
+    : await supabase!
+        .from('wedding_cases')
+        .select('id, wedding_date')
+        .order('wedding_date', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
   if (error) {
     return (
@@ -75,18 +89,27 @@ export default async function MyPage() {
   // 「0件」と表示しながら提出済みの宿題が並ぶ矛盾を防ぐ。
   // 提出済み（submitted）は新郎新婦の手を離れているので「次にやること」ではない。
   // 件数用の別クエリを持たないのは、母集合が二重定義になると同じ矛盾が再発するため。
-  const [profileResult, taskResult] = await Promise.all([
-    supabase.from('couple_profiles').select(COUPLE_PROFILE_COLUMNS).eq('case_id', caseId),
-    supabase
-      .from('case_tasks')
-      .select('id, title, due_date, status, display_order')
-      .eq('case_id', caseId)
-      .in('status', [...UNSUBMITTED_TASK_STATUSES])
-      // 並びの正本は 4-3／6-6-2 の ORDER BY due_date, display_order, id
-      .order('due_date', { ascending: true })
-      .order('display_order', { ascending: true })
-      .order('id', { ascending: true }),
-  ]);
+  const [profileResult, taskResult] = d1
+    ? [
+        { data: local?.couple_profiles ?? [] },
+        {
+          data: (local?.case_tasks ?? []).filter((t) =>
+            UNSUBMITTED_TASK_STATUSES.includes(t.status),
+          ),
+        },
+      ]
+    : await Promise.all([
+        supabase!.from('couple_profiles').select(COUPLE_PROFILE_COLUMNS).eq('case_id', caseId),
+        supabase!
+          .from('case_tasks')
+          .select('id, title, due_date, status, display_order')
+          .eq('case_id', caseId)
+          .in('status', [...UNSUBMITTED_TASK_STATUSES])
+          // 並びの正本は 4-3／6-6-2 の ORDER BY due_date, display_order, id
+          .order('due_date', { ascending: true })
+          .order('display_order', { ascending: true })
+          .order('id', { ascending: true }),
+      ]);
 
   // COUPLE_PROFILE_COLUMNS は連結で組み立てた string のため supabase-js の
   // 型レベル select パーサが解決できない。行の形は上の ProfileRow が正本。
@@ -176,31 +199,37 @@ export default async function MyPage() {
         <span className="text-title font-bold text-text-primary">{unsubmitted}件</span>
       </section>
 
-      <div className="mt-1 flex flex-col gap-[10px]">
-        <Link href="/mypage/tasks" prefetch={false} className="btn-primary block text-center">
-          宿題・提出物を見る
-        </Link>
-        <nav
-          aria-label="そのほかのメニュー"
-          className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-label"
-        >
-          <Link
-            href="/mypage/timeline"
-            prefetch={false}
-            className="text-link underline underline-offset-2"
-          >
-            準備タイムラインを見る
+      <InstallGuide />
+
+      {
+        <div className="mt-1 flex flex-col gap-[10px]">
+          <Link href="/mypage/tasks" prefetch={false} className="btn-primary block text-center">
+            宿題・提出物を見る
           </Link>
-          {/* 4-3 M01「通知一覧（M05）は Phase 2 で追加する」 */}
-          <Link
-            href="/mypage/notifications"
-            prefetch={false}
-            className="text-link underline underline-offset-2"
-          >
-            お知らせを見る
-          </Link>
-        </nav>
-      </div>
+          {!d1 && (
+            <nav
+              aria-label="そのほかのメニュー"
+              className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-label"
+            >
+              <Link
+                href="/mypage/timeline"
+                prefetch={false}
+                className="text-link underline underline-offset-2"
+              >
+                準備タイムラインを見る
+              </Link>
+              {/* 4-3 M01「通知一覧（M05）は Phase 2 で追加する」 */}
+              <Link
+                href="/mypage/notifications"
+                prefetch={false}
+                className="text-link underline underline-offset-2"
+              >
+                お知らせを見る
+              </Link>
+            </nav>
+          )}
+        </div>
+      }
     </div>
   );
 }

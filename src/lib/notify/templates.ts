@@ -54,7 +54,6 @@ export interface TemplateVars {
   /** info の任意件名・本文 */
   subject?: string;
   message?: string;
-  url?: string;
 }
 
 export interface RenderedNotification {
@@ -75,7 +74,6 @@ export function renderNotification(
   const task = vars.taskName ?? 'ご提出物';
   const planner = vars.plannerName || '担当プランナー';
   const to = `${vars.coupleName}さま`;
-  const url = vars.url ? ` ${vars.url}` : '';
 
   switch (type) {
     case 'due_reminder':
@@ -85,7 +83,7 @@ export function renderNotification(
           `${to} ${task}のご提出期限が${vars.daysLeft ?? 0}日後` +
           `（${vars.dueDate ?? ''}）です。` +
           'ご準備がお済みでしたらマイページからご提出ください。' +
-          `ご不明な点は担当${planner}までお気軽にどうぞ。${url}`,
+          `ご不明な点は担当${planner}までお気軽にどうぞ。`,
       };
 
     case 'overdue':
@@ -94,7 +92,7 @@ export function renderNotification(
         body:
           `${to} ${task}のご提出期限（${vars.dueDate ?? ''}）を過ぎております。` +
           'ご都合がつかない場合は期限の調整も可能ですので、' +
-          `担当${planner}までご相談ください。${url}`,
+          `担当${planner}までご相談ください。`,
       };
 
     case 'submission_request':
@@ -102,7 +100,7 @@ export function renderNotification(
         title: `${task}のご案内`,
         body:
           `${to} ${task}のご入力をお願いしております。` +
-          `${vars.dueDate ?? ''}までにマイページからご提出ください。${url}`,
+          `${vars.dueDate ?? ''}までにマイページからご提出ください。`,
       };
 
     case 'needs_fix':
@@ -111,7 +109,7 @@ export function renderNotification(
         body:
           `${to} ご提出いただいた${task}について、` +
           `${vars.reviewComment ?? '内容'}をご確認いただけますでしょうか。` +
-          `お手数ですがマイページからご修正をお願いいたします。${url}`,
+          `お手数ですがマイページからご修正をお願いいたします。`,
       };
 
     case 'info':

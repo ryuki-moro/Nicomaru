@@ -16,9 +16,14 @@ import { caseTaskCreateSchema } from '@/lib/validation';
 
 export const POST = route(
   async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
-    await requireRole('planner', 'admin', 'system_admin');
+    const user = await requireRole('planner', 'admin', 'system_admin');
     const { caseId } = await context.params;
     const input = await parseBody(request, caseTaskCreateSchema);
+    if (process.env.NICOMARU_DB === 'd1-local') {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { addTask } = await import('@/lib/d1/tasks');
+      return ok(await addTask(await localDB(), user, caseId, input), 201);
+    }
     const supabase = await createSupabaseServerClient();
 
     // タイムラインの見出し（phase_name）は挙式日からの距離で決まる（表5-14）

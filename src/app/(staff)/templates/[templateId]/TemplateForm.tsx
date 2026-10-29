@@ -71,6 +71,11 @@ export function TemplateForm({ mode, initial, save }: Props) {
   const [summary, setSummary] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  const choices = choicesText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
   const toggleFileType = (type: AllowedFileType) => {
     setAllowedFileTypes((current) =>
       current.includes(type) ? current.filter((t) => t !== type) : [...current, type],
@@ -96,15 +101,7 @@ export function TemplateForm({ mode, initial, save }: Props) {
       submissionFormat,
       // 提出フォーマットに関係ない値を送ると DB のスナップショット（6-6-2）が汚れる
       allowedFileTypes: submissionFormat === 'file' ? allowedFileTypes : [],
-      defaultOptions:
-        submissionFormat === 'select'
-          ? {
-              choices: choicesText
-                .split('\n')
-                .map((line) => line.trim())
-                .filter(Boolean),
-            }
-          : {},
+      defaultOptions: submissionFormat === 'select' ? { choices } : {},
       dueOffsetDays: offset,
       importance,
       isRequired,
@@ -216,6 +213,20 @@ export function TemplateForm({ mode, initial, save }: Props) {
             onChange={(e) => setChoicesText(e.target.value)}
           />
           <FieldError message={fieldErrors.defaultOptions} />
+          <div className="mt-2 text-caption text-text-muted">
+            <p>保存される選択肢（{choices.length}件）</p>
+            {choices.length === 0 ? (
+              <p>選択肢がありません。1行に1つ入力してください。</p>
+            ) : (
+              <ol className="list-inside list-decimal">
+                {choices.map((choice, index) => (
+                  <li key={index} className="break-words">
+                    {choice}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
         </div>
       )}
 

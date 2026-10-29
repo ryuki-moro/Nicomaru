@@ -72,6 +72,30 @@ describe('未ログイン時のログイン先', () => {
     expect([...target.searchParams]).toEqual([['next', '/venues/%2F%2Fevil.example.test']]);
   });
 
+  it('一覧の絞り込み（許可キー tab・page）だけをnextに引き継ぐ', async () => {
+    vi.stubEnv('APP_BASE_URL', 'https://app.example.test');
+    const response = await middleware(
+      new NextRequest(
+        'https://app.example.test/mypage/tasks?token=private&tab=needs_fix&linkToken=private&page=2',
+      ),
+    );
+    const target = new URL(response.headers.get('location')!);
+
+    expect([...target.searchParams]).toEqual([['next', '/mypage/tasks?tab=needs_fix&page=2']]);
+    expect(response.headers.get('location')).not.toContain('private');
+  });
+
+  it('許可キーでも値が規則外ならnextに載せない', async () => {
+    vi.stubEnv('APP_BASE_URL', 'https://app.example.test');
+    const response = await middleware(
+      new NextRequest('https://app.example.test/mypage/tasks?tab=https%3A%2F%2Fevil.example.test'),
+    );
+
+    expect(response.headers.get('location')).toBe(
+      'https://app.example.test/login?next=%2Fmypage%2Ftasks',
+    );
+  });
+
   it('ルートからのログインにはnextを付けない', async () => {
     vi.stubEnv('APP_BASE_URL', 'https://app.example.test');
     const response = await middleware(new NextRequest('https://app.example.test/?next=/venues'));

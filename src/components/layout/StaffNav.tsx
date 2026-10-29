@@ -9,7 +9,11 @@ import type { Role } from '@/lib/constants';
 /** planner／admin／system_admin 側の全画面に常設するグローバルナビ（ヘッダー内の横並び）。項目は staffNavItems.ts。 */
 export function StaffNav({ role }: { role: Role }) {
   const pathname = usePathname();
-  const items = staffNavItemsFor(role);
+  const items = staffNavItemsFor(role).filter(
+    (item) =>
+      process.env.NEXT_PUBLIC_NICOMARU_DB !== 'd1-local' ||
+      ['/cases', '/submissions'].includes(item.href),
+  );
 
   return (
     <nav aria-label="メインメニュー" className="mx-auto w-full max-w-6xl px-4">

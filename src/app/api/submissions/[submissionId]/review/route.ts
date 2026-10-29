@@ -40,10 +40,15 @@ interface ReviewResult {
 export const POST = route(
   async (request: Request, context: { params: Promise<{ submissionId: string }> }) => {
     const { submissionId } = await context.params;
-    await requireStaff();
+    const user = await requireStaff();
     if (!isUuid(submissionId)) throw notFound();
 
     const input = await parseBody(request, reviewSubmissionSchema);
+    if (process.env.NICOMARU_DB === 'd1-local') {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { reviewSubmission } = await import('@/lib/d1/tasks');
+      return ok(await reviewSubmission(await localDB(), user, submissionId, input));
+    }
     const supabase = await createSupabaseServerClient();
 
     // 状態チェック（draft・確認済み・対応不要）も関数の中で行う。

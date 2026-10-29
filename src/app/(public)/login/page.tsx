@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { getDevAdminConfig, isLoopbackHost } from '@/lib/auth/dev-admin';
+import { normalizeNext } from '@/lib/auth/next';
 import { getAppUser, landingPathFor } from '@/lib/auth/session';
 
 import { DevAdminLoginButton } from './DevAdminLoginButton';
@@ -12,28 +13,6 @@ import { LoginForm } from './LoginForm';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = { title: 'ログイン' };
-
-/**
- * 遷移先として許可する ?next= の形。
- *
- *   ^\/                       自サイト内の絶対パスに限る（'https://…' や 'javascript:' を弾く）
- *   (?![/\\])                 2文字目が '/' でも '\' でもないこと
- *   [^\u0000-\u001F\u007F\\]* 以降にバックスラッシュと制御文字を含まないこと
- *
- * '//' だけを見る判定では '/\evil.com' が素通りする。ブラウザは URL のパス区切りで
- * '\' を '/' と同一視するため、これを protocol-relative URL（'//evil.com'）として解釈し、
- * 外部サイトへ遷移してしまう。P01 の couple はパスワードを持たず、メールと6桁コードだけで
- * ログインする（6-3-1）ので、偽のログイン画面へ誘導されること自体がアカウント奪取に直結する。
- * 制御文字（改行・タブ・NUL）も、遷移先の見た目を偽装したりヘッダを分割したりする材料に
- * なるため同時に弾く。条件を複数の startsWith に分けると取りこぼしが生まれるので、1本にまとめる。
- */
-const SAFE_NEXT_PATTERN = /^\/(?![/\\])[^\u0000-\u001F\u007F\\]*$/;
-
-/** オープンリダイレクト防止。自サイト内の絶対パスだけを許可する（12-1）。 */
-function safeNext(next: string | undefined): string | null {
-  if (!next) return null;
-  return SAFE_NEXT_PATTERN.test(next) ? next : null;
-}
 
 /**
  * P01 ログイン画面（全利用者）。
@@ -49,10 +28,13 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; reset?: string; mode?: string }>;
 }) {
   const { next, reset, mode } = await searchParams;
-  const destination = safeNext(next);
+  // 戻り先はパスと許可キーのクエリだけ（src/lib/auth/next.ts）。不正なら役割別の初期画面へ
+  const destination = normalizeNext(next);
+  const destinationPath = destination?.split('?')[0];
   // 式場管理へのリンクでは、管理者が使うパスワード入力を最初から表示する。
   // 方式の選択だけであり、認証・認可は通常の経路で行う。
-  const isVenueDestination = destination === '/venues' || destination?.startsWith('/venues/');
+  const isVenueDestination =
+    destinationPath === '/venues' || destinationPath?.startsWith('/venues/');
   const initialMode = mode === 'password' || isVenueDestination ? 'password' : 'otp';
 
   // ログイン済みで /login を開いた場合は種別ごとの初期画面へ戻す（4-2）
@@ -67,9 +49,11 @@ export default async function LoginPage({
       <div>
         <h1 className="text-title font-bold text-text-primary">ログイン</h1>
         <p className="mt-1 text-label text-text-muted">
-          {initialMode === 'password'
-            ? 'プランナー・管理者はメールアドレスとパスワードでログインしてください。'
-            : '新郎新婦さまはメールアドレスだけでログインできます。'}
+          {process.env.NICOMARU_DB === 'd1-local'
+            ? '新郎新婦は確認コード、プランナー・管理者はパスワードでログインできます。'
+            : initialMode === 'password'
+              ? 'プランナー・管理者はメールアドレスとパスワードでログインしてください。'
+              : '新郎新婦さまはメールアドレスだけでログインできます。'}
         </p>
       </div>
 
@@ -80,6 +64,16 @@ export default async function LoginPage({
       )}
 
       {showDevAdmin && <DevAdminLoginButton />}
+      {process.env.NICOMARU_DB === 'd1-local' && (
+        <a
+          href="/dev/mailbox"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-link underline"
+        >
+          ローカル受信箱で確認コードを見る
+        </a>
+      )}
       <LoginForm next={destination} initialMode={initialMode} />
     </div>
   );

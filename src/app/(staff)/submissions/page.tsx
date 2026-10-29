@@ -12,6 +12,9 @@
  * 読み取りは 6-5 の原則どおり Server Component から RLS 適用クライアントで直接 select する。
  */
 import Link from 'next/link';
+import { requireStaff } from '@/lib/auth/session';
+import { usingD1, localDB } from '@/lib/d1/runtime';
+import { pendingSubmissions, coupleNames as d1CoupleNames } from '@/lib/d1/tasks';
 
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ReviewStatusBadge } from '@/components/ui/StatusBadge';
@@ -52,25 +55,28 @@ export default async function SubmissionsPage({
   const currentPage = resolvePage(page);
   const offset = (currentPage - 1) * LIST_PAGE_SIZE;
 
-  const supabase = await createSupabaseServerClient();
+  const user = await requireStaff();
+  const supabase = usingD1() ? null : await createSupabaseServerClient();
 
-  const { data, error, count } = await supabase
-    .from('task_submissions')
-    .select(
-      'id, submitted_at,' +
-        ' case_tasks!inner ( id, title, due_date, case_id, status,' +
-        ' wedding_cases!inner ( id, case_code, wedding_date ) )',
-      { count: 'exact' },
-    )
-    .eq('review_status', 'submitted')
-    .eq('is_latest', true)
-    // 「対応不要」にした宿題は確認対象から外す（表6-9／6-8）。
-    // 埋め込みが !inner なので、この条件は親行（task_submissions）ごと絞り込む。
-    .neq('case_tasks.status', 'waived')
-    // 待たせている提出から順に確認する。同着は id をタイブレークにする（4-3 一覧画面共通）
-    .order('submitted_at', { ascending: true })
-    .order('id', { ascending: true })
-    .range(offset, offset + LIST_PAGE_SIZE - 1);
+  const { data, error, count } = usingD1()
+    ? await pendingSubmissions(await localDB(), user, offset)
+    : await supabase!
+        .from('task_submissions')
+        .select(
+          'id, submitted_at,' +
+            ' case_tasks!inner ( id, title, due_date, case_id, status,' +
+            ' wedding_cases!inner ( id, case_code, wedding_date ) )',
+          { count: 'exact' },
+        )
+        .eq('review_status', 'submitted')
+        .eq('is_latest', true)
+        // 「対応不要」にした宿題は確認対象から外す（表6-9／6-8）。
+        // 埋め込みが !inner なので、この条件は親行（task_submissions）ごと絞り込む。
+        .neq('case_tasks.status', 'waived')
+        // 待たせている提出から順に確認する。同着は id をタイブレークにする（4-3 一覧画面共通）
+        .order('submitted_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(offset, offset + LIST_PAGE_SIZE - 1);
   if (error) throw fromPostgresError(error);
 
   const rows = (data ?? []) as unknown as SubmissionRow[];
@@ -81,10 +87,12 @@ export default async function SubmissionsPage({
   // couple_profiles は memo を列レベル権限で剥奪しているため select * が 42501 になる（付録A）
   const coupleNames = new Map<string, string>();
   if (caseIds.length > 0) {
-    const { data: profiles, error: profileError } = await supabase
-      .from('couple_profiles')
-      .select(COUPLE_PROFILE_COLUMNS)
-      .in('case_id', caseIds);
+    const { data: profiles, error: profileError } = usingD1()
+      ? { data: await d1CoupleNames(await localDB(), user, caseIds), error: null }
+      : await supabase!
+          .from('couple_profiles')
+          .select(COUPLE_PROFILE_COLUMNS)
+          .in('case_id', caseIds);
     if (profileError) throw fromPostgresError(profileError);
 
     for (const profile of (profiles ?? []) as unknown as CoupleProfileRow[]) {
