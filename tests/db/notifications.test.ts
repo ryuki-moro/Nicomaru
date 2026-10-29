@@ -244,3 +244,54 @@ describe('notification_settings', () => {
     });
   });
 });
+
+describe('notifications.link_path', () => {
+  it('旧6引数RPCはNULL、新7引数RPCはリンクを保存する', async () => {
+    await db.asUser(fx.planner.authUserId, async () => {
+      const old = await db.query<{ create_notification: string }>(createSql, [
+        fx.caseId,
+        fx.couple.profileId,
+        'in_app',
+        'info',
+        '件名',
+        '本文',
+      ]);
+      const added = await db.query<{ create_notification: string }>(
+        'select create_notification($1,$2,$3,$4,$5,$6,$7)',
+        [fx.caseId, fx.couple.profileId, 'in_app', 'info', '件名', '本文', '/mypage/tasks/task_1'],
+      );
+      const rows = await db.query<{ id: string; link_path: string | null }>(
+        'select id, link_path from notifications where id in ($1,$2)',
+        [old.rows[0].create_notification, added.rows[0].create_notification],
+      );
+      expect(rows.rows.find((r) => r.id === old.rows[0].create_notification)?.link_path).toBeNull();
+      expect(rows.rows.find((r) => r.id === added.rows[0].create_notification)?.link_path).toBe(
+        '/mypage/tasks/task_1',
+      );
+    });
+  });
+  it.each([
+    '/dashboard',
+    'https://evil.test',
+    '//evil',
+    '/mypage/../x',
+    '/mypageX',
+    '/mypage?token=x',
+    '/mypage/' + 'a'.repeat(512),
+  ])('不正なパス %s を拒否する', async (path) => {
+    const code = await db.asUser(fx.planner.authUserId, () =>
+      errcodeOf(() =>
+        db.query('select create_notification($1,$2,$3,$4,$5,$6,$7)', [
+          fx.caseId,
+          fx.couple.profileId,
+          'in_app',
+          'info',
+          '件名',
+          '本文',
+          path,
+        ]),
+      ),
+    );
+    expect(code).toBe('23514');
+  });
+});

@@ -9,6 +9,10 @@
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || exit 0",
     "dev": "next dev",
+    "dev:admin": "tsx scripts/dev-admin.mts",
+    "demo": "node scripts/demo-server.mjs",
+    "test:demo": "node --test tests/demo/*.test.mjs",
+    "test:demo:browser": "node --test tests/demo/browser-smoke.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -26,17 +30,23 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:coverage": "vitest run --config vitest.coverage.config.ts",
-    "progress:check": "node scripts/render-progress.mjs --check"
+    "progress:check": "node scripts/render-progress.mjs --check",
+    "dev:d1": "node --import tsx scripts/d1-local.mjs",
+    "db:d1:setup": "node --import tsx scripts/d1-local.mjs --setup-only",
+    "test:d1": "node --import tsx --test tests/d1/*.test.mjs",
+    "test:d1:browser": "node --test --test-concurrency=1 tests/d1/browser.mjs tests/d1/onboarding.browser.mjs tests/d1/tasks.browser.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.112.4",
-    "next": "15.5.27",
+    "better-auth": "1.7.12",
+    "next": "15.5.28",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "5.20261023.1",
     "@electric-sql/pglite": "^0.5.8",
     "@eslint/compat": "^2.0.0",
     "@next/eslint-plugin-next": "14.2.35",
@@ -56,7 +66,8 @@
     "tailwindcss": "4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "vitest": "4.1.12"
+    "vitest": "4.1.12",
+    "wrangler": "^4.155.0"
   },
   "overrides": {
     "postcss": "$postcss",

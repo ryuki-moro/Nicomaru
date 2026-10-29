@@ -2,6 +2,15 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  logging: process.env.NICOMARU_DB === 'd1-local' ? { incomingRequests: false } : undefined,
+  serverExternalPackages: ['wrangler', 'better-auth'],
+  // 通常の開発サーバーと同時に確認できるよう生成物を分ける。
+  distDir:
+    process.env.NICOMARU_DB === 'd1-local'
+      ? '.next-d1'
+      : process.env.NODE_ENV === 'development' && process.env.DEV_ADMIN_LOGIN_ENABLED === 'true'
+        ? '.next-dev-admin'
+        : '.next',
   // middlewareの転送先127.0.0.1をNext.jsがlocalhostへ書き換えないようにする。
   // ログインCookieと更新APIの同一Origin検証を、設定したURLで一致させる。
   skipMiddlewareUrlNormalize: true,
@@ -13,6 +22,21 @@ const nextConfig: NextConfig = {
       {
         source: '/api/:path*',
         headers: [{ key: 'Cache-Control', value: 'private, no-store, max-age=0' }],
+      },
+      {
+        source: '/register/:path*',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'Cache-Control', value: 'private, no-store' },
+        ],
+      },
+      {
+        source: '/dev/:path*',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Cache-Control', value: 'private, no-store' },
+        ],
       },
       {
         source: '/sw.js',

@@ -15,7 +15,14 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-dvh bg-bg">
       <AppHeader role={user.role} displayName={user.displayName} />
-      <main className="mx-auto w-full max-w-6xl px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-6xl px-4 py-6">
+        {process.env.NICOMARU_DB === 'd1-local' && (
+          <p className="banner-info">
+            ローカル検証：案件の登録・更新・招待、宿題の提出・確認が利用できます。外部への送信は行いません。
+          </p>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

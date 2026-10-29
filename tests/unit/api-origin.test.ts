@@ -171,7 +171,7 @@ describe('共通RouteのOrigin検証', () => {
 });
 
 describe('全APIの適用範囲（新規Routeも自動列挙）', () => {
-  it('全30ブラウザー更新APIで不正Originを拒否し、認証・DB・外部通信を呼ばない', async () => {
+  it('全32ブラウザー更新APIで不正Originを拒否し、認証・DB・外部通信を呼ばない', async () => {
     const checked: string[] = [];
     for (const [file, load] of Object.entries(moduleLoaders)) {
       const path = file.replace('../../src/app', '').replace('/route.ts', '');
@@ -193,7 +193,9 @@ describe('全APIの適用範囲（新規Routeも自動列挙）', () => {
         checked.push(`${method} ${path}`);
       }
     }
-    expect(checked).toHaveLength(30);
+    expect(checked).toHaveLength(32);
+    expect(checked).toContain('POST /api/auth/sign-out');
+    expect(checked).toContain('POST /api/auth/dev-admin');
     expect(checked).toContain('POST /api/auth/password-login');
     expect(checked).toContain('POST /api/auth/password-update');
     expect(checked).toContain('POST /api/auth/otp-verify');

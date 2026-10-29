@@ -46,9 +46,15 @@ async function restoreCase(formData: FormData) {
   const actor = await getAppUser();
   if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin')) redirect('/error');
 
-  const supabase = await createSupabaseServerClient();
   try {
-    await setCaseArchived(supabase, caseId, false);
+    if (process.env.NICOMARU_DB === 'd1-local') {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { patchCase } = await import('@/lib/d1/cases');
+      await patchCase(await localDB(), actor, caseId, { archived: false });
+    } else {
+      const supabase = await createSupabaseServerClient();
+      await setCaseArchived(supabase, caseId, false);
+    }
   } catch {
     redirect('/cases?scope=archived&error=restore');
   }
@@ -68,7 +74,7 @@ interface Props {
 }
 
 export default async function CaseListPage({ searchParams }: Props) {
-  const user = await requirePageUser();
+  const user = await requirePageUser('planner', 'admin', 'system_admin');
 
   const params = await searchParams;
   const canSeeArchived = user.role === 'admin' || user.role === 'system_admin';
@@ -79,8 +85,6 @@ export default async function CaseListPage({ searchParams }: Props) {
   const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
 
-  const supabase = await createSupabaseServerClient();
-
   // 取得・復号・並べ替え・キーワード絞り込みはサービス層に置く。
   // 画面と GET /api/cases に同じ処理が二重にあり、挙動が食い違っていた（#18）。
   let visible: CaseListItem[] = [];
@@ -88,7 +92,15 @@ export default async function CaseListPage({ searchParams }: Props) {
   let truncated = false;
   let loadError = false;
   try {
-    const result = await loadCaseList(supabase, {
+    const load =
+      process.env.NICOMARU_DB === 'd1-local'
+        ? async (options: Parameters<typeof loadCaseList>[1]) => {
+            const { localDB } = await import('@/lib/d1/runtime');
+            return (await import('@/lib/d1/cases')).listCases(await localDB(), user, options);
+          }
+        : async (options: Parameters<typeof loadCaseList>[1]) =>
+            loadCaseList(await createSupabaseServerClient(), options);
+    const result = await load({
       scope,
       sort,
       keyword,
@@ -131,7 +143,7 @@ export default async function CaseListPage({ searchParams }: Props) {
 
       <div className="flex items-center justify-between gap-3">
         <h1 className="section-head">案件一覧</h1>
-        {user.role === 'planner' && (
+        {(user.role === 'planner' || user.role === 'admin') && (
           <Link href="/cases/new" className="btn-primary w-auto whitespace-nowrap px-5 text-center">
             新規案件登録
           </Link>
@@ -214,7 +226,8 @@ export default async function CaseListPage({ searchParams }: Props) {
             <tbody>
               {visible.map((row) => (
                 <tr key={row.id}>
-                  <td>
+                  {/* 案件番号は途中で折り返すと読み違えやすいので1行に保つ（スマホでは表を横に送る） */}
+                  <td className="whitespace-nowrap">
                     <Link href={`/cases/${row.id}`} className="text-link hover:underline">
                       {row.caseCode}
                     </Link>
