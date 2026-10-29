@@ -13,6 +13,9 @@ import { createAuthRateLimitFetch } from './auth-rate-limit-fetch';
 
 /** 表6-4 に列挙された使用箇所と、そのときAPI層で担保すべき権限検証。 */
 export const SERVICE_ROLE_USE_CASES = {
+  'auth.invitation-peek':
+    'P02で形式確認済みのトークンハッシュとinitial_registration目的で状態列のみ参照する。更新・消費はしない。案件/相手区分は本人判定に限り画面へ出さない（表6-4改訂案参照）',
+
   'auth.initial-register':
     'case_invitations の token_hash 照合と expires_at／used_at／revoked_at／purpose／max_uses チェックを必須実施。' +
     'recipient_email が設定された招待は入力メールとの一致も必須。検証と消費は単一 UPDATE ... RETURNING（6-6-1）',
@@ -47,6 +50,9 @@ export const SERVICE_ROLE_USE_CASES = {
     'system_admin 初期アカウントの作成（12章 (b)）。CLI から手で1回だけ実行する。' +
     '呼び出し元のJWTが無いため、既に system_admin が存在する場合は作成せず中止することで' +
     '二重作成を防ぐ。パスワードは扱わず、初回設定リンクの発行に留める（6-3-1）',
+  'setup.development-admin':
+    '開発専用ランチャーでのみ使用（docs/開発用管理者モード.md）。既存の式場へ専用adminを作成し、' +
+    '既存利用者の権限・パスワードは変更しない。WebのログインAPIではService Roleを使用しない',
   'line.webhook':
     'LINE からの Webhook。署名検証（raw body）を通過したリクエストのみ。' +
     '受信イベントIDの重複排除と、連携完了の書き込みに限る（6-10）',
@@ -61,6 +67,7 @@ let cachedRateLimit: SupabaseClient | null = null;
  * @param useCase 表6-4 のどの行にあたる使用かを明示する。
  */
 export function createSupabaseAdminClient(useCase: ServiceRoleUseCase): SupabaseClient {
+  if (process.env.NICOMARU_DB === 'd1-local') throw new Error('D1検証中はSupabaseへ接続できません');
   if (!(useCase in SERVICE_ROLE_USE_CASES)) {
     throw new Error(
       `Service Role の使用範囲表（6-3-5 表6-4）にない用途です: ${useCase}。` +

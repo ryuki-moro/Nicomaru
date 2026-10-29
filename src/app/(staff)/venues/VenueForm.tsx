@@ -108,7 +108,11 @@ export function VenueForm() {
           maxLength={INPUT_LIMITS.shortText}
           onChange={(e) => setName(e.target.value)}
           required
+          aria-describedby="venue-name-count"
         />
+        <p id="venue-name-count" className="mt-1 text-caption text-text-muted">
+          {name.length} / {INPUT_LIMITS.shortText}字
+        </p>
         <FieldError message={fieldErrors.name} />
       </div>
 

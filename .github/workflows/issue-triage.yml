@@ -1,0 +1,113 @@
+# Issueの整理を自動で行う。ルールは docs/Issueの立て方.md を参照。
+#
+#   1. フォームの「先に終わっている必要があるIssue」に書いた #番号 を「blocked by（待ち）」に登録する
+#      → 待ちのIssueは「今すぐ着手できるIssue」の一覧（-is:blocked）に出なくなる
+#   2. フォームの「種類」「Agent AI」の回答をラベルにそろえる
+#   3. 待ちの相手がすべて閉じたら、待っていたIssueに「着手できます」とコメントする
+#   4. 「将来候補」ラベルが付いたら「対応しない（not planned）」で閉じ、再オープンされたらラベルを外す
+name: Issue整理
+
+on:
+  issues:
+    types: [opened, edited, labeled, reopened, closed]
+
+permissions:
+  issues: write
+
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const action = context.payload.action;
+            const issue = context.payload.issue;
+            const issue_number = issue.number;
+            const FUTURE = '将来候補';
+
+            // ---- 4. 将来候補 ----
+            if (action === 'labeled') {
+              if (context.payload.label.name !== FUTURE || issue.state !== 'open') return;
+              await github.rest.issues.createComment({
+                owner, repo, issue_number,
+                body: '「将来候補」のため「対応しない」で閉じました。やると決まったら再オープンしてください（ラベルは自動で外れます）。',
+              });
+              await github.rest.issues.update({ owner, repo, issue_number, state: 'closed', state_reason: 'not_planned' });
+              return;
+            }
+            if (action === 'reopened') {
+              if (issue.labels.some((l) => l.name === FUTURE)) {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number, name: FUTURE });
+              }
+              return;
+            }
+
+            // ---- 3. 待ちの解消を知らせる ----
+            if (action === 'closed') {
+              if (issue.state_reason !== 'completed') return;
+              const blocking = await github.paginate('GET /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocking', { owner, repo, issue_number, per_page: 100 });
+              for (const target of blocking.filter((t) => t.state === 'open')) {
+                const blockers = await github.paginate('GET /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by', { owner, repo, issue_number: target.number, per_page: 100 });
+                if (blockers.some((b) => b.state === 'open')) continue;
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: target.number,
+                  body: `#${issue_number} が終わり、待ちがすべて解消しました。着手できます。`,
+                });
+              }
+              return;
+            }
+
+            // ---- ここから opened / edited（本文が変わったときだけ）----
+            if (action === 'edited' && !context.payload.changes?.body) return;
+            const body = issue.body || '';
+            // Issueフォームの回答は「### 見出し」の下に入る。未回答は _No response_ になる
+            const answer = (heading) => {
+              const m = body.match(new RegExp(`^### ${heading}\\s*$([\\s\\S]*?)(?=^### |(?![\\s\\S]))`, 'm'));
+              const v = m ? m[1].trim() : '';
+              return v === '_No response_' ? '' : v;
+            };
+
+            // ---- 2. 種類・Agent AI をラベルにそろえる（同じグループの古いラベルは外す）----
+            const groups = [
+              { heading: '種類', map: { 'コード': 'コード', '資料': '資料', '手作業（管理画面などの操作）': '手作業' } },
+              { heading: 'Agent AI', map: { 'Agent AI不要': 'Agent AI不要', 'Codex使用可': 'Codex使用可' } },
+            ];
+            const current = new Set(issue.labels.map((l) => l.name));
+            for (const g of groups) {
+              const want = g.map[answer(g.heading)];
+              if (!want) continue;
+              for (const old of Object.values(g.map)) {
+                if (old !== want && current.has(old)) {
+                  await github.rest.issues.removeLabel({ owner, repo, issue_number, name: old });
+                }
+              }
+              if (!current.has(want)) {
+                await github.rest.issues.addLabels({ owner, repo, issue_number, labels: [want] });
+              }
+            }
+
+            // ---- 1. 先に終わっている必要があるIssue → blocked by ----
+            const refs = [...new Set((answer('先に終わっている必要があるIssue').match(/#\d+/g) || []).map((s) => Number(s.slice(1))))]
+              .filter((n) => n !== issue_number);
+            if (refs.length === 0) return;
+            const already = await github.paginate('GET /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by', { owner, repo, issue_number, per_page: 100 });
+            const known = new Set(already.map((b) => b.number));
+            for (const n of refs.filter((n) => !known.has(n))) {
+              try {
+                const { data: blocker } = await github.rest.issues.get({ owner, repo, issue_number: n });
+                if (blocker.pull_request) {
+                  core.warning(`#${n} はPRなので待ちに登録しません`);
+                  continue;
+                }
+                await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by', { owner, repo, issue_number, issue_id: blocker.id });
+                core.info(`#${issue_number} を #${n} 待ちにしました`);
+              } catch (e) {
+                core.warning(`#${n} を待ちに登録できませんでした: ${e.status ?? ''} ${e.message}`);
+              }
+            }

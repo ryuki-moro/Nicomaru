@@ -10,7 +10,7 @@
  * 「メールで送信」「LINEで送信」も再発行を伴うため、押すたびに表示中のURLは失効し、
  * 新しく発行されたURLに置き換わる。取り違えを防ぐため、応答のURLで必ず表示を更新する。
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { ApiCallError, api } from '@/lib/api/client';
@@ -59,6 +59,28 @@ export function InvitationResultModal({
   const [items, setItems] = useState(
     invitations.map((invitation) => ({ ...invitation, note: null as string | null })),
   );
+  const [hasEmails, setHasEmails] = useState<Record<string, boolean> | null>(null);
+  const [recipientEmails, setRecipientEmails] = useState<Record<string, string>>({});
+  const [confirmEmails, setConfirmEmails] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let active = true;
+    api
+      .get<{ invitations: { targetPartnerRole: PartnerRole; hasEmail: boolean }[] }>(
+        `/api/cases/${caseId}/invitations`,
+      )
+      .then((result) => {
+        if (active)
+          setHasEmails(
+            Object.fromEntries(result.invitations.map((i) => [i.targetPartnerRole, i.hasEmail])),
+          );
+      })
+      .catch(() => {
+        if (active) setHasEmails(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [caseId]);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   async function copy(id: string, url: string) {
@@ -77,11 +99,26 @@ export function InvitationResultModal({
 
   async function send(id: string, channel: ContactChannel) {
     if (busyId) return;
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    const needsEmail = channel === 'email' && hasEmails?.[item.targetPartnerRole] === false;
+    const recipientEmail = recipientEmails[item.targetPartnerRole]?.trim() ?? '';
+    if (
+      needsEmail &&
+      (!recipientEmail ||
+        recipientEmail.toLowerCase() !==
+          confirmEmails[item.targetPartnerRole]?.trim().toLowerCase())
+    ) {
+      setNote(id, 'メールアドレスと確認用メールアドレスを同じ内容で入力してください。');
+      return;
+    }
     setBusyId(id);
     try {
       const result = await api.post<SendResponse>(`/api/cases/${caseId}/invitations/${id}/send`, {
         channel,
+        ...(needsEmail ? { recipientEmail } : {}),
       });
+      if (needsEmail) setHasEmails((v) => ({ ...v, [item.targetPartnerRole]: true }));
       setItems((prev) =>
         prev.map((item) =>
           item.id === id
@@ -169,6 +206,41 @@ export function InvitationResultModal({
                 onFocus={(e) => e.currentTarget.select()}
               />
 
+              {hasEmails?.[item.targetPartnerRole] === false && (
+                <div className="mb-2 space-y-2">
+                  <p className="text-caption">メールで送信する場合は宛先をご入力ください。</p>
+                  <label className="block text-caption">
+                    メールアドレス
+                    <input
+                      type="email"
+                      autoComplete="off"
+                      className="field"
+                      value={recipientEmails[item.targetPartnerRole] ?? ''}
+                      onChange={(e) =>
+                        setRecipientEmails((v) => ({
+                          ...v,
+                          [item.targetPartnerRole]: e.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="block text-caption">
+                    メールアドレス（確認用）
+                    <input
+                      type="email"
+                      autoComplete="off"
+                      className="field"
+                      value={confirmEmails[item.targetPartnerRole] ?? ''}
+                      onChange={(e) =>
+                        setConfirmEmails((v) => ({
+                          ...v,
+                          [item.targetPartnerRole]: e.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -182,7 +254,7 @@ export function InvitationResultModal({
                     key={channel}
                     type="button"
                     className="btn-secondary w-auto px-4 py-2"
-                    disabled={busyId !== null}
+                    disabled={busyId !== null || (channel === 'email' && hasEmails === null)}
                     onClick={() => send(item.id, channel)}
                   >
                     {CONTACT_CHANNEL_LABEL[channel]}で送信

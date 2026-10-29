@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ja">
       <body>
         {children}
-        <PwaRegistration />
+        {process.env.NICOMARU_DB !== 'd1-local' && <PwaRegistration />}
         <PerformanceReporter />
       </body>
     </html>
