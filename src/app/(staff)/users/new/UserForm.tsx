@@ -162,6 +162,8 @@ export function UserForm({ roleLabel, fixedVenueName, venueOptions }: Props) {
           className="field"
           type="email"
           autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
           value={email}
           maxLength={255}
           onChange={(e) => setEmail(e.target.value)}
