@@ -2,11 +2,13 @@
  * 全画面共通ヘッダー（4-3 全画面共通仕様）。
  *   サービス名／ログイン中の利用者種別・表示名／ログアウト（機能1-5）。
  *   planner・admin 側画面にはパンくずを置き、couple 側は最小構成にする。
+ *   staff 側はヘッダー内にグローバルナビ（StaffNav）を常設する。couple 側の主要導線は下部の CoupleNav。
  */
 import Link from 'next/link';
 
 import { LogoutButton } from '@/components/layout/LogoutButton';
-import { ROLE_LABEL, type Role } from '@/lib/constants';
+import { StaffNav } from '@/components/layout/StaffNav';
+import { isStaff, ROLE_LABEL, type Role } from '@/lib/constants';
 
 export interface Crumb {
   label: string;
@@ -42,6 +44,8 @@ export function AppHeader({ role, displayName, breadcrumbs, minimal = false }: P
           <LogoutButton />
         </div>
       </div>
+
+      {!minimal && isStaff(role) && <StaffNav role={role} />}
 
       {!minimal && breadcrumbs && breadcrumbs.length > 0 && (
         <nav aria-label="パンくず" className="mx-auto w-full max-w-6xl px-4 pb-2">

@@ -14,3 +14,10 @@ docs/screenshots/
 docs/images/
 # 生成資料は生成元と専用の整合性検査で管理する。
 docs/詳細設計/generated/
+# C4 図の HTML は同じフォルダの C4アーキテクチャ.json から生成する。
+docs/詳細設計/C4アーキテクチャ.html
+
+.next-d1/
+.next-dev-admin/
+.wrangler/
+spikes/

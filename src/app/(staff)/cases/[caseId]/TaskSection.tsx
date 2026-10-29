@@ -84,6 +84,8 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingDate, setEditingDate] = useState('');
+  /** 「対応不要にしますか？」をその場で出している行。window.confirm は E2E で扱いにくいので使わない */
+  const [confirmingWaiveId, setConfirmingWaiveId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
 
@@ -134,7 +136,10 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
   const setWaived = (taskId: string, waived: boolean) =>
     run(async () => {
       await api.patch(`/api/cases/${caseId}/tasks/${taskId}`, { waived });
-      return waived ? '対応不要に変更しました。' : '対応不要を解除しました。';
+      setConfirmingWaiveId(null);
+      return waived
+        ? '対応不要に変更しました。同じ行の「対応不要を解除」で元に戻せます。'
+        : '対応不要を解除しました。';
     });
 
   const addTask = (event: React.FormEvent<HTMLFormElement>) => {
@@ -293,16 +298,52 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
                             期限を変更
                           </button>
                         )}
-                        {WAIVABLE_STATUSES.includes(task.status) && (
-                          <button
-                            type="button"
-                            className="btn-ghost"
-                            disabled={busy}
-                            onClick={() => setWaived(task.id, task.status !== 'waived')}
-                          >
-                            {task.status === 'waived' ? '対応不要を解除' : '対応不要にする'}
-                          </button>
-                        )}
+                        {WAIVABLE_STATUSES.includes(task.status) &&
+                          (task.status === 'waived' ? (
+                            <button
+                              type="button"
+                              className="btn-ghost"
+                              disabled={busy}
+                              onClick={() => setWaived(task.id, false)}
+                            >
+                              対応不要を解除
+                            </button>
+                          ) : confirmingWaiveId === task.id ? (
+                            // 誤操作を防ぐため、その行で確認してから変更する
+                            <span
+                              role="group"
+                              aria-label={`${task.title}を対応不要にするかの確認`}
+                              className="flex flex-wrap items-center gap-2 rounded-button bg-danger-bg px-2 py-1"
+                            >
+                              <span className="text-caption text-danger">対応不要にしますか？</span>
+                              <button
+                                type="button"
+                                className="rounded-button bg-danger px-3 py-1 text-caption text-white disabled:opacity-50"
+                                disabled={busy}
+                                onClick={() => setWaived(task.id, true)}
+                              >
+                                はい
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-ghost text-caption"
+                                disabled={busy}
+                                onClick={() => setConfirmingWaiveId(null)}
+                              >
+                                やめる
+                              </button>
+                            </span>
+                          ) : (
+                            // 「期限を変更」（リンク風）と見分けられるよう、注意色の枠付きボタンにする
+                            <button
+                              type="button"
+                              className="rounded-button border border-danger px-3 py-1 text-caption text-danger transition-colors hover:bg-danger-bg disabled:opacity-50"
+                              disabled={busy}
+                              onClick={() => setConfirmingWaiveId(task.id)}
+                            >
+                              対応不要にする
+                            </button>
+                          ))}
                       </div>
                     </td>
                   )}

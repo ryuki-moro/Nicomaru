@@ -1,0 +1,36 @@
+name: 不具合
+description: 同じ操作をすれば誰でも再現できる不具合（試験で見つかったものを含む）
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        タイトルは「どこで・何が起きるか」を書きます。例: 「提出画面で画像を2枚選ぶと送信ボタンが押せない」
+        秘密の値（パスワード・鍵）、個人情報、招待URLは書かないでください。
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      value: |
+        1. 操作前の状態:
+        2. 操作:
+        3. 実際の結果:
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する結果
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 環境
+      description: 分かる範囲で。試験ID・ブラウザー・端末・利用ロール・commit など
+      placeholder: 例) T-0302 / Chrome 141 / iPhone / planner / 8ead4f3
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 画像・ログ
+      description: 画面の写真やエラー文を貼ります（秘密の値・個人情報を消してから）。

@@ -78,6 +78,80 @@ afterAll(async () => {
   await db?.close();
 });
 
+d('別パートナーへの招待先メールの同時設定（#122）', () => {
+  async function clearRecipients() {
+    await db.asOwner(async (q) => {
+      await q(
+        "insert into couple_profiles (case_id, partner_role, full_name) values ($1, 'bride', 'テスト花子') on conflict (case_id, partner_role) do nothing",
+        [caseId],
+      );
+      await q('update couple_profiles set email=null, email_hash=null where case_id=$1', [caseId]);
+      await q(
+        'update case_invitations set revoked_at=now() where case_id=$1 and revoked_at is null',
+        [caseId],
+      );
+    });
+  }
+  const outcome = (attempt: Promise<unknown>) =>
+    attempt.then(
+      () => 'ok',
+      (error: { code?: string }) => error.code,
+    );
+  it('両プロフィールへ同じ宛先を同時保存しても片方だけ成功する', async () => {
+    await clearRecipients();
+    const results = await Promise.all(
+      ['groom', 'bride'].map((role) =>
+        outcome(
+          db.asUser(plannerAuthId, (q) =>
+            q(
+              'update couple_profiles set email=$1,email_hash=$2 where case_id=$3 and partner_role=$4',
+              ['encrypted:race', 'race-profile', caseId, role],
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(results.sort()).toEqual(['BH422', 'ok']);
+    const after = await db.asOwner((q) =>
+      q('select id from couple_profiles where case_id=$1 and email_hash=$2', [
+        caseId,
+        'race-profile',
+      ]),
+    );
+    expect(after.rows).toHaveLength(1);
+  });
+  it('プロフィール保存と他方への招待発行が競合しても重複を残さない', async () => {
+    await clearRecipients();
+    const results = await Promise.all([
+      outcome(
+        db.asUser(plannerAuthId, (q) =>
+          q(
+            "update couple_profiles set email=$1,email_hash=$2 where case_id=$3 and partner_role='groom'",
+            ['encrypted:race', 'race-invitation', caseId],
+          ),
+        ),
+      ),
+      outcome(
+        db.asUser(plannerAuthId, (q) =>
+          q(
+            "select reissue_case_invitation($1,'bride','initial_registration','race-invitation-token','email',now()+interval '14 days',1,'encrypted:race','race-invitation')",
+            [caseId],
+          ),
+        ),
+      ),
+    ]);
+    expect(results.sort()).toEqual(['BH422', 'ok']);
+    const after = await db.asOwner((q) =>
+      q(
+        "select id from couple_profiles where case_id=$1 and email_hash='race-invitation' union all select id from case_invitations where case_id=$1 and recipient_email_hash='race-invitation' and revoked_at is null",
+        [caseId],
+      ),
+    );
+    expect(after.rows).toHaveLength(1);
+    await clearRecipients();
+  });
+});
+
 d('招待トークンの原子的な消費（6-6-1）', () => {
   it('同一トークンへ同時に8リクエストを投げても1つしか通らない', async () => {
     const tokenHash = 'concurrent-token-hash-1';

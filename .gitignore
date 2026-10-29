@@ -1,4 +1,4 @@
-﻿# ローカル成果物・ツール束(アプリ本体ではないため追跡しない)
+# ローカル成果物・ツール束(アプリ本体ではないため追跡しない)
 design-system/*.skill
 
 # OS / editor
@@ -8,6 +8,7 @@ Thumbs.db
 # Node / Next.js
 node_modules/
 .next/
+.next-dev-admin/
 out/
 build/
 next-env.d.ts
@@ -34,3 +35,7 @@ tsconfig.tsbuildinfo
 
 # Claude Code のローカル設定(個人の権限設定は共有しない)
 .claude/settings.local.json
+
+# D1 local
+.wrangler/
+.next-d1/

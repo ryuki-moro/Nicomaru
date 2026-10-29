@@ -1,0 +1,1916 @@
+{
+  "title": "にこまる（BridalHub）のアーキテクチャ",
+  "summary": {
+    "対象": "ブランチ codex/dev-admin-login の bfa5ab0 時点のコード",
+    "時点": "2026-10-15",
+    "今回の変更": "origin/main との差分（ログイン不要デモと開発用 admin ログイン）",
+    "対象外": "テストの中身、パスワード再設定、LINE 連携の細部、AWS 演習用テンプレート",
+    "作った図": "C1・C2（本体／開発・デモ用）・C3（Web アプリの中身）・動的図（招待とログイン）",
+    "調べ方": "コードを読んで確かめた。実機での通信や外部サービスへの到達は確かめていない"
+  },
+  "overview": [
+    "結婚式の準備を、プランナーと新郎新婦で進めるための Web アプリ。",
+    "画面とサーバーは 1 つの Web アプリ、データは Supabase、AI は別に動く。",
+    "今回のブランチで、ログイン不要デモと開発用 admin ログインが加わった。",
+    "【未確認】定期処理・LINE・メールが実環境で動くかは、コードでしか確かめていない。"
+  ],
+  "notes": [
+    "【未確認】pg_cron と pg_net は「あれば登録する」作り。実環境で 8 件の定期処理が登録済みかは確かめていない。",
+    "【未確認】ログイン用メールを Resend で送る設定は README の記載だけで、設定ファイルでは見つからない。",
+    "【未確認】Vercel での公開は資料の記載だけで、配備の設定ファイルはリポジトリに無い。",
+    "【推定】LLM の呼び出しに時間切れの設定が無く、生成が長引くと心拍が途切れて「利用不可」になり得る。",
+    "【推定】準備シートの AI 下書きは、画面を開き直さないと結果が出ない場合がある。",
+    "【事実】宿題の提出・差し戻しでは LINE もメールも送らない。プランナーは画面を開いて気づく。",
+    "【事実】外部へ送る主な場面は、招待の送付と毎朝の期限切れ通知。期限前の知らせはアプリ内だけ。",
+    "【事実】メールや LINE の鍵が未設定だと、送らずに成功として扱う。",
+    "【事実】AI の「利用不可」判定は画面を開いた時の 1 回だけ。開いたまま止まっても表示は変わらない。",
+    "【事実】AI ワーカーは専用ロールで DB に直接つなぎ、使える関数は取得・完了・心拍の 3 つだけ。",
+    "【事実】pgvector と RAG は設計書にあるが、コードにはまだ入っていない。",
+    "【事実】AWS のテンプレートは学校の演習用で、アプリからは使っていない。",
+    "【事実】AI モデルはコードの既定が gemma3:12b、設定例は軽い qwen2.5:7b。担当者が機器に合わせて選ぶ。",
+    "【事実】ログイン不要デモは外部と通信せず、データはそのブラウザの中だけに残る。",
+    "【事実】開発用 admin ログインは、開発モードで専用ランチャーから起動した時だけ有効になる。"
+  ],
+  "glossary": [
+    { "term": "Next.js", "meaning": "Web の画面とサーバー処理を 1 つにまとめて作れる仕組み" },
+    {
+      "term": "Supabase",
+      "meaning": "データベース・ログイン・ファイル置き場をまとめて貸してくれるサービス"
+    },
+    {
+      "term": "RLS",
+      "meaning": "データベースが「この人はこの行を見てよいか」を行ごとに判定する仕組み"
+    },
+    {
+      "term": "RPC",
+      "meaning": "データベースに用意した関数を呼び、ひとまとまりの処理をさせること"
+    },
+    {
+      "term": "Service Role（強い鍵）",
+      "meaning": "RLS を飛び越えて全データに触れる鍵。決めた用途でだけ使う"
+    },
+    {
+      "term": "PostgREST",
+      "meaning": "データベースを HTTPS で読み書きできるようにする Supabase の窓口"
+    },
+    {
+      "term": "pg_cron / pg_net",
+      "meaning": "データベースの中で決まった時刻に処理を動かし、外へ HTTP で呼びかける仕組み"
+    },
+    {
+      "term": "middleware（関所）",
+      "meaning": "すべての要求の最初に通る、ログイン状態を整える処理"
+    },
+    {
+      "term": "Route Handler（API）",
+      "meaning": "画面からのデータの要求を受け付けるサーバー側の窓口"
+    },
+    { "term": "Server Action", "meaning": "画面のボタンから直接呼べるサーバー側の処理" },
+    { "term": "Origin 検証", "meaning": "要求が自分のサイトの画面から来たかを確かめること" },
+    {
+      "term": "合言葉（共有シークレット）",
+      "meaning": "定期処理の呼び出し元だけが知っている秘密の文字列"
+    },
+    { "term": "署名つき URL", "meaning": "短い時間だけ使える、鍵つきのファイルの URL" },
+    {
+      "term": "マジックリンク / 6 桁コード",
+      "meaning": "メールで届くリンクか数字で、パスワード無しでログインする方法"
+    },
+    { "term": "cookie", "meaning": "ブラウザが覚えておく小さな情報。ここではログイン状態を持つ" },
+    {
+      "term": "Webhook",
+      "meaning": "相手のサービスから、出来事があった時に呼び出してもらう仕組み"
+    },
+    {
+      "term": "LLM / Ollama",
+      "meaning": "文章を読み書きする AI と、それを手元の PC で動かすソフト"
+    },
+    { "term": "ポーリング", "meaning": "「何か来ていないか」を一定の間隔で問い合わせること" },
+    { "term": "心拍", "meaning": "「まだ動いている」と定期的に知らせる合図" },
+    { "term": "localStorage", "meaning": "ブラウザの中にデータを保存しておける場所" }
+  ],
+  "diagrams": [
+    {
+      "level": "context",
+      "title": "C1 システムコンテキスト",
+      "scope": "にこまる全体と、使う人・つながる外部サービス",
+      "points": [
+        "3 種類の利用者が、同じ Web アプリを役割ごとに使い分ける",
+        "外へ出る通知は LINE とメールの 2 つの出口だけ",
+        "AI は手元の LLM を使い、外部の AI サービスには送らない"
+      ],
+      "width": 1240,
+      "height": 700,
+      "nodes": [
+        {
+          "id": "couple",
+          "name": "新郎新婦",
+          "kind": "Person",
+          "description": "招待を受けて登録し、宿題を提出する",
+          "details": [
+            "マイページで宿題・日程・お知らせを見る",
+            "LINE と連携すると通知を受け取れる"
+          ],
+          "evidence": [
+            "src/lib/constants.ts:9-17",
+            "src/app/(couple)/layout.tsx:14-17",
+            "src/app/api/line/link/route.ts:174"
+          ],
+          "x": 60,
+          "y": 40
+        },
+        {
+          "id": "staff",
+          "name": "プランナー・式場管理者",
+          "kind": "Person",
+          "description": "案件を登録して新郎新婦を招待し、提出物を確かめる",
+          "details": [
+            "式場管理者は利用者やテンプレートも管理する",
+            "AI 補助に下書きや分類を頼める"
+          ],
+          "evidence": [
+            "src/app/(staff)/layout.tsx:12-15",
+            "src/app/(staff)/users/page.tsx:42",
+            "src/app/(staff)/templates/page.tsx:71"
+          ],
+          "x": 510,
+          "y": 40
+        },
+        {
+          "id": "sysadmin",
+          "name": "システム管理者",
+          "kind": "Person",
+          "description": "式場を登録し、容量や稼働の状態を見守る",
+          "details": ["通知の記録を CSV で取り出せる"],
+          "evidence": [
+            "src/app/(staff)/system/page.tsx:72",
+            "src/app/(staff)/venues/page.tsx:42",
+            "src/app/api/system/notification-logs.csv/route.ts:25"
+          ],
+          "x": 960,
+          "y": 40
+        },
+        {
+          "id": "line",
+          "name": "LINE",
+          "kind": "External System",
+          "description": "新郎新婦へ通知を届け、アカウント連携を受け付ける",
+          "details": ["送れる数に上限があり、超えるとメールに切り替える"],
+          "technology": "LINE Messaging API",
+          "evidence": [
+            "src/lib/notify/send.ts:71-83",
+            "src/lib/notify/line.ts:48-99",
+            "src/app/api/line/webhook/route.ts:31-60",
+            "src/lib/services/notifications.ts:62-91"
+          ],
+          "x": 60,
+          "y": 300
+        },
+        {
+          "id": "nicomaru",
+          "name": "にこまる（BridalHub）",
+          "kind": "System",
+          "description": "結婚式準備の案件・宿題・連絡をまとめて管理する",
+          "details": [
+            "案件登録 → 招待 → 提出 → 確認 が中心の流れ",
+            "AI が止まっても主な業務は手作業で続けられる"
+          ],
+          "technology": "Web アプリ",
+          "evidence": ["README.md:3-4", "README.md:236-237"],
+          "x": 510,
+          "y": 300
+        },
+        {
+          "id": "github",
+          "name": "GitHub Actions",
+          "kind": "External System",
+          "description": "6 時間ごとにアプリへアクセスして稼働を確かめる",
+          "details": ["2 回続けて失敗すると CI の通知で知らせる", "品質チェック（CI）もここで動く"],
+          "technology": "GitHub Actions",
+          "evidence": [".github/workflows/keepalive.yml:16,28-36", ".github/workflows/ci.yml"],
+          "x": 960,
+          "y": 300
+        },
+        {
+          "id": "resend",
+          "name": "Resend（メール送信）",
+          "kind": "External System",
+          "description": "招待や通知のメールを送り届ける",
+          "details": ["鍵が未設定なら送らずに記録だけ残す"],
+          "technology": "Resend API",
+          "evidence": ["src/lib/notify/mailer.ts:31,71-89"],
+          "x": 290,
+          "y": 560
+        },
+        {
+          "id": "ollama",
+          "name": "ローカル LLM（Ollama）",
+          "kind": "External System",
+          "description": "AI ワーカーの依頼を受けて文章を生成する",
+          "details": ["【推定】校内や自宅の GPU 付き PC で動かす想定"],
+          "technology": "Ollama",
+          "evidence": [
+            "worker/ai-worker.ts:78-95",
+            "supabase/migrations/20260828001600_ai_job_queue.sql:15"
+          ],
+          "x": 730,
+          "y": 560
+        }
+      ],
+      "edges": [
+        {
+          "id": "c_submit",
+          "from": "couple",
+          "to": "nicomaru",
+          "label": "宿題を提出する",
+          "protocol": "HTTPS",
+          "description": "マイページで宿題を出し、日程やお知らせを見る",
+          "evidence": ["src/app/(couple)/mypage/tasks/[taskId]/SubmitForm.tsx:120-147"]
+        },
+        {
+          "id": "c_staff",
+          "from": "staff",
+          "to": "nicomaru",
+          "label": "案件と提出を管理する",
+          "protocol": "HTTPS",
+          "description": "案件の登録・招待・提出物の確認をする",
+          "evidence": [
+            "src/app/(staff)/cases/new/page.tsx:32",
+            "src/app/(staff)/submissions/[submissionId]/page.tsx:137-139"
+          ]
+        },
+        {
+          "id": "c_admin",
+          "from": "sysadmin",
+          "to": "nicomaru",
+          "label": "式場と稼働を管理する",
+          "protocol": "HTTPS",
+          "description": "式場の登録や、容量・監視の状態を確かめる",
+          "evidence": ["src/app/(staff)/system/page.tsx:72"]
+        },
+        {
+          "id": "c_line_send",
+          "from": "nicomaru",
+          "to": "line",
+          "label": "通知を送る",
+          "protocol": "HTTPS",
+          "description": "招待や期限切れの通知を LINE で送る",
+          "evidence": ["src/lib/notify/send.ts:71-83"],
+          "via": [
+            [460, 330],
+            [330, 330]
+          ],
+          "labelX": 395,
+          "labelY": 300
+        },
+        {
+          "id": "c_line_hook",
+          "from": "line",
+          "to": "nicomaru",
+          "label": "連携イベントを送る",
+          "protocol": "Webhook",
+          "description": "友だち追加やアカウント連携を知らせる。署名を確かめてから受け取る",
+          "evidence": ["src/app/api/line/webhook/route.ts:31-60"],
+          "via": [
+            [330, 380],
+            [460, 380]
+          ],
+          "labelX": 395,
+          "labelY": 405
+        },
+        {
+          "id": "c_line_user",
+          "from": "line",
+          "to": "couple",
+          "label": "通知を届ける",
+          "protocol": "LINE",
+          "description": "【推定】連携済みの新郎新婦の LINE に届く。届いたかはコードでは見えない",
+          "evidence": ["src/lib/notify/send.ts:71-83（宛先は連携済みの LINE ID）"]
+        },
+        {
+          "id": "c_mail",
+          "from": "nicomaru",
+          "to": "resend",
+          "label": "メールを送る",
+          "protocol": "HTTPS",
+          "description": "招待・通知・パスワード設定のメールを頼む",
+          "evidence": ["src/lib/notify/mailer.ts:80-89"]
+        },
+        {
+          "id": "c_llm",
+          "from": "nicomaru",
+          "to": "ollama",
+          "label": "文章の生成を頼む",
+          "protocol": "HTTP",
+          "description": "AI ワーカーが下書きや分類の生成を頼む",
+          "evidence": ["worker/ai-worker.ts:78-95"]
+        },
+        {
+          "id": "c_keepalive",
+          "from": "github",
+          "to": "nicomaru",
+          "label": "稼働を確かめる",
+          "protocol": "HTTPS",
+          "description": "6 時間ごとに死活確認の窓口へアクセスする",
+          "evidence": [".github/workflows/keepalive.yml:16,33-34"]
+        }
+      ],
+      "flows": [
+        {
+          "title": "宿題を出して確かめてもらう",
+          "description": "新郎新婦が提出し、プランナーが画面を開いて確かめるまで",
+          "steps": [
+            { "edge": "c_submit", "label": "宿題を提出する" },
+            {
+              "edge": "c_submit",
+              "reverse": true,
+              "label": "受け付けた結果を返す",
+              "note": "プランナーへの通知は出ない",
+              "evidence": "src/app/api/tasks/[taskId]/submit/route.ts:224-275"
+            },
+            {
+              "edge": "c_staff",
+              "label": "提出の画面を開く",
+              "note": "開いた時に初めて提出に気づく",
+              "evidence": "src/app/(staff)/submissions/[submissionId]/page.tsx:137-139"
+            },
+            {
+              "edge": "c_staff",
+              "label": "確認済みか差し戻しを記録",
+              "evidence": "src/app/api/submissions/[submissionId]/review/route.ts:51-79"
+            }
+          ]
+        },
+        {
+          "title": "期限切れの宿題を知らせる",
+          "description": "毎朝の定期処理が、期限を過ぎた宿題を LINE かメールで知らせる",
+          "steps": [
+            {
+              "edge": "c_line_send",
+              "label": "期限切れを LINE で送る",
+              "note": "【未確認】毎朝 8 時の定期処理。実環境での登録は未確認",
+              "evidence": "supabase/migrations/20261009000600_register_observability_jobs.sql:33-46"
+            },
+            { "edge": "c_line_user", "label": "LINE に届く" },
+            {
+              "edge": "c_mail",
+              "label": "代わりにメールで送る",
+              "note": "LINE 未連携や送信枠切れの時に切り替える",
+              "evidence": "src/lib/services/notifications.ts:62-91"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "level": "container",
+      "title": "C2 コンテナ（本体）",
+      "scope": "にこまる本体を、動くアプリとデータの置き場に分けて見る",
+      "points": [
+        "業務データは DB に集め、誰が見てよいかは DB が行ごとに判定する",
+        "AI ワーカーは DB の順番待ちから仕事を取るので、止まっても本体は動く",
+        "定期処理は DB が時刻になると Web アプリの内部 API を呼んで動かす"
+      ],
+      "width": 1640,
+      "height": 920,
+      "boundaries": [
+        { "label": "にこまる（BridalHub）", "x": 320, "y": 200, "width": 1000, "height": 520 }
+      ],
+      "nodes": [
+        {
+          "id": "users",
+          "name": "利用者",
+          "kind": "Person",
+          "description": "新郎新婦・プランナー・管理者がブラウザで使う",
+          "details": ["役割ごとに最初に開く画面が変わる"],
+          "evidence": ["src/lib/auth/session.ts:107-119"],
+          "x": 720,
+          "y": 30
+        },
+        {
+          "id": "github",
+          "name": "GitHub Actions",
+          "kind": "External System",
+          "description": "6 時間ごとにアプリへアクセスして稼働を確かめる",
+          "details": ["2 回続けて失敗すると CI の通知で知らせる"],
+          "technology": "GitHub Actions",
+          "evidence": [".github/workflows/keepalive.yml:16,28-36"],
+          "x": 1160,
+          "y": 30
+        },
+        {
+          "id": "auth",
+          "name": "Supabase Auth",
+          "kind": "Container",
+          "description": "ログインとセッション（ログイン状態）を管理する",
+          "details": [
+            "スタッフはメールとパスワードで入る",
+            "新郎新婦はメールのリンクか 6 桁コードで入る"
+          ],
+          "technology": "Supabase（クラウド）",
+          "evidence": [
+            "src/app/api/auth/password-login/route.ts:13",
+            "src/app/api/auth/otp-request/route.ts:28-34",
+            "src/app/api/auth/otp-verify/route.ts:52"
+          ],
+          "x": 360,
+          "y": 250
+        },
+        {
+          "id": "web",
+          "name": "Web アプリ",
+          "kind": "Container",
+          "description": "画面の表示と、ログイン・入力チェック・業務処理を受け持つ",
+          "details": [
+            "画面 30 枚あまりと API 45 本を持つ",
+            "更新 API は自サイトの画面からの要求だけ受ける",
+            "【推定】Vercel で公開する想定"
+          ],
+          "technology": "Next.js 15 / React 19 / TypeScript",
+          "evidence": [
+            "src/app/",
+            "src/middleware.ts:24-57",
+            "src/lib/api/route.ts:51-80",
+            "package.json:30-40",
+            "README.md:193"
+          ],
+          "x": 720,
+          "y": 250
+        },
+        {
+          "id": "line",
+          "name": "LINE",
+          "kind": "External System",
+          "description": "新郎新婦へ通知を届け、アカウント連携を受け付ける",
+          "details": ["送れる数に上限があり、超えるとメールに切り替える"],
+          "technology": "LINE Messaging API",
+          "evidence": [
+            "src/lib/notify/send.ts:71-83",
+            "src/lib/notify/line.ts:48-99",
+            "src/lib/services/notifications.ts:62-91"
+          ],
+          "x": 1380,
+          "y": 250
+        },
+        {
+          "id": "resend",
+          "name": "Resend（メール送信）",
+          "kind": "External System",
+          "description": "招待や通知のメールを送り届ける",
+          "details": ["鍵が未設定なら送らずに記録だけ残す"],
+          "technology": "Resend API",
+          "evidence": ["src/lib/notify/mailer.ts:31,71-89"],
+          "x": 40,
+          "y": 470
+        },
+        {
+          "id": "storage",
+          "name": "ファイル置き場",
+          "kind": "Container",
+          "description": "宿題で提出されたファイルを、外から見えない形で保管する",
+          "details": [
+            "CSV・JPG・PNG。1 件 5MB、案件ごとに 100MB まで",
+            "見る時は 60 秒だけ有効な URL を発行する"
+          ],
+          "technology": "Supabase Storage",
+          "evidence": [
+            "src/app/api/files/upload/route.ts:91-213",
+            "src/lib/constants.ts:221-222",
+            "src/app/api/files/[fileId]/download/route.ts:18,49-62",
+            "supabase/migrations/20260828000900_submission_functions.sql:101-141"
+          ],
+          "x": 360,
+          "y": 560
+        },
+        {
+          "id": "db",
+          "name": "データベース",
+          "kind": "Database",
+          "description": "業務データを保存し、誰が何を見られるかを行ごとに判定する",
+          "details": [
+            "表 33 個と、ひとまとまりで処理する関数（RPC）",
+            "AI の仕事の順番待ちもここに置く",
+            "pg_cron で定期処理の時刻を管理する"
+          ],
+          "technology": "PostgreSQL（Supabase）",
+          "evidence": [
+            "supabase/migrations/",
+            "supabase/migrations/20260828000500_rls_policies.sql",
+            "supabase/migrations/20260828001600_ai_job_queue.sql:33-209",
+            "supabase/migrations/20261009000600_register_observability_jobs.sql:10-48"
+          ],
+          "x": 720,
+          "y": 560
+        },
+        {
+          "id": "worker",
+          "name": "AI ワーカー",
+          "kind": "Container",
+          "description": "AI の仕事を順番待ちから取り出し、LLM に処理させて結果を戻す",
+          "details": [
+            "30 秒ごとに仕事を探し、毎回「動いている」と知らせる",
+            "使える DB の関数は 3 つだけに絞っている",
+            "【推定】校内や自宅の PC で動かす想定"
+          ],
+          "technology": "Node.js / tsx",
+          "evidence": [
+            "worker/ai-worker.ts:32,183-229",
+            "supabase/migrations/20260828001600_ai_job_queue.sql:15,21-27,90,127",
+            "supabase/migrations/20260828001800_ai_assist.sql:49"
+          ],
+          "x": 1080,
+          "y": 560
+        },
+        {
+          "id": "ollama",
+          "name": "ローカル LLM（Ollama）",
+          "kind": "External System",
+          "description": "AI ワーカーの依頼を受けて文章を生成する",
+          "details": ["既定は同じ PC の 11434 番ポート", "結果は JSON の形で返させる"],
+          "technology": "Ollama",
+          "evidence": ["worker/ai-worker.ts:78-106"],
+          "x": 1080,
+          "y": 780
+        }
+      ],
+      "edges": [
+        {
+          "id": "w_use",
+          "from": "users",
+          "to": "web",
+          "label": "画面を操作する",
+          "protocol": "HTTPS",
+          "description": "ブラウザで画面を開き、ボタンで更新を送る",
+          "evidence": ["src/app/", "src/lib/api/client.ts:87-92"]
+        },
+        {
+          "id": "w_keepalive",
+          "from": "github",
+          "to": "web",
+          "label": "稼働を確かめる",
+          "protocol": "HTTPS",
+          "description": "死活確認の窓口へアクセスし、DB にも軽く問い合わせさせる",
+          "evidence": [".github/workflows/keepalive.yml:16,33-34", "src/app/api/health/route.ts:25"]
+        },
+        {
+          "id": "w_auth",
+          "from": "web",
+          "to": "auth",
+          "label": "本人を確かめる",
+          "protocol": "HTTPS",
+          "description": "パスワードや 6 桁コードの確認と、ログイン状態の確認を頼む",
+          "details": ["利用者の作成もここに頼む"],
+          "evidence": [
+            "src/middleware.ts:56-57",
+            "src/app/api/auth/password-login/route.ts:13",
+            "src/app/api/auth/initial-register/route.ts:69,203"
+          ]
+        },
+        {
+          "id": "w_db",
+          "from": "web",
+          "to": "db",
+          "label": "データを読み書きする",
+          "protocol": "HTTPS（PostgREST）",
+          "description": "ふだんは利用者本人の権限で読み書きし、DB が行ごとに判定する",
+          "details": [
+            "一部は用途を限った強い鍵（Service Role）で行う",
+            "まとめて処理したい時は RPC を呼ぶ"
+          ],
+          "evidence": [
+            "src/lib/supabase/server.ts:22-39",
+            "src/lib/supabase/admin.ts:15-92",
+            "eslint.config.mjs:32-37"
+          ],
+          "via": [
+            [800, 400],
+            [800, 520]
+          ],
+          "labelX": 730,
+          "labelY": 510
+        },
+        {
+          "id": "w_cron",
+          "from": "db",
+          "to": "web",
+          "label": "定期処理を呼び出す",
+          "protocol": "HTTPS（pg_net）",
+          "description": "【未確認】時刻になると内部 API を合言葉つきで呼ぶ。実環境での登録は未確認",
+          "details": ["通知・削除・監視など 8 種類", "登録は担当者が SQL で手作業で行う"],
+          "evidence": [
+            "supabase/migrations/20261009000600_register_observability_jobs.sql:10-48",
+            "supabase/migrations/20260828002300_register_scheduled_jobs.sql:15-17",
+            "src/lib/api/route.ts:60-61"
+          ],
+          "via": [
+            [860, 520],
+            [860, 400]
+          ],
+          "labelX": 935,
+          "labelY": 450
+        },
+        {
+          "id": "w_file",
+          "from": "web",
+          "to": "storage",
+          "label": "ファイルを保存する",
+          "protocol": "HTTPS",
+          "description": "提出ファイルを保存し、見る時は期限つきの URL を発行する",
+          "details": ["ブラウザはその URL で直接ファイルを開く"],
+          "evidence": [
+            "src/app/api/files/upload/route.ts:175-181",
+            "src/app/api/files/[fileId]/download/route.ts:49-62",
+            "src/app/(staff)/submissions/[submissionId]/ReviewForm.tsx:172-181"
+          ]
+        },
+        {
+          "id": "w_line_send",
+          "from": "web",
+          "to": "line",
+          "label": "通知を送る",
+          "protocol": "HTTPS",
+          "description": "招待や期限切れの通知を LINE で送る",
+          "evidence": ["src/lib/notify/send.ts:71-83", "src/lib/notify/line.ts:80,99"],
+          "via": [
+            [980, 285],
+            [1330, 285]
+          ],
+          "labelX": 1160,
+          "labelY": 258
+        },
+        {
+          "id": "w_line_hook",
+          "from": "line",
+          "to": "web",
+          "label": "連携イベントを送る",
+          "protocol": "Webhook",
+          "description": "友だち追加やアカウント連携を知らせる。署名を確かめてから受け取る",
+          "evidence": ["src/app/api/line/webhook/route.ts:31-60"],
+          "via": [
+            [1330, 325],
+            [980, 325]
+          ],
+          "labelX": 1160,
+          "labelY": 355
+        },
+        {
+          "id": "w_mail",
+          "from": "web",
+          "to": "resend",
+          "label": "メールを送る",
+          "protocol": "HTTPS",
+          "description": "招待・通知・パスワード設定のメールを頼む",
+          "evidence": ["src/lib/notify/mailer.ts:80-89"]
+        },
+        {
+          "id": "w_authmail",
+          "from": "auth",
+          "to": "resend",
+          "label": "ログインメールを送る",
+          "protocol": "SMTP（未確認）",
+          "description": "【未確認】ログイン用のメールの経路。設定ファイルでは確かめられない",
+          "details": [
+            "README には Resend を使うと書かれている",
+            "手元では試験用の受信箱（Mailpit）に届く"
+          ],
+          "evidence": ["README.md:199", "supabase/config.toml:104-107,237-240"]
+        },
+        {
+          "id": "w_job",
+          "from": "worker",
+          "to": "db",
+          "label": "仕事を取り結果を返す",
+          "protocol": "PostgreSQL 直結",
+          "description": "専用ロールで直接つなぎ、心拍・取得・完了の 3 つの関数だけを呼ぶ",
+          "evidence": ["worker/ai-worker.ts:185-215,158-163"]
+        },
+        {
+          "id": "w_llm",
+          "from": "worker",
+          "to": "ollama",
+          "label": "文章の生成を頼む",
+          "protocol": "HTTP",
+          "description": "仕事ごとのプロンプトと入力を渡し、JSON で返させる",
+          "evidence": ["worker/ai-worker.ts:78-95"]
+        }
+      ],
+      "flows": [
+        {
+          "title": "新郎新婦が宿題を提出する",
+          "description": "ファイルを添えて提出し、AI の分類が順番待ちに入るまで",
+          "steps": [
+            {
+              "edge": "w_use",
+              "label": "ファイルを送る",
+              "note": "ファイルの宿題の時だけ。5MB まで",
+              "evidence": "src/app/(couple)/mypage/tasks/[taskId]/SubmitForm.tsx:71-76"
+            },
+            {
+              "edge": "w_file",
+              "label": "ファイルを保存する",
+              "evidence": "src/app/api/files/upload/route.ts:175-181"
+            },
+            {
+              "edge": "w_use",
+              "label": "提出を送る",
+              "evidence": "src/app/(couple)/mypage/tasks/[taskId]/SubmitForm.tsx:140-147"
+            },
+            {
+              "edge": "w_db",
+              "label": "提出を登録する",
+              "note": "1 つのまとまった処理（RPC）で登録する",
+              "evidence": "src/app/api/tasks/[taskId]/submit/route.ts:224-234"
+            },
+            {
+              "edge": "w_db",
+              "label": "AI に分類を頼む",
+              "note": "文章の提出だけ。失敗しても提出は成功のまま",
+              "evidence": "src/app/api/tasks/[taskId]/submit/route.ts:265-273"
+            },
+            {
+              "edge": "w_use",
+              "reverse": true,
+              "label": "提出結果を返す",
+              "note": "プランナーへの通知は出ない",
+              "evidence": "src/app/api/tasks/[taskId]/submit/route.ts:275"
+            }
+          ]
+        },
+        {
+          "title": "AI に下書きを頼む",
+          "description": "プランナーが頼んだ仕事を、AI ワーカーが別に処理して画面に戻すまで",
+          "steps": [
+            {
+              "edge": "w_use",
+              "label": "下書きを頼む",
+              "note": "AI が使えるかは画面を開いた時に判定する",
+              "evidence": [
+                "src/app/(staff)/submissions/[submissionId]/DraftAssist.tsx:61-69",
+                "src/lib/ai/assist.ts:59-67"
+              ]
+            },
+            {
+              "edge": "w_db",
+              "label": "仕事を順番待ちに入れる",
+              "evidence": "src/app/api/ai/jobs/route.ts:32-39"
+            },
+            {
+              "edge": "w_job",
+              "label": "仕事を取り出す",
+              "note": "30 秒ごとに探す。画面の操作とは別に動く",
+              "evidence": "worker/ai-worker.ts:205-219"
+            },
+            {
+              "edge": "w_llm",
+              "label": "文章を生成させる",
+              "evidence": "worker/ai-worker.ts:78-95"
+            },
+            {
+              "edge": "w_llm",
+              "reverse": true,
+              "label": "生成結果を返す",
+              "note": "形式を確かめてから使う",
+              "evidence": "worker/ai-worker.ts:100-106,146"
+            },
+            {
+              "edge": "w_job",
+              "label": "結果を書き戻す",
+              "evidence": "worker/ai-worker.ts:158-163"
+            },
+            {
+              "edge": "w_use",
+              "label": "結果を問い合わせる",
+              "note": "5 秒ごと、最大で約 4 分まで問い合わせる",
+              "evidence": "src/components/ai/useAiJob.ts:27-33,53-66"
+            },
+            {
+              "edge": "w_use",
+              "reverse": true,
+              "label": "下書きを見せる",
+              "note": "人が確かめて、採用か破棄を選ぶ",
+              "evidence": "src/app/api/ai/jobs/[jobId]/route.ts:73-85"
+            }
+          ]
+        },
+        {
+          "title": "毎朝、期限切れを知らせる",
+          "description": "定期処理が期限切れの宿題を探し、LINE かメールで知らせるまで",
+          "steps": [
+            {
+              "edge": "w_cron",
+              "label": "通知処理を呼び出す",
+              "note": "【未確認】毎朝 8 時。実環境での登録は未確認",
+              "evidence": "supabase/migrations/20261009000600_register_observability_jobs.sql:33-46"
+            },
+            {
+              "edge": "w_db",
+              "label": "期限切れの宿題を探す",
+              "note": "先に合言葉を確かめ、違えば 401 で止める",
+              "evidence": [
+                "src/app/api/internal/notifications-dispatch/route.ts:47-133",
+                "src/lib/api/internal.ts:32-37"
+              ]
+            },
+            {
+              "edge": "w_line_send",
+              "label": "LINE で知らせる",
+              "note": "連携済みで、送信枠が残っている時",
+              "evidence": "src/lib/services/notifications.ts:62-91,164-166"
+            },
+            {
+              "edge": "w_mail",
+              "label": "メールで知らせる",
+              "note": "LINE が使えない時の代わり",
+              "evidence": [
+                "src/lib/services/notifications.ts:166",
+                "src/lib/notify/mailer.ts:80-89"
+              ]
+            },
+            {
+              "edge": "w_db",
+              "label": "送った結果を記録する",
+              "evidence": [
+                "src/lib/services/notifications.ts:94-111,168-178",
+                "src/lib/api/internal.ts:121-125"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "level": "container",
+      "title": "C2 開発・デモ用の仕組み（今回の変更）",
+      "scope": "このブランチで加わった、開発用 admin ログインとログイン不要デモ",
+      "points": [
+        "デモは外部と一切通信せず、データはブラウザの中だけに残る",
+        "開発用 admin は、開発モードで専用ランチャーから起動した時だけ有効",
+        "開発用 admin も、ふだんと同じ Supabase Auth でパスワードを確かめる"
+      ],
+      "width": 1100,
+      "height": 880,
+      "boundaries": [
+        { "label": "開発用 admin ログイン", "x": 20, "y": 20, "width": 1060, "height": 420 },
+        { "label": "ログイン不要デモ", "x": 20, "y": 480, "width": 1060, "height": 380 }
+      ],
+      "nodes": [
+        {
+          "id": "dev",
+          "name": "開発者・メンバー",
+          "kind": "Person",
+          "description": "手元の PC でアプリを動かして確かめる",
+          "evidence": ["README.md", "docs/開発用管理者モード.md"],
+          "x": 50,
+          "y": 70
+        },
+        {
+          "id": "launcher",
+          "name": "開発用 admin ランチャー",
+          "kind": "Container",
+          "description": "専用の admin を用意し、ログイン用の設定つきで開発サーバーを起動する",
+          "details": ["本番モードでは起動を中止する", "既存の利用者の権限やパスワードは変えない"],
+          "technology": "Node.js / tsx",
+          "evidence": ["scripts/dev-admin.mts:9-176", "package.json:6"],
+          "change": "added",
+          "changeNote": "入力なしで式場管理者として入れる開発用ランチャーを追加",
+          "x": 430,
+          "y": 70
+        },
+        {
+          "id": "devfile",
+          "name": "開発用 admin の設定",
+          "kind": "Container",
+          "description": "ランチャーが作った専用 admin の情報を、手元にだけ保存する",
+          "details": ["Git には入らない", "本人だけが読み書きできる権限で作る"],
+          "technology": "JSON ファイル",
+          "evidence": ["scripts/dev-admin.mts:31,43-76,116-122", ".gitignore:18"],
+          "change": "added",
+          "changeNote": "専用 admin の情報を置く Git 管理外のファイルを追加",
+          "x": 830,
+          "y": 70
+        },
+        {
+          "id": "webdev",
+          "name": "Web アプリ（開発モード）",
+          "kind": "Container",
+          "description": "本体と同じ Web アプリ。開発用 admin のボタンと API が使える",
+          "details": [
+            "ボタンは設定が有効で、手元のアドレスの時だけ出る",
+            "API は同じサイトからの POST だけ受け付ける"
+          ],
+          "technology": "Next.js dev / 127.0.0.1:3000",
+          "evidence": [
+            "src/app/(public)/login/page.tsx:62-63,82",
+            "src/app/(public)/login/DevAdminLoginButton.tsx:20-31",
+            "src/app/api/auth/dev-admin/route.ts:9-65",
+            "src/lib/auth/dev-admin.ts:3-56",
+            "next.config.ts:6-9"
+          ],
+          "change": "changed",
+          "changeNote": "ログイン画面に「開発用adminで入る」ボタンと専用の API を追加",
+          "x": 430,
+          "y": 300
+        },
+        {
+          "id": "supa",
+          "name": "Supabase（Auth・DB）",
+          "kind": "Container",
+          "description": "ログインと利用者のプロフィールを持つ。本体と同じもの",
+          "technology": "Supabase",
+          "evidence": ["src/app/api/auth/dev-admin/route.ts:19-48", "scripts/dev-admin.mts:43-122"],
+          "x": 830,
+          "y": 300
+        },
+        {
+          "id": "viewer",
+          "name": "デモを試す人",
+          "kind": "Person",
+          "description": "アカウント無しで、架空の案件を操作してみる",
+          "evidence": ["README.md"],
+          "x": 50,
+          "y": 620
+        },
+        {
+          "id": "demoServer",
+          "name": "デモ用サーバー",
+          "kind": "Container",
+          "description": "デモ画面のファイルを配るだけの小さなサーバー",
+          "details": ["決まった 6 つのパスだけを返す", "画面から外へ通信できない設定を付けて返す"],
+          "technology": "Node.js http / 127.0.0.1:3100",
+          "evidence": ["scripts/demo-server.mjs:7-29,53-82,95-134", "package.json:7"],
+          "change": "added",
+          "changeNote": "ログイン不要デモを配るローカルサーバーを追加",
+          "x": 430,
+          "y": 530
+        },
+        {
+          "id": "demoApp",
+          "name": "デモ画面",
+          "kind": "Container",
+          "description": "架空の 5 案件で、プランナーと新郎新婦の操作を試せる画面",
+          "details": [
+            "案件登録・宿題の提出と差し戻し・準備シート",
+            "AI・LINE・メール・ファイル提出は使わない"
+          ],
+          "technology": "JavaScript（ブラウザ内）",
+          "evidence": ["demo/app.mjs:338-371", "demo/model.mjs:60,142-170", "demo/data.mjs"],
+          "change": "added",
+          "changeNote": "ブラウザだけで動くデモ画面を追加",
+          "x": 430,
+          "y": 720
+        },
+        {
+          "id": "storageLocal",
+          "name": "ブラウザ内の保存領域",
+          "kind": "Container",
+          "description": "デモの操作内容を、そのブラウザの中だけに保存する",
+          "details": ["「デモを初期化」で最初の状態に戻る", "使えない時はメモリだけで動く"],
+          "technology": "localStorage",
+          "evidence": ["demo/app.mjs:15-23,62-71,347-357", "demo/data.mjs:2"],
+          "change": "added",
+          "changeNote": "デモの状態をブラウザ内に保存するようにした",
+          "x": 830,
+          "y": 720
+        }
+      ],
+      "edges": [
+        {
+          "id": "d_start",
+          "from": "dev",
+          "to": "launcher",
+          "label": "ランチャーを起動する",
+          "protocol": "コマンド",
+          "description": "専用のコマンドで開発用 admin モードを始める",
+          "evidence": ["package.json:6"]
+        },
+        {
+          "id": "d_save",
+          "from": "launcher",
+          "to": "devfile",
+          "label": "admin 情報を保存する",
+          "protocol": "ファイル",
+          "description": "初回に作った専用 admin の情報を書き込む。2 回目からは読むだけ",
+          "evidence": ["scripts/dev-admin.mts:43-76,116-122"]
+        },
+        {
+          "id": "d_prepare",
+          "from": "launcher",
+          "to": "supa",
+          "label": "専用 admin を用意する",
+          "protocol": "HTTPS（Service Role）",
+          "description": "初回だけ強い鍵で専用 admin を作る。途中で失敗したら取り消す",
+          "evidence": ["scripts/dev-admin.mts:78-131", "src/lib/supabase/admin.ts:50-52"]
+        },
+        {
+          "id": "d_boot",
+          "from": "launcher",
+          "to": "webdev",
+          "label": "設定つきで起動する",
+          "protocol": "子プロセス",
+          "description": "ログイン情報を環境変数でサーバーにだけ渡して起動する",
+          "evidence": ["scripts/dev-admin.mts:142-163"]
+        },
+        {
+          "id": "d_login",
+          "from": "dev",
+          "to": "webdev",
+          "label": "ボタンでログインする",
+          "protocol": "HTTP（手元のみ）",
+          "description": "ログイン画面の「開発用adminで入る」を押す",
+          "evidence": ["src/app/(public)/login/DevAdminLoginButton.tsx:20-31"]
+        },
+        {
+          "id": "d_verify",
+          "from": "webdev",
+          "to": "supa",
+          "label": "admin か確かめて入る",
+          "protocol": "HTTPS",
+          "description": "パスワードで認証し、有効な式場管理者かを確かめてから入れる",
+          "details": ["強い鍵は使わない"],
+          "evidence": ["src/app/api/auth/dev-admin/route.ts:19-61"]
+        },
+        {
+          "id": "d_open",
+          "from": "viewer",
+          "to": "demoServer",
+          "label": "画面を開く",
+          "protocol": "HTTP",
+          "description": "ブラウザで手元のデモ用アドレスを開く",
+          "evidence": ["scripts/demo-server.mjs:53-70"]
+        },
+        {
+          "id": "d_serve",
+          "from": "demoServer",
+          "to": "demoApp",
+          "label": "画面ファイルを配る",
+          "protocol": "HTTP",
+          "description": "HTML・CSS・JavaScript を返す。ほかの要求は断る",
+          "evidence": ["scripts/demo-server.mjs:7-29,72-82"]
+        },
+        {
+          "id": "d_play",
+          "from": "viewer",
+          "to": "demoApp",
+          "label": "デモを操作する",
+          "protocol": "ブラウザ",
+          "description": "表示をプランナーと新郎新婦で切り替えて操作する",
+          "evidence": ["demo/app.mjs:338-371"]
+        },
+        {
+          "id": "d_keep",
+          "from": "demoApp",
+          "to": "storageLocal",
+          "label": "操作内容を保存する",
+          "protocol": "localStorage",
+          "description": "操作のたびに状態を保存し、次に開いた時に読み戻す",
+          "evidence": ["demo/app.mjs:16-23,62-71"]
+        }
+      ],
+      "flows": [
+        {
+          "title": "開発用 admin で入る",
+          "description": "ランチャーの起動から、ボタン 1 つで式場管理者として入るまで",
+          "steps": [
+            {
+              "edge": "d_start",
+              "label": "ランチャーを起動する",
+              "note": "本番モードなら起動しない",
+              "evidence": "scripts/dev-admin.mts:15-17"
+            },
+            {
+              "edge": "d_prepare",
+              "label": "専用 admin を用意する",
+              "note": "初回だけ作る。2 回目からは中身を確かめるだけ",
+              "evidence": "scripts/dev-admin.mts:43-122"
+            },
+            {
+              "edge": "d_save",
+              "label": "admin 情報を保存する",
+              "evidence": "scripts/dev-admin.mts:116-122"
+            },
+            {
+              "edge": "d_boot",
+              "label": "設定つきで起動する",
+              "note": "設定は環境変数でサーバーにだけ渡す",
+              "evidence": "scripts/dev-admin.mts:142-163"
+            },
+            {
+              "edge": "d_login",
+              "label": "ボタンでログインする",
+              "note": "手元のアドレスで開いた時だけボタンが出る",
+              "evidence": [
+                "src/app/(public)/login/page.tsx:62-63,82",
+                "src/lib/auth/dev-admin.ts:29-56"
+              ]
+            },
+            {
+              "edge": "d_verify",
+              "label": "admin か確かめて入る",
+              "note": "有効な式場管理者でなければ断る",
+              "evidence": "src/app/api/auth/dev-admin/route.ts:19-48"
+            },
+            {
+              "edge": "d_login",
+              "reverse": true,
+              "label": "ログイン状態を渡す",
+              "note": "確認が済んでから cookie を書く",
+              "evidence": "src/app/api/auth/dev-admin/route.ts:50-61"
+            }
+          ]
+        },
+        {
+          "title": "ログイン不要デモを試す",
+          "description": "デモ画面を開き、操作内容がブラウザに保存されるまで",
+          "steps": [
+            {
+              "edge": "d_open",
+              "label": "画面を開く",
+              "note": "手元の 3100 番ポートで待ち受ける",
+              "evidence": "scripts/demo-server.mjs:110-134"
+            },
+            {
+              "edge": "d_serve",
+              "label": "画面ファイルを配る",
+              "note": "外へ通信できない設定を付けて返す",
+              "evidence": "scripts/demo-server.mjs:16-29,72-82"
+            },
+            {
+              "edge": "d_keep",
+              "label": "前回の状態を読む",
+              "note": "無ければ架空の 5 案件で始める",
+              "evidence": ["demo/app.mjs:16-23", "demo/model.mjs:83-98"]
+            },
+            { "edge": "d_play", "label": "デモを操作する", "evidence": "demo/app.mjs:338-371" },
+            { "edge": "d_keep", "label": "操作内容を保存する", "evidence": "demo/app.mjs:62-71" }
+          ]
+        }
+      ]
+    },
+    {
+      "level": "component",
+      "title": "C3 Web アプリ（Next.js）の中身",
+      "scope": "Web アプリのコンテナを、受け付け・業務処理・接続・外への出口に分けて見る",
+      "points": [
+        "すべての要求は最初に関所（middleware）を通り、ログイン状態を整える",
+        "更新 API は共通の受付で、送信元や合言葉を確かめてから処理する",
+        "外へ送るのは通知の部品だけ。AI は順番待ちに入れるだけで直接呼ばない"
+      ],
+      "width": 1560,
+      "height": 1220,
+      "boundaries": [
+        { "label": "Web アプリ（Next.js）", "x": 200, "y": 190, "width": 1060, "height": 830 }
+      ],
+      "nodes": [
+        {
+          "id": "users",
+          "name": "利用者",
+          "kind": "Person",
+          "description": "新郎新婦・プランナー・管理者がブラウザで使う",
+          "evidence": ["src/lib/constants.ts:9"],
+          "x": 590,
+          "y": 30
+        },
+        {
+          "id": "mw",
+          "name": "関所（middleware）",
+          "kind": "Component",
+          "description": "すべての要求の最初に通り、ログイン状態を更新する",
+          "details": [
+            "未ログインで画面を開くとログイン画面へ送る",
+            "API と内部 API は止めずに先へ通す"
+          ],
+          "technology": "Next.js middleware",
+          "evidence": ["src/middleware.ts:24-57,94-96"],
+          "x": 590,
+          "y": 230
+        },
+        {
+          "id": "pages",
+          "name": "画面",
+          "kind": "Component",
+          "description": "役割ごとの画面を作り、必要なデータをその場で読む",
+          "details": [
+            "スタッフ・新郎新婦・公開の 3 グループ",
+            "一部のボタンはサーバー処理を直接呼ぶ"
+          ],
+          "technology": "React Server Components",
+          "evidence": [
+            "src/app/(staff)/",
+            "src/app/(couple)/",
+            "src/app/(public)/",
+            "src/app/(staff)/cases/[caseId]/sheet/page.tsx:110-163"
+          ],
+          "x": 270,
+          "y": 420
+        },
+        {
+          "id": "api",
+          "name": "API の受付",
+          "kind": "Component",
+          "description": "更新の要求を受け、送信元や合言葉を確かめてから処理する",
+          "details": [
+            "自サイト以外からの更新は 403 で断る",
+            "内部 API は合言葉が無いと 401",
+            "エラーを共通の形にそろえて返す"
+          ],
+          "technology": "Route Handler",
+          "evidence": [
+            "src/app/api/",
+            "src/lib/api/route.ts:51-80",
+            "src/lib/api/origin.ts:4-28",
+            "src/lib/api/internal.ts:32-37"
+          ],
+          "x": 910,
+          "y": 420
+        },
+        {
+          "id": "logic",
+          "name": "業務ルール",
+          "kind": "Component",
+          "description": "期限の計算・リスク判定・招待・通知の振り分けなどの決まりごと",
+          "details": ["期限を挙式日から逆算する", "定期処理の削除や監視もここで行う"],
+          "technology": "TypeScript",
+          "evidence": [
+            "src/lib/services/",
+            "src/lib/batches/case-purge.ts",
+            "src/lib/monitoring/",
+            "src/lib/api/internal.ts:61-158"
+          ],
+          "x": 270,
+          "y": 640
+        },
+        {
+          "id": "ai",
+          "name": "AI 補助の窓口",
+          "kind": "Component",
+          "description": "AI の仕事を順番待ちに入れ、使えるかを確かめる",
+          "details": ["LLM は直接呼ばない", "CSV の不備は決まりに沿って先に調べる"],
+          "technology": "TypeScript / zod",
+          "evidence": [
+            "src/lib/ai/assist.ts:59-67,117",
+            "src/lib/ai/schemas.ts",
+            "src/lib/ai/defectCheck.ts"
+          ],
+          "x": 910,
+          "y": 640
+        },
+        {
+          "id": "sbc",
+          "name": "認証と DB 接続",
+          "kind": "Component",
+          "description": "ログイン中の利用者と役割を調べ、DB へつなぐ部品をそろえる",
+          "details": [
+            "ふだんは本人の権限で DB につなぐ",
+            "強い鍵は決められた用途でしか使えない",
+            "範囲外の使い方は ESLint が見つける"
+          ],
+          "technology": "supabase-js",
+          "evidence": [
+            "src/lib/auth/session.ts:43-119",
+            "src/lib/supabase/server.ts:22-39",
+            "src/lib/supabase/admin.ts:15-92",
+            "eslint.config.mjs:32-37"
+          ],
+          "x": 650,
+          "y": 830
+        },
+        {
+          "id": "notify",
+          "name": "通知の出口",
+          "kind": "Component",
+          "description": "LINE とメールへ送るただ 1 つの出口",
+          "details": ["LINE の署名確認や連携もここで行う", "鍵が無ければ送らずに記録だけ残す"],
+          "technology": "TypeScript / HTTPS",
+          "evidence": [
+            "src/lib/notify/send.ts:71-134",
+            "src/lib/notify/mailer.ts:31-89",
+            "src/lib/notify/line.ts:48-99"
+          ],
+          "x": 270,
+          "y": 860
+        },
+        {
+          "id": "ext",
+          "name": "LINE・Resend",
+          "kind": "External System",
+          "description": "通知を利用者へ届ける外部サービス",
+          "technology": "LINE Messaging API / Resend API",
+          "evidence": ["src/lib/notify/send.ts:78", "src/lib/notify/mailer.ts:80"],
+          "x": 270,
+          "y": 1080
+        },
+        {
+          "id": "supa",
+          "name": "Supabase",
+          "kind": "Container",
+          "description": "ログイン・データベース・ファイル置き場。C2 の 3 つをまとめたもの",
+          "technology": "Auth / PostgreSQL / Storage",
+          "evidence": ["src/lib/supabase/", "supabase/migrations/"],
+          "x": 1310,
+          "y": 640
+        }
+      ],
+      "edges": [
+        {
+          "id": "k_req",
+          "from": "users",
+          "to": "mw",
+          "label": "画面や API を求める",
+          "protocol": "HTTPS",
+          "description": "ブラウザからの要求はすべて最初に関所を通る",
+          "evidence": ["src/middleware.ts:94-96"]
+        },
+        {
+          "id": "k_session",
+          "from": "mw",
+          "to": "supa",
+          "label": "ログイン状態を更新する",
+          "protocol": "HTTPS",
+          "description": "期限が近いログイン状態を新しくし、cookie に反映する",
+          "evidence": ["src/middleware.ts:44-57"],
+          "via": [[1420, 285]],
+          "labelX": 1100,
+          "labelY": 273
+        },
+        {
+          "id": "k_page",
+          "from": "mw",
+          "to": "pages",
+          "label": "画面へ通す",
+          "protocol": "関数呼び出し",
+          "description": "ログイン済みなら画面の処理へ進める",
+          "evidence": ["src/middleware.ts:34-57"]
+        },
+        {
+          "id": "k_api",
+          "from": "mw",
+          "to": "api",
+          "label": "API へ通す",
+          "protocol": "関数呼び出し",
+          "description": "API はログイン画面へ送らず、受付の判断に任せる",
+          "evidence": ["src/middleware.ts:24-32"]
+        },
+        {
+          "id": "k_page_rule",
+          "from": "pages",
+          "to": "logic",
+          "label": "業務ルールを使う",
+          "protocol": "関数呼び出し",
+          "description": "期限やリスクの表示に業務ルールを使う",
+          "evidence": ["src/app/(staff)/dashboard/page.tsx:35-45"]
+        },
+        {
+          "id": "k_page_db",
+          "from": "pages",
+          "to": "sbc",
+          "label": "利用者とデータを得る",
+          "protocol": "関数呼び出し",
+          "description": "ログイン中の利用者を調べ、本人の権限でデータを読む",
+          "evidence": ["src/lib/auth/session.ts:50-61", "src/app/(staff)/layout.tsx:11-13"],
+          "labelX": 600,
+          "labelY": 720
+        },
+        {
+          "id": "k_api_db",
+          "from": "api",
+          "to": "sbc",
+          "label": "利用者を確かめる",
+          "protocol": "関数呼び出し",
+          "description": "ログイン中の利用者と役割を確かめ、DB への接続を受け取る",
+          "evidence": ["src/lib/auth/session.ts:43-119"],
+          "via": [[880, 600]],
+          "labelX": 830,
+          "labelY": 715
+        },
+        {
+          "id": "k_api_rule",
+          "from": "api",
+          "to": "logic",
+          "label": "業務処理を頼む",
+          "protocol": "関数呼び出し",
+          "description": "招待の作成や通知の振り分け、定期処理の本体を呼ぶ",
+          "evidence": [
+            "src/app/api/cases/route.ts:82-110",
+            "src/app/api/internal/notifications-dispatch/route.ts:47-161"
+          ]
+        },
+        {
+          "id": "k_api_ai",
+          "from": "api",
+          "to": "ai",
+          "label": "AI に仕事を頼む",
+          "protocol": "関数呼び出し",
+          "description": "下書き・分類・不備チェックの仕事を受け付ける",
+          "evidence": [
+            "src/app/api/ai/jobs/route.ts:32-41",
+            "src/app/api/tasks/[taskId]/submit/route.ts:265-273"
+          ]
+        },
+        {
+          "id": "k_rule_db",
+          "from": "logic",
+          "to": "sbc",
+          "label": "DB を読み書きする",
+          "protocol": "関数呼び出し",
+          "description": "業務ルールの結果を保存し、定期処理では強い鍵で走査する",
+          "evidence": ["src/lib/services/riskStore.ts", "src/lib/batches/case-purge.ts:34-130"]
+        },
+        {
+          "id": "k_rule_notify",
+          "from": "logic",
+          "to": "notify",
+          "label": "通知を送らせる",
+          "protocol": "関数呼び出し",
+          "description": "LINE かメールかを決めてから送らせる",
+          "details": ["招待の送付では API の受付から直接呼ぶこともある"],
+          "evidence": [
+            "src/lib/services/notifications.ts:62-178",
+            "src/app/api/cases/[caseId]/invitations/[invitationId]/send/route.ts:115-127"
+          ]
+        },
+        {
+          "id": "k_notify_ext",
+          "from": "notify",
+          "to": "ext",
+          "label": "LINE とメールで送る",
+          "protocol": "HTTPS",
+          "description": "LINE への送信とメールの送信を頼む",
+          "evidence": ["src/lib/notify/send.ts:78-82", "src/lib/notify/mailer.ts:80-89"]
+        },
+        {
+          "id": "k_db",
+          "from": "sbc",
+          "to": "supa",
+          "label": "DB とログインにつなぐ",
+          "protocol": "HTTPS",
+          "description": "本人の権限か、用途を限った強い鍵で Supabase につなぐ",
+          "evidence": ["src/lib/supabase/server.ts:22-39", "src/lib/supabase/admin.ts:15-92"]
+        },
+        {
+          "id": "k_ai_db",
+          "from": "ai",
+          "to": "supa",
+          "label": "順番待ちに入れる",
+          "protocol": "RPC",
+          "description": "仕事の登録と、AI ワーカーの心拍の確認を DB の関数で行う",
+          "evidence": ["src/lib/ai/assist.ts:59-67,117"]
+        },
+        {
+          "id": "k_cron",
+          "from": "supa",
+          "to": "api",
+          "label": "定期処理を呼び出す",
+          "protocol": "HTTPS（pg_net）",
+          "description": "【未確認】時刻になると内部 API を合言葉つきで呼ぶ。関所は素通りする",
+          "evidence": [
+            "supabase/migrations/20261009000600_register_observability_jobs.sql:10-48",
+            "src/middleware.ts:29-30"
+          ]
+        }
+      ],
+      "flows": [
+        {
+          "title": "スタッフがパスワードでログインする",
+          "description": "ログインボタンを押してから、ダッシュボードが表示されるまで",
+          "steps": [
+            {
+              "edge": "k_req",
+              "label": "ログイン要求を送る",
+              "note": "ログイン用の API は未ログインでも通す",
+              "evidence": [
+                "src/app/(public)/login/LoginForm.tsx:264-278",
+                "src/middleware.ts:24-32"
+              ]
+            },
+            {
+              "edge": "k_api",
+              "label": "API へ通す",
+              "note": "受付で送信元を確かめ、違えば 403",
+              "evidence": ["src/lib/api/route.ts:62-63", "src/lib/api/origin.ts:4-28"]
+            },
+            {
+              "edge": "k_api_db",
+              "label": "認証を頼む",
+              "note": "先に試行回数を確かめ、多すぎれば 429",
+              "evidence": [
+                "src/app/api/auth/password-login/route.ts:11",
+                "src/app/api/auth/shared.ts:66-84"
+              ]
+            },
+            {
+              "edge": "k_db",
+              "label": "パスワードを確かめる",
+              "evidence": "src/app/api/auth/password-login/route.ts:13"
+            },
+            {
+              "edge": "k_api",
+              "reverse": true,
+              "label": "ログイン状態を返す",
+              "note": "ログイン状態を cookie に書く",
+              "evidence": [
+                "src/app/api/auth/password-login/route.ts:23",
+                "src/lib/supabase/server.ts:22-38"
+              ]
+            },
+            { "edge": "k_req", "reverse": true, "label": "cookie を渡す" },
+            {
+              "edge": "k_req",
+              "label": "ダッシュボードを開く",
+              "evidence": "src/app/(public)/login/LoginForm.tsx:139-145"
+            },
+            {
+              "edge": "k_session",
+              "label": "ログイン状態を更新する",
+              "evidence": "src/middleware.ts:44-57"
+            },
+            { "edge": "k_page", "label": "画面へ通す" },
+            {
+              "edge": "k_page_db",
+              "label": "利用者と役割を調べる",
+              "note": "役割に合った最初の画面を決める",
+              "evidence": "src/lib/auth/session.ts:50-61,107-118"
+            },
+            { "edge": "k_page", "reverse": true, "label": "画面を作って返す" },
+            { "edge": "k_req", "reverse": true, "label": "ダッシュボードを表示する" }
+          ]
+        },
+        {
+          "title": "毎日、古い案件のデータを消す",
+          "description": "定期処理が、保管期限を過ぎた案件のファイルと個人情報を消すまで",
+          "steps": [
+            {
+              "edge": "k_cron",
+              "label": "削除処理を呼び出す",
+              "note": "【未確認】毎日 4 時（日本時間）。登録は手作業",
+              "evidence": "supabase/migrations/20261009000600_register_observability_jobs.sql:33-46"
+            },
+            {
+              "edge": "k_api_rule",
+              "label": "削除を頼む",
+              "note": "合言葉が違えば 401 で止める",
+              "evidence": [
+                "src/lib/api/route.ts:60-61",
+                "src/app/api/internal/case-purge/route.ts:34-37"
+              ]
+            },
+            {
+              "edge": "k_rule_db",
+              "label": "対象の案件を探す",
+              "note": "アーカイブから 180 日を過ぎた案件",
+              "evidence": "src/lib/batches/case-purge.ts:5,34-48"
+            },
+            {
+              "edge": "k_db",
+              "label": "ファイルと個人情報を消す",
+              "note": "氏名などは匿名化し、実行記録を残す",
+              "evidence": ["src/lib/batches/case-purge.ts:48-130", "src/lib/api/internal.ts:69-125"]
+            },
+            {
+              "edge": "k_cron",
+              "reverse": true,
+              "label": "結果を返す",
+              "note": "一部失敗なら 500。詳細は実行記録に残る",
+              "evidence": "src/lib/batches/case-purge.ts:188-207"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "level": "dynamic",
+      "title": "動的図：招待から初回ログインまで",
+      "scope": "プランナーが招待を送り、新郎新婦が登録してログインするまで",
+      "points": [
+        "招待 URL の合言葉そのものは保存せず、照合用の値だけを DB に残す",
+        "招待は初回登録の 1 回で使い切る。送り直すたびに作り直す",
+        "2 回目からは、メールのリンクか 6 桁コードでログインする"
+      ],
+      "width": 1400,
+      "height": 720,
+      "nodes": [
+        {
+          "id": "planner",
+          "name": "プランナー",
+          "kind": "Person",
+          "description": "案件を登録して、新郎新婦に招待を送る",
+          "evidence": ["src/app/(staff)/cases/new/CaseForm.tsx:87-106"],
+          "x": 40,
+          "y": 40
+        },
+        {
+          "id": "couple",
+          "name": "新郎新婦",
+          "kind": "Person",
+          "description": "招待 URL から登録し、その後はメールでログインする",
+          "evidence": ["src/app/(public)/register/[token]/RegisterForm.tsx:77-125"],
+          "x": 1060,
+          "y": 40
+        },
+        {
+          "id": "db",
+          "name": "データベース",
+          "kind": "Database",
+          "description": "案件と招待を保存し、招待の消費を 1 回で確かめる",
+          "technology": "PostgreSQL（Supabase）",
+          "evidence": [
+            "supabase/migrations/20260828000700_auth_functions.sql:29-51",
+            "supabase/migrations/20260828000800_case_functions.sql:316-362"
+          ],
+          "x": 40,
+          "y": 300
+        },
+        {
+          "id": "web",
+          "name": "Web アプリ",
+          "kind": "Container",
+          "description": "招待の発行・送付と、登録・ログインの窓口",
+          "technology": "Next.js",
+          "evidence": [
+            "src/app/api/cases/route.ts:72-143",
+            "src/app/api/auth/initial-register/route.ts",
+            "src/app/api/auth/otp-request/route.ts",
+            "src/app/api/auth/otp-verify/route.ts"
+          ],
+          "x": 440,
+          "y": 300
+        },
+        {
+          "id": "line",
+          "name": "LINE",
+          "kind": "External System",
+          "description": "招待を LINE で届ける",
+          "technology": "LINE Messaging API",
+          "evidence": ["src/lib/notify/send.ts:71-134"],
+          "x": 1060,
+          "y": 300
+        },
+        {
+          "id": "auth",
+          "name": "Supabase Auth",
+          "kind": "Container",
+          "description": "利用者を作り、ログイン状態を発行する",
+          "technology": "Supabase",
+          "evidence": [
+            "src/app/api/auth/initial-register/route.ts:63-83,182-230",
+            "src/app/api/auth/otp-verify/route.ts:35-56"
+          ],
+          "x": 440,
+          "y": 580
+        },
+        {
+          "id": "resend",
+          "name": "Resend（メール送信）",
+          "kind": "External System",
+          "description": "招待やログインのメールを届ける",
+          "technology": "Resend API",
+          "evidence": ["src/lib/notify/mailer.ts:80-89"],
+          "x": 840,
+          "y": 580
+        }
+      ],
+      "edges": [
+        {
+          "id": "v_case",
+          "from": "planner",
+          "to": "web",
+          "label": "案件を登録する",
+          "protocol": "HTTPS",
+          "evidence": [
+            "src/app/(staff)/cases/new/CaseForm.tsx:87-106",
+            "src/app/api/cases/route.ts:72"
+          ]
+        },
+        {
+          "id": "v_db",
+          "from": "web",
+          "to": "db",
+          "label": "案件と招待を作る",
+          "protocol": "HTTPS（RPC）",
+          "description": "案件・招待の作成や消費を、ひとまとまりの処理で行う",
+          "evidence": ["src/app/api/cases/route.ts:82-110"]
+        },
+        {
+          "id": "v_couple",
+          "from": "couple",
+          "to": "web",
+          "label": "登録・ログインする",
+          "protocol": "HTTPS",
+          "evidence": [
+            "src/app/(public)/register/[token]/RegisterForm.tsx:77-82",
+            "src/app/(public)/login/LoginForm.tsx:228-262"
+          ]
+        },
+        {
+          "id": "v_line",
+          "from": "web",
+          "to": "line",
+          "label": "LINE で招待を送る",
+          "protocol": "HTTPS",
+          "evidence": ["src/lib/notify/send.ts:71-83"]
+        },
+        {
+          "id": "v_line_user",
+          "from": "line",
+          "to": "couple",
+          "label": "LINE で届ける",
+          "protocol": "LINE",
+          "description": "【推定】配信は LINE 側の動き。届いたかはコードでは見えない",
+          "evidence": ["コード外（LINE の配信）"]
+        },
+        {
+          "id": "v_mail",
+          "from": "web",
+          "to": "resend",
+          "label": "招待メールを送る",
+          "protocol": "HTTPS",
+          "evidence": ["src/lib/notify/send.ts:109-134", "src/lib/notify/mailer.ts:80-89"]
+        },
+        {
+          "id": "v_mail_user",
+          "from": "resend",
+          "to": "couple",
+          "label": "メールを届ける",
+          "protocol": "メール",
+          "description": "【推定】配信は Resend 側の動き。届いたかはコードでは見えない",
+          "evidence": ["コード外（メールの配信）"],
+          "via": [
+            [1340, 635],
+            [1340, 95]
+          ],
+          "labelX": 1340,
+          "labelY": 480
+        },
+        {
+          "id": "v_auth",
+          "from": "web",
+          "to": "auth",
+          "label": "利用者を作る・確かめる",
+          "protocol": "HTTPS",
+          "evidence": [
+            "src/app/api/auth/initial-register/route.ts:63-83,182-230",
+            "src/app/api/auth/otp-request/route.ts:28-34"
+          ]
+        },
+        {
+          "id": "v_authmail",
+          "from": "auth",
+          "to": "resend",
+          "label": "ログインメールを送る",
+          "protocol": "SMTP（未確認）",
+          "description": "【未確認】ログイン用メールの経路。README の記載だけが根拠",
+          "evidence": ["README.md:199", "supabase/config.toml:237-240"]
+        }
+      ],
+      "flows": [
+        {
+          "title": "プランナーが招待を送る",
+          "description": "案件を登録し、招待 URL をメールで送るまで",
+          "steps": [
+            {
+              "edge": "v_case",
+              "label": "案件を登録する",
+              "evidence": "src/app/api/cases/route.ts:72"
+            },
+            {
+              "edge": "v_db",
+              "label": "案件と招待を作る",
+              "note": "合言葉は照合用の値（ハッシュ）だけを保存する",
+              "evidence": [
+                "src/app/api/cases/route.ts:82-110",
+                "src/lib/services/invitations.ts:23-30"
+              ]
+            },
+            {
+              "edge": "v_case",
+              "reverse": true,
+              "label": "招待 URL を見せる",
+              "note": "URL を見られるのはこの 1 回だけ",
+              "evidence": "src/app/api/cases/route.ts:124-143"
+            },
+            {
+              "edge": "v_case",
+              "label": "送信ボタンを押す",
+              "evidence": "src/app/(staff)/cases/new/InvitationResultModal.tsx:78-84"
+            },
+            {
+              "edge": "v_db",
+              "label": "招待を作り直す",
+              "note": "古い招待を失効させ、新しい招待を作る",
+              "evidence": [
+                "src/app/api/cases/[caseId]/invitations/[invitationId]/send/route.ts:96-107",
+                "supabase/migrations/20260828000800_case_functions.sql:316-362"
+              ]
+            },
+            {
+              "edge": "v_mail",
+              "label": "招待メールを送る",
+              "note": "LINE を選んだ時は LINE で送る",
+              "evidence": [
+                "src/app/api/cases/[caseId]/invitations/[invitationId]/send/route.ts:115-127"
+              ]
+            },
+            {
+              "edge": "v_mail_user",
+              "label": "招待が届く",
+              "note": "【推定】配信はサービス側の動き"
+            },
+            {
+              "edge": "v_db",
+              "label": "送信済みを記録する",
+              "evidence": "src/app/api/cases/[caseId]/invitations/[invitationId]/send/route.ts:130-137"
+            }
+          ]
+        },
+        {
+          "title": "招待 URL から初回登録する",
+          "description": "招待 URL を開いて登録し、マイページに入るまで",
+          "steps": [
+            {
+              "edge": "v_couple",
+              "label": "登録内容を送る",
+              "note": "メール・氏名・規約への同意",
+              "evidence": "src/app/(public)/register/[token]/RegisterForm.tsx:77-82"
+            },
+            {
+              "edge": "v_db",
+              "label": "招待を使い切る",
+              "note": "1 回の更新で確かめて消費する。使えなければ 422",
+              "evidence": [
+                "src/app/api/auth/initial-register/route.ts:102-114",
+                "supabase/migrations/20260828000700_auth_functions.sql:29-51"
+              ]
+            },
+            {
+              "edge": "v_auth",
+              "label": "利用者を作る",
+              "note": "途中で失敗したら招待も元に戻す",
+              "evidence": "src/app/api/auth/initial-register/route.ts:122-158,182-230"
+            },
+            {
+              "edge": "v_db",
+              "label": "プロフィールを結び付ける",
+              "evidence": "src/app/api/auth/initial-register/route.ts:255-288"
+            },
+            {
+              "edge": "v_auth",
+              "label": "ログイン状態を作る",
+              "note": "メールは送らず、その場でログインさせる",
+              "evidence": "src/app/api/auth/initial-register/route.ts:63-83"
+            },
+            {
+              "edge": "v_couple",
+              "reverse": true,
+              "label": "マイページへ案内する",
+              "evidence": "src/app/api/auth/initial-register/route.ts:304-308"
+            }
+          ]
+        },
+        {
+          "title": "2 回目から 6 桁コードでログインする",
+          "description": "メールアドレスを入れ、届いたコードでログインするまで",
+          "steps": [
+            {
+              "edge": "v_couple",
+              "label": "メールアドレスを送る",
+              "evidence": "src/app/(public)/login/LoginForm.tsx:228-246"
+            },
+            {
+              "edge": "v_auth",
+              "label": "ログインメールを頼む",
+              "note": "登録済みかどうかに関係なく同じ応答を返す",
+              "evidence": "src/app/api/auth/otp-request/route.ts:19-42"
+            },
+            {
+              "edge": "v_authmail",
+              "label": "ログインメールを送る",
+              "note": "【未確認】送信経路の設定が見当たらない"
+            },
+            {
+              "edge": "v_mail_user",
+              "label": "コードが届く",
+              "note": "【未確認】実際の配信は確かめていない"
+            },
+            {
+              "edge": "v_couple",
+              "label": "6 桁コードを送る",
+              "evidence": "src/app/(public)/login/LoginForm.tsx:248-262"
+            },
+            {
+              "edge": "v_auth",
+              "label": "コードを確かめる",
+              "note": "5 回まちがえるとコードは使えなくなる",
+              "evidence": ["src/app/api/auth/otp-verify/route.ts:35-56", "src/lib/constants.ts:250"]
+            },
+            {
+              "edge": "v_couple",
+              "reverse": true,
+              "label": "ログイン状態を渡す",
+              "note": "cookie を発行してマイページへ",
+              "evidence": "src/app/api/auth/otp-verify/route.ts:86"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

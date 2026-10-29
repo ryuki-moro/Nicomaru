@@ -74,10 +74,11 @@ test('無効なログインリンクはURLからエラーを除き、コード�
   await page.goto('/login#error_description=expired');
   await expect(
     page.getByText(
-      'ログインリンクが無効か、有効期限が切れています。メールに記載の6桁のコードをご入力ください',
+      'ログインリンクが無効か、有効期限が切れています。メールアドレスとメールに記載の6桁のコードをご入力ください',
       { exact: true },
     ),
   ).toBeVisible();
+  await expect(page.getByLabel('メールアドレス', { exact: true })).toBeEditable();
   await expect(page.getByRole('group', { name: 'ワンタイムコード' })).toBeVisible();
   await expect.poll(() => new URL(page.url()).hash).toBe('');
 });
