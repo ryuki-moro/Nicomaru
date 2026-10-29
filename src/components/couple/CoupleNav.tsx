@@ -69,7 +69,11 @@ export function CoupleNav() {
       className="no-print fixed inset-x-0 bottom-0 z-10 border-t border-border-light bg-surface"
     >
       <ul className="mx-auto flex max-w-phone">
-        {ITEMS.map((item) => {
+        {ITEMS.filter(
+          (item) =>
+            process.env.NEXT_PUBLIC_NICOMARU_DB !== 'd1-local' ||
+            ['/mypage', '/mypage/tasks'].includes(item.href),
+        ).map((item) => {
           const active = isCoupleNavActive(item, pathname);
           return (
             <li key={item.href} className="flex-1">

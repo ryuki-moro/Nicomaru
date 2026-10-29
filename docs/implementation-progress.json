@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-09T03:26:51.207Z",
+  "updatedAt": "2026-10-23T05:58:25.995Z",
   "repository": "ryuki-moro/Nicomaru",
-  "mainCommit": "214b041d6965bd335d596b5791b261a5671696a2",
-  "implementationCommit": "c6048b2acef8449d4bf99d80ce32880ae98ae46b",
+  "mainCommit": "b5a72de2df0d8baa3ebe8ddaee53b9ee11ace462",
+  "implementationCommit": "90eeae0ac9c70b26b41037ed0c7f18ceeb6b32cc",
   "statusLabels": {
     "main": "mainに実装",
     "review": "マージ待ち",
@@ -26,7 +26,19 @@
     "2026-10-09 実装再開・GAP-06全28更新API/内部5件/Webhookの検証、PR66/68とmainの再確認",
     "2026-10-09 GAP-11/Issue47修正、失敗注入52件・全649件・Chrome28件、PR70 CIのverify/実PG/security成功を確認",
     "2026-10-09 PR79へ残実装8項目/既存8PRを統合。詳細設計・発表PPTX/PDF・試験仕様Excel・WBS・評価/引継ぎを作成。人の実施と共有DB更新を区別。",
-    "2026-10-09 最終CI・4観点レビュー・実PG/ブラウザー/負荷の実行結果を確認してPR79をmainへ統合。完成したコードと人の実施/環境反映待ちを分離。"
+    "2026-10-09 最終CI・4観点レビュー・実PG/ブラウザー/負荷の実行結果を確認してPR79をmainへ統合。完成したコードと人の実施/環境反映待ちを分離。",
+    "2026-10-23 未完了実装を調査。origin/main b426e99からIssue123のホーム画面追加案内を再開。既存の認証・通知・招待・AI拡張は作業用チェックアウトに残り、main未反映。",
+    "2026-10-23 Issue104の既存実装551a60fをorigin/main b426e99とIssue123の統合ブランチへ移植。単体968件、模擬認証のPC/モバイル寸法Chromium各4件を確認。実Supabase/MailpitとWebKitは未検証。",
+    "2026-10-23 Issue105の実装3690050と未コミット試験をIssue104・123の統合ブランチへ取り込んだ。単体990件、模擬認証UIのPC・スマートフォン寸法Chromium各10件が成功。共有設定・実認証・実機は未確認。",
+    "2026-10-23 Issue120のStep4だけをIssue104・105・123統合ブランチへ取り込み。単体/PGlite1017件、ビルド版の模擬認証ブラウザーPC・スマートフォン寸法各12件が成功。共有DB適用・実送信・実認証通しは未実施。",
+    "2026-10-23 Issue121のAuth成功時刻同期とリスク入力試験をIssue120までの統合ブランチへ取り込み。停止解除による活動誤認とJST日付境界を修正。単体1033件成功、実PostgreSQL15件skip。共有DB適用・実Auth・保存済みリスク再計算は未実施。",
+    "2026-10-23 Issue122のStep7をIssue121までの統合ブランチへ取り込み。二重入力・RLS経由の暗号化保存・発行と再送を実装。失敗後の再試行とDBの宛先重複防止を追加。PC・スマートフォン幅の模擬API操作を確認。実送信・共有DBは未実施。 全単体/PGlite1069件成功、実PostgreSQL15件skip。型・lint・整形・進捗・本番ビルド成功。",
+    "2026-10-23 ユーザー直接依頼のStep8招待状態先読みをIssue122までの累積ブランチへ統合。単体/PGlite1091件成功、実PostgreSQL15件skip。ビルド版のPC・スマートフォン幅で状態表示とハッシュによるGET14件だけを確認。実認証・共有環境は未確認。",
+    "2026-10-23 認証・通知・招待の累積変更4d3045aを最新main b426e99と照合して最終検証。全1091件・コア分岐93/93・PC/モバイル模擬UI24件・招待画面とホーム案内が成功。実PGの宛先競合2件を追加し、クリーン依存・実PG17件・実Supabase通しは統合PRのCIで確認する。",
+    "2026-10-23 最終監査でNext.js 15.5.27の既存criticalを検出し15.5.28へ更新。lockどおりのVitest4.1.12で1091件成功/実PG17件skip、コア分岐100%、監査0件、ビルド版UI24件と招待先読み/送信操作を再確認。CLI認証はユーザーの再ログインで復旧。",
+    "2026-10-23 累積統合PR140に合わせて対象7項目のmain反映後の台帳を更新。コード統合と共有DB・メール設定・実機・設計原本の確認を分離し、後者を各nextへ残す。CIはPR140を参照。",
+    "2026-10-23 PR140のCIで実PG17件・verify・securityが成功。E2Eの旧案内文、WebKitの模擬HTML文字化け、同一メールの送信間隔制限による消費済みメール取得を切り分け、試験を更新。最終成否は最新headのCIを参照。",
+    "2026-10-23 PR140の66794d3でCI全成功（単体1091・実PG17・E2E118・負荷1）後、mainのPR148/D1対応b5a72deを取込み。両経路の分岐を保持し、D1のSupabase非接続・hasEmail互換・未対応宛先入力の明示拒否を追加。取込み後は単体1095/D1 20件成功。最新headのCIを再確認する。"
   ],
   "ci": {
     "run": 37878283145,
@@ -129,6 +141,18 @@
       "checkSummary": "PR79で履歴を保持してmainへ統合。c6048b2のCI run 37878283145: 全ジョブ成功。834単体/DB、実PG15、E2E84、負荷1成功。共有DB・実機/人の実施は別項目。",
       "merged": true,
       "mergeCommit": "214b041d6965bd335d596b5791b261a5671696a2"
+    },
+    {
+      "number": 140,
+      "title": "認証後の復帰・通知導線・2人目招待を累積統合する",
+      "state": "open",
+      "base": "main",
+      "head": "90eeae0ac9c70b26b41037ed0c7f18ceeb6b32cc",
+      "url": "https://github.com/ryuki-moro/Nicomaru/pull/140",
+      "draft": false,
+      "merged": false,
+      "mergeCommit": null,
+      "checkSummary": "累積統合PR。ローカル1091件、分岐100%、Next15.5.28・監査0件。最終CIはPR140を参照。共有DB・メール設定・実機/人の実施は別項目。"
     }
   ],
   "issues": [
@@ -491,6 +515,42 @@
       "title": "共通のコード整形とコア分岐網羅をCIで検査する（GAP-10）",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/78",
       "state": "closed"
+    },
+    {
+      "number": 123,
+      "title": "マイページにホーム画面追加の案内を表示する",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/123",
+      "state": "open"
+    },
+    {
+      "number": 104,
+      "title": "ログインをまたいで元の画面(パスと絞り込み)へ戻す",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/104"
+    },
+    {
+      "number": 105,
+      "title": "メールのログインリンクを別ブラウザでも使えるようにする(/login/link)",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/105"
+    },
+    {
+      "number": 120,
+      "title": "通知から該当する宿題画面を開けるようにする",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/120"
+    },
+    {
+      "number": 121,
+      "title": "成功ログイン時刻を記録してリスク集計の無反応判定へ反映する",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/121"
+    },
+    {
+      "number": 122,
+      "title": "新郎新婦の2人目へメール招待を送れるようにする",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/122"
     }
   ],
   "nextOrder": [
@@ -3660,7 +3720,7 @@
         "docs/screenshots/",
         "docs/テスト/テスト仕様書_校内デモ.xlsx"
       ],
-      "note": "実端末の環境/操作/証拠欄を試験ブックへ用意。エミュレーションは実端末の代替実績にしない。",
+      "note": "実端末の環境/操作/証拠欄を試験ブックへ用意。エミュレーションは実端末の代替実績にしない。 Issue123の案内をブラウザー相当で検証。実機のインストールと再ログインは未確認。",
       "next": "メンバー所有のiOS/Android/タブレット/LINE内ブラウザーで試用し記録。",
       "issues": [],
       "prs": [
@@ -4693,6 +4753,233 @@
       "latestBy": "2027-02-28",
       "ownerMode": "メンバー（記録担当）＋全員（実績入力）",
       "workMode": "Agent AI不要"
+    },
+    {
+      "id": "PWA-INSTALL-GUIDE",
+      "title": "マイページに閉じられるホーム画面追加案内を表示する",
+      "category": "追加実装",
+      "phase": "2",
+      "status": "main",
+      "design": "Issue #123 / メール式場導線 Step10",
+      "screens": [
+        "M01"
+      ],
+      "evidence": [
+        "src/components/InstallGuide.tsx",
+        "src/lib/install-guide.ts",
+        "src/app/(couple)/mypage/page.tsx",
+        "tests/unit/pwa.test.ts",
+        "docs/検証/ホーム画面追加案内_20261023.md"
+      ],
+      "note": "origin/main b426e99に既存の未完了実装を移植。iOS SafariとAndroid Chromeに案内し、LINE内ブラウザ・追加済み・閉じた端末では非表示。保存するのは案内を閉じたフラグだけ。ブラウザー相当の操作検証を実施し、実機確認はQA-07として残す。",
+      "next": "QA-07で実機の追加・再ログインを確認する。",
+      "issues": [
+        123
+      ],
+      "prs": [
+        140
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-104",
+      "title": "ログインをまたいで元の画面（パスと絞り込み）へ戻す",
+      "category": "改善",
+      "phase": "改善",
+      "status": "main",
+      "design": "基本設計4-2/6-5/12-1",
+      "screens": [
+        "P01"
+      ],
+      "evidence": [
+        "src/lib/auth/next.ts",
+        "src/middleware.ts",
+        "src/app/api/auth/otp-request/route.ts",
+        "tests/unit/auth-next.test.ts",
+        "tests/e2e/login-return.spec.ts",
+        "docs/環境の使い分け.md",
+        "tests/e2e/login-return-ui.spec.ts",
+        "docs/詳細設計/APIと更新境界.md",
+        "docs/検証/ログイン後の復帰_20261023.md"
+      ],
+      "note": "戻り先（next）の検証と組み立てをsrc/lib/auth/next.tsに集約。クエリは一覧の絞り込み（tab・page）だけを残し、トークン類は持ち出さない。ワンタイム認証メールの戻り先にもnextを載せ、メールのリンク経由でも元の画面へ戻る。 2026-10-23に最新main基点へ統合。単体968件と模擬認証UIのPC・スマートフォン寸法Chromium各4件が成功。実Supabase/Mailpit試験は接続環境なしでskip、WebKitは起動直後に終了。",
+      "next": "ローカルSupabase・Mailpitで実認証の復帰2件を再実行し、WebKit起動環境を整備する。基本設計DOCXの4-2・P01を改訂し、レビューする。共有環境の設定は未変更。",
+      "issues": [
+        104
+      ],
+      "prs": [
+        140
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-105",
+      "title": "メールのログインリンクを別ブラウザでも使えるようにする",
+      "category": "改善",
+      "phase": "改善",
+      "status": "main",
+      "design": "基本設計6-3-1/4-3 P01/9章（改訂差分）",
+      "screens": [
+        "P01"
+      ],
+      "evidence": [
+        "src/app/(public)/login/link/LoginLinkForm.tsx",
+        "src/lib/auth/login-link.ts",
+        "supabase/templates/magic_link.html",
+        "tests/unit/login-link.test.ts",
+        "tests/e2e/login-link-ui.spec.ts",
+        "tests/e2e/login-link.spec.ts",
+        "docs/検証/メールリンクの別ブラウザ対応_20261023.md",
+        "docs/詳細設計/APIと更新境界.md"
+      ],
+      "note": "フラグメント着地・明示ボタンによる既存OTP検証・ログイン中の切替案内・失敗後の再送と旧リンクの再入力を統合。単体990件、模擬認証UI各10件成功。実OTP消費・実アカウント切替・Mailpitは未確認。共有テンプレートは未変更。",
+      "next": "ローカルSupabase・Mailpitで実認証2件を実施し、実機Safari/Gmail内ブラウザーを確認する。基本設計DOCXを改訂してレビューし、コードとテンプレートを同じ版で反映する。共有設定変更はユーザー確認後。",
+      "issues": [
+        105
+      ],
+      "prs": [
+        140
+      ],
+      "dependsOn": [
+        "FIX-104"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-120",
+      "title": "通知から該当する宿題画面を開けるようにする",
+      "category": "改善",
+      "phase": "改善",
+      "status": "main",
+      "design": "基本設計5-3/4-3 M05/付録D（改訂差分）",
+      "screens": [
+        "M05"
+      ],
+      "evidence": [
+        "supabase/migrations/20261023000100_notification_link_path.sql",
+        "src/lib/services/notifications.ts",
+        "src/app/api/notifications/send/route.ts",
+        "src/app/(couple)/mypage/notifications/page.tsx",
+        "tests/db/notifications.test.ts",
+        "tests/unit/notification-send-route.test.ts",
+        "tests/unit/notification-page.test.ts",
+        "tests/e2e/notification-link-ui.spec.ts",
+        "docs/検証/通知から宿題へのリンク_20261023.md"
+      ],
+      "note": "NULL可のlink_pathと旧6引数互換RPC、同一案件のtaskId確認、通知送信時の絶対URL付与、M05の詳細リンクと旧行の戻り先を統合。単体1017件とビルド版模擬ブラウザー各12件成功。差戻し・期限頻度変更は含めず、共有DB・実配信・実認証は未確認。",
+      "next": "検証環境でDB追加migrationをアプリ反映より先に適用し、PostgRESTと旧RPC互換を確認する。実通知のM05クリックから認証を経た宿題復帰を確認し、設計DOCXを改訂してレビューする。",
+      "issues": [
+        120
+      ],
+      "prs": [
+        140
+      ],
+      "dependsOn": [
+        "FIX-104"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-121",
+      "title": "成功ログイン時刻を記録してリスク集計の無反応判定へ反映する",
+      "category": "改善",
+      "phase": "改善",
+      "status": "main",
+      "design": "基本設計5-3/6-8（改訂差分）",
+      "screens": [],
+      "evidence": [
+        "supabase/migrations/20261015000100_record_last_login.sql",
+        "src/lib/services/riskStore.ts",
+        "tests/db/last-login.test.ts",
+        "tests/unit/risk-store-login.test.ts",
+        "docs/検証/成功ログイン時刻とリスク集計_20261023.md"
+      ],
+      "note": "Authのlast_sign_in_atをactive本人へ同期し、初回プロフィール作成と招待有効化を扱う。停止解除・直接日時更新では活動を進めない。リスク入力の活動日をJSTへ統一。全単体1033件成功。認証UIと閾値は未変更、実Auth・共有DB・保存済みsnapshotの再計算は未実施。",
+      "next": "検証環境のmigration履歴とAuthトリガー作成権限を確認し、実Authの全入口・refresh・停止中の非更新を試験する。既存のリスク再計算で保存済みsnapshotへの反映を確認し、設計DOCXを改訂してレビューする。",
+      "issues": [
+        121
+      ],
+      "prs": [
+        140
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-122",
+      "title": "新郎新婦の2人目へメール招待を送れるようにする",
+      "category": "改善",
+      "phase": "改善",
+      "status": "main",
+      "design": "基本設計6-6-1/13-1（改訂差分）",
+      "screens": [
+        "K02",
+        "K03"
+      ],
+      "evidence": [
+        "src/lib/services/invitation-recipient.ts",
+        "src/app/api/cases/[caseId]/invitations/route.ts",
+        "src/app/api/cases/[caseId]/invitations/[invitationId]/send/route.ts",
+        "supabase/migrations/20261023000200_invitation_recipient_guard.sql",
+        "tests/unit/invitation-recipient.test.ts",
+        "tests/unit/invitation-api-combination.test.ts",
+        "tests/db/invitation-recipient-rls.test.ts",
+        "docs/検証/2人目へのメール招待_20261023.md"
+      ],
+      "note": "未登録相手のメールを二重入力・暗号化保存し、発行・再送へ引き継ぐ。別パートナーのプロフィール・有効招待との重複をRLS照会とDBロックで拒否。同じ宛先で失敗後の再試行が可能。実送信・共有DB・実PostgreSQL並行接続は未実施。 全単体/PGlite1069件、型・lint・整形・進捗・本番ビルド成功。",
+      "next": "検証環境でmigration履歴・既存重複を照合し、実メール送信と登録完了まで確認する。設計DOCXを改訂してレビューする。",
+      "issues": [
+        122
+      ],
+      "prs": [
+        140
+      ],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "INVITATION-PEEK",
+      "title": "Step8 招待状態の先読み",
+      "category": "改善",
+      "phase": "改善",
+      "status": "main",
+      "design": "基本設計P02/6-6-1/表6-4（改訂差分）",
+      "screens": [
+        "P02"
+      ],
+      "evidence": [
+        "src/app/(public)/register/[token]/page.tsx",
+        "src/lib/services/invitations.ts",
+        "src/lib/supabase/admin.ts",
+        "tests/unit/invitation-landing.test.ts",
+        "docs/検証/招待状態の先読み_20261023.md"
+      ],
+      "note": "表示専用のハッシュ照会で未使用・登録済み・無効・障害を案内。使用済みのactiveな本人だけRLSの案件・相手区分一致で復帰する。未使用は共用端末や紐付け前でもフォームを維持。全単体1091件、ビルド版のPC・スマートフォン幅で模擬DB14照会を確認。実Auth・共有環境は未確認。",
+      "next": "検証環境で使用済み本人・共用端末・LINE紐付け前と表示後の失効を実Auth/RLSで確認する。設計DOCXに表6-4等の改訂を反映し、レビューする。",
+      "issues": [],
+      "prs": [
+        140
+      ],
+      "dependsOn": [
+        "FIX-122"
+      ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
     }
   ],
   "schoolSchedule": {

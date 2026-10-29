@@ -130,8 +130,8 @@ async function lastActivityOf(
   }
 
   if (candidates.length === 0) return null;
-  // ISO 文字列の辞書順は時刻順と一致する。日付部分だけを返す（6-8 は日数で判定する）。
-  return candidates.sort().at(-1)!.slice(0, 10);
+  // 判定基準のtodayと同じ日本時間で暦日を求める（6-8）。
+  return todayInJst(new Date(candidates.sort().at(-1)!));
 }
 
 /** 1案件ぶんのリスク算出に必要な入力を集める。 */

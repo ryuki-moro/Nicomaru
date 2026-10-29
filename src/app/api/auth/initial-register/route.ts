@@ -83,6 +83,18 @@ async function establishSession(
 }
 
 export const POST = route(async (request) => {
+  if (process.env.NICOMARU_DB === 'd1-local') {
+    const body = await parseBody(request, initialRegisterSchema.strict());
+    const { localDB } = await import('@/lib/d1/runtime');
+    const db = await localDB();
+    await (await import('@/lib/d1/auth-limits')).authLimit(db, 'initial_register', body.email);
+    const session = await (
+      await (await import('@/lib/d1/auth')).d1Auth()
+    ).api.getSession({ headers: request.headers });
+    return ok(
+      await (await import('@/lib/d1/onboarding')).registerCouple(db, body, session?.user ?? null),
+    );
+  }
   const body = await parseBody(request, initialRegisterSchema);
   await enforceAuthRateLimit(request, 'initial_register', body.email);
 

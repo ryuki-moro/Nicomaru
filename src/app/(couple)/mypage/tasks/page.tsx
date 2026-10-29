@@ -12,6 +12,9 @@
  * 「自分の案件だけ」の絞り込みは付録A の RLS が担保するため、ここでは case_id を指定しない。
  */
 import Link from 'next/link';
+import { requireRole } from '@/lib/auth/session';
+import { usingD1, localDB } from '@/lib/d1/runtime';
+import { taskList, taskRow } from '@/lib/d1/tasks';
 
 import { TaskFilterTabs } from '@/app/(couple)/mypage/tasks/TaskFilterTabs';
 import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
@@ -81,6 +84,22 @@ function pageHref(tabKey: string, page: number): string {
   return search ? `/mypage/tasks?${search}` : '/mypage/tasks';
 }
 
+async function submittedD1Notice(taskId: string | undefined): Promise<string | null> {
+  if (!isUuid(taskId)) return null;
+  const user = await requireRole('couple');
+  try {
+    const task = await taskRow(await localDB(), user, taskId);
+    if (task.status !== 'submitted') return null;
+    return task.submission_format === 'none'
+      ? `『${task.title}』の確認をプランナーに伝えました。`
+      : `『${task.title}』を提出しました。プランナーの確認をお待ちください。`;
+  } catch (error) {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404)
+      return null;
+    throw error;
+  }
+}
+
 export default async function TaskListPage({
   searchParams,
 }: {
@@ -89,8 +108,10 @@ export default async function TaskListPage({
   const query = await searchParams;
   const tab = resolveTab(query.tab);
   const page = resolvePage(query.page);
-  const supabase = await createSupabaseServerClient();
-  const notice = await submittedNotice(supabase, query.submitted);
+  const supabase = usingD1() ? null : await createSupabaseServerClient();
+  const notice = supabase
+    ? await submittedNotice(supabase, query.submitted)
+    : await submittedD1Notice(query.submitted);
 
   // 「すべて」は waived を除外する。除外リストの補集合を .in() に渡すことで、
   // PostgREST の not.in 記法（値のクォート規則が独特）に依存せず値域を constants 側へ寄せる。
@@ -100,14 +121,19 @@ export default async function TaskListPage({
   // 既定の表示件数は50件、以降はページング（4-3 一覧画面共通）。
   // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する。
   const from = (page - 1) * LIST_PAGE_SIZE;
-  const { data, error } = await supabase
-    .from('case_tasks')
-    .select('id, title, due_date, status, submission_format')
-    .in('status', [...statuses])
-    .order('due_date', { ascending: true })
-    .order('display_order', { ascending: true })
-    .order('id', { ascending: true })
-    .range(from, from + LIST_PAGE_SIZE);
+  const { data, error } = usingD1()
+    ? {
+        data: await taskList(await localDB(), await requireRole('couple'), statuses, from),
+        error: null,
+      }
+    : await supabase!
+        .from('case_tasks')
+        .select('id, title, due_date, status, submission_format')
+        .in('status', [...statuses])
+        .order('due_date', { ascending: true })
+        .order('display_order', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, from + LIST_PAGE_SIZE);
 
   const fetched = (data ?? []) as TaskRow[];
   const hasNext = fetched.length > LIST_PAGE_SIZE;
@@ -150,10 +176,12 @@ export default async function TaskListPage({
                     <span className="block text-label text-text-secondary">
                       回答方法：{TASK_ANSWER_METHOD_LABEL[task.submission_format]}
                     </span>
+                    {/* 相対期限が次の行に回ったとき全角「（」の左の空きで字下げに見えないよう、
+                        かっこを半角幅（halt）で組む。同じ行に並ぶときの空きは gap で取る */}
                     <span
-                      className={`block text-label ${dueSoon ? 'text-warning-text' : 'text-text-muted'}`}
+                      className={`flex flex-wrap gap-x-1 text-label ${dueSoon ? 'text-warning-text' : 'text-text-muted'}`}
                     >
-                      {formatDateJp(task.due_date)}まで
+                      <span>{formatDateJp(task.due_date)}まで</span>
                       {relativeDeadline && (
                         <span className="inline-block [font-feature-settings:'halt']">
                           （{relativeDeadline}）

@@ -29,36 +29,61 @@ interface PlanTypeRow {
 
 export default async function CaseCreatePage() {
   // K03 は planner の画面（4-1 表4-10）。API は admin も許可するため admin の直接遷移は通す。
-  await requirePageUser('planner', 'admin');
+  const user = await requirePageUser('planner', 'admin');
 
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('plan_types')
-    .select(
-      `id, name, display_order,
+  let plans: PlanOption[];
+  let error = false;
+  if (process.env.NICOMARU_DB === 'd1-local') {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const result = await (
+      await localDB()
+    )
+      .prepare(
+        'SELECT id,name,templates_json FROM plan_types WHERE venue_id=? AND active=1 ORDER BY name',
+      )
+      .bind(user.venueId)
+      .all<{ id: string; name: string; templates_json: string }>();
+    plans = result.results.map((plan) => ({
+      id: plan.id,
+      name: plan.name,
+      templates: (
+        JSON.parse(plan.templates_json) as import('@/lib/services/schedule').TemplateForAssign[]
+      ).map((t) => ({
+        id: t.taskTemplateId,
+        name: t.title,
+        dueOffsetDays: t.dueOffsetDaysOverride ?? t.dueOffsetDays,
+      })),
+    }));
+  } else {
+    const supabase = await createSupabaseServerClient();
+    const { data, error: loadError } = await supabase
+      .from('plan_types')
+      .select(
+        `id, name, display_order,
        plan_task_templates ( display_order, due_offset_days_override,
                              task_templates ( id, name, due_offset_days, active ) )`,
-    )
-    .eq('active', true)
-    .order('display_order', { ascending: true });
+      )
+      .eq('active', true)
+      .order('display_order', { ascending: true });
 
-  const plans: PlanOption[] = ((data ?? []) as unknown as PlanTypeRow[]).map((plan) => ({
-    id: plan.id,
-    name: plan.name,
-    templates: plan.plan_task_templates
-      .filter((link) => link.task_templates !== null && link.task_templates.active)
-      .sort((a, b) => a.display_order - b.display_order)
-      .map((link) => {
-        const template = link.task_templates as NonNullable<typeof link.task_templates>;
-        return {
-          id: template.id,
-          name: template.name,
-          // プラン固有の上書きがあればそちらを使う（6-6-2）
-          dueOffsetDays: link.due_offset_days_override ?? template.due_offset_days,
-        };
-      }),
-  }));
-
+    error = Boolean(loadError);
+    plans = ((data ?? []) as unknown as PlanTypeRow[]).map((plan) => ({
+      id: plan.id,
+      name: plan.name,
+      templates: plan.plan_task_templates
+        .filter((link) => link.task_templates !== null && link.task_templates.active)
+        .sort((a, b) => a.display_order - b.display_order)
+        .map((link) => {
+          const template = link.task_templates as NonNullable<typeof link.task_templates>;
+          return {
+            id: template.id,
+            name: template.name,
+            // プラン固有の上書きがあればそちらを使う（6-6-2）
+            dueOffsetDays: link.due_offset_days_override ?? template.due_offset_days,
+          };
+        }),
+    }));
+  }
   // 過去日付不可（表4-14）の基準日。サーバー側 validation.ts の notPastDate と同じ
   // 日本時間の暦日を使う。片方が UTC だと JST の 0:00〜9:00 に入力欄と検証結果が食い違う。
   const today = todayInJst();

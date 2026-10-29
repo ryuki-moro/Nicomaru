@@ -24,6 +24,7 @@ export const dynamic = 'force-dynamic';
 interface NotificationRow {
   id: string;
   case_id: string | null;
+  link_path: string | null;
   notification_type: NotificationType;
   title: string;
   body: string;
@@ -46,7 +47,9 @@ export default async function NotificationsPage({ searchParams }: Props) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from('notifications')
-    .select('id, case_id, notification_type, title, body, status, sent_at, read_at, created_at')
+    .select(
+      'id, case_id, link_path, notification_type, title, body, status, sent_at, read_at, created_at',
+    )
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
     .range(offset, offset + LIST_PAGE_SIZE);
@@ -84,8 +87,8 @@ export default async function NotificationsPage({ searchParams }: Props) {
       <ul className="space-y-3">
         {visible.map((item) => {
           // 4-3 M05「通知タップで関連画面（M02／M03等）」。
-          // 宿題単位のIDは通知に持たせていないため、宿題一覧へ寄せる。
-          const href = item.case_id ? '/mypage/tasks' : '/mypage';
+          // 旧通知にはリンクが無いため、一覧への導線を維持する。
+          const href = item.link_path ?? (item.case_id ? '/mypage/tasks' : '/mypage');
           return (
             <li key={item.id}>
               <Link href={href} className="card block">

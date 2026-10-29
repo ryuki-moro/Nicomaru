@@ -17,7 +17,19 @@ export function LogoutButton() {
       disabled={pending}
       onClick={async () => {
         setPending(true);
-        await createSupabaseBrowserClient().auth.signOut();
+        if (process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1-local') {
+          const result = await fetch('/api/auth/sign-out', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: '{}',
+          });
+          if (!result.ok) {
+            setPending(false);
+            return;
+          }
+        } else {
+          await createSupabaseBrowserClient().auth.signOut();
+        }
         router.replace('/login');
         router.refresh();
       }}

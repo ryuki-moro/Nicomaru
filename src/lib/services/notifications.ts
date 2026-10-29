@@ -30,6 +30,7 @@ export interface NotificationRow {
   notification_type: NotificationType;
   title: string;
   body: string;
+  link_path?: string | null;
   status: string;
 }
 
@@ -155,10 +156,12 @@ export async function dispatchNotification(
   // LINE は文字数上限が短い（付録D）。切り詰めてでも送る方が、
   // 送らずに落とすより通知の目的に適う。
   const limit = BODY_LIMIT[notification.notification_type];
-  const body =
+  const text =
     resolved.channel === 'line' && notification.body.length > limit.line
       ? `${notification.body.slice(0, limit.line - 1)}…`
       : notification.body;
+  const url = notificationUrl(notification.link_path);
+  const body = url ? `${text}\nマイページで確認する: ${url}` : text;
 
   const result =
     resolved.channel === 'line'
@@ -184,4 +187,23 @@ export async function dispatchNotification(
     switchedFrom: resolved.switchedFrom,
     reason: resolved.reason ?? result.reason ?? result.skippedReason,
   };
+}
+
+/** cronにも共通する固定の基点。未設定時にlocalhostのリンクを配信しない。 */
+export function notificationUrl(path: string | null | undefined): string | null {
+  if (!path || path.length > 512 || !/^\/mypage(?:\/[A-Za-z0-9_-]+)*$/.test(path)) return null;
+  const base = process.env.APP_BASE_URL;
+  if (!base) {
+    console.warn('[notify] APP_BASE_URL未設定のため通知リンクを付与できません');
+    return null;
+  }
+  try {
+    const origin = new URL(base);
+    if (!['http:', 'https:'].includes(origin.protocol) || origin.username || origin.password)
+      return null;
+    return new URL(path, origin).href;
+  } catch {
+    console.warn('[notify] APP_BASE_URLが不正のため通知リンクを付与できません');
+    return null;
+  }
 }

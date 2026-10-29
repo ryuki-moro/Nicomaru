@@ -36,55 +36,88 @@ interface CaseRow {
 }
 
 export default async function CaseEditPage({ params }: { params: Promise<{ caseId: string }> }) {
-  const user = await requirePageUser();
+  const user = await requirePageUser('planner', 'admin', 'system_admin');
 
   const { caseId } = await params;
-  const supabase = await createSupabaseServerClient();
+  let row: CaseRow;
+  let plans: { id: string; name: string }[];
+  let planners: { id: string; displayName: string }[] | null = null;
+  if (process.env.NICOMARU_DB === 'd1-local') {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { caseRow } = await import('@/lib/d1/cases');
+    const db = await localDB();
+    let venueId: string;
+    try {
+      const found = await caseRow(db, user, caseId);
+      row = found;
+      venueId = found.venue_id;
+    } catch (error) {
+      if ((error as { code?: string }).code === 'NOT_FOUND') redirect('/error');
+      throw error;
+    }
+    if (row.archived_at) redirect(`/cases/${caseId}`);
+    plans = (
+      await db
+        .prepare('SELECT id,name FROM plan_types WHERE venue_id=? AND active=1 ORDER BY name')
+        .bind(venueId)
+        .all<{ id: string; name: string }>()
+    ).results;
+    if (user.role === 'admin' || user.role === 'system_admin')
+      planners = (
+        await db
+          .prepare(
+            "SELECT p.id,u.name AS displayName FROM user_profiles p JOIN user u ON u.id=p.id WHERE p.venue_id=? AND p.role='planner' AND p.status='active' ORDER BY u.name",
+          )
+          .bind(venueId)
+          .all<{ id: string; displayName: string }>()
+      ).results;
+  } else {
+    const supabase = await createSupabaseServerClient();
 
-  const { data } = await supabase
-    .from('wedding_cases')
-    .select(
-      `id, case_code, wedding_date, wedding_time, contact_channel, guest_count,
+    const { data } = await supabase
+      .from('wedding_cases')
+      .select(
+        `id, case_code, wedding_date, wedding_time, contact_channel, guest_count,
        plan_type_id, primary_planner_id, archived_at,
        couple_profiles ( ${COUPLE_PROFILE_COLUMNS} )`,
-    )
-    .eq('id', caseId)
-    .maybeSingle();
+      )
+      .eq('id', caseId)
+      .maybeSingle();
 
-  if (!data) redirect('/error?code=404');
-  const row = data as unknown as CaseRow;
-  // アーカイブ済みは内容変更の対象外（K05／2-5）。復元してから編集する導線にする。
-  if (row.archived_at !== null) redirect(`/cases/${caseId}`);
+    if (!data) redirect('/error?code=404');
+    row = data as unknown as CaseRow;
+    // アーカイブ済みは内容変更の対象外（K05／2-5）。復元してから編集する導線にする。
+    if (row.archived_at !== null) redirect(`/cases/${caseId}`);
 
+    const { data: planData } = await supabase
+      .from('plan_types')
+      .select('id, name, display_order')
+      .eq('active', true)
+      .order('display_order', { ascending: true });
+    plans = ((planData ?? []) as { id: string; name: string }[]).map((plan) => ({
+      id: plan.id,
+      name: plan.name,
+    }));
+
+    // 担当プランナーの変更は admin のみ（4-3 K04）。planner には選択肢自体を渡さない。
+    const isAdmin = user.role === 'admin' || user.role === 'system_admin';
+
+    if (isAdmin) {
+      const { data: plannerData } = await supabase
+        .from('user_profiles')
+        .select('id, display_name, role, status')
+        .eq('role', 'planner')
+        .eq('status', 'active')
+        .order('display_name', { ascending: true });
+      planners = ((plannerData ?? []) as { id: string; display_name: string }[]).map((planner) => ({
+        id: planner.id,
+        displayName: planner.display_name,
+      }));
+    }
+  }
   const groom = row.couple_profiles.find((p) => p.partner_role === 'groom');
   const bride = row.couple_profiles.find((p) => p.partner_role === 'bride');
   const primary = row.couple_profiles.find((p) => p.is_primary_contact);
-
-  const { data: planData } = await supabase
-    .from('plan_types')
-    .select('id, name, display_order')
-    .eq('active', true)
-    .order('display_order', { ascending: true });
-  const plans = ((planData ?? []) as { id: string; name: string }[]).map((plan) => ({
-    id: plan.id,
-    name: plan.name,
-  }));
-
-  // 担当プランナーの変更は admin のみ（4-3 K04）。planner には選択肢自体を渡さない。
-  const isAdmin = user.role === 'admin' || user.role === 'system_admin';
-  let planners: { id: string; displayName: string }[] | null = null;
-  if (isAdmin) {
-    const { data: plannerData } = await supabase
-      .from('user_profiles')
-      .select('id, display_name, role, status')
-      .eq('role', 'planner')
-      .eq('status', 'active')
-      .order('display_name', { ascending: true });
-    planners = ((plannerData ?? []) as { id: string; display_name: string }[]).map((planner) => ({
-      id: planner.id,
-      displayName: planner.display_name,
-    }));
-  }
 
   const initial: CaseEditInitial = {
     weddingDate: row.wedding_date,

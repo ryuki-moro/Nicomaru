@@ -48,6 +48,9 @@ export type ResolvedUser =
 // React.cacheは同じRSC requestのlayout/page間だけで共有し、次requestで破棄される。
 // プロセス全体・Cookie値キーの共有キャッシュへ変更しない（別利用者への漏洩を防ぐ）。
 export const resolveAppUser = cache(async (): Promise<ResolvedUser> => {
+  if (process.env.NICOMARU_DB === 'd1-local') {
+    return (await import('@/lib/d1/auth')).resolveD1User();
+  }
   const supabase = await createSupabaseServerClient();
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user) return { state: 'anonymous' };

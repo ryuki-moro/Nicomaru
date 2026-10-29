@@ -112,16 +112,18 @@ export function ReviewForm({
         <FieldError message={fieldErrors.decision} />
       </fieldset>
 
-      <DraftAssist
-        caseId={caseId}
-        taskId={taskId}
-        taskTitle={taskTitle}
-        decision={decision}
-        memo={comment}
-        aiAvailable={aiAvailable}
-        lastSeenAt={lastSeenAt}
-        onAdopt={setComment}
-      />
+      {process.env.NEXT_PUBLIC_NICOMARU_DB !== 'd1-local' && (
+        <DraftAssist
+          caseId={caseId}
+          taskId={taskId}
+          taskTitle={taskTitle}
+          decision={decision}
+          memo={comment}
+          aiAvailable={aiAvailable}
+          lastSeenAt={lastSeenAt}
+          onAdopt={setComment}
+        />
+      )}
 
       <div className="mb-4">
         <label htmlFor="review-comment" className="field-label">
