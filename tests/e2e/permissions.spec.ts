@@ -74,6 +74,26 @@ test.describe('ログイン済みの権限', () => {
     await expect(planner.getByRole('link', { name: 'ログイン画面へ戻る' })).toBeVisible();
   });
 
+  test('同じ式場でも別担当の実在案件はエラー画面へ（P04）', async ({ page }) => {
+    // 自分の担当案件は開けることを先に確認し、不存在との取り違えを防ぐ。
+    await loginAsPlanner(page, await createPlanner('E2E 別担当プランナー'));
+    const otherCase = await createCase(page, {
+      groomName: '別担当 新郎',
+      brideName: '別担当 新婦',
+      primaryContact: 'groom',
+      contactEmail: uniqueEmail('other-case'),
+    });
+    await expect(page.getByRole('heading', { name: /別担当 新郎/ })).toBeVisible();
+
+    await planner.goto(`/cases/${otherCase.caseId}`);
+    await planner.waitForURL(/\/error$/);
+    await expect(
+      planner.getByRole('heading', { name: 'ページを表示できませんでした' }),
+    ).toBeVisible();
+    await expect(planner.locator('body')).not.toContainText('別担当 新郎');
+    await expect(planner.locator('body')).not.toContainText('別担当 新婦');
+  });
+
   test('system_admin 専用画面は 403 の文面', async () => {
     await planner.goto('/system');
     await planner.waitForURL(/\/error\?code=403$/);
