@@ -63,8 +63,10 @@
     @apply inline-flex items-center rounded-badge px-[11px] py-1 text-caption;
   }
 
+  /* 背景を bg にするとページ背景（bg）の上で見えなくなるため、白地に細い枠で示す
+     （宿題一覧の絞り込みタブ・回答方法ラベルと同じ作り） */
   .badge-neutral {
-    @apply bg-bg text-text-secondary;
+    @apply bg-surface text-text-secondary ring-1 ring-inset ring-border-light;
   }
   .badge-success {
     @apply bg-success-bg text-success-text;
