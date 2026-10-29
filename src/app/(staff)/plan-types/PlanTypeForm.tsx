@@ -145,16 +145,23 @@ export function PlanTypeForm({ mode, initial, templates, save }: Props) {
     }
 
     setSaving(true);
-    const result = await save({
-      name,
-      description: description.trim() === '' ? null : description,
-      defaultGuestCountMin: min,
-      defaultGuestCountMax: max,
-      displayOrder: order ?? 0,
-      active,
-      assignments: rows,
-    });
-    setSaving(false);
+    let result: SavePlanTypeResult;
+    try {
+      result = await save({
+        name,
+        description: description.trim() === '' ? null : description,
+        defaultGuestCountMin: min,
+        defaultGuestCountMax: max,
+        displayOrder: order ?? 0,
+        active,
+        assignments: rows,
+      });
+    } catch {
+      setSummary('保存に失敗しました。時間をおいて再度お試しください。');
+      return;
+    } finally {
+      setSaving(false);
+    }
 
     if (result.ok) {
       router.push('/plan-types');
