@@ -15,6 +15,7 @@ import { redirect } from 'next/navigation';
 
 import { InvitationSection } from './InvitationSection';
 import { RiskSection, type CaseRisk } from './RiskSection';
+import { GuestResponseList } from '@/components/guests/GuestResponseList';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import type { RiskReasonView } from '@/components/ui/RiskBadge';
 import { TaskSection, type CaseTaskRow } from './TaskSection';
@@ -36,6 +37,7 @@ import {
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { formatDate } from '@/lib/format';
+import { loadGuestBook } from '@/lib/services/guests';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -181,6 +183,12 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
   const isAdmin = user.role === 'admin' || user.role === 'system_admin';
   const archived = row.archived_at !== null;
 
+  // ゲストの出欠回答とタグ。回答の追加は新郎新婦が配るURLから行い、タグは新郎新婦が付けたものを確認・修正できる。
+  // D1 ローカル検証の対象外
+  const guestBook = d1
+    ? undefined
+    : await loadGuestBook(await createSupabaseServerClient(), row.id);
+
   return (
     <div className="space-y-5">
       <Breadcrumbs
@@ -311,6 +319,19 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
           readOnly={archived}
         />
       }
+
+      {guestBook !== undefined && (
+        <section className="space-y-3">
+          <h2 className="section-head">ゲストの出欠</h2>
+          {guestBook === null ? (
+            <div role="alert" className="banner-error">
+              <span>ゲストの回答を読み込めませんでした。</span>
+            </div>
+          ) : (
+            <GuestResponseList caseId={row.id} book={guestBook} editable={!archived} />
+          )}
+        </section>
+      )}
     </div>
   );
 }

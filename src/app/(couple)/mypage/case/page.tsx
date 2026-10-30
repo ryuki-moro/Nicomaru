@@ -159,6 +159,10 @@ export default async function CoupleCasePage() {
         内容の変更が必要なときは、担当プランナーへお知らせください。
       </p>
 
+      <Link href="/mypage/guests" className="btn-secondary block text-center">
+        ゲストの出欠を見る
+      </Link>
+
       <Link href="/mypage/tasks" className="btn-secondary block text-center">
         宿題・提出物を見る
       </Link>

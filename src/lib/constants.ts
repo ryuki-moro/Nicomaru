@@ -173,6 +173,75 @@ export const PARTNER_ROLE_LABEL: Record<PartnerRole, string> = {
   bride: '新婦',
 };
 
+// ------------------------------------------------------------ ゲストの出欠回答
+/** 1回の回答で登録できる人数（本人＋同伴者）。DB の submit_guest_response() と揃える。 */
+export const GUEST_RESPONSE_MAX_PEOPLE = 10;
+
+export const GUEST_AGE_CATEGORIES = ['adult', 'child', 'infant'] as const;
+export type GuestAgeCategory = (typeof GUEST_AGE_CATEGORIES)[number];
+export const GUEST_AGE_CATEGORY_LABEL: Record<GuestAgeCategory, string> = {
+  adult: '大人（中学生以上）',
+  child: '子ども（小学生）',
+  infant: '幼児（未就学）',
+};
+
+export const GUEST_GENDERS = ['male', 'female', 'unspecified'] as const;
+export type GuestGender = (typeof GUEST_GENDERS)[number];
+export const GUEST_GENDER_LABEL: Record<GuestGender, string> = {
+  male: '男性',
+  female: '女性',
+  unspecified: '回答しない',
+};
+
+/**
+ * 特記事項のうち「身体的なご事情」の区分。座席や動線の配慮に使う。
+ * DB の case_guests_assistance_needs_check と揃える。
+ */
+export const GUEST_ASSISTANCE_NEEDS = [
+  'mobility',
+  'wheelchair',
+  'pregnancy',
+  'hearing',
+  'vision',
+  'other',
+] as const;
+export type GuestAssistanceNeed = (typeof GUEST_ASSISTANCE_NEEDS)[number];
+export const GUEST_ASSISTANCE_NEED_LABEL: Record<GuestAssistanceNeed, string> = {
+  mobility: '足腰が弱い・杖を使う',
+  wheelchair: '車いすを使う',
+  pregnancy: '妊娠中',
+  hearing: '耳が聞こえにくい',
+  vision: '目が見えにくい',
+  other: 'その他',
+};
+/** タグ・一覧で使う短い名前。 */
+export const GUEST_ASSISTANCE_NEED_SHORT_LABEL: Record<GuestAssistanceNeed, string> = {
+  mobility: '足腰',
+  wheelchair: '車いす',
+  pregnancy: '妊娠中',
+  hearing: '耳',
+  vision: '目',
+  other: '配慮その他',
+};
+
+export const GUEST_RELATIONSHIPS = [
+  'family',
+  'relative',
+  'friend',
+  'colleague',
+  'teacher',
+  'other',
+] as const;
+export type GuestRelationship = (typeof GUEST_RELATIONSHIPS)[number];
+export const GUEST_RELATIONSHIP_LABEL: Record<GuestRelationship, string> = {
+  family: '家族',
+  relative: '親族',
+  friend: '友人',
+  colleague: '職場関係',
+  teacher: '恩師',
+  other: 'その他',
+};
+
 export const INVITATION_PURPOSES = ['initial_registration', 'mypage_access'] as const;
 export type InvitationPurpose = (typeof INVITATION_PURPOSES)[number];
 
@@ -218,6 +287,8 @@ export const INPUT_LIMITS = {
   textArea: 1000,
   answerText: 2000,
   templateDescription: 500,
+  guestAllergyNote: 500,
+  guestAssistanceNote: 500,
   fileBytes: 5 * 1024 * 1024,
   caseTotalFileBytes: 100 * 1024 * 1024,
 } as const;
@@ -251,6 +322,8 @@ export const RATE_LIMITS = {
   initial_register: { windowSeconds: 3600, max: 10 },
   password_reset: { windowSeconds: 3600, max: 10 },
   password_login: { windowSeconds: 3600, max: 20 },
+  /** ゲストの出欠回答。同じ回線から家族分を続けて送れるよう、認証系より緩める */
+  guest_rsvp: { windowSeconds: 3600, max: 30 },
 } as const;
 
 /** 一覧画面の既定表示件数（4-3 一覧画面共通）。 */

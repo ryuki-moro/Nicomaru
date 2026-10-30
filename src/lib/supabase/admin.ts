@@ -20,7 +20,11 @@ export const SERVICE_ROLE_USE_CASES = {
     'case_invitations の token_hash 照合と expires_at／used_at／revoked_at／purpose／max_uses チェックを必須実施。' +
     'recipient_email が設定された招待は入力メールとの一致も必須。検証と消費は単一 UPDATE ... RETURNING（6-6-1）',
   'auth.rate-limit':
-    'auth_rate_limits は authenticated から直接参照させないため、判定関数の呼び出しにのみ用いる（付録A）',
+    'auth_rate_limits は authenticated から直接参照させないため、判定関数の呼び出しにのみ用いる（付録A）。' +
+    '未ログインのゲスト出欠回答（guest_rsvp）の判定も同じ関数で行う',
+  'guest.rsvp':
+    '未ログインのゲストの出欠回答。形式確認済みトークンのハッシュで peek_guest_form／submit_guest_response を' +
+    '呼ぶだけで、表を直接参照・更新しない。返すのは挙式日と新郎新婦の氏名のみ。案件IDは応答に出さない',
   'admin.users':
     '呼び出し元JWTの role が admin／system_admin であることを検証。venue_id は呼び出し元の値に固定し、' +
     'role は U02 の自動設定規則に従う（任意指定を受け付けない）',
