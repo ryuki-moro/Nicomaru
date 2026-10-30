@@ -98,6 +98,7 @@ export async function purgeCases(admin: SupabaseClient): Promise<BatchOutcome> {
 
     for (const table of [
       'case_guests',
+      'case_guest_forms',
       'communication_logs',
       'meeting_notes',
       'ai_jobs',

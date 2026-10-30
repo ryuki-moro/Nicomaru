@@ -11,6 +11,10 @@ import {
   ALLOWED_FILE_TYPES,
   CONTACT_CHANNELS,
   FOLLOW_METHODS,
+  GUEST_AGE_CATEGORIES,
+  GUEST_GENDERS,
+  GUEST_RELATIONSHIPS,
+  GUEST_RESPONSE_MAX_PEOPLE,
   IMPORTANCE_LEVELS,
   INPUT_LIMITS,
   PARTNER_ROLES,
@@ -245,6 +249,29 @@ export const reviewSubmissionSchema = z
     if (v.decision === 'needs_fix' && !v.comment) {
       ctx.addIssue({ code: 'custom', path: ['comment'], message: '不備の内容を入力してください' });
     }
+  });
+
+// ------------------------------------------------------------ ゲストの出欠回答
+const guestPersonSchema = z.object({
+  fullName: shortText,
+  kana: z.string().trim().max(INPUT_LIMITS.shortText).optional().nullable(),
+  ageCategory: z.enum(GUEST_AGE_CATEGORIES, { message: '年齢区分を選択してください' }),
+  gender: z.enum(GUEST_GENDERS, { message: '性別を選択してください' }),
+  /** 空欄は「アレルギーなし」。欠席の回答では保存しない */
+  allergyNote: z.string().trim().max(INPUT_LIMITS.guestAllergyNote).optional().nullable(),
+});
+
+/** 先頭が回答者本人、2人目以降が同伴者。欠席の回答に同伴者は付けない。 */
+export const guestResponseSchema = z
+  .object({
+    attending: z.boolean({ message: 'ご出席・ご欠席を選択してください' }),
+    guestSide: z.enum(PARTNER_ROLES, { message: '新郎側・新婦側を選択してください' }),
+    relationship: z.enum(GUEST_RELATIONSHIPS, { message: 'ご関係を選択してください' }),
+    guests: z.array(guestPersonSchema).min(1).max(GUEST_RESPONSE_MAX_PEOPLE),
+  })
+  .refine((v) => v.attending || v.guests.length === 1, {
+    path: ['guests'],
+    message: 'ご欠席の場合、同伴者は登録できません',
   });
 
 // ------------------------------------------------------ 招待・フォロー・利用者
