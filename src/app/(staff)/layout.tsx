@@ -1,3 +1,4 @@
+import { localD1 } from '@/lib/d1/mode';
 import { redirect } from 'next/navigation';
 
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -16,7 +17,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     <div className="min-h-dvh bg-bg">
       <AppHeader role={user.role} displayName={user.displayName} />
       <main className="mx-auto w-full max-w-6xl px-4 py-6">
-        {process.env.NICOMARU_DB === 'd1-local' && (
+        {localD1() && (
           <p className="banner-info">
             ローカル検証：案件の登録・更新・招待、宿題の提出・確認が利用できます。外部への送信は行いません。
           </p>

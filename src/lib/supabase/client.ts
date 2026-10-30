@@ -4,11 +4,11 @@
  */
 'use client';
 
+import { publicD1 } from '@/lib/d1/mode';
 import { createBrowserClient } from '@supabase/ssr';
 
 export function createSupabaseBrowserClient() {
-  if (process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1-local')
-    throw new Error('D1検証中はSupabaseへ接続できません');
+  if (publicD1()) throw new Error('D1検証中はSupabaseへ接続できません');
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) {

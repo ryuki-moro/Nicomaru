@@ -1,3 +1,4 @@
+import { usingD1 } from '@/lib/d1/mode';
 import type { Metadata, Viewport } from 'next';
 
 import { PerformanceReporter } from '@/components/PerformanceReporter';
@@ -28,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ja">
       <body>
         {children}
-        {process.env.NICOMARU_DB !== 'd1-local' && <PwaRegistration />}
+        {!usingD1() && <PwaRegistration />}
         <PerformanceReporter />
       </body>
     </html>

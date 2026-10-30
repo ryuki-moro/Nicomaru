@@ -8,6 +8,7 @@
  *     invited／suspended／deleted の利用者はDB層で全拒否になる。
  *     API 層はこの状態を 403（FORBIDDEN）として扱い、再ログインを促す（6-3-4）。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
 
@@ -48,7 +49,7 @@ export type ResolvedUser =
 // React.cacheは同じRSC requestのlayout/page間だけで共有し、次requestで破棄される。
 // プロセス全体・Cookie値キーの共有キャッシュへ変更しない（別利用者への漏洩を防ぐ）。
 export const resolveAppUser = cache(async (): Promise<ResolvedUser> => {
-  if (process.env.NICOMARU_DB === 'd1-local') {
+  if (usingD1()) {
     return (await import('@/lib/d1/auth')).resolveD1User();
   }
   const supabase = await createSupabaseServerClient();

@@ -156,8 +156,10 @@ export const CASE_STATUS_LABEL: Record<CaseStatus, string> = {
   archived: 'アーカイブ済み',
 };
 
+/** line は LINE連携終了前に保存された値の表示用。新規の入力・送信は SENDABLE_CHANNELS に限る。 */
 export const CONTACT_CHANNELS = ['line', 'email'] as const;
 export type ContactChannel = (typeof CONTACT_CHANNELS)[number];
+export const SENDABLE_CHANNELS = ['email'] as const;
 
 export const CONTACT_CHANNEL_LABEL: Record<ContactChannel, string> = {
   line: '公式LINE',

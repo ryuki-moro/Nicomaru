@@ -9,6 +9,7 @@
  * 同一トランザクションで行い、応答で平文URLを1度だけ返す。
  * 失効と発行を別々に呼ぶとトークンが2本同時に有効な瞬間が生まれるため、DB側の1関数へ閉じている。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
 import {
@@ -19,7 +20,7 @@ import {
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { saveInvitationRecipient } from '@/lib/services/invitation-recipient';
-import { fromPostgresError, notFound, unprocessable } from '@/lib/errors';
+import { fromPostgresError, notFound } from '@/lib/errors';
 import { sendInvitation } from '@/lib/notify/send';
 import {
   buildInvitationUrl,
@@ -63,14 +64,13 @@ const INVITATION_COLUMNS =
 
 /** 送信先の解決に必要な列。couple_profiles は memo を剥奪しているため列を明示する（付録A）。 */
 const CASE_WITH_PARTNERS_SELECT = `id, case_code, contact_channel,
-   couple_profiles ( ${COUPLE_PROFILE_COLUMNS}, user_profiles ( id, line_user_id ) )`;
+   couple_profiles ( ${COUPLE_PROFILE_COLUMNS} )`;
 
 interface PartnerRow {
   partner_role: PartnerRole;
   full_name: string;
   email: string | null;
   email_hash: string | null;
-  user_profiles: { id: string; line_user_id: string | null } | null;
 }
 
 /**
@@ -108,7 +108,7 @@ export const GET = route(
   async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
     const actor = await requireRole('planner', 'admin', 'system_admin');
     const { caseId } = await context.params;
-    if (process.env.NICOMARU_DB === 'd1-local') {
+    if (usingD1()) {
       const { localDB } = await import('@/lib/d1/runtime');
       return ok(
         await (await import('@/lib/d1/onboarding')).listInvitations(await localDB(), actor, caseId),
@@ -143,14 +143,21 @@ export const POST = route(
   async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
     const actor = await requireRole('planner', 'admin', 'system_admin');
     const { caseId } = await context.params;
-    if (process.env.NICOMARU_DB === 'd1-local') {
+    if (usingD1()) {
       const input = await parseBody(request, invitationIssueSchema.strict());
-      if (input.recipientEmail) throw unprocessable('D1ローカルでは招待先メールの追加は未対応です');
       const { localDB } = await import('@/lib/d1/runtime');
       return ok(
         await (
           await import('@/lib/d1/onboarding')
-        ).issueInvitation(await localDB(), actor, caseId, input.targetPartnerRole, input.send),
+        ).issueInvitation(
+          await localDB(),
+          actor,
+          caseId,
+          input.targetPartnerRole,
+          input.send,
+          undefined,
+          input.recipientEmail,
+        ),
         201,
       );
     }
@@ -222,7 +229,6 @@ export const POST = route(
         input.send,
         {
           email: readPii(partner.email) || null,
-          lineUserId: partner.user_profiles?.line_user_id ?? null,
         },
         {
           caseCode: target.case_code,

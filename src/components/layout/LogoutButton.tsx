@@ -1,5 +1,6 @@
 'use client';
 
+import { publicD1 } from '@/lib/d1/mode';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -17,7 +18,7 @@ export function LogoutButton() {
       disabled={pending}
       onClick={async () => {
         setPending(true);
-        if (process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1-local') {
+        if (publicD1()) {
           const result = await fetch('/api/auth/sign-out', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },

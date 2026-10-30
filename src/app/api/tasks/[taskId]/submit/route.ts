@@ -36,6 +36,7 @@
  *   - 連絡履歴の記録とAIジョブの投入。どちらも副次的な記録で、
  *     失敗を理由に提出そのものを取り消すべきではない（7-1）
  */
+import { usingD1 } from '@/lib/d1/mode';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { ok, parseBody, route } from '@/lib/api/route';
@@ -128,10 +129,10 @@ export const POST = route(
     const user = await requireRole('couple');
 
     const { taskId } = await context.params;
-    if (!isUuid(taskId) && process.env.NICOMARU_DB !== 'd1-local') throw notFound();
+    if (!isUuid(taskId) && !usingD1()) throw notFound();
 
     const body = await parseBody(request, submitTaskSchema);
-    if (process.env.NICOMARU_DB === 'd1-local') {
+    if (usingD1()) {
       const { localDB } = await import('@/lib/d1/runtime');
       const { submitTask } = await import('@/lib/d1/tasks');
       return ok(await submitTask(await localDB(), user, taskId, body));

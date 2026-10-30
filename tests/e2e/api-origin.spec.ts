@@ -75,9 +75,9 @@ test('内部cronはOriginなしでも共有secretの認証へ進み、欠落secr
   expect(await response.json()).toMatchObject({ error: { code: 'UNAUTHENTICATED' } });
 });
 
-test('LINE WebhookはOriginなしでも署名検証へ進み、欠落署名を401で拒否する', async ({ page }) => {
+test('廃止したLINE Webhookは410を返す', async ({ page }) => {
   // 空イベントを署名なしで送る。LINEへの返信やDB処理には到達しない。
   const response = await page.request.post('/api/line/webhook', { data: { events: [] } });
-  expect(response.status()).toBe(401);
-  expect(await response.json()).toMatchObject({ error: { code: 'UNAUTHENTICATED' } });
+  expect(response.status()).toBe(410);
+  expect(await response.json()).toMatchObject({ error: { code: 'GONE' } });
 });

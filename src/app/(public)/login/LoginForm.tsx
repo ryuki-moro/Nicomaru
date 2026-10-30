@@ -1,5 +1,6 @@
 'use client';
 
+import { publicD1, publicLocalD1 } from '@/lib/d1/mode';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { startTransition, useCallback, useEffect, useRef, useState } from 'react';
@@ -183,7 +184,7 @@ export function LoginForm({
    * その場合は同一画面で完結する「メールアドレス＋6桁コード」の入力へ誘導する（6-3-1 方針(1)）。
    */
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1-local') return;
+    if (publicD1()) return;
     const url = new URL(window.location.href);
     if (hasLoginLinkFragment(url.hash)) {
       window.location.replace(
@@ -261,9 +262,11 @@ export function LoginForm({
       setCode('');
       setResendIn(OTP.resendIntervalSeconds);
       setNotice(
-        process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1-local'
+        publicLocalD1()
           ? `${email} 宛の6桁の確認コードをローカル受信箱に保存しました（外部送信なし）。`
-          : `${email} 宛にログインリンクと6桁のコードをお送りしました。` +
+          : publicD1()
+            ? `${email} 宛に6桁の確認コードをお送りしました（有効期限は${Math.round(OTP.ttlSeconds / 60)}分）。`
+            : `${email} 宛にログインリンクと6桁のコードをお送りしました。` +
               `どちらでもログインできます（有効期限は${Math.round(OTP.ttlSeconds / 60)}分）。`,
       );
     } catch (cause) {
@@ -398,7 +401,7 @@ export function LoginForm({
             ? 'パスワードでログイン'
             : codeSent
               ? '認証してログイン'
-              : process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1-local'
+              : publicD1()
                 ? '確認コードを送信'
                 : 'ログインリンクを送信'}
         </button>
@@ -443,7 +446,7 @@ export function LoginForm({
           </button>
         )}
 
-        {process.env.NEXT_PUBLIC_NICOMARU_DB !== 'd1-local' && (
+        {!publicD1() && (
           <Link href="/password" className="btn-ghost self-center">
             パスワードをお忘れの方
           </Link>

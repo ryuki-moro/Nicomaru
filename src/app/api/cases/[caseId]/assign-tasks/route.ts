@@ -12,6 +12,7 @@
  *
  * 自動リトライは行わない（二重作成回避）。失敗時はエラーを返し、画面側で再実行を促す。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { ok, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
 import { fromPostgresError, notFound, unprocessable } from '@/lib/errors';
@@ -23,7 +24,7 @@ export const POST = route(
   async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
     const actor = await requireRole('planner', 'admin', 'system_admin');
     const { caseId } = await context.params;
-    if (process.env.NICOMARU_DB === 'd1-local') {
+    if (usingD1()) {
       const { localDB } = await import('@/lib/d1/runtime');
       return ok(
         await (await import('@/lib/d1/onboarding')).assignTasks(await localDB(), actor, caseId),

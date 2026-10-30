@@ -1,0 +1,24 @@
+// Cloudflare本番（OpenNext）。ローカル検証は cloudflare/wrangler.jsonc を使う。
+// database_id は `wrangler d1 create nicomaru` の出力に置き換える。APP_BASE_URL と秘密値は配備時に設定する。
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nicomaru",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "nicomaru" }],
+  "vars": { "NICOMARU_DB": "d1", "NEXT_PUBLIC_NICOMARU_DB": "d1" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nicomaru",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "migrations_dir": "cloudflare/migrations",
+    },
+  ],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "nicomaru-files" }],
+  "observability": { "enabled": true },
+}

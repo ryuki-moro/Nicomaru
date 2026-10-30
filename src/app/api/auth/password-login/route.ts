@@ -1,3 +1,4 @@
+import { clientIp, usingD1 } from '@/lib/d1/mode';
 import { ok, route } from '@/lib/api/route';
 import { ApiError, rateLimited, unauthenticated } from '@/lib/errors';
 import { recordAuthenticationFailure } from '@/lib/services/audit';
@@ -8,7 +9,7 @@ import { enforceAuthRateLimit } from '../shared';
 
 export const POST = route(async (request) => {
   const body = await parsePasswordBody(request, passwordLoginSchema);
-  if (process.env.NICOMARU_DB === 'd1-local') {
+  if (usingD1()) {
     const { d1Auth } = await import('@/lib/d1/auth');
     const auth = await d1Auth();
     const result = await auth.handler(
@@ -17,7 +18,7 @@ export const POST = route(async (request) => {
         headers: {
           'content-type': 'application/json',
           origin: process.env.APP_BASE_URL!,
-          'x-nicomaru-local-ip': '127.0.0.1',
+          'x-nicomaru-local-ip': clientIp(request.headers),
         },
         body: JSON.stringify(body),
       }),

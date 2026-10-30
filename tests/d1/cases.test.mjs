@@ -6,6 +6,12 @@ import { readFile } from 'node:fs/promises';
 import { getPlatformProxy } from 'wrangler';
 import { seedAppFixtures, ids } from '../../scripts/d1-fixtures.mjs';
 import { caseRow, listCases, patchCase } from '../../src/lib/d1/cases.ts';
+import { readMailbox } from '../../src/lib/d1/mailbox.ts';
+import {
+  createNotification,
+  listNotifications,
+  markNotificationsRead,
+} from '../../src/lib/d1/notifications.ts';
 
 let platform;
 let db;
@@ -18,10 +24,17 @@ const actor = (role, id, venueId = ids.venueA) => ({
   email: 'test@example.test',
 });
 before(async () => {
+  process.env.NICOMARU_DB = 'd1-local';
   process.env.PII_ENCRYPTION_KEY = randomBytes(32).toString('base64');
   platform = await getPlatformProxy({ configPath: 'cloudflare/wrangler.jsonc', persist: false });
   db = platform.env.DB;
-  for (const file of ['0001_auth.sql', '0002_cases.sql', '0003_onboarding.sql', '0004_tasks.sql']) {
+  for (const file of [
+    '0001_auth.sql',
+    '0002_cases.sql',
+    '0003_onboarding.sql',
+    '0004_tasks.sql',
+    '0005_notifications.sql',
+  ]) {
     const sql = await readFile(`cloudflare/migrations/${file}`, 'utf8');
     await db.batch(
       sql
@@ -35,6 +48,95 @@ before(async () => {
 });
 after(async () => {
   await platform?.dispose();
+});
+
+test('通知は本人と担当者だけが閲覧でき、既読化は本人だけが行える', async () => {
+  await db
+    .prepare(
+      "INSERT INTO notifications(id,case_id,recipient_user_id,channel,notification_type,title,body,created_at) VALUES ('notice-test',?,?, 'email','info','お知らせ','本文','2028-01-01')",
+    )
+    .bind(ids.caseA, ids.coupleA)
+    .run();
+  assert.equal((await listNotifications(db, actor('couple', ids.coupleA), 0)).length, 1);
+  assert.equal((await listNotifications(db, actor('planner', ids.plannerA), 0)).length, 1);
+  assert.equal((await listNotifications(db, actor('planner', ids.plannerA2), 0)).length, 0);
+  assert.equal(
+    (await listNotifications(db, actor('couple', ids.coupleB, ids.venueB), 0)).length,
+    0,
+  );
+  await markNotificationsRead(db, actor('planner', ids.plannerA), ['notice-test']);
+  assert.equal(
+    (await db.prepare("SELECT read_at FROM notifications WHERE id='notice-test'").first()).read_at,
+    null,
+  );
+  await markNotificationsRead(db, actor('couple', ids.coupleA), ['notice-test']);
+  assert.ok(
+    (await db.prepare("SELECT read_at FROM notifications WHERE id='notice-test'").first()).read_at,
+  );
+});
+
+test('担当者がアプリ内通知を作成でき、担当外と別案件の宿題を拒否する', async () => {
+  const input = {
+    caseId: ids.caseA,
+    recipientUserId: ids.coupleA,
+    channel: 'in_app',
+    notificationType: 'info',
+    message: 'ご確認ください',
+  };
+  await assert.rejects(createNotification(db, actor('planner', ids.plannerA2), input));
+  await assert.rejects(
+    createNotification(db, actor('planner', ids.plannerA), {
+      ...input,
+      taskId: '10000000-0000-4000-8000-000000000999',
+    }),
+  );
+  const created = await createNotification(db, actor('planner', ids.plannerA), input);
+  assert.equal(created.delivered, true);
+  assert.ok(
+    (await listNotifications(db, actor('couple', ids.coupleA), 0)).some(
+      (n) => n.id === created.notificationId,
+    ),
+  );
+  const email = await createNotification(db, actor('planner', ids.plannerA), {
+    ...input,
+    channel: 'email',
+  });
+  assert.equal(email.delivered, false);
+  assert.equal(
+    (
+      await db
+        .prepare('SELECT status FROM notifications WHERE id=?')
+        .bind(email.notificationId)
+        .first()
+    ).status,
+    'pending',
+  );
+  const mail = (await readMailbox(db)).find((item) => item.kind === 'notification');
+  assert.equal(mail.email, 'couplea@example.test');
+  assert.match(mail.text, /ご確認ください/);
+});
+
+test('受信箱への保存が失敗した場合は通知も保存しない', async () => {
+  const before = await db.prepare('SELECT count(*) AS n FROM notifications').first();
+  await db
+    .prepare(
+      "CREATE TRIGGER mailbox_fail BEFORE INSERT ON local_mailbox BEGIN SELECT RAISE(ABORT,'failure'); END",
+    )
+    .run();
+  try {
+    await assert.rejects(
+      createNotification(db, actor('planner', ids.plannerA), {
+        caseId: ids.caseA,
+        recipientUserId: ids.coupleA,
+        channel: 'email',
+        notificationType: 'info',
+        message: 'ご確認ください',
+      }),
+    );
+    assert.equal((await db.prepare('SELECT count(*) AS n FROM notifications').first()).n, before.n);
+  } finally {
+    await db.prepare('DROP TRIGGER mailbox_fail').run();
+  }
 });
 
 test('4ロールの参照範囲と他式場・同僚担当の拒否', async () => {

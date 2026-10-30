@@ -11,6 +11,7 @@
  * どの案件が見えるかは付録A の accessible_case_ids() が決めるため、
  * 本画面では case_id の絞り込みを自前で書かず RLS に委ねる。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
 import { requirePageUser } from '@/lib/auth/session';
 
@@ -46,7 +47,7 @@ interface ProfileRow {
 }
 
 export default async function MyPage() {
-  const d1 = process.env.NICOMARU_DB === 'd1-local';
+  const d1 = usingD1();
   const user = await requirePageUser('couple');
   let local: Awaited<ReturnType<(typeof import('@/lib/d1/cases'))['caseRow']>> | null = null;
   if (d1) {
@@ -207,11 +208,11 @@ export default async function MyPage() {
           <Link href="/mypage/tasks" prefetch={false} className="btn-primary block text-center">
             宿題・提出物を見る
           </Link>
-          {!d1 && (
-            <nav
-              aria-label="そのほかのメニュー"
-              className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-label"
-            >
+          <nav
+            aria-label="そのほかのメニュー"
+            className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-label"
+          >
+            {!d1 && (
               <Link
                 href="/mypage/timeline"
                 prefetch={false}
@@ -219,16 +220,16 @@ export default async function MyPage() {
               >
                 準備タイムラインを見る
               </Link>
-              {/* 4-3 M01「通知一覧（M05）は Phase 2 で追加する」 */}
-              <Link
-                href="/mypage/notifications"
-                prefetch={false}
-                className="text-link underline underline-offset-2"
-              >
-                お知らせを見る
-              </Link>
-            </nav>
-          )}
+            )}
+            {/* 4-3 M01「通知一覧（M05）は Phase 2 で追加する」 */}
+            <Link
+              href="/mypage/notifications"
+              prefetch={false}
+              className="text-link underline underline-offset-2"
+            >
+              お知らせを見る
+            </Link>
+          </nav>
         </div>
       }
     </div>

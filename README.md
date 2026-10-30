@@ -197,7 +197,7 @@ TEST_PG_URL=postgres://postgres:<password>@127.0.0.1:5433/postgres npm run test:
 | 個人情報              | アプリ側 AES-256-GCM ＋ 検索用 HMAC-SHA256 列                                     | 等値一致検索のみ(13-1)                                                                                       |
 | 定期処理              | pg_cron (死活監視のみ GitHub Actions)                                             | 一覧は 6-12                                                                                                  |
 | AI補助                | ローカルLLM (Ollama) をプル型ジョブで内製、RAG は pgvector                        | Phase 3。生成エンジンは校内サーバー非公開。ワーカーには Service Role Key を配らず3関数だけを専用ロールへ付与 |
-| 通知                  | LINE Messaging API / メール(Resend)                                               | Auth メールも Resend を Custom SMTP として使用                                                               |
+| 通知                  | メール(Resend)。LINE連携は終了し、`/api/line/*`は410                              | Auth メールも Resend を Custom SMTP として使用                                                               |
 
 ## 設計上の要点(実装で踏み外しやすいところ)
 
@@ -226,7 +226,7 @@ TEST_PG_URL=postgres://postgres:<password>@127.0.0.1:5433/postgres npm run test:
   正しいOriginでの未認証は従来どおり401。通常のブラウザー`fetch`はOriginを自動送信する。
   curl等で直接確認する場合は`Origin: <APP_BASE_URLのscheme+host+port>`を付ける（利用者認証は別途必要）。
   内部cronだけは`route(handler, { source: 'internal-cron' })`で共有secret認証を必須にする。
-  LINE Webhookは独立したraw body署名検証を維持し、LINE連携の`/api/line/link`は通常のOrigin検証対象。
+  LINE連携は終了し、`/api/line/*`はmiddlewareで410を返す。
   [対象・検証計画](docs/実装計画_API送信元検証.md)と`tests/unit/api-origin.test.ts`を参照。
 
 ## フェーズ計画

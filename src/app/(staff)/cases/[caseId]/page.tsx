@@ -10,6 +10,7 @@
  * リスクスコアは Phase 2 のため表示しない。
  * couple 向けの K02 は (couple) 側の画面として別に用意する（本画面は (staff) レイアウト配下）。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
@@ -90,7 +91,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
   const user = await requirePageUser('planner', 'admin', 'system_admin');
 
   const { caseId } = await params;
-  const d1 = process.env.NICOMARU_DB === 'd1-local';
+  const d1 = usingD1();
   let row: CaseRow;
   if (d1) {
     const { localDB } = await import('@/lib/d1/runtime');

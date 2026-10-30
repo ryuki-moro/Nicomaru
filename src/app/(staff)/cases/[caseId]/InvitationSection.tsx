@@ -19,7 +19,7 @@ import { InvitationStateBadge } from '@/components/ui/StatusBadge';
 import { ApiCallError, api } from '@/lib/api/client';
 import { formatDateTime } from '@/lib/format';
 import {
-  CONTACT_CHANNELS,
+  SENDABLE_CHANNELS,
   CONTACT_CHANNEL_LABEL,
   PARTNER_ROLE_LABEL,
   type ContactChannel,
@@ -278,7 +278,7 @@ export function InvitationSection({ caseId, readOnly }: { caseId: string; readOn
             value={channel}
             onChange={(e) => setChannel(e.target.value as ContactChannel)}
           >
-            {CONTACT_CHANNELS.map((value) => (
+            {SENDABLE_CHANNELS.map((value) => (
               <option key={value} value={value}>
                 {CONTACT_CHANNEL_LABEL[value]}
               </option>

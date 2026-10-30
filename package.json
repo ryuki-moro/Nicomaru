@@ -34,6 +34,10 @@
     "dev:d1": "node --import tsx scripts/d1-local.mjs",
     "db:d1:setup": "node --import tsx scripts/d1-local.mjs --setup-only",
     "test:d1": "node --import tsx --test tests/d1/*.test.mjs",
+    "cf:build": "NICOMARU_DB=d1 NEXT_PUBLIC_NICOMARU_DB=d1 opennextjs-cloudflare build",
+    "cf:deploy": "opennextjs-cloudflare deploy",
+    "db:d1:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "db:d1:bootstrap-admin": "node scripts/d1-bootstrap-admin.mjs",
     "test:d1:browser": "node --test --test-concurrency=1 tests/d1/browser.mjs tests/d1/onboarding.browser.mjs tests/d1/tasks.browser.mjs"
   },
   "dependencies": {
@@ -50,6 +54,7 @@
     "@electric-sql/pglite": "^0.5.8",
     "@eslint/compat": "^2.0.0",
     "@next/eslint-plugin-next": "14.2.35",
+    "@opennextjs/cloudflare": "^1.20.14",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^22.15.0",

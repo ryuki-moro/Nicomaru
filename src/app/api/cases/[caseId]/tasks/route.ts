@@ -7,6 +7,7 @@
  * task_template_id は NULL、display_order は既存の最大値+1 とする。
  * case_tasks と timeline_items の2テーブルへ書くため、DB側の add_case_task() へ集約する。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
 import { fromPostgresError, notFound } from '@/lib/errors';
@@ -19,7 +20,7 @@ export const POST = route(
     const user = await requireRole('planner', 'admin', 'system_admin');
     const { caseId } = await context.params;
     const input = await parseBody(request, caseTaskCreateSchema);
-    if (process.env.NICOMARU_DB === 'd1-local') {
+    if (usingD1()) {
       const { localDB } = await import('@/lib/d1/runtime');
       const { addTask } = await import('@/lib/d1/tasks');
       return ok(await addTask(await localDB(), user, caseId, input), 201);
