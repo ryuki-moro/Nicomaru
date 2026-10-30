@@ -1,10 +1,12 @@
 import type { D1Database, R2Bucket } from '@cloudflare/workers-types';
+import { ApiError } from '@/lib/errors';
 
 export { usingD1, localD1 } from './mode';
 
 interface Bindings {
   DB: D1Database;
-  FILES: R2Bucket;
+  // R2を有効化するまで本番は束縛なしで配備する。
+  FILES?: R2Bucket;
 }
 const local = globalThis as typeof globalThis & { nicomaruD1?: Promise<{ env: Bindings }> };
 
@@ -39,5 +41,7 @@ export async function localDB(): Promise<D1Database> {
 }
 
 export async function localFiles(): Promise<R2Bucket> {
-  return (await bindings()).FILES;
+  const files = (await bindings()).FILES;
+  if (!files) throw new ApiError('SERVICE_UNAVAILABLE', '添付ファイルは現在準備中です');
+  return files;
 }
