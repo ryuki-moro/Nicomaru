@@ -4,6 +4,13 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   logging: process.env.NICOMARU_DB === 'd1-local' ? { incomingRequests: false } : undefined,
   serverExternalPackages: ['wrangler', 'better-auth'],
+  // ファイル追跡はNode向けの入口だけを拾う。OpenNextはworkerd向けの入口で束ねるため明示する。
+  outputFileTracingIncludes: {
+    '/**': [
+      './node_modules/@better-auth/core/dist/**/*.mjs',
+      './node_modules/@better-auth/utils/dist/**/*.mjs',
+    ],
+  },
   // 通常の開発サーバーと同時に確認できるよう生成物を分ける。
   distDir:
     process.env.NICOMARU_DB === 'd1-local'
