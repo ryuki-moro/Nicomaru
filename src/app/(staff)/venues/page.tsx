@@ -12,6 +12,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
@@ -62,11 +63,7 @@ export default async function VenueListPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li aria-current="page">式場一覧</li>
-        </ol>
-      </nav>
+      <Breadcrumbs items={[homeCrumbFor(user.role), { label: '式場一覧' }]} />
 
       <div className="flex items-center justify-between gap-3">
         <h1 className="section-head">式場一覧</h1>

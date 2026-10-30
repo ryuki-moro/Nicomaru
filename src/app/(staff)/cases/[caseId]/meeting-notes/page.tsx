@@ -15,11 +15,11 @@
  * D04 フォロー記録とは別の画面。D04 は「連絡したこと」の記録で、
  * こちらは「打ち合わせで決まったこと」の記録。宿題の元になるのは後者。
  */
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
 import { TaskProposalPanel } from './TaskProposalPanel';
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { AI_JOB_COLUMNS, fetchAiAssistStatus, trimForAi, type AiJobRow } from '@/lib/ai/assist';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { INPUT_LIMITS, isStaff } from '@/lib/constants';
@@ -144,29 +144,14 @@ export default async function MeetingNotesPage({
 
   return (
     <div className="space-y-5">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href="/cases" className="text-link hover:underline">
-              案件一覧
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href={`/cases/${caseId}`} className="text-link hover:underline">
-              {target.case_code}
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page">打ち合わせ記録</li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        items={[
+          DASHBOARD_CRUMB,
+          { label: '案件一覧', href: '/cases' },
+          { label: target.case_code, href: `/cases/${caseId}` },
+          { label: '打ち合わせ記録' },
+        ]}
+      />
 
       {/* 案件詳細の入口リンク・パンくずと同じ画面名にする（宿題の起票はこの画面の中の機能） */}
       <h1 className="section-head">打ち合わせ記録</h1>

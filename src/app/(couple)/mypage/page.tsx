@@ -14,6 +14,7 @@
 import Link from 'next/link';
 import { requirePageUser } from '@/lib/auth/session';
 
+import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { InstallGuide } from '@/components/InstallGuide';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
@@ -171,7 +172,7 @@ export default async function MyPage() {
               return (
                 <li key={task.id}>
                   <Link
-                    href={`/mypage/tasks/${task.id}`}
+                    href={taskDetailHref(task.id, 'home')}
                     prefetch={false}
                     className="flex items-center gap-3 rounded-card bg-field-filled-bg px-4 py-[13px]"
                   >
