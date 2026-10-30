@@ -8,7 +8,7 @@
  * これにより「どの行で許可された使用なのか」がコード上で追跡でき、
  * AI がRLSエラー回避のために Service Role へ逃げる典型的な失敗をレビューで機械的に検出できる。
  */
-import { usingD1 } from '@/lib/d1/mode';
+import { usingD1 } from '../d1/mode';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createAuthRateLimitFetch } from './auth-rate-limit-fetch';
 
