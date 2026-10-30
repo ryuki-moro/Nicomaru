@@ -171,8 +171,10 @@ export default async function TaskListPage({
             return (
               <li key={task.id}>
                 <Link href={taskDetailHref(task.id)} className="card flex items-center gap-3">
-                  <span className="flex-1">
-                    <span className="block text-base text-text-primary">{task.title}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block break-words text-base text-text-primary">
+                      {task.title}
+                    </span>
                     <span className="block text-label text-text-secondary">
                       回答方法：{TASK_ANSWER_METHOD_LABEL[task.submission_format]}
                     </span>
