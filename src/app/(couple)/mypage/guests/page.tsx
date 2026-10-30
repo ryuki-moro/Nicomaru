@@ -11,7 +11,7 @@ import { GuestResponseList } from '@/components/guests/GuestResponseList';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { decryptPii } from '@/lib/crypto';
 import { appBaseUrl } from '@/lib/notify/mailer';
-import { buildGuestFormUrl, loadGuestResponses } from '@/lib/services/guests';
+import { buildGuestFormUrl, loadGuestBook } from '@/lib/services/guests';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 import { GuestFormLink } from './GuestFormLink';
@@ -42,14 +42,14 @@ export default async function CoupleGuestsPage() {
     );
   }
 
-  const [formResult, responses] = await Promise.all([
+  const [formResult, book] = await Promise.all([
     supabase
       .from('case_guest_forms')
       .select('token_enc')
       .eq('case_id', weddingCase.id)
       .is('revoked_at', null)
       .maybeSingle(),
-    loadGuestResponses(supabase, weddingCase.id),
+    loadGuestBook(supabase, weddingCase.id),
   ]);
 
   let url: string | null = null;
@@ -76,12 +76,12 @@ export default async function CoupleGuestsPage() {
 
       <section className="card flex flex-col gap-3">
         <h2 className="text-label font-bold text-text-primary">届いた回答</h2>
-        {responses === null ? (
+        {book === null ? (
           <div role="alert" className="banner-error">
             <span>回答を読み込めませんでした。時間をおいて開き直してください。</span>
           </div>
         ) : (
-          <GuestResponseList responses={responses} />
+          <GuestResponseList caseId={weddingCase.id} book={book} editable />
         )}
         <p className="text-caption text-text-muted">
           回答は担当プランナーにも共有され、お料理や引出物の手配に使われます。

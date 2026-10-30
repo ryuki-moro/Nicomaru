@@ -23,6 +23,7 @@ import {
   SUBMISSION_FORMATS,
 } from '@/lib/constants';
 import { type ErrorDetail } from '@/lib/errors';
+import { GUEST_TAG_MAX_PER_CASE, GUEST_TAG_NAME_MAX } from '@/lib/guest-tags';
 import { todayInJst } from '@/lib/format';
 import { aiJobInputSchema } from '@/lib/ai/schemas';
 import { NOTIFICATION_TYPES } from '@/lib/notify/templates';
@@ -273,6 +274,20 @@ export const guestResponseSchema = z
     path: ['guests'],
     message: 'ご欠席の場合、同伴者は登録できません',
   });
+
+/** ゲストの自由タグ（作成・名前変更）。 */
+export const guestTagSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'タグ名を入力してください')
+    .max(GUEST_TAG_NAME_MAX, `${GUEST_TAG_NAME_MAX}文字以内で入力してください`),
+});
+
+/** ゲスト1人の自由タグの付け替え。指定した内容に置き換える。 */
+export const guestTagAssignmentSchema = z.object({
+  tagIds: z.array(z.string().uuid()).max(GUEST_TAG_MAX_PER_CASE),
+});
 
 // ------------------------------------------------------ 招待・フォロー・利用者
 export const invitationIssueSchema = z

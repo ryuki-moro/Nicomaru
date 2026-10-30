@@ -16,6 +16,7 @@ import {
   type PartnerRole,
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
+import type { GuestCustomTag } from '@/lib/guest-tags';
 import type { SupabaseServerClient } from '@/lib/supabase/server';
 
 export const GUEST_FORM_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
@@ -43,6 +44,8 @@ export interface GuestRow {
   gender: GuestGender | null;
   responded_at: string | null;
   created_at: string;
+  /** 自由タグの対応（埋め込み select）。読まない場合は省略される */
+  case_guest_tag_links?: { tag_id: string }[];
 }
 
 export interface GuestPerson {
@@ -52,6 +55,8 @@ export interface GuestPerson {
   ageCategory: GuestAgeCategory | null;
   gender: GuestGender | null;
   allergyNote: string;
+  /** 付いている自由タグのID（case_guest_tags.id） */
+  tagIds: string[];
 }
 
 /** 1回の回答（本人＋同伴者）。 */
@@ -106,26 +111,45 @@ export function groupGuestResponses(rows: GuestRow[]): GuestResponse[] {
           ageCategory: row.age_category,
           gender: row.gender,
           allergyNote: readPii(row.allergy_note),
+          tagIds: (row.case_guest_tag_links ?? []).map((link) => link.tag_id),
         })),
       };
     })
     .sort((a, b) => b.respondedAt.localeCompare(a.respondedAt) || a.id.localeCompare(b.id));
 }
 
+export interface GuestBook {
+  responses: GuestResponse[];
+  /** 案件の自由タグ（作成順）。絞り込みと付け外しの候補になる */
+  tags: GuestCustomTag[];
+}
+
 /**
- * 案件の回答を読み、回答単位にまとめて返す。読めなかった場合は null。
- * 参照範囲は RLS（case_guests_all）が決めるので、呼び出し側の利用者のクライアントを渡す。
+ * 案件の回答と自由タグを読み、回答単位にまとめて返す。読めなかった場合は null。
+ * 参照範囲は RLS（case_guests_all／case_guest_tags_all）が決めるので、利用者のクライアントを渡す。
+ * 座席表で卓の役割と照らし合わせる場合も、ここで読んだ内容を guestTags() に通して使う。
  */
-export async function loadGuestResponses(
+export async function loadGuestBook(
   supabase: SupabaseServerClient,
   caseId: string,
-): Promise<GuestResponse[] | null> {
-  const { data, error } = await supabase
-    .from('case_guests')
-    .select(GUEST_RESPONSE_COLUMNS)
-    .eq('case_id', caseId);
-  if (error) return null;
-  return groupGuestResponses((data ?? []) as unknown as GuestRow[]);
+): Promise<GuestBook | null> {
+  const [guests, tags] = await Promise.all([
+    supabase
+      .from('case_guests')
+      .select(`${GUEST_RESPONSE_COLUMNS}, case_guest_tag_links ( tag_id )`)
+      .eq('case_id', caseId),
+    supabase
+      .from('case_guest_tags')
+      .select('id, name')
+      .eq('case_id', caseId)
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true }),
+  ]);
+  if (guests.error || tags.error) return null;
+  return {
+    responses: groupGuestResponses((guests.data ?? []) as unknown as GuestRow[]),
+    tags: (tags.data ?? []) as GuestCustomTag[],
+  };
 }
 
 export function summarizeGuestResponses(responses: GuestResponse[]): GuestSummary {
