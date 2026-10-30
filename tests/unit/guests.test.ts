@@ -56,6 +56,27 @@ describe('guestResponseSchema', () => {
     expect(parsed.error!.issues[0].path).toEqual(['guests']);
   });
 
+  it('身体的なご事情は区分と補足を受け付け、「その他」には内容が要る', () => {
+    expect(
+      guestResponseSchema.safeParse({
+        ...base,
+        guests: [guest({ assistanceNeeds: ['mobility', 'wheelchair'] })],
+      }).success,
+    ).toBe(true);
+    const other = guestResponseSchema.safeParse({
+      ...base,
+      guests: [guest({ assistanceNeeds: ['other'] })],
+    });
+    expect(other.success).toBe(false);
+    expect(other.error!.issues[0].path).toEqual(['guests', 0, 'assistanceNote']);
+    expect(
+      guestResponseSchema.safeParse({
+        ...base,
+        guests: [guest({ assistanceNeeds: ['unknown'] })],
+      }).success,
+    ).toBe(false);
+  });
+
   it('1回の回答は10名まで', () => {
     const parsed = guestResponseSchema.safeParse({
       ...base,
@@ -79,13 +100,15 @@ const row = (overrides: Partial<GuestRow>): GuestRow => ({
   gender: 'female',
   responded_at: '2026-10-01T00:00:00Z',
   created_at: '2026-10-01T00:00:00Z',
+  assistance_needs: [],
+  assistance_note: null,
   ...overrides,
 });
 
 describe('groupGuestResponses／summarizeGuestResponses', () => {
   const rows: GuestRow[] = [
     row({ id: 'g2', full_name: '同伴', is_companion: true, age_category: 'child' }),
-    row({ id: 'g1', allergy_note: 'えび' }),
+    row({ id: 'g1', allergy_note: 'えび', assistance_needs: ['wheelchair', 'mobility'] }),
     row({
       id: 'g3',
       full_name: '欠席者',
@@ -102,6 +125,8 @@ describe('groupGuestResponses／summarizeGuestResponses', () => {
     expect(responses[1].people.map((p) => p.fullName)).toEqual(['本人', '同伴']);
     expect(responses[1].attending).toBe(true);
     expect(responses[0].attending).toBe(false);
+    // 区分は保存順ではなく GUEST_ASSISTANCE_NEEDS の順に並べる
+    expect(responses[1].people[0].assistanceNeeds).toEqual(['mobility', 'wheelchair']);
   });
 
   it('出席者だけを年齢区分・アレルギーで数える', () => {
@@ -111,6 +136,7 @@ describe('groupGuestResponses／summarizeGuestResponses', () => {
       declinedPeople: 1,
       byAge: { adult: 1, child: 1, infant: 0 },
       allergyPeople: 1,
+      assistancePeople: 1,
     });
   });
 });

@@ -44,6 +44,9 @@ export const POST = route(
         age_category: guest.ageCategory,
         gender: guest.gender,
         allergy_note: input.attending ? encryptPii(guest.allergyNote) : null,
+        // 身体的なご事情も出席時のみ。区分は座席の手がかりにするため平文、補足は暗号化する
+        assistance_needs: input.attending ? guest.assistanceNeeds : [],
+        assistance_note: input.attending ? encryptPii(guest.assistanceNote) : null,
       })),
     });
     if (error) throw fromPostgresError(error);

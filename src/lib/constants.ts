@@ -193,6 +193,37 @@ export const GUEST_GENDER_LABEL: Record<GuestGender, string> = {
   unspecified: '回答しない',
 };
 
+/**
+ * 特記事項のうち「身体的なご事情」の区分。座席や動線の配慮に使う。
+ * DB の case_guests_assistance_needs_check と揃える。
+ */
+export const GUEST_ASSISTANCE_NEEDS = [
+  'mobility',
+  'wheelchair',
+  'pregnancy',
+  'hearing',
+  'vision',
+  'other',
+] as const;
+export type GuestAssistanceNeed = (typeof GUEST_ASSISTANCE_NEEDS)[number];
+export const GUEST_ASSISTANCE_NEED_LABEL: Record<GuestAssistanceNeed, string> = {
+  mobility: '足腰が弱い・杖を使う',
+  wheelchair: '車いすを使う',
+  pregnancy: '妊娠中',
+  hearing: '耳が聞こえにくい',
+  vision: '目が見えにくい',
+  other: 'その他',
+};
+/** タグ・一覧で使う短い名前。 */
+export const GUEST_ASSISTANCE_NEED_SHORT_LABEL: Record<GuestAssistanceNeed, string> = {
+  mobility: '足腰',
+  wheelchair: '車いす',
+  pregnancy: '妊娠中',
+  hearing: '耳',
+  vision: '目',
+  other: '配慮その他',
+};
+
 export const GUEST_RELATIONSHIPS = [
   'family',
   'relative',
@@ -257,6 +288,7 @@ export const INPUT_LIMITS = {
   answerText: 2000,
   templateDescription: 500,
   guestAllergyNote: 500,
+  guestAssistanceNote: 500,
   fileBytes: 5 * 1024 * 1024,
   caseTotalFileBytes: 100 * 1024 * 1024,
 } as const;

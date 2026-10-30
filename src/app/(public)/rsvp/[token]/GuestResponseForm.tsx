@@ -7,6 +7,8 @@ import { ApiCallError, api } from '@/lib/api/client';
 import {
   GUEST_AGE_CATEGORIES,
   GUEST_AGE_CATEGORY_LABEL,
+  GUEST_ASSISTANCE_NEEDS,
+  GUEST_ASSISTANCE_NEED_LABEL,
   GUEST_GENDERS,
   GUEST_GENDER_LABEL,
   GUEST_RELATIONSHIPS,
@@ -15,6 +17,7 @@ import {
   INPUT_LIMITS,
   PARTNER_ROLES,
   type GuestAgeCategory,
+  type GuestAssistanceNeed,
   type GuestGender,
   type GuestRelationship,
   type PartnerRole,
@@ -29,6 +32,9 @@ interface PersonDraft {
   gender: GuestGender | '';
   hasAllergy: boolean;
   allergyNote: string;
+  hasAssistance: boolean;
+  assistanceNeeds: GuestAssistanceNeed[];
+  assistanceNote: string;
 }
 
 const emptyPerson = (key: number): PersonDraft => ({
@@ -39,6 +45,9 @@ const emptyPerson = (key: number): PersonDraft => ({
   gender: '',
   hasAllergy: false,
   allergyNote: '',
+  hasAssistance: false,
+  assistanceNeeds: [],
+  assistanceNote: '',
 });
 
 /** 選択式の行。選択中は枠と文字でも示す（色だけに頼らない）。 */
@@ -100,8 +109,14 @@ export function GuestResponseForm({
 
   const update = (index: number, patch: Partial<PersonDraft>) => {
     setPeople((list) => list.map((p, i) => (i === index ? { ...p, ...patch } : p)));
+    // チェックや区分を変えたら、それに対応する内容欄のエラーも消す
+    const NOTE_FIELD: Record<string, string> = {
+      hasAllergy: 'allergyNote',
+      hasAssistance: 'assistanceNote',
+      assistanceNeeds: 'assistanceNote',
+    };
     const fields = Object.keys(patch).map(
-      (field) => `guests.${index}.${field === 'hasAllergy' ? 'allergyNote' : field}`,
+      (field) => `guests.${index}.${NOTE_FIELD[field] ?? field}`,
     );
     clearErrors((field) => fields.includes(field));
   };
@@ -121,15 +136,25 @@ export function GuestResponseForm({
 
   const submit = async () => {
     setError(null);
-    // 「アレルギーあり」で内容が空だと、保存時に「なし」と区別できなくなる
-    const missingAllergy: Record<string, string> = {};
+    // 「ある」にチェックして中身が空だと、保存時に「なし」と区別できなくなる
+    const missing: Record<string, string> = {};
     people.forEach((p, index) => {
-      if (attending && p.hasAllergy && !p.allergyNote.trim()) {
-        missingAllergy[`guests.${index}.allergyNote`] = 'アレルギーの内容をご記入ください';
+      if (!attending) return;
+      if (p.hasAllergy && !p.allergyNote.trim()) {
+        missing[`guests.${index}.allergyNote`] = 'アレルギーの内容をご記入ください';
+      }
+      if (p.hasAssistance && p.assistanceNeeds.length === 0 && !p.assistanceNote.trim()) {
+        missing[`guests.${index}.assistanceNote`] = '当てはまるものを選ぶか、内容をご記入ください';
+      } else if (
+        p.hasAssistance &&
+        p.assistanceNeeds.includes('other') &&
+        !p.assistanceNote.trim()
+      ) {
+        missing[`guests.${index}.assistanceNote`] = '「その他」を選んだ場合は内容をご記入ください';
       }
     });
-    setFieldErrors(missingAllergy);
-    if (Object.keys(missingAllergy).length > 0) {
+    setFieldErrors(missing);
+    if (Object.keys(missing).length > 0) {
       setError('入力内容をご確認ください');
       return;
     }
@@ -145,6 +170,8 @@ export function GuestResponseForm({
           ageCategory: p.ageCategory || undefined,
           gender: p.gender || undefined,
           allergyNote: attending && p.hasAllergy ? p.allergyNote : null,
+          assistanceNeeds: attending && p.hasAssistance ? p.assistanceNeeds : [],
+          assistanceNote: attending && p.hasAssistance ? p.assistanceNote : null,
         })),
       });
       setDone(result);
@@ -360,35 +387,92 @@ export function GuestResponseForm({
               </div>
             </div>
 
-            {/* 欠席の方の食事は手配しないため、アレルギーは出席のときだけ伺う */}
+            {/*
+              特記事項。食事と当日の席・動線の手配に使うため、出席のときだけ伺う。
+              「ある」にチェックした人だけ詳細を出し、ほとんどの方は2つのチェックを素通りできるようにする
+            */}
             {attending && (
-              <div>
-                <label className="flex items-start gap-2 text-label text-text-primary">
-                  <input
-                    type="checkbox"
-                    className="mt-[3px] h-4 w-4 accent-primary"
-                    checked={person.hasAllergy}
-                    onChange={(e) => update(index, { hasAllergy: e.target.checked })}
-                  />
-                  <span>食物アレルギー・食べられないものがある</span>
-                </label>
-                {person.hasAllergy && (
-                  <>
-                    <label className="field-label mt-2" htmlFor={id('allergy')}>
-                      内容（食材と症状の程度など）
-                    </label>
-                    <textarea
-                      id={id('allergy')}
-                      className="field min-h-[80px]"
-                      maxLength={INPUT_LIMITS.guestAllergyNote}
-                      placeholder="例：えび・かに（少量でも不可）"
-                      value={person.allergyNote}
-                      onChange={(e) => update(index, { allergyNote: e.target.value })}
+              <fieldset className="flex flex-col gap-3 border-t border-border-light pt-3">
+                <legend className="text-label font-bold text-text-primary">特記事項</legend>
+                <div>
+                  <label className="flex items-start gap-2 text-label text-text-primary">
+                    <input
+                      type="checkbox"
+                      className="mt-[3px] h-4 w-4 accent-primary"
+                      checked={person.hasAllergy}
+                      onChange={(e) => update(index, { hasAllergy: e.target.checked })}
                     />
-                    <FieldError message={fieldErrors[`${prefix}.allergyNote`]} />
-                  </>
-                )}
-              </div>
+                    <span>食物アレルギー・食べられないものがある</span>
+                  </label>
+                  {person.hasAllergy && (
+                    <>
+                      <label className="field-label mt-2" htmlFor={id('allergy')}>
+                        内容（食材と症状の程度など）
+                      </label>
+                      <textarea
+                        id={id('allergy')}
+                        className="field min-h-[80px]"
+                        maxLength={INPUT_LIMITS.guestAllergyNote}
+                        placeholder="例：えび・かに（少量でも不可）"
+                        value={person.allergyNote}
+                        onChange={(e) => update(index, { allergyNote: e.target.value })}
+                      />
+                      <FieldError message={fieldErrors[`${prefix}.allergyNote`]} />
+                    </>
+                  )}
+                </div>
+
+                <div>
+                  <label className="flex items-start gap-2 text-label text-text-primary">
+                    <input
+                      type="checkbox"
+                      className="mt-[3px] h-4 w-4 accent-primary"
+                      checked={person.hasAssistance}
+                      onChange={(e) => update(index, { hasAssistance: e.target.checked })}
+                    />
+                    <span>お席や移動で配慮が必要な身体的なご事情がある</span>
+                  </label>
+                  {person.hasAssistance && (
+                    <div className="mt-2 flex flex-col gap-2">
+                      <p className="text-caption text-text-secondary">
+                        当てはまるものをお選びください（複数可）。お席の位置などの参考にいたします。
+                      </p>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {GUEST_ASSISTANCE_NEEDS.map((need) => (
+                          <label key={need} className="flex items-center gap-2 text-label">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-primary"
+                              checked={person.assistanceNeeds.includes(need)}
+                              onChange={(e) =>
+                                update(index, {
+                                  assistanceNeeds: e.target.checked
+                                    ? [...person.assistanceNeeds, need]
+                                    : person.assistanceNeeds.filter((n) => n !== need),
+                                })
+                              }
+                            />
+                            {GUEST_ASSISTANCE_NEED_LABEL[need]}
+                          </label>
+                        ))}
+                      </div>
+                      <label className="field-label" htmlFor={id('assistance')}>
+                        {person.assistanceNeeds.includes('other') ? '内容' : '補足（任意）'}
+                      </label>
+                      <textarea
+                        id={id('assistance')}
+                        className="field min-h-[80px]"
+                        maxLength={INPUT_LIMITS.guestAssistanceNote}
+                        placeholder="例：長時間の立ち歩きが難しいため、出入口に近い席を希望します"
+                        value={person.assistanceNote}
+                        aria-invalid={fieldErrors[`${prefix}.assistanceNote`] ? true : undefined}
+                        onChange={(e) => update(index, { assistanceNote: e.target.value })}
+                      />
+                      <FieldError message={fieldErrors[`${prefix}.assistanceNote`]} />
+                    </div>
+                  )}
+                </div>
+              </fieldset>
             )}
           </section>
         );

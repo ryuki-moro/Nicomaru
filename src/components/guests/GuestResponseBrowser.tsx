@@ -14,6 +14,7 @@ import { ErrorSummary } from '@/components/ui/ErrorSummary';
 import { ApiCallError, api } from '@/lib/api/client';
 import {
   GUEST_AGE_CATEGORY_LABEL,
+  GUEST_ASSISTANCE_NEED_LABEL,
   GUEST_GENDER_LABEL,
   GUEST_RELATIONSHIP_LABEL,
   PARTNER_ROLE_LABEL,
@@ -59,6 +60,7 @@ export function GuestResponseBrowser({ caseId, responses, tags, editable }: Prop
               relationship: response.relationship,
               ageCategory: person.ageCategory,
               allergyNote: person.allergyNote,
+              assistanceNeeds: person.assistanceNeeds,
               tagIds: person.tagIds,
             },
             tags,
@@ -257,6 +259,20 @@ function PersonRow({
         <p className="mt-1 rounded-card bg-warning-bg px-2 py-1 text-caption text-warning-text">
           <span className="font-bold">アレルギー：</span>
           {person.allergyNote}
+        </p>
+      )}
+      {(person.assistanceNeeds.length > 0 || person.assistanceNote) && (
+        <p className="mt-1 rounded-card bg-info-bg px-2 py-1 text-caption text-text-primary">
+          <span className="font-bold">身体的なご事情：</span>
+          {[
+            person.assistanceNeeds
+              .filter((need) => need !== 'other')
+              .map((need) => GUEST_ASSISTANCE_NEED_LABEL[need])
+              .join('・'),
+            person.assistanceNote,
+          ]
+            .filter(Boolean)
+            .join('／')}
         </p>
       )}
       {personTags.length > 0 && (

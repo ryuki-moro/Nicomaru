@@ -25,7 +25,7 @@ export function GuestResponseList({
 
   return (
     <div className="flex flex-col gap-3">
-      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <SummaryItem label="ご出席" value={`${summary.attendingPeople}名`} />
         <SummaryItem label="ご欠席" value={`${summary.declinedPeople}名`} />
         <SummaryItem
@@ -35,6 +35,7 @@ export function GuestResponseList({
           ).join('・')}
         />
         <SummaryItem label="アレルギーあり" value={`${summary.allergyPeople}名`} />
+        <SummaryItem label="身体的なご事情あり" value={`${summary.assistancePeople}名`} />
       </dl>
 
       <GuestResponseBrowser

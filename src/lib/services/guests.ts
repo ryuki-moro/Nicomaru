@@ -10,7 +10,9 @@
  */
 import {
   GUEST_AGE_CATEGORIES,
+  GUEST_ASSISTANCE_NEEDS,
   type GuestAgeCategory,
+  type GuestAssistanceNeed,
   type GuestGender,
   type GuestRelationship,
   type PartnerRole,
@@ -28,7 +30,8 @@ export function buildGuestFormUrl(baseUrl: string, token: string): string {
 /** case_guests から一覧に使う列。 */
 export const GUEST_RESPONSE_COLUMNS =
   'id, full_name, kana, relationship, allergy_note, invitation_status, response_group_id, ' +
-  'is_companion, guest_side, age_category, gender, responded_at, created_at';
+  'is_companion, guest_side, age_category, gender, responded_at, created_at, ' +
+  'assistance_needs, assistance_note';
 
 export interface GuestRow {
   id: string;
@@ -44,6 +47,8 @@ export interface GuestRow {
   gender: GuestGender | null;
   responded_at: string | null;
   created_at: string;
+  assistance_needs: GuestAssistanceNeed[] | null;
+  assistance_note: string | null;
   /** 自由タグの対応（埋め込み select）。読まない場合は省略される */
   case_guest_tag_links?: { tag_id: string }[];
 }
@@ -55,6 +60,9 @@ export interface GuestPerson {
   ageCategory: GuestAgeCategory | null;
   gender: GuestGender | null;
   allergyNote: string;
+  /** 身体的なご事情の区分（足腰・車いすなど）。並びは GUEST_ASSISTANCE_NEEDS の順 */
+  assistanceNeeds: GuestAssistanceNeed[];
+  assistanceNote: string;
   /** 付いている自由タグのID（case_guest_tags.id） */
   tagIds: string[];
 }
@@ -75,6 +83,8 @@ export interface GuestSummary {
   declinedPeople: number;
   byAge: Record<GuestAgeCategory, number>;
   allergyPeople: number;
+  /** 身体的なご事情（区分または補足）のある出席者 */
+  assistancePeople: number;
 }
 
 /**
@@ -103,7 +113,7 @@ export function groupGuestResponses(rows: GuestRow[]): GuestResponse[] {
         guestSide: head.guest_side,
         relationship: head.relationship as GuestRelationship | null,
         respondedAt: head.responded_at ?? head.created_at,
-        // 氏名・ふりがな・アレルギーは暗号化列（13-1）。読めない値で画面を落とさない
+        // 氏名・ふりがな・アレルギー・ご事情の補足は暗号化列（13-1）。読めない値で画面を落とさない
         people: sorted.map((row) => ({
           id: row.id,
           fullName: readPii(row.full_name),
@@ -111,6 +121,10 @@ export function groupGuestResponses(rows: GuestRow[]): GuestResponse[] {
           ageCategory: row.age_category,
           gender: row.gender,
           allergyNote: readPii(row.allergy_note),
+          assistanceNeeds: GUEST_ASSISTANCE_NEEDS.filter((need) =>
+            (row.assistance_needs ?? []).includes(need),
+          ),
+          assistanceNote: readPii(row.assistance_note),
           tagIds: (row.case_guest_tag_links ?? []).map((link) => link.tag_id),
         })),
       };
@@ -160,6 +174,7 @@ export function summarizeGuestResponses(responses: GuestResponse[]): GuestSummar
   let attendingPeople = 0;
   let declinedPeople = 0;
   let allergyPeople = 0;
+  let assistancePeople = 0;
   for (const response of responses) {
     if (!response.attending) {
       declinedPeople += response.people.length;
@@ -169,7 +184,15 @@ export function summarizeGuestResponses(responses: GuestResponse[]): GuestSummar
       attendingPeople += 1;
       if (person.ageCategory) byAge[person.ageCategory] += 1;
       if (person.allergyNote) allergyPeople += 1;
+      if (person.assistanceNeeds.length > 0 || person.assistanceNote) assistancePeople += 1;
     }
   }
-  return { responses: responses.length, attendingPeople, declinedPeople, byAge, allergyPeople };
+  return {
+    responses: responses.length,
+    attendingPeople,
+    declinedPeople,
+    byAge,
+    allergyPeople,
+    assistancePeople,
+  };
 }

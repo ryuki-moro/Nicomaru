@@ -69,7 +69,7 @@ export default async function CoupleGuestsPage() {
         <h2 className="text-label font-bold text-text-primary">回答URL</h2>
         <p className="text-caption text-text-secondary">
           {'ゲストの皆さまにこのURLをお送りください。ゲストはログインせずに、ご出欠・年齢区分・性別・' +
-            'おふたりとのご関係・アレルギーを回答できます。ご家族などは同伴者としてまとめて回答できます。'}
+            'おふたりとのご関係・アレルギーや身体的なご事情を回答できます。ご家族などは同伴者としてまとめて回答できます。'}
         </p>
         <GuestFormLink caseId={weddingCase.id} url={url} />
       </section>

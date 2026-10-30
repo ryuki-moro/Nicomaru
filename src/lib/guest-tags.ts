@@ -1,7 +1,7 @@
 /**
  * ゲストのタグ（座席表で卓の役割と照らし合わせて分類するため）。
  *
- * - 自動タグ: 出欠回答の内容（新郎新婦側・関係・年齢区分・アレルギー）から導く。保存しない
+ * - 自動タグ: 出欠回答の内容（新郎新婦側・関係・年齢区分・アレルギー・身体的なご事情）から導く。保存しない
  * - 自由タグ: 新郎新婦（担当プランナーも可）が案件ごとに作る分類。case_guest_tags に保存する
  *
  * どちらも key で識別する。自動タグの key は固定の文字列（例: 'side:groom'、'age:child'）なので、
@@ -13,11 +13,14 @@
 import {
   GUEST_AGE_CATEGORIES,
   GUEST_AGE_CATEGORY_LABEL,
+  GUEST_ASSISTANCE_NEEDS,
+  GUEST_ASSISTANCE_NEED_SHORT_LABEL,
   GUEST_RELATIONSHIPS,
   GUEST_RELATIONSHIP_LABEL,
   PARTNER_ROLES,
   PARTNER_ROLE_LABEL,
   type GuestAgeCategory,
+  type GuestAssistanceNeed,
   type GuestRelationship,
   type PartnerRole,
 } from '@/lib/constants';
@@ -63,6 +66,12 @@ export const AUTO_GUEST_TAGS: readonly GuestTag[] = [
     kind: 'auto' as const,
   })),
   { key: ALLERGY_TAG_KEY, label: 'アレルギーあり', kind: 'auto' },
+  // 身体的なご事情。座席表で「出入口に近い卓」「スクリーンが見やすい卓」などへ寄せる手がかり
+  ...GUEST_ASSISTANCE_NEEDS.map((value) => ({
+    key: `assistance:${value}`,
+    label: GUEST_ASSISTANCE_NEED_SHORT_LABEL[value],
+    kind: 'auto' as const,
+  })),
 ];
 
 const AUTO_TAG_BY_KEY = new Map(AUTO_GUEST_TAGS.map((tag) => [tag.key, tag]));
@@ -72,6 +81,7 @@ export interface TaggableGuest {
   relationship: GuestRelationship | null;
   ageCategory: GuestAgeCategory | null;
   allergyNote: string;
+  assistanceNeeds: GuestAssistanceNeed[];
   tagIds: string[];
 }
 
@@ -82,6 +92,7 @@ export function guestTags(guest: TaggableGuest, customTags: GuestCustomTag[]): G
     guest.relationship && `relationship:${guest.relationship}`,
     guest.ageCategory && `age:${guest.ageCategory}`,
     guest.allergyNote && ALLERGY_TAG_KEY,
+    ...guest.assistanceNeeds.map((need) => `assistance:${need}`),
   ].filter((key): key is string => Boolean(key));
   return [
     ...autoKeys.flatMap((key) => AUTO_TAG_BY_KEY.get(key) ?? []),

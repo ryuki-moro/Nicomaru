@@ -163,6 +163,34 @@ describe('ゲストの回答登録', () => {
     ).rejects.toMatchObject({ code: 'BH422' });
   });
 
+  it('身体的なご事情は出席の回答でのみ保存し、未知の区分は拒否する', async () => {
+    const attending = await submit('form-hash-2', true, [
+      person('enc:配慮', {
+        assistance_needs: ['wheelchair', 'mobility', 'wheelchair'],
+        assistance_note: 'enc:出入口の近く',
+      }),
+    ]);
+    const declined = await submit('form-hash-2', false, [
+      person('enc:欠席配慮', { assistance_needs: ['mobility'], assistance_note: 'enc:x' }),
+    ]);
+    const rows = await db.asOwner(() =>
+      db.query<{ group_id: string; needs: string[]; note: string | null }>(
+        `select response_group_id as group_id, assistance_needs::text[] as needs,
+                assistance_note as note
+           from case_guests where response_group_id = any($1::uuid[])`,
+        [[attending.rows[0].group_id, declined.rows[0].group_id]],
+      ),
+    );
+    const byGroup = Object.fromEntries(rows.rows.map((r) => [r.group_id, r]));
+    expect(byGroup[attending.rows[0].group_id!].needs.sort()).toEqual(['mobility', 'wheelchair']);
+    expect(byGroup[attending.rows[0].group_id!].note).toBe('enc:出入口の近く');
+    expect(byGroup[declined.rows[0].group_id!]).toMatchObject({ needs: [], note: null });
+
+    await expect(
+      submit('form-hash-2', true, [person('enc:x', { assistance_needs: ['flying'] })]),
+    ).rejects.toMatchObject({ code: '23514' });
+  });
+
   it('切り替え前のURL・存在しないURLでは登録されない', async () => {
     for (const hash of ['form-hash-1', 'unknown-hash']) {
       const result = await submit(hash, true, [person('enc:x')]);

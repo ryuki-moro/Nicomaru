@@ -12,6 +12,7 @@ import {
   CONTACT_CHANNELS,
   FOLLOW_METHODS,
   GUEST_AGE_CATEGORIES,
+  GUEST_ASSISTANCE_NEEDS,
   GUEST_GENDERS,
   GUEST_RELATIONSHIPS,
   GUEST_RESPONSE_MAX_PEOPLE,
@@ -253,14 +254,25 @@ export const reviewSubmissionSchema = z
   });
 
 // ------------------------------------------------------------ ゲストの出欠回答
-const guestPersonSchema = z.object({
-  fullName: shortText,
-  kana: z.string().trim().max(INPUT_LIMITS.shortText).optional().nullable(),
-  ageCategory: z.enum(GUEST_AGE_CATEGORIES, { message: '年齢区分を選択してください' }),
-  gender: z.enum(GUEST_GENDERS, { message: '性別を選択してください' }),
-  /** 空欄は「アレルギーなし」。欠席の回答では保存しない */
-  allergyNote: z.string().trim().max(INPUT_LIMITS.guestAllergyNote).optional().nullable(),
-});
+const guestPersonSchema = z
+  .object({
+    fullName: shortText,
+    kana: z.string().trim().max(INPUT_LIMITS.shortText).optional().nullable(),
+    ageCategory: z.enum(GUEST_AGE_CATEGORIES, { message: '年齢区分を選択してください' }),
+    gender: z.enum(GUEST_GENDERS, { message: '性別を選択してください' }),
+    /** 空欄は「アレルギーなし」。欠席の回答では保存しない */
+    allergyNote: z.string().trim().max(INPUT_LIMITS.guestAllergyNote).optional().nullable(),
+    /** 身体的なご事情の区分（足腰・車いすなど）。空配列は「特になし」。欠席の回答では保存しない */
+    assistanceNeeds: z
+      .array(z.enum(GUEST_ASSISTANCE_NEEDS, { message: 'ご事情の区分が正しくありません' }))
+      .max(GUEST_ASSISTANCE_NEEDS.length)
+      .default([]),
+    assistanceNote: z.string().trim().max(INPUT_LIMITS.guestAssistanceNote).optional().nullable(),
+  })
+  .refine((v) => !v.assistanceNeeds.includes('other') || Boolean(v.assistanceNote), {
+    path: ['assistanceNote'],
+    message: '「その他」を選んだ場合は内容をご記入ください',
+  });
 
 /** 先頭が回答者本人、2人目以降が同伴者。欠席の回答に同伴者は付けない。 */
 export const guestResponseSchema = z
