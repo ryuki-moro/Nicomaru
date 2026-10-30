@@ -10,6 +10,8 @@
   "preview_urls": false,
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "nicomaru" }],
+  // ダッシュボードで設定した APP_BASE_URL・RESEND_FROM を配備で消さない。
+  "keep_vars": true,
   "vars": { "NICOMARU_DB": "d1", "NEXT_PUBLIC_NICOMARU_DB": "d1" },
   "d1_databases": [
     {
