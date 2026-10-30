@@ -9,7 +9,7 @@ import { z } from 'zod';
 
 import {
   ALLOWED_FILE_TYPES,
-  CONTACT_CHANNELS,
+  SENDABLE_CHANNELS,
   FOLLOW_METHODS,
   GUEST_AGE_CATEGORIES,
   GUEST_ASSISTANCE_NEEDS,
@@ -124,7 +124,7 @@ export const caseCreateSchema = z.object({
   contactEmail: email,
   /** K03「主連絡先」。選択した側に is_primary_contact=true と recipient_email を設定する（6-6-1） */
   primaryContact: z.enum(PARTNER_ROLES),
-  contactChannel: z.enum(CONTACT_CHANNELS),
+  contactChannel: z.enum(SENDABLE_CHANNELS),
   guestCount: z.number().int().min(0).optional().nullable(),
   planTypeId: z.string().uuid('プラン種別を選択してください'),
   venueRoom: z.string().trim().max(INPUT_LIMITS.shortText).optional().nullable(),
@@ -306,7 +306,7 @@ export const invitationIssueSchema = z
   .object({
     targetPartnerRole: z.enum(PARTNER_ROLES),
     /** 発行と同時に送信する場合に指定する。省略時は発行のみ（URLを応答で1度だけ返す） */
-    send: z.enum(CONTACT_CHANNELS).optional(),
+    send: z.enum(SENDABLE_CHANNELS).optional(),
     recipientEmail: email.optional(),
   })
   .refine((v) => !v.recipientEmail || v.send === 'email', {
@@ -316,7 +316,7 @@ export const invitationIssueSchema = z
 
 export const invitationSendSchema = z
   .object({
-    channel: z.enum(CONTACT_CHANNELS),
+    channel: z.enum(SENDABLE_CHANNELS),
     recipientEmail: email.optional(),
   })
   .refine((v) => !v.recipientEmail || v.channel === 'email', {
@@ -446,7 +446,7 @@ export const notificationSendSchema = z
   .object({
     caseId: z.string().uuid(),
     recipientUserId: z.string().uuid(),
-    channel: z.enum(['line', 'email', 'in_app']),
+    channel: z.enum(['email', 'in_app']),
     notificationType: z.enum(NOTIFICATION_TYPES),
     taskId: z.string().uuid().optional().nullable(),
     taskName: z.string().trim().max(120).optional().nullable(),
@@ -493,11 +493,6 @@ export const venueUpdateSchema = z
   .refine((value) => Object.values(value).some((item) => item !== undefined), {
     message: '更新する項目を指定してください',
   });
-
-/** POST /api/line/link（機能1-3、Phase 2）。linkToken は follow イベント経由で受け取った値。 */
-export const lineLinkSchema = z.object({
-  linkToken: z.string().trim().min(1).max(200),
-});
 
 /** POST /api/ai/jobs（機能9-6、Phase 3）。faq_answer は専用APIから投入する（7-3）。 */
 export const aiJobCreateSchema = z.object({

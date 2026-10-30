@@ -1,3 +1,4 @@
+import { localD1 } from '@/lib/d1/mode';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -49,7 +50,7 @@ export default async function LoginPage({
       <div>
         <h1 className="text-title font-bold text-text-primary">ログイン</h1>
         <p className="mt-1 text-label text-text-muted">
-          {process.env.NICOMARU_DB === 'd1-local'
+          {localD1()
             ? '新郎新婦は確認コード、プランナー・管理者はパスワードでログインできます。'
             : initialMode === 'password'
               ? 'プランナー・管理者はメールアドレスとパスワードでログインしてください。'
@@ -64,7 +65,7 @@ export default async function LoginPage({
       )}
 
       {showDevAdmin && <DevAdminLoginButton />}
-      {process.env.NICOMARU_DB === 'd1-local' && (
+      {localD1() && (
         <a
           href="/dev/mailbox"
           target="_blank"

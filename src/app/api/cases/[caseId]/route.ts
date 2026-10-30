@@ -11,6 +11,7 @@
  * 「提示した内容」と「適用する内容」を必ず一致させるため、再計算はサービス層
  * （schedule.ts）で1度だけ行い、その結果をそのまま apply_case_update() へ渡す。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireStaff } from '@/lib/auth/session';
 import { COUPLE_PROFILE_COLUMNS, INCOMPLETE_TASK_STATUSES, type TaskStatus } from '@/lib/constants';
@@ -61,7 +62,7 @@ export const GET = route(
   async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
     const user = await requireStaff();
     const { caseId } = await context.params;
-    if (process.env.NICOMARU_DB === 'd1-local') {
+    if (usingD1()) {
       const { localDB } = await import('@/lib/d1/runtime');
       const { caseRow, detailDto } = await import('@/lib/d1/cases');
       return ok(detailDto(await caseRow(await localDB(), user, caseId)));
@@ -133,7 +134,7 @@ export const PATCH = route(
   async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
     const actor = await requireStaff();
     const { caseId } = await context.params;
-    if (process.env.NICOMARU_DB === 'd1-local') {
+    if (usingD1()) {
       const input = await parseBody(request, casePatchSchema.strict());
       const { localDB } = await import('@/lib/d1/runtime');
       return ok(

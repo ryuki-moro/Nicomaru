@@ -147,7 +147,7 @@ describe.each([
     );
     expect(m.send).toHaveBeenCalledWith(
       'email',
-      { email: 'bride@example.test', lineUserId: null },
+      { email: 'bride@example.test' },
       expect.objectContaining({
         invitationUrl: expect.stringMatching(/^https:\/\/app.test\/register\//),
       }),
@@ -215,12 +215,22 @@ describe.each([
     expect((await post(request(p), context())).status).toBe(400);
     expect(m.client).not.toHaveBeenCalled();
   });
-  it('D1ローカルで未対応の宛先入力を黙って無視しない', async () => {
+  it('D1ローカルへ入力した宛先を渡す', async () => {
     vi.stubEnv('NICOMARU_DB', 'd1-local');
-    expect((await post(request(payload('bride@example.test')), context())).status).toBe(422);
+    expect((await post(request(payload('bride@example.test')), context())).status).toBe(
+      post === issue ? 201 : 200,
+    );
     expect(m.client).not.toHaveBeenCalled();
     expect(m.send).not.toHaveBeenCalled();
-    expect(m.d1Issue).not.toHaveBeenCalled();
+    expect(m.d1Issue).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      'c',
+      'bride',
+      'email',
+      post === issue ? undefined : 'old',
+      'bride@example.test',
+    );
   });
 });
 

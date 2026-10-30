@@ -16,7 +16,7 @@ import { InvitationResultModal, type IssuedInvitation } from './InvitationResult
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { ApiCallError, api } from '@/lib/api/client';
 import {
-  CONTACT_CHANNELS,
+  SENDABLE_CHANNELS,
   CONTACT_CHANNEL_LABEL,
   INPUT_LIMITS,
   PARTNER_ROLES,
@@ -250,7 +250,7 @@ export function CaseForm({ plans, today }: Props) {
               value={form.contactChannel}
               onChange={(e) => update('contactChannel', e.target.value as ContactChannel)}
             >
-              {CONTACT_CHANNELS.map((channel) => (
+              {SENDABLE_CHANNELS.map((channel) => (
                 <option key={channel} value={channel}>
                   {CONTACT_CHANNEL_LABEL[channel]}
                 </option>

@@ -15,6 +15,7 @@
  * 表6-6 には現れないが、Storage への書き込みと storage_files への記録という
  * 複数リソースの更新を伴うため Route Handler に置く（6-5 の原則）。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { randomUUID } from 'node:crypto';
 
 import { ok, route } from '@/lib/api/route';
@@ -79,14 +80,14 @@ export const POST = route(async (request: Request) => {
 
   const taskId = form.get('taskId');
   const file = form.get('file');
-  if (typeof taskId !== 'string' || (!isUuid(taskId) && process.env.NICOMARU_DB !== 'd1-local')) {
+  if (typeof taskId !== 'string' || (!isUuid(taskId) && !usingD1())) {
     throw badRequest([{ field: 'taskId', reason: '宿題を特定できませんでした' }]);
   }
   if (!(file instanceof File) || file.size === 0) {
     throw badRequest([{ field: 'file', reason: 'ファイルを選んでください' }]);
   }
 
-  const d1 = process.env.NICOMARU_DB === 'd1-local';
+  const d1 = usingD1();
   const supabase = d1 ? null : await createSupabaseServerClient();
 
   const taskResult = d1

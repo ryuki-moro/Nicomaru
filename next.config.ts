@@ -4,6 +4,13 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   logging: process.env.NICOMARU_DB === 'd1-local' ? { incomingRequests: false } : undefined,
   serverExternalPackages: ['wrangler', 'better-auth'],
+  // ファイル追跡はNode向けの入口だけを拾う。OpenNextはworkerd向けの入口で束ねるため明示する。
+  outputFileTracingIncludes: {
+    '/**': [
+      './node_modules/@better-auth/core/dist/**/*.mjs',
+      './node_modules/@better-auth/utils/dist/**/*.mjs',
+    ],
+  },
   // 通常の開発サーバーと同時に確認できるよう生成物を分ける。
   distDir:
     process.env.NICOMARU_DB === 'd1-local'
@@ -14,6 +21,21 @@ const nextConfig: NextConfig = {
   // middlewareの転送先127.0.0.1をNext.jsがlocalhostへ書き換えないようにする。
   // ログインCookieと更新APIの同一Origin検証を、設定したURLで一致させる。
   skipMiddlewareUrlNormalize: true,
+  // 開発サーバーを複数同時に動かすと、互いの生成物やローカルDBの書込みで再コンパイルが続く。
+  webpack: (config, { dev }) => {
+    if (dev)
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [
+          '**/node_modules/**',
+          '**/.git/**',
+          '**/.next*/**',
+          '**/.wrangler/**',
+          '**/.work/**',
+        ],
+      };
+    return config;
+  },
   // 型・Lint の失敗をビルドで握りつぶさない（12-2 テストゲート）
   typescript: { ignoreBuildErrors: false },
   eslint: { ignoreDuringBuilds: false },

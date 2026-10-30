@@ -153,6 +153,12 @@ describe('招待APIの入力制約', () => {
   });
   it('宛先なしは従来入力を維持', () => {
     expect(invitationIssueSchema.safeParse({ targetPartnerRole: 'bride' }).success).toBe(true);
-    expect(invitationSendSchema.safeParse({ channel: 'line' }).success).toBe(true);
+    expect(invitationSendSchema.safeParse({ channel: 'email' }).success).toBe(true);
+  });
+  it('LINE連携の終了後はlineを受け付けない', () => {
+    expect(invitationSendSchema.safeParse({ channel: 'line' }).success).toBe(false);
+    expect(
+      invitationIssueSchema.safeParse({ targetPartnerRole: 'bride', send: 'line' }).success,
+    ).toBe(false);
   });
 });

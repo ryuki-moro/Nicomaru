@@ -7,7 +7,7 @@ import { OTP } from '@/lib/constants';
 import { hmacHash } from '@/lib/crypto';
 import type { ResolvedUser, AppUser } from '@/lib/auth/session';
 import { localDB } from './runtime';
-import { captureMail } from './mailbox';
+import { deliverMail } from './mailbox';
 
 export async function d1Auth() {
   return createD1Auth(await localDB());
@@ -25,13 +25,23 @@ export function createD1Auth(db: D1Database) {
         allowedAttempts: OTP.verifyFailuresBeforeInvalidation,
         disableSignUp: true,
         storeOTP: { hash: async (code) => hmacHash(`otp:${code}`) },
-        sendVerificationOTP: async ({ email, otp }) =>
-          captureMail(db, {
+        sendVerificationOTP: async ({ email, otp }) => {
+          const minutes = Math.round(OTP.ttlSeconds / 60);
+          const result = await deliverMail(db, {
             kind: 'otp',
             email,
             code: otp,
             expiresAt: new Date(Date.now() + OTP.ttlSeconds * 1000).toISOString(),
-          }),
+            subject: 'ログイン確認コード（にこまる）',
+            text: `ログイン確認コード: ${otp}
+
+このコードの有効期限は${minutes}分です。
+お心当たりがない場合は、このメールを破棄してください。`,
+          });
+          // 登録の有無を応答で区別させないため、送信失敗も例外にせず記録だけ残す。
+          if (!result.delivered && result.reason === 'provider_error')
+            console.error('[d1-auth] 確認コードのメール送信に失敗しました');
+        },
       }),
     ],
     session: { expiresIn: 3600, cookieCache: { enabled: false } },
@@ -68,7 +78,9 @@ export function createD1Auth(db: D1Database) {
 }
 
 export async function resolveD1User(): Promise<ResolvedUser> {
-  const session = await (await d1Auth()).api.getSession({ headers: await headers() });
+  // 先にheaders()を読み、静的生成時はDBへ接続する前に動的描画へ切り替える。
+  const requestHeaders = await headers();
+  const session = await (await d1Auth()).api.getSession({ headers: requestHeaders });
   if (!session) return { state: 'anonymous' };
   const row = await (
     await localDB()

@@ -1,5 +1,6 @@
 'use client';
 
+import { publicD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -10,9 +11,7 @@ import type { Role } from '@/lib/constants';
 export function StaffNav({ role }: { role: Role }) {
   const pathname = usePathname();
   const items = staffNavItemsFor(role).filter(
-    (item) =>
-      process.env.NEXT_PUBLIC_NICOMARU_DB !== 'd1-local' ||
-      ['/cases', '/submissions'].includes(item.href),
+    (item) => !publicD1() || ['/cases', '/submissions'].includes(item.href),
   );
 
   return (

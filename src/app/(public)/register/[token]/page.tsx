@@ -1,3 +1,4 @@
+import { localD1, usingD1 } from '@/lib/d1/mode';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -19,8 +20,7 @@ export const dynamic = 'force-dynamic';
 export default async function RegisterPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return <InvalidInvitation />;
-  if (process.env.NICOMARU_DB === 'd1-local')
-    return <RegistrationContent token={token} user={await getAppUser()} />;
+  if (usingD1()) return <RegistrationContent token={token} user={await getAppUser()} />;
   const admin = createSupabaseAdminClient('auth.invitation-peek');
   const { data, error } = await admin
     .from('case_invitations')
@@ -86,7 +86,7 @@ function RegistrationContent({ token, user }: { token: string; user: AppUser | n
           プランナーからお送りした招待URLです。挙式日やお名前などの情報は登録済みですので、ご連絡先だけご入力ください。パスワードの設定は不要です。
         </span>
       </div>
-      {process.env.NICOMARU_DB === 'd1-local' && (
+      {localD1() && (
         <a
           href="/dev/mailbox"
           target="_blank"

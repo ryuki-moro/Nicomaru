@@ -1,5 +1,6 @@
 'use client';
 
+import { publicD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -70,9 +71,7 @@ export function CoupleNav() {
     >
       <ul className="mx-auto flex max-w-phone">
         {ITEMS.filter(
-          (item) =>
-            process.env.NEXT_PUBLIC_NICOMARU_DB !== 'd1-local' ||
-            ['/mypage', '/mypage/tasks'].includes(item.href),
+          (item) => !publicD1() || ['/mypage', '/mypage/tasks'].includes(item.href),
         ).map((item) => {
           const active = isCoupleNavActive(item, pathname);
           return (

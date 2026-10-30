@@ -9,6 +9,7 @@
  * この行自体は revoked_at が付いて失効する。応答の id は新しく発行された行を指す。
  * 成功時に sent_at を記録する。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
 import {
@@ -20,7 +21,7 @@ import {
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { saveInvitationRecipient } from '@/lib/services/invitation-recipient';
-import { fromPostgresError, notFound, unprocessable } from '@/lib/errors';
+import { fromPostgresError, notFound } from '@/lib/errors';
 import { sendInvitation } from '@/lib/notify/send';
 import {
   buildInvitationUrl,
@@ -37,7 +38,6 @@ interface PartnerRow {
   full_name: string;
   email: string | null;
   email_hash: string | null;
-  user_profiles: { id: string; line_user_id: string | null } | null;
 }
 
 export const POST = route(
@@ -47,14 +47,21 @@ export const POST = route(
   ) => {
     const actor = await requireRole('planner', 'admin', 'system_admin');
     const { caseId, invitationId } = await context.params;
-    if (process.env.NICOMARU_DB === 'd1-local') {
+    if (usingD1()) {
       const input = await parseBody(request, invitationSendSchema.strict());
-      if (input.recipientEmail) throw unprocessable('D1ローカルでは招待先メールの追加は未対応です');
       const { localDB } = await import('@/lib/d1/runtime');
       return ok(
         await (
           await import('@/lib/d1/onboarding')
-        ).issueInvitation(await localDB(), actor, caseId, 'bride', input.channel, invitationId),
+        ).issueInvitation(
+          await localDB(),
+          actor,
+          caseId,
+          'bride',
+          input.channel,
+          invitationId,
+          input.recipientEmail,
+        ),
       );
     }
     const input = await parseBody(request, invitationSendSchema);
@@ -76,9 +83,7 @@ export const POST = route(
 
     const { data: caseData, error: caseError } = await supabase
       .from('wedding_cases')
-      .select(
-        `id, case_code, couple_profiles ( ${COUPLE_PROFILE_COLUMNS}, user_profiles ( id, line_user_id ) )`,
-      )
+      .select(`id, case_code, couple_profiles ( ${COUPLE_PROFILE_COLUMNS} )`)
       .eq('id', caseId)
       .maybeSingle();
     if (caseError) throw fromPostgresError(caseError);
@@ -140,7 +145,6 @@ export const POST = route(
       channel,
       {
         email: readPii(partner.email) || null,
-        lineUserId: partner.user_profiles?.line_user_id ?? null,
       },
       {
         caseCode: target.case_code,
