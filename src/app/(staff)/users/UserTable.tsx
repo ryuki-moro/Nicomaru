@@ -56,7 +56,7 @@ export function UserTable({
           {rows.map((row) => (
             <tr key={row.id}>
               <td>
-                <Link href={`/users/${row.id}`} className="text-link hover:underline">
+                <Link href={`/users/${row.id}`} className="btn-ghost">
                   {row.displayName}
                 </Link>
                 {row.id === currentUserId && <span className="ml-2 badge-neutral">ご自身</span>}

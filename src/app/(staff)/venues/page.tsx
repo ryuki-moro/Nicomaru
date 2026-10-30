@@ -101,7 +101,7 @@ export default async function VenueListPage({ searchParams }: Props) {
                 return (
                   <tr key={row.id}>
                     <td>
-                      <Link href={`/venues/${row.id}`} className="text-link hover:underline">
+                      <Link href={`/venues/${row.id}`} className="btn-ghost">
                         {row.code}
                       </Link>
                     </td>

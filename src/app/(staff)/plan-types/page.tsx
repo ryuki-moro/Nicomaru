@@ -324,10 +324,7 @@ export default async function PlanTypesPage({
               {planTypes.map((planType) => (
                 <tr key={planType.id}>
                   <td>
-                    <Link
-                      href={hrefFor({ edit: planType.id, page })}
-                      className="text-link hover:underline"
-                    >
+                    <Link href={hrefFor({ edit: planType.id, page })} className="btn-ghost">
                       {planType.name}
                     </Link>
                   </td>

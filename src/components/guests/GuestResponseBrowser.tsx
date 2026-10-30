@@ -142,7 +142,7 @@ export function GuestResponseBrowser({ caseId, responses, tags, editable }: Prop
             role="status"
           >
             {visiblePeople}名が当てはまります
-            <button type="button" className="text-link underline" onClick={() => setSelected([])}>
+            <button type="button" className="btn-ghost" onClick={() => setSelected([])}>
               絞り込みを解除
             </button>
           </p>
