@@ -1,5 +1,5 @@
 // Cloudflare本番（OpenNext）。ローカル検証は cloudflare/wrangler.jsonc を使う。
-// database_id は `wrangler d1 create nicomaru` の出力に置き換える。APP_BASE_URL と秘密値は配備時に設定する。
+// APP_BASE_URL・RESEND_FROM と秘密値はダッシュボードで設定する。
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "nicomaru",
@@ -17,7 +17,7 @@
     {
       "binding": "DB",
       "database_name": "nicomaru",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "database_id": "9a210477-8a24-482b-a138-a04f1cdc4bdc",
       "migrations_dir": "cloudflare/migrations",
     },
   ],
