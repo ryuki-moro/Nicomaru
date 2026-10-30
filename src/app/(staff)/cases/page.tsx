@@ -220,12 +220,12 @@ export default async function CaseListPage({ searchParams }: Props) {
                 <tr key={row.id}>
                   {/* 案件番号は途中で折り返すと読み違えやすいので1行に保つ（スマホでは表を横に送る） */}
                   <td className="whitespace-nowrap">
-                    <Link href={`/cases/${row.id}`} className="text-link hover:underline">
+                    <Link href={`/cases/${row.id}`} className="btn-ghost">
                       {row.caseCode}
                     </Link>
                   </td>
                   <td>
-                    <Link href={`/cases/${row.id}`} className="text-link hover:underline">
+                    <Link href={`/cases/${row.id}`} className="btn-ghost">
                       {row.coupleName || '（氏名未登録）'}
                     </Link>
                   </td>

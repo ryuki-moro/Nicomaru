@@ -30,7 +30,7 @@ export default async function LocalMailboxPage() {
             </p>
           )}
           {mail.url && (
-            <a className="text-link underline" href={mail.url} referrerPolicy="no-referrer">
+            <a className="btn-ghost" href={mail.url} referrerPolicy="no-referrer">
               招待を開く
             </a>
           )}

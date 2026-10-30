@@ -209,10 +209,7 @@ export default async function SubmissionsPage({
               {rows.map((row) => (
                 <tr key={row.id}>
                   <td>
-                    <Link
-                      href={`/submissions/${row.id}`}
-                      className="text-link underline underline-offset-2"
-                    >
+                    <Link href={`/submissions/${row.id}`} className="btn-ghost">
                       {row.case_tasks.wedding_cases.case_code}
                     </Link>
                   </td>

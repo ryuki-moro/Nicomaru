@@ -199,7 +199,7 @@ export default async function SubmissionReviewPage({
         <ReviewStatusBadge status={submission.review_status} />
       </div>
       <p className="mt-1 text-caption text-text-muted">
-        <Link href={`/cases/${task.case_id}`} className="text-link hover:underline">
+        <Link href={`/cases/${task.case_id}`} className="btn-ghost mr-2">
           {weddingCase.case_code}
         </Link>
         {coupleName && ` / ${coupleName} さま`}
