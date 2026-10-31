@@ -44,7 +44,22 @@ const AI_CORE_JOB_TYPES_FOR_STAFF = [
   'translation',
 ] as const;
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付の形式が正しくありません');
+/**
+ * 実在する暦日か（2028-02-31 のような存在しない日付を弾く）。
+ * setUTCFullYear で年を直接指定し、月日の繰り上がりがあれば不一致として検出する。
+ */
+const isRealCalendarDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  );
+};
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, '日付の形式が正しくありません')
+  .refine(isRealCalendarDate, '存在しない日付です');
 const shortText = z.string().trim().min(1, '入力してください').max(INPUT_LIMITS.shortText);
 const optionalTextArea = z.string().trim().max(INPUT_LIMITS.textArea).optional().nullable();
 const email = z
