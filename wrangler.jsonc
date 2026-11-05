@@ -25,6 +25,6 @@
       "migrations_dir": "cloudflare/migrations",
     },
   ],
-  // R2を有効化したら追加する: "r2_buckets": [{ "binding": "FILES", "bucket_name": "nicomaru-files" }],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "nicomaru-files" }],
   "observability": { "enabled": true },
 }
