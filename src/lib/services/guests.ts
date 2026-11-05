@@ -15,9 +15,11 @@ import {
   type GuestAssistanceNeed,
   type GuestGender,
   type GuestRelationship,
+  type GuestSeatRole,
   type PartnerRole,
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
+import { seatTitleOf, suggestedSeatTitle, type TitleSource } from '@/lib/guest-review';
 import type { GuestCustomTag } from '@/lib/guest-tags';
 import type { SupabaseServerClient } from '@/lib/supabase/server';
 
@@ -31,7 +33,7 @@ export function buildGuestFormUrl(baseUrl: string, token: string): string {
 export const GUEST_RESPONSE_COLUMNS =
   'id, full_name, kana, relationship, allergy_note, invitation_status, response_group_id, ' +
   'is_companion, guest_side, age_category, gender, responded_at, created_at, ' +
-  'assistance_needs, assistance_note';
+  'assistance_needs, assistance_note, checked_at, relationship_override, seat_role, seat_title';
 
 export interface GuestRow {
   id: string;
@@ -49,6 +51,10 @@ export interface GuestRow {
   created_at: string;
   assistance_needs: GuestAssistanceNeed[] | null;
   assistance_note: string | null;
+  checked_at: string | null;
+  relationship_override: string | null;
+  seat_role: GuestSeatRole | null;
+  seat_title: string | null;
   /** 自由タグの対応（埋め込み select）。読まない場合は省略される */
   case_guest_tag_links?: { tag_id: string }[];
 }
@@ -65,6 +71,19 @@ export interface GuestPerson {
   assistanceNote: string;
   /** 付いている自由タグのID（case_guest_tags.id） */
   tagIds: string[];
+  /** 席次に使うご関係（新郎新婦が直していればその値、無ければ回答の値） */
+  relationship: GuestRelationship | null;
+  /** 新郎新婦が直す前の、回答のご関係 */
+  answeredRelationship: GuestRelationship | null;
+  /** 新郎新婦が確認済みにしたか。席次に入るのは出席かつ確認済みの人（#179） */
+  checked: boolean;
+  seatRole: GuestSeatRole | null;
+  /** 入力済みの肩書き。null なら seatTitle は候補 */
+  customSeatTitle: string | null;
+  /** 表示する肩書き（入力済みの値か、新郎新婦側・ご関係からの候補） */
+  seatTitle: string;
+  /** 新郎新婦側・ご関係からの肩書きの候補。編集欄の見本に出す */
+  suggestedSeatTitle: string;
 }
 
 /** 1回の回答（本人＋同伴者）。 */
@@ -85,7 +104,13 @@ export interface GuestSummary {
   allergyPeople: number;
   /** 身体的なご事情（区分または補足）のある出席者 */
   assistancePeople: number;
+  /** 出席のうち、新郎新婦がまだ確認済みにしていない人 */
+  pendingPeople: number;
 }
+
+/** 新郎新婦が直したご関係があればそれを、無ければ回答の値を使う。 */
+const effectiveRelationship = (row: GuestRow) =>
+  (row.relationship_override ?? row.relationship) as GuestRelationship | null;
 
 /**
  * 回答単位に束ね、新しい回答を先に並べる。
@@ -107,6 +132,13 @@ export function groupGuestResponses(rows: GuestRow[]): GuestResponse[] {
           a.id.localeCompare(b.id),
       );
       const head = sorted[0];
+      const titleSource = (row: GuestRow): TitleSource => ({
+        guestSide: head.guest_side,
+        relationship: effectiveRelationship(row),
+        ageCategory: row.age_category,
+        isCompanion: row.is_companion,
+        seatTitle: row.seat_title,
+      });
       return {
         id,
         attending: head.invitation_status === 'reply_yes',
@@ -126,6 +158,13 @@ export function groupGuestResponses(rows: GuestRow[]): GuestResponse[] {
           ),
           assistanceNote: readPii(row.assistance_note),
           tagIds: (row.case_guest_tag_links ?? []).map((link) => link.tag_id),
+          relationship: effectiveRelationship(row),
+          answeredRelationship: row.relationship as GuestRelationship | null,
+          checked: row.checked_at !== null,
+          seatRole: row.seat_role,
+          customSeatTitle: row.seat_title,
+          seatTitle: seatTitleOf(titleSource(row), titleSource(head)),
+          suggestedSeatTitle: suggestedSeatTitle(titleSource(row), titleSource(head)),
         })),
       };
     })
@@ -175,6 +214,7 @@ export function summarizeGuestResponses(responses: GuestResponse[]): GuestSummar
   let declinedPeople = 0;
   let allergyPeople = 0;
   let assistancePeople = 0;
+  let pendingPeople = 0;
   for (const response of responses) {
     if (!response.attending) {
       declinedPeople += response.people.length;
@@ -185,6 +225,7 @@ export function summarizeGuestResponses(responses: GuestResponse[]): GuestSummar
       if (person.ageCategory) byAge[person.ageCategory] += 1;
       if (person.allergyNote) allergyPeople += 1;
       if (person.assistanceNeeds.length > 0 || person.assistanceNote) assistancePeople += 1;
+      if (!person.checked) pendingPeople += 1;
     }
   }
   return {
@@ -194,5 +235,6 @@ export function summarizeGuestResponses(responses: GuestResponse[]): GuestSummar
     byAge,
     allergyPeople,
     assistancePeople,
+    pendingPeople,
   };
 }
