@@ -100,7 +100,7 @@ export async function middleware(request: NextRequest) {
       );
     const registration = /^\/register\/[^/]+$/.test(path);
     const guests =
-      /^\/(?:rsvp\/[^/]+|api\/rsvp\/[^/]+|api\/cases\/[^/]+\/(?:guest-form|guest-tags(?:\/[^/]+)?|guests\/[^/]+\/tags))$/.test(
+      /^\/(?:rsvp\/[^/]+|api\/rsvp\/[^/]+|api\/cases\/[^/]+\/(?:guest-form|guest-tags(?:\/[^/]+)?|guests\/[^/]+(?:\/tags)?))$/.test(
         path,
       );
     const staffUser = /^\/(?:users|api\/admin\/users)\/[^/]+$/.test(path) && path !== '/users/new';

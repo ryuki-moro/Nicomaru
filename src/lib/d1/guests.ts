@@ -15,7 +15,7 @@ import { notFound, unprocessable } from '@/lib/errors';
 import { GUEST_TAG_MAX_PER_CASE, type GuestCustomTag } from '@/lib/guest-tags';
 import { groupGuestResponses, type GuestBook, type GuestRow } from '@/lib/services/guests';
 import { generateInvitationToken, hashInvitationToken } from '@/lib/services/invitations';
-import type { guestResponseSchema } from '@/lib/validation';
+import type { guestResponseSchema, guestReviewSchema } from '@/lib/validation';
 import { scope } from './cases';
 
 type Actor = Pick<AppUser, 'id'>;
@@ -249,6 +249,52 @@ export async function deleteGuestTag(db: D1Database, user: Actor, caseId: string
       .run()
   ).meta;
   if (!changes) throw notFound('タグが見つかりません');
+}
+
+/**
+ * ゲスト1人の確認・修正（#179）。Supabase版の review_case_guest() と同じ決まりで、送った項目だけを変える。
+ * 確認済みにできるのは出席の方だけ。ご関係を回答と同じ値に戻したら「直していない」扱いにする。
+ */
+export async function reviewGuest(
+  db: D1Database,
+  user: Actor,
+  caseId: string,
+  guestId: string,
+  input: z.infer<typeof guestReviewSchema>,
+) {
+  await assertEditable(db, user, caseId, 'ゲスト');
+  const guest = await db
+    .prepare(
+      'SELECT relationship,invitation_status,checked_at FROM case_guests WHERE id=? AND case_id=?',
+    )
+    .bind(guestId, caseId)
+    .first<{ relationship: string | null; invitation_status: string; checked_at: string | null }>();
+  if (!guest) throw notFound('ゲストが見つかりません');
+  const fields: [string, unknown][] = [];
+  if (input.checked !== undefined) {
+    if (input.checked && guest.invitation_status !== 'reply_yes')
+      throw unprocessable('ご出席の方だけ確認済みにできます');
+    fields.push([
+      'checked_at',
+      input.checked ? (guest.checked_at ?? new Date().toISOString()) : null,
+    ]);
+  }
+  if (input.relationship !== undefined)
+    fields.push([
+      'relationship_override',
+      input.relationship === guest.relationship ? null : input.relationship,
+    ]);
+  if (input.seatRole !== undefined) fields.push(['seat_role', input.seatRole]);
+  if (input.seatTitle !== undefined) fields.push(['seat_title', input.seatTitle?.trim() || null]);
+  const { changes } = (
+    await db
+      .prepare(
+        `UPDATE case_guests SET ${fields.map(([column]) => `${column}=?`).join(',')} WHERE id=? AND case_id=? AND ${editable}`,
+      )
+      .bind(...fields.map(([, value]) => value), guestId, caseId, caseId, user.id)
+      .run()
+  ).meta;
+  if (!changes) throw notFound('ゲストが見つかりません');
 }
 
 /** ゲスト1人の自由タグを指定した内容に置き換える。同じ案件のタグに限る。 */

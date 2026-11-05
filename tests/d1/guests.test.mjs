@@ -14,6 +14,7 @@ import {
   peekGuestForm,
   reissueGuestForm,
   renameGuestTag,
+  reviewGuest,
   setGuestTags,
   submitGuestResponse,
 } from '../../src/lib/d1/guests.ts';
@@ -109,6 +110,63 @@ test('回答URLの発行・切り替え・回答の登録と一覧（暗号化�
   assert.equal(declined.people[0].allergyNote, '');
 });
 
+test('ゲストの確認・修正は送った項目だけを変え、回答は残る（#179）', async () => {
+  const book = await loadGuestBook(db, coupleA, ids.caseA);
+  const [head, companion] = book.responses.find((r) => r.attending).people;
+  const declined = book.responses.find((r) => !r.attending).people[0];
+  // 新しく届いた回答は確認待ち
+  assert.equal(head.checked, false);
+
+  await reviewGuest(db, coupleA, ids.caseA, head.id, { checked: true });
+  await reviewGuest(db, plannerA, ids.caseA, companion.id, {
+    relationship: 'family',
+    seatRole: 'chief',
+    seatTitle: '  新婦 叔父 ',
+  });
+  await assert.rejects(reviewGuest(db, coupleA, ids.caseA, declined.id, { checked: true }), {
+    status: 422,
+  });
+  await assert.rejects(reviewGuest(db, plannerB, ids.caseA, head.id, { checked: true }), {
+    code: 'NOT_FOUND',
+  });
+  // パスの案件とゲストの所属が食い違う指定は存在しない扱い
+  await assert.rejects(reviewGuest(db, coupleB, ids.caseB, head.id, { checked: true }), {
+    code: 'NOT_FOUND',
+  });
+
+  let people = (await loadGuestBook(db, coupleA, ids.caseA)).responses.find(
+    (r) => r.attending,
+  ).people;
+  assert.equal(people[0].checked, true);
+  assert.equal(people[1].relationship, 'family');
+  assert.equal(people[1].answeredRelationship, 'friend');
+  assert.equal(people[1].seatRole, 'chief');
+  assert.equal(people[1].customSeatTitle, '新婦 叔父');
+  const stored = await db
+    .prepare('SELECT * FROM case_guests WHERE id=?')
+    .bind(companion.id)
+    .first();
+  assert.equal(stored.relationship, 'friend');
+  assert.equal(stored.checked_at, null);
+
+  // 回答と同じご関係に戻すと「直していない」扱い。空の肩書き・null で自動の候補に戻る
+  await reviewGuest(db, plannerA, ids.caseA, companion.id, {
+    relationship: 'friend',
+    seatRole: null,
+    seatTitle: '',
+  });
+  await reviewGuest(db, coupleA, ids.caseA, head.id, { checked: false });
+  people = (await loadGuestBook(db, coupleA, ids.caseA)).responses.find((r) => r.attending).people;
+  assert.equal(people[0].checked, false);
+  assert.equal(
+    (await db.prepare('SELECT * FROM case_guests WHERE id=?').bind(companion.id).first())
+      .relationship_override,
+    null,
+  );
+  assert.equal(people[1].seatRole, null);
+  assert.equal(people[1].customSeatTitle, null);
+});
+
 test('他式場・担当外は参照も変更もできず、アーカイブ済みは変更を拒否する', async () => {
   await assert.rejects(loadGuestBook(db, plannerB, ids.caseA), { code: 'NOT_FOUND' });
   await assert.rejects(loadGuestBook(db, coupleB, ids.caseA), { code: 'NOT_FOUND' });
@@ -146,6 +204,9 @@ test('他式場・担当外は参照も変更もできず、アーカイブ済�
   assert.equal((await loadGuestBook(db, adminA, ids.caseA)).responses.length, 2);
   await assert.rejects(renameGuestTag(db, adminA, ids.caseA, keep.id, '変更'), { status: 422 });
   await assert.rejects(reissueGuestForm(db, adminA, ids.caseA), { status: 422 });
+  await assert.rejects(reviewGuest(db, adminA, ids.caseA, guest.id, { seatRole: 'toast' }), {
+    status: 422,
+  });
   const token = readPii(await activeGuestFormToken(db, adminA, ids.caseA));
   assert.equal(await peekGuestForm(db, hashInvitationToken(token)), null);
   assert.equal(
