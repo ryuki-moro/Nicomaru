@@ -89,6 +89,18 @@ interface CaseRow {
   }[];
 }
 
+/** 補助表示なので、読めなくても案件詳細は出す（null はエラー表示）。 */
+async function loadD1GuestBook(user: { id: string }, caseId: string) {
+  try {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { loadGuestBook: load } = await import('@/lib/d1/guests');
+    return await load(await localDB(), user, caseId);
+  } catch (error) {
+    console.error('[case] D1のゲスト回答を読み込めませんでした', error);
+    return null;
+  }
+}
+
 export default async function CaseDetailPage({ params }: { params: Promise<{ caseId: string }> }) {
   const user = await requirePageUser('planner', 'admin', 'system_admin');
 
@@ -185,9 +197,8 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
   const archived = row.archived_at !== null;
 
   // ゲストの出欠回答とタグ。回答の追加は新郎新婦が配るURLから行い、タグは新郎新婦が付けたものを確認・修正できる。
-  // D1 ローカル検証の対象外
   const guestBook = d1
-    ? undefined
+    ? await loadD1GuestBook(user, row.id)
     : await loadGuestBook(await createSupabaseServerClient(), row.id);
 
   return (

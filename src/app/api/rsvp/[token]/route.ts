@@ -10,6 +10,7 @@
  */
 import { ok, parseBody, route } from '@/lib/api/route';
 import { encryptPii } from '@/lib/crypto';
+import { clientIp, usingD1 } from '@/lib/d1/mode';
 import { fromPostgresError, notFound, unprocessable } from '@/lib/errors';
 import { GUEST_FORM_TOKEN_PATTERN } from '@/lib/services/guests';
 import { hashInvitationToken } from '@/lib/services/invitations';
@@ -28,6 +29,16 @@ export const POST = route(
     const input = await parseBody(request, guestResponseSchema);
 
     const tokenHash = hashInvitationToken(token);
+    if (usingD1()) {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { guestRsvpLimit } = await import('@/lib/d1/auth-limits');
+      const { submitGuestResponse } = await import('@/lib/d1/guests');
+      const db = await localDB();
+      await guestRsvpLimit(db, tokenHash, clientIp(request.headers));
+      if (!(await submitGuestResponse(db, tokenHash, input)))
+        throw unprocessable(INVALID_FORM_MESSAGE);
+      return ok({ people: input.guests.length, attending: input.attending }, 201);
+    }
     // 送信元IP＋URLで数える。同じURLを使う別の回線のゲストを巻き込まない
     await enforceAuthRateLimit(request, 'guest_rsvp', tokenHash);
 
