@@ -84,7 +84,7 @@ export function InstallGuide() {
         <button
           type="button"
           onClick={dismiss}
-          className="text-label text-text-secondary underline"
+          className="btn-ghost shrink-0"
           aria-label="ホーム画面追加の案内を閉じる"
         >
           閉じる
