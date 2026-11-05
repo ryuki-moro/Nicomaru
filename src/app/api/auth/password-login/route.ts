@@ -10,19 +10,8 @@ import { enforceAuthRateLimit } from '../shared';
 export const POST = route(async (request) => {
   const body = await parsePasswordBody(request, passwordLoginSchema);
   if (usingD1()) {
-    const { d1Auth } = await import('@/lib/d1/auth');
-    const auth = await d1Auth();
-    const result = await auth.handler(
-      new Request(new URL('/api/auth/sign-in/email', process.env.APP_BASE_URL), {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          origin: process.env.APP_BASE_URL!,
-          'x-nicomaru-local-ip': clientIp(request.headers),
-        },
-        body: JSON.stringify(body),
-      }),
-    );
+    const { signInD1WithPassword } = await import('@/lib/d1/auth');
+    const result = await signInD1WithPassword(body.email, body.password, clientIp(request.headers));
     if (!result.ok) {
       if (result.status === 429) throw rateLimited();
       throw unauthenticated('メールアドレスまたはパスワードが正しくありません');
