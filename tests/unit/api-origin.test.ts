@@ -192,7 +192,8 @@ describe('全APIの適用範囲（新規Routeも自動列挙）', () => {
         checked.push(`${method} ${path}`);
       }
     }
-    expect(checked).toHaveLength(39);
+    expect(checked).toHaveLength(40);
+    expect(checked).toContain('PATCH /api/cases/[caseId]/guests/[guestId]');
     expect(checked).toContain('PUT /api/cases/[caseId]/guests/[guestId]/tags');
     expect(checked).toContain('POST /api/rsvp/[token]');
     expect(checked).toContain('POST /api/auth/sign-out');

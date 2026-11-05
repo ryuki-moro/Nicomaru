@@ -24,6 +24,7 @@ const ROUTES = [
   '/api/cases/[caseId]/guest-form',
   '/api/cases/[caseId]/guest-tags',
   '/api/cases/[caseId]/guest-tags/[tagId]',
+  '/api/cases/[caseId]/guests/[guestId]',
   '/api/cases/[caseId]/guests/[guestId]/tags',
   '/api/cases/[caseId]/invitations',
   '/api/cases/[caseId]/invitations/[invitationId]/send',

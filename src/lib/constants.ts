@@ -244,6 +244,16 @@ export const GUEST_RELATIONSHIP_LABEL: Record<GuestRelationship, string> = {
   other: 'その他',
 };
 
+/** 席次での役割。主賓は前の卓の上座、乾杯のご発声はその次の席に入れる（#179）。 */
+export const GUEST_SEAT_ROLES = ['chief', 'toast'] as const;
+export type GuestSeatRole = (typeof GUEST_SEAT_ROLES)[number];
+export const GUEST_SEAT_ROLE_LABEL: Record<GuestSeatRole, string> = {
+  chief: '主賓',
+  toast: '乾杯のご発声',
+};
+/** 席次表に載せる肩書きの上限。DB の varchar(30) と揃える。 */
+export const GUEST_SEAT_TITLE_MAX = 30;
+
 export const INVITATION_PURPOSES = ['initial_registration', 'mypage_access'] as const;
 export type InvitationPurpose = (typeof INVITATION_PURPOSES)[number];
 

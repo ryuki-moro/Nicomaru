@@ -16,6 +16,8 @@ import {
   GUEST_GENDERS,
   GUEST_RELATIONSHIPS,
   GUEST_RESPONSE_MAX_PEOPLE,
+  GUEST_SEAT_ROLES,
+  GUEST_SEAT_TITLE_MAX,
   IMPORTANCE_LEVELS,
   INPUT_LIMITS,
   PARTNER_ROLES,
@@ -315,6 +317,25 @@ export const guestTagSchema = z.object({
 export const guestTagAssignmentSchema = z.object({
   tagIds: z.array(z.string().uuid()).max(GUEST_TAG_MAX_PER_CASE),
 });
+
+/**
+ * ゲスト1人の確認・修正（#179）。送った項目だけを更新する。
+ * seatRole／seatTitle は null で「なし」「自動の候補に戻す」。
+ */
+export const guestReviewSchema = z
+  .object({
+    checked: z.boolean().optional(),
+    relationship: z.enum(GUEST_RELATIONSHIPS, { message: 'ご関係を選択してください' }).optional(),
+    seatRole: z.enum(GUEST_SEAT_ROLES, { message: '役割が正しくありません' }).nullable().optional(),
+    seatTitle: z
+      .string()
+      .trim()
+      .max(GUEST_SEAT_TITLE_MAX, `${GUEST_SEAT_TITLE_MAX}文字以内で入力してください`)
+      .nullable()
+      .optional(),
+  })
+  .strict()
+  .refine((v) => Object.keys(v).length > 0, { message: '変更する項目がありません' });
 
 // ------------------------------------------------------ 招待・フォロー・利用者
 export const invitationIssueSchema = z
