@@ -1,4 +1,4 @@
-import { localD1 } from '@/lib/d1/mode';
+import { demoLogin, localD1 } from '@/lib/d1/mode';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -50,11 +50,10 @@ export default async function LoginPage({
       <div>
         <h1 className="text-title font-bold text-text-primary">ログイン</h1>
         <p className="mt-1 text-label text-text-muted">
+          {/* フォーム内の切り替えでは書き換わらないため、方式によらない説明にする */}
           {localD1()
-            ? '新郎新婦は確認コード、プランナー・管理者はパスワードでログインできます。'
-            : initialMode === 'password'
-              ? 'プランナー・管理者はメールアドレスとパスワードでログインしてください。'
-              : '新郎新婦さまはメールアドレスだけでログインできます。'}
+            ? '新郎新婦は確認コード、プランナー・式場管理者・システム管理者はパスワードでログインできます。'
+            : '新郎新婦さまはメールアドレスだけで、プランナー・式場管理者・システム管理者はパスワードでログインできます。'}
         </p>
       </div>
 
@@ -65,7 +64,15 @@ export default async function LoginPage({
       )}
 
       {showDevAdmin && <DevAdminLoginButton />}
-      {localD1() && (
+      {demoLogin() && (
+        <div role="note" className="banner-info">
+          <span>
+            デモ版です。入力は空欄のままでログインできます。「確認コードを送信」で新郎新婦、
+            「パスワードでログイン」でプランナーとして入ります。
+          </span>
+        </div>
+      )}
+      {localD1() && !demoLogin() && (
         <a href="/dev/mailbox" target="_blank" rel="noopener noreferrer" className="btn-ghost">
           ローカル受信箱で確認コードを見る
         </a>

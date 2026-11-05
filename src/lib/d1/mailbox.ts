@@ -2,7 +2,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { decryptPii, encryptPii } from '@/lib/crypto';
 import { forbidden } from '@/lib/errors';
 import { sendMail, type SendResult } from '@/lib/notify/mailer';
-import { demoMailbox, localD1 } from './mode';
+import { demoMailbox, isLocalD1Origin, localD1 } from './mode';
 
 export interface LocalMail {
   kind: 'otp' | 'invitation' | 'notification' | 'password';
@@ -63,8 +63,8 @@ export function requireLocalMailbox(requestHeaders: Headers) {
   if (
     process.env.NICOMARU_DB !== 'd1-local' ||
     process.env.NODE_ENV !== 'development' ||
-    process.env.APP_BASE_URL !== 'http://127.0.0.1:3104' ||
-    requestHeaders.get('host') !== '127.0.0.1:3104' ||
+    !isLocalD1Origin(process.env.APP_BASE_URL) ||
+    `http://${requestHeaders.get('host')}` !== process.env.APP_BASE_URL ||
     (site && !['same-origin', 'none'].includes(site)) ||
     (requestHeaders.has('origin') && requestHeaders.get('origin') !== process.env.APP_BASE_URL)
   )
