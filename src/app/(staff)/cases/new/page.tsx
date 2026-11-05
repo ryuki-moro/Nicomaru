@@ -7,6 +7,7 @@
  * Server Component で読み込み（6-5 の直アクセス原則）、入力と送信だけをクライアントへ渡す。
  */
 
+import { usingD1 } from '@/lib/d1/mode';
 import { CaseForm, type PlanOption } from './CaseForm';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -33,7 +34,7 @@ export default async function CaseCreatePage() {
 
   let plans: PlanOption[];
   let error = false;
-  if (process.env.NICOMARU_DB === 'd1-local') {
+  if (usingD1()) {
     const { localDB } = await import('@/lib/d1/runtime');
     const result = await (
       await localDB()

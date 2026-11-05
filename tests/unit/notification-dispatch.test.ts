@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { sendEmail, sendLine } from '@/lib/notify/send';
+import { sendEmail } from '@/lib/notify/send';
 import { dispatchNotification, notificationUrl } from '@/lib/services/notifications';
 
 afterEach(() => {
@@ -43,7 +43,6 @@ describe('notificationUrl', () => {
 
 vi.mock('@/lib/notify/send', () => ({
   sendEmail: vi.fn(async () => ({ delivered: true })),
-  sendLine: vi.fn(async () => ({ delivered: true })),
 }));
 function client() {
   const chain = {
@@ -52,7 +51,7 @@ function client() {
     update: vi.fn().mockReturnThis(),
     insert: vi.fn(async () => ({ error: null })),
     maybeSingle: vi.fn(async () => ({
-      data: { id: 'u', email: 'couple@example.test', line_user_id: 'line-id', status: 'active' },
+      data: { id: 'u', email: 'couple@example.test', status: 'active' },
       error: null,
     })),
   };
@@ -62,29 +61,28 @@ function client() {
   } as unknown as SupabaseClient;
 }
 describe('dispatchNotificationの送信本文', () => {
-  it.each(['email', 'line'] as const)('%s: 本文の後に完全なURLを付ける', async (channel) => {
-    vi.stubEnv('APP_BASE_URL', 'https://example.test');
-    vi.mocked(sendEmail).mockClear();
-    vi.mocked(sendLine).mockClear();
-    await dispatchNotification(client(), {
-      id: 'n',
-      venue_id: 'v',
-      case_id: 'c',
-      recipient_user_id: 'u',
-      channel,
-      notification_type: 'overdue',
-      title: '件名',
-      body: 'あ'.repeat(200),
-      status: 'queued',
-      link_path: '/mypage/tasks/task_1',
-    });
-    const body =
-      channel === 'email'
-        ? vi.mocked(sendEmail).mock.calls[0][2]
-        : vi.mocked(sendLine).mock.calls[0][1];
-    expect(body).toMatch(/マイページで確認する: https:\/\/example.test\/mypage\/tasks\/task_1$/);
-    expect(body.split('\n')[0].length).toBe(channel === 'line' ? 80 : 200);
-  });
+  it.each(['email', 'line'] as const)(
+    '%s: メールで送り、本文の後に完全なURLを付ける',
+    async (channel) => {
+      vi.stubEnv('APP_BASE_URL', 'https://example.test');
+      vi.mocked(sendEmail).mockClear();
+      await dispatchNotification(client(), {
+        id: 'n',
+        venue_id: 'v',
+        case_id: 'c',
+        recipient_user_id: 'u',
+        channel,
+        notification_type: 'overdue',
+        title: '件名',
+        body: 'あ'.repeat(200),
+        status: 'queued',
+        link_path: '/mypage/tasks/task_1',
+      });
+      const body = vi.mocked(sendEmail).mock.calls[0][2];
+      expect(body).toMatch(/マイページで確認する: https:\/\/example.test\/mypage\/tasks\/task_1$/);
+      expect(body.split('\n')[0].length).toBe(200);
+    },
+  );
   it('旧通知のNULLリンクでは本文にURLを足さない', async () => {
     vi.stubEnv('APP_BASE_URL', 'https://example.test');
     vi.mocked(sendEmail).mockClear();

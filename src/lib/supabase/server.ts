@@ -5,6 +5,7 @@
  * 単純なCRUDは本クライアント経由（RLS適用）で行い、
  * Service Role Key は 6-3-5 の使用範囲表にある処理でのみ用いる。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { cookies } from 'next/headers';
 
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
@@ -20,7 +21,7 @@ function env(name: string): string {
  * ここから発行するクエリはすべて付録A の RLS が適用される（最終防衛線）。
  */
 export async function createSupabaseServerClient() {
-  if (process.env.NICOMARU_DB === 'd1-local') throw new Error('D1検証中はSupabaseへ接続できません');
+  if (usingD1()) throw new Error('D1検証中はSupabaseへ接続できません');
   const cookieStore = await cookies();
 
   return createServerClient(env('NEXT_PUBLIC_SUPABASE_URL'), env('NEXT_PUBLIC_SUPABASE_ANON_KEY'), {

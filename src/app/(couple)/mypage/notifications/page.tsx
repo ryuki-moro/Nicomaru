@@ -9,6 +9,7 @@
  * 一覧を開いた時点で既読にするのは、7-2 のマイページ内通知が「開いて読むもの」であり、
  * 個別に既読ボタンを押させる導線が 4-3 に無いため。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
 
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -44,28 +45,55 @@ export default async function NotificationsPage({ searchParams }: Props) {
   const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
 
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('notifications')
-    .select(
-      'id, case_id, link_path, notification_type, title, body, status, sent_at, read_at, created_at',
-    )
-    .order('created_at', { ascending: false })
-    .order('id', { ascending: false })
-    .range(offset, offset + LIST_PAGE_SIZE);
+  let data: unknown[] | null = null;
+  let error: unknown = null;
+  if (usingD1()) {
+    try {
+      if (user) {
+        const { localDB } = await import('@/lib/d1/runtime');
+        const { listNotifications, markNotificationsRead } = await import('@/lib/d1/notifications');
+        const db = await localDB();
+        data = await listNotifications(db, user, offset);
+        await markNotificationsRead(
+          db,
+          user,
+          (data as NotificationRow[])
+            .slice(0, LIST_PAGE_SIZE)
+            .filter((n) => n.read_at === null)
+            .map((n) => n.id),
+        ).catch(() => {});
+      }
+    } catch (cause) {
+      error = cause;
+    }
+  } else {
+    const supabase = await createSupabaseServerClient();
+    const result = await supabase
+      .from('notifications')
+      .select(
+        'id, case_id, link_path, notification_type, title, body, status, sent_at, read_at, created_at',
+      )
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(offset, offset + LIST_PAGE_SIZE);
+    data = result.data;
+    error = result.error;
+    const unread = ((data ?? []) as NotificationRow[])
+      .slice(0, LIST_PAGE_SIZE)
+      .filter((n) => n.read_at === null)
+      .map((n) => n.id);
+    if (user && unread.length > 0)
+      await supabase
+        .from('notifications')
+        .update({ read_at: new Date().toISOString(), status: 'read' })
+        .in('id', unread);
+  }
 
   const rows = (data ?? []) as unknown as NotificationRow[];
   const hasNext = rows.length > LIST_PAGE_SIZE;
   const visible = rows.slice(0, LIST_PAGE_SIZE);
 
   // 未読を既読にする。失敗しても一覧の表示は妨げない（既読は補助的な状態）。
-  const unread = visible.filter((n) => n.read_at === null).map((n) => n.id);
-  if (user && unread.length > 0) {
-    await supabase
-      .from('notifications')
-      .update({ read_at: new Date().toISOString(), status: 'read' })
-      .in('id', unread);
-  }
 
   return (
     <div className="space-y-4">
@@ -76,7 +104,7 @@ export default async function NotificationsPage({ searchParams }: Props) {
       </Link>
       <h1 className="section-head">お知らせ</h1>
 
-      {error && (
+      {Boolean(error) && (
         <div role="alert" className="banner-error">
           <span>お知らせを取得できませんでした。時間をおいてお試しください。</span>
         </div>

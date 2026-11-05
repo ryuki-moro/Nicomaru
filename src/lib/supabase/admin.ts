@@ -8,6 +8,7 @@
  * これにより「どの行で許可された使用なのか」がコード上で追跡でき、
  * AI がRLSエラー回避のために Service Role へ逃げる典型的な失敗をレビューで機械的に検出できる。
  */
+import { usingD1 } from '../d1/mode';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createAuthRateLimitFetch } from './auth-rate-limit-fetch';
 
@@ -71,7 +72,7 @@ let cachedRateLimit: SupabaseClient | null = null;
  * @param useCase 表6-4 のどの行にあたる使用かを明示する。
  */
 export function createSupabaseAdminClient(useCase: ServiceRoleUseCase): SupabaseClient {
-  if (process.env.NICOMARU_DB === 'd1-local') throw new Error('D1検証中はSupabaseへ接続できません');
+  if (usingD1()) throw new Error('D1検証中はSupabaseへ接続できません');
   if (!(useCase in SERVICE_ROLE_USE_CASES)) {
     throw new Error(
       `Service Role の使用範囲表（6-3-5 表6-4）にない用途です: ${useCase}。` +

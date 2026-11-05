@@ -1,4 +1,6 @@
+import { z } from 'zod';
 import { noContent, route } from '@/lib/api/route';
+import { usingD1 } from '@/lib/d1/mode';
 import {
   ApiError,
   forbidden,
@@ -11,7 +13,20 @@ import { awaitAudit } from '@/lib/services/audit-deadline';
 import { passwordUpdateSchema } from '@/lib/validation';
 import { parsePasswordBody } from '../password-body';
 
+// D1ではメールのリンクのトークンで本人を確かめる（セッションは作らない）。
+const d1PasswordUpdateSchema = passwordUpdateSchema.and(
+  z.object({ token: z.string().min(1).max(200) }),
+);
+
 export const POST = route(async (request) => {
+  if (usingD1()) {
+    const body = await parsePasswordBody(request, d1PasswordUpdateSchema);
+    const { localDB } = await import('@/lib/d1/runtime');
+    await (
+      await import('@/lib/d1/staff')
+    ).completePasswordSetup(await localDB(), body.token, body.password);
+    return noContent();
+  }
   const body = await parsePasswordBody(request, passwordUpdateSchema);
   const supabase = await createSupabaseServerClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();

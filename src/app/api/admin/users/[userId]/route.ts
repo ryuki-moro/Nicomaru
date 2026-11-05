@@ -14,6 +14,7 @@
  * 即座に効く。したがって ban の失敗は致命傷ではなく、記録して処理を続ける。
  */
 import { noContent, ok, parseBody, route } from '@/lib/api/route';
+import { usingD1 } from '@/lib/d1/mode';
 import { requireRole, type AppUser } from '@/lib/auth/session';
 import { ROLE_LABEL, type Role, type UserStatus } from '@/lib/constants';
 import {
@@ -109,6 +110,12 @@ export const PATCH = route<[RouteContext]>(async (request, context) => {
   const actor = await requireRole('admin', 'system_admin');
   const { userId } = await context.params;
   const input = await parseBody(request, userUpdateWithActionSchema);
+  if (usingD1()) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    return ok(
+      await (await import('@/lib/d1/staff')).updateStaff(await localDB(), actor, userId, input),
+    );
+  }
 
   const supabase = await createSupabaseServerClient();
   const target = await loadManagedUser(supabase, actor, userId);
@@ -195,6 +202,13 @@ export const DELETE = route<[RouteContext]>(async (request, context) => {
   // U04:「ログイン中の自身は削除不可」
   if (userId === actor.id) {
     throw unprocessable('ログイン中のご自身のアカウントは削除できません');
+  }
+  if (usingD1()) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    await (
+      await import('@/lib/d1/staff')
+    ).deleteStaff(await localDB(), actor, userId, input.successorPlannerId);
+    return noContent();
   }
 
   const supabase = await createSupabaseServerClient();

@@ -108,7 +108,7 @@ test(
       await page.reload();
       assert.equal(await page.getByLabel('回答', { exact: true }).inputValue(), '最初の提出内容');
       await page.getByRole('button', { name: '提出する', exact: true }).click();
-      await page.waitForURL('**/mypage/tasks');
+      await page.waitForURL(/\/mypage\/tasks(?:\?submitted=[^&]+)?$/);
       const getLatest = async () => {
         const p = await getPlatformProxy({
           configPath: 'cloudflare/wrangler.jsonc',
@@ -148,19 +148,19 @@ test(
       await staffPage.getByRole('radio', { name: '不備あり', exact: true }).check();
       await staffPage.getByLabel('コメント', { exact: false }).fill('人数を追記してください');
       await staffPage.getByRole('button', { name: '確定する', exact: true }).click();
-      await staffPage.waitForURL(`**/cases/${ids.caseA}`);
+      await staffPage.waitForURL(/\/submissions\?reviewed=[^&]+$/);
       await page.goto(`${origin}/mypage/tasks/${taskId}`);
       await page.getByText('人数を追記してください', { exact: true }).waitFor();
       await page.getByLabel('回答', { exact: true }).fill('人数を追記した回答');
       await page.getByRole('button', { name: '提出する', exact: true }).click();
-      await page.waitForURL('**/mypage/tasks');
+      await page.waitForURL(/\/mypage\/tasks(?:\?submitted=[^&]+)?$/);
       const second = (await getLatest()).id;
       assert.notEqual(first, second);
       assert.equal((await planner.post(review, { data: { decision: 'confirmed' } })).status(), 409);
       await staffPage.goto(`${origin}/submissions/${second}`);
       await staffPage.getByRole('radio', { name: '確認済', exact: true }).check();
       await staffPage.getByRole('button', { name: '確定する', exact: true }).click();
-      await staffPage.waitForURL(`**/cases/${ids.caseA}`);
+      await staffPage.waitForURL(/\/submissions\?reviewed=[^&]+$/);
       await page.goto(`${origin}/mypage/tasks/${taskId}`);
       await page
         .getByText('確認済みです。内容を変えたいときは、入力し直して提出してください。')

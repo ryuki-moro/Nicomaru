@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import type { AppUser } from '@/lib/auth/session';
 import type { PartnerRole, ContactChannel } from '@/lib/constants';
 import { badRequest, conflict, forbidden, notFound, unprocessable } from '@/lib/errors';
-import { emailHash, encryptPii, normalizeEmail } from '@/lib/crypto';
+import { emailHash, encryptPii, normalizeEmail, readPii } from '@/lib/crypto';
 import {
   generateInvitationToken,
   hashInvitationToken,
@@ -15,6 +15,8 @@ import {
 import { planTasks, phaseNameFor, type TemplateForAssign } from '@/lib/services/schedule';
 import type { caseCreateSchema, initialRegisterSchema } from '@/lib/validation';
 import { caseRow, scope } from './cases';
+import { localD1 } from './mode';
+import { sendInvitation } from '@/lib/notify/send';
 
 const staffScope = `${scope} AND c.archived_at IS NULL AND EXISTS (SELECT 1 FROM user_profiles w WHERE w.id=? AND w.status='active' AND w.role IN ('planner','admin','system_admin'))`;
 const existsCase = `EXISTS (SELECT 1 FROM wedding_cases c WHERE c.id=? AND ${staffScope})`;
@@ -254,6 +256,7 @@ export async function issueInvitation(
   role: PartnerRole,
   send?: ContactChannel,
   invitationId?: string,
+  recipientEmail?: string,
 ) {
   if (user.role === 'couple') throw forbidden();
   const row = await caseRow(db, user, id);
@@ -270,6 +273,29 @@ export async function issueInvitation(
   }
   const partner = row.couple_profiles.find((p) => p.partner_role === role);
   if (!partner) throw notFound();
+  const recipient = recipientEmail ? normalizeEmail(recipientEmail) : partner.email;
+  if (recipientEmail && partner.email && normalizeEmail(partner.email) !== recipient)
+    throw unprocessable('送信先は既に登録されています');
+  if (
+    recipient &&
+    row.couple_profiles.some(
+      (p) => p.partner_role !== role && p.email && normalizeEmail(p.email) === recipient,
+    )
+  )
+    throw unprocessable('もう一方のパートナーと同じメールアドレスは指定できません');
+  const snapshots = await db
+    .prepare('SELECT partner_role,email FROM couple_profiles WHERE case_id=?')
+    .bind(id)
+    .all<{ partner_role: PartnerRole; email: string | null }>();
+  const ownEmail = snapshots.results.find((p) => p.partner_role === role)?.email ?? null;
+  const otherRole = role === 'bride' ? 'groom' : 'bride';
+  const otherEmail = snapshots.results.find((p) => p.partner_role === otherRole)?.email ?? null;
+  if (
+    (ownEmail === null ? null : readPii(ownEmail)) !== partner.email ||
+    (otherEmail === null ? null : readPii(otherEmail)) !==
+      (row.couple_profiles.find((p) => p.partner_role === otherRole)?.email ?? null)
+  )
+    throw conflict();
   const linked = await db
     .prepare('SELECT user_id FROM couple_profiles WHERE case_id=? AND partner_role=?')
     .bind(id, role)
@@ -280,8 +306,26 @@ export async function issueInvitation(
     now = new Date().toISOString();
   const expiresAt = invitationExpiresAt('initial_registration').toISOString(),
     channel = send ?? row.contact_channel;
-  const args = [id, user.id, user.id, id, role, id, row.version];
-  const guard = `${existsCase} AND EXISTS (SELECT 1 FROM couple_profiles cp WHERE cp.case_id=? AND cp.partner_role=? AND cp.user_id IS NULL) AND EXISTS (SELECT 1 FROM wedding_cases current WHERE current.id=? AND current.version=?)`;
+  const args = [
+    id,
+    user.id,
+    user.id,
+    id,
+    role,
+    id,
+    row.version,
+    id,
+    role,
+    ownEmail,
+    id,
+    otherRole,
+    otherEmail,
+    id,
+    otherRole,
+    recipient ? emailHash(recipient) : null,
+    now,
+  ];
+  const guard = `${existsCase} AND EXISTS (SELECT 1 FROM couple_profiles cp WHERE cp.case_id=? AND cp.partner_role=? AND cp.user_id IS NULL) AND EXISTS (SELECT 1 FROM wedding_cases current WHERE current.id=? AND current.version=?) AND EXISTS (SELECT 1 FROM couple_profiles WHERE case_id=? AND partner_role=? AND email IS ?) AND EXISTS (SELECT 1 FROM couple_profiles WHERE case_id=? AND partner_role=? AND email IS ?) AND NOT EXISTS (SELECT 1 FROM case_invitations WHERE case_id=? AND target_partner_role=? AND recipient_email_hash=? AND revoked_at IS NULL AND used_at IS NULL AND use_count<max_uses AND expires_at>?)`;
   const statements = [
     db
       .prepare(
@@ -298,7 +342,7 @@ export async function issueInvitation(
         id,
         role,
         hashInvitationToken(token),
-        partner.email ? emailHash(partner.email) : null,
+        recipient ? emailHash(recipient) : null,
         channel,
         expiresAt,
         now,
@@ -310,7 +354,15 @@ export async function issueInvitation(
       )
       .bind(id, user.id, invitation),
   ];
-  if (send)
+  if (recipientEmail && !partner.email)
+    statements.push(
+      db
+        .prepare(
+          'UPDATE couple_profiles SET email=? WHERE case_id=? AND partner_role=? AND EXISTS (SELECT 1 FROM case_invitations WHERE id=?)',
+        )
+        .bind(encryptPii(recipient), id, role, invitation),
+    );
+  if (send && localD1())
     statements.push(
       db
         .prepare(
@@ -321,7 +373,7 @@ export async function issueInvitation(
           encryptPii(
             JSON.stringify({
               kind: 'invitation',
-              email: partner.email,
+              email: recipient,
               url: buildInvitationUrl(process.env.APP_BASE_URL!, token),
               channel,
               expiresAt,
@@ -333,11 +385,35 @@ export async function issueInvitation(
     );
   const results = await db.batch(statements);
   if (!results[1].results.length) throw conflict();
+  if (!send || localD1())
+    return {
+      ...tokenResult(invitation, role, channel, expiresAt, token),
+      sentAt: null,
+      delivered: false,
+      skippedReason: send ? '外部送信なし。ローカル受信箱に保存した。' : null,
+    };
+  // 発行は確定済み。送信に失敗しても平文URLを応答で返し、発行を巻き戻さない（6-3-6）。
+  const sent = await sendInvitation(
+    send,
+    { email: recipient },
+    {
+      caseCode: row.case_code,
+      recipientName: partner.full_name,
+      invitationUrl: buildInvitationUrl(process.env.APP_BASE_URL!, token),
+      expiresAt,
+    },
+  );
+  const sentAt = sent.delivered ? new Date().toISOString() : null;
+  if (sentAt)
+    await db
+      .prepare('UPDATE case_invitations SET sent_at=? WHERE id=?')
+      .bind(sentAt, invitation)
+      .run();
   return {
     ...tokenResult(invitation, role, channel, expiresAt, token),
-    sentAt: null,
-    delivered: false,
-    skippedReason: send ? '外部送信なし。ローカル受信箱に保存した。' : null,
+    sentAt,
+    delivered: sent.delivered,
+    skippedReason: sent.delivered ? null : (sent.skippedReason ?? null),
   };
 }
 
