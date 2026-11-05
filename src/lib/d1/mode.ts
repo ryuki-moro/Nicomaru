@@ -7,6 +7,10 @@ export const publicD1 = () =>
   process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1' ||
   process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1-local';
 export const publicLocalD1 = () => process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1-local';
+/** npm run demo のログイン素通り。ローカルD1でだけ有効（本番D1・Supabaseでは常に無効）。 */
+export const demoLogin = () => localD1() && process.env.NICOMARU_DEMO_LOGIN === 'true';
+export const publicDemoLogin = () =>
+  publicLocalD1() && process.env.NEXT_PUBLIC_NICOMARU_DEMO_LOGIN === 'true';
 /** レート制限用の接続元。本番はCloudflareが上書きする cf-connecting-ip だけを信頼する。 */
 export const clientIp = (headers: Headers) =>
   localD1() ? '127.0.0.1' : (headers.get('cf-connecting-ip') ?? 'unknown');

@@ -76,6 +76,7 @@ export async function middleware(request: NextRequest) {
       '/api/cases',
       '/api/mypage/case',
       '/api/auth/password-login',
+      '/api/auth/demo-login',
       '/api/auth/sign-out',
       '/api/auth/initial-register',
       '/api/auth/otp-request',

@@ -1,4 +1,4 @@
-import { localD1 } from '@/lib/d1/mode';
+import { demoLogin, localD1 } from '@/lib/d1/mode';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -65,7 +65,15 @@ export default async function LoginPage({
       )}
 
       {showDevAdmin && <DevAdminLoginButton />}
-      {localD1() && (
+      {demoLogin() && (
+        <div role="note" className="banner-info">
+          <span>
+            デモ版です。入力は空欄のままでログインできます。「確認コードを送信」で新郎新婦、
+            「パスワードでログイン」でプランナーとして入ります。
+          </span>
+        </div>
+      )}
+      {localD1() && !demoLogin() && (
         <a href="/dev/mailbox" target="_blank" rel="noopener noreferrer" className="btn-ghost">
           ローカル受信箱で確認コードを見る
         </a>

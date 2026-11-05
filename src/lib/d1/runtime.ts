@@ -30,7 +30,7 @@ async function bindings(): Promise<Bindings> {
   ).then(({ getPlatformProxy }) =>
     getPlatformProxy<Bindings>({
       configPath: 'cloudflare/wrangler.jsonc',
-      persist: { path: '.wrangler/app-local/v3' },
+      persist: { path: `${process.env.NICOMARU_D1_DIR ?? '.wrangler/app-local'}/v3` },
     }),
   );
   return (await local.nicomaruD1).env;
