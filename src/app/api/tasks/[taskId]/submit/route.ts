@@ -135,7 +135,19 @@ export const POST = route(
     if (usingD1()) {
       const { localDB } = await import('@/lib/d1/runtime');
       const { submitTask } = await import('@/lib/d1/tasks');
-      return ok(await submitTask(await localDB(), user, taskId, body));
+      const db = await localDB();
+      const result = await submitTask(db, user, taskId, body);
+      // 分類（9-1）の投入。失敗しても提出は取り消さない（7-1）。
+      const forAi = !body.draft && body.submissionType === 'text' && trimForAi(body.textValue);
+      if (forAi) {
+        const { enqueueTaskJob } = await import('@/lib/d1/ai');
+        await enqueueTaskJob(db, user, taskId, 'classification', {
+          ref: { table: 'task_submissions', id: result.id },
+          text: forAi,
+          params: {},
+        }).catch((error: unknown) => console.warn('[ai] ジョブを投入できませんでした', error));
+      }
+      return ok(result);
     }
     const supabase = await createSupabaseServerClient();
 

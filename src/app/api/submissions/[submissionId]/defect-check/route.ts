@@ -19,6 +19,9 @@ import { ok, route } from '@/lib/api/route';
 import { enqueueSubmissionAiJob } from '@/lib/ai/assist';
 import { checkSubmittedCsv, csvSchemaOf } from '@/lib/ai/submissionCheck';
 import { requireRole } from '@/lib/auth/session';
+import { checkStoredCsv, enqueueTaskJob } from '@/lib/d1/ai';
+import { localDB, localFiles, usingD1 } from '@/lib/d1/runtime';
+import { submissionRow } from '@/lib/d1/tasks';
 import { ApiError, fromPostgresError, notFound, unprocessable } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -38,8 +41,28 @@ interface SubmissionRow {
 
 export const POST = route(
   async (_request: Request, context: { params: Promise<{ submissionId: string }> }) => {
-    await requireRole('planner', 'admin', 'system_admin');
+    const user = await requireRole('planner', 'admin', 'system_admin');
     const { submissionId } = await context.params;
+    if (usingD1()) {
+      const db = await localDB();
+      const row = await submissionRow(db, user, submissionId);
+      if (!row.storage_files) throw unprocessable('この提出にはチェックできるファイルがありません');
+      if (!csvSchemaOf(row.case_tasks.options))
+        throw unprocessable('この宿題にはCSVの期待列が設定されていないためチェックできません');
+      const checked = await checkStoredCsv(
+        await localFiles(),
+        row.storage_files,
+        row.case_tasks.options,
+      );
+      if (!checked) throw unprocessable('提出ファイルをCSVとして読み取れませんでした');
+      if (checked.llmInput === '') throw unprocessable('表記ゆれ・敬称を確認できる列がありません');
+      const jobId = await enqueueTaskJob(db, user, row.case_tasks.id, 'defect_check', {
+        ref: { table: 'task_submissions', id: row.id },
+        text: checked.llmInput,
+        params: {},
+      });
+      return ok({ jobId, rowCount: checked.rowCount }, 202);
+    }
 
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
