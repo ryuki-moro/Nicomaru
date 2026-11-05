@@ -13,7 +13,7 @@
  * つまり「1回目の送信＝プレビュー取得」「2回目の送信＝適用」であり、
  * 画面に出した差分とDBへ適用される内容が必ず一致する。
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -72,6 +72,29 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
   const [summary, setSummary] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<PlanChangePreview | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const updateButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogWasOpen = useRef(false);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (preview) {
+      if (!dialog.open) dialog.showModal();
+      dialogWasOpen.current = true;
+      cancelButtonRef.current?.focus();
+      return;
+    }
+
+    if (submitting) return;
+    if (dialog.open) dialog.close();
+    if (dialogWasOpen.current) {
+      dialogWasOpen.current = false;
+      updateButtonRef.current?.focus();
+    }
+  }, [preview, submitting]);
 
   useEffect(() => {
     const fieldOrder = [
@@ -358,7 +381,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
         </div>
 
         <div className="flex gap-3">
-          <button type="submit" className="btn-primary" disabled={submitting}>
+          <button ref={updateButtonRef} type="submit" className="btn-primary" disabled={submitting}>
             {submitting ? '確認しています…' : '更新する'}
           </button>
           <Link href={`/cases/${caseId}`} className="btn-secondary text-center">
@@ -367,14 +390,33 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
         </div>
       </form>
 
-      {preview && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="case-diff-title"
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-text-primary/40 p-4"
-        >
-          <div className="card mt-8 w-full max-w-2xl space-y-4">
+      <dialog
+        ref={dialogRef}
+        aria-labelledby="case-diff-title"
+        onKeyDown={(event) => {
+          if (event.key !== 'Tab') return;
+          event.preventDefault();
+          const buttons = Array.from(
+            event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
+          );
+          if (buttons.length === 0) return;
+          const current = buttons.findIndex((button) => button === document.activeElement);
+          const next =
+            current < 0
+              ? event.shiftKey
+                ? buttons.length - 1
+                : 0
+              : (current + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
+          buttons[next]?.focus();
+        }}
+        onCancel={(event) => {
+          event.preventDefault();
+          if (!submitting) setPreview(null);
+        }}
+        className="fixed inset-0 z-50 m-0 h-full w-full max-h-none max-w-none overflow-y-auto border-0 bg-transparent p-4 backdrop:bg-text-primary/40"
+      >
+        {preview && (
+          <div className="card mx-auto mt-8 w-full max-w-2xl space-y-4">
             <h2 id="case-diff-title" className="section-head">
               変更内容の確認
             </h2>
@@ -457,6 +499,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               <button
                 type="button"
                 className="btn-secondary"
+                ref={cancelButtonRef}
                 onClick={() => setPreview(null)}
                 disabled={submitting}
               >
@@ -464,8 +507,8 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </dialog>
     </>
   );
 }
