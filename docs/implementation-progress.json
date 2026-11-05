@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-23T05:58:25.995Z",
+  "updatedAt": "2026-11-05T03:00:00.000Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "b5a72de2df0d8baa3ebe8ddaee53b9ee11ace462",
   "implementationCommit": "90eeae0ac9c70b26b41037ed0c7f18ceeb6b32cc",
@@ -551,6 +551,12 @@
       "title": "新郎新婦の2人目へメール招待を送れるようにする",
       "state": "open",
       "url": "https://github.com/ryuki-moro/Nicomaru/issues/122"
+    },
+    {
+      "number": 103,
+      "title": "ワンタイムコードの有効期限を10分にそろえる(画面・メール・Supabase設定)",
+      "state": "open",
+      "url": "https://github.com/ryuki-moro/Nicomaru/issues/103"
     }
   ],
   "nextOrder": [
@@ -2862,6 +2868,33 @@
         "FIX-42",
         "FIX-47"
       ],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
+      "id": "FIX-103",
+      "title": "ワンタイムコードの有効期限を10分にそろえる",
+      "category": "改善",
+      "phase": "改善",
+      "status": "review",
+      "design": "基本設計5-3/6-3-1",
+      "screens": [
+        "P01"
+      ],
+      "evidence": [
+        "supabase/config.toml",
+        "supabase/templates/magic_link.html",
+        "tests/unit/auth-email-config.test.ts",
+        "docs/環境の使い分け.md"
+      ],
+      "note": "Supabase Authのotp_expiryを3600→600秒、メール本文を「1時間」→「10分」に修正し、画面のOTP.ttlSeconds（10分）と一致させた。設定・文面と定数の一致をunitで検査。",
+      "next": "PRをレビューしてmainへ統合し、共有SupabaseのEmail OTP Expirationを600秒にする（変更前の値をIssue103に記録）。",
+      "issues": [
+        103
+      ],
+      "prs": [],
+      "dependsOn": [],
       "requiresAi": false,
       "scope": "active",
       "kind": "work_item"
