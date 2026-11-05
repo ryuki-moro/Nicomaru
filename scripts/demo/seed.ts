@@ -9,7 +9,7 @@
  * 期限の逆算・暗号化・招待トークンも、アプリ本体の同じ関数（src/lib）を使う。
  *
  * 所有者権限（RLS を通らない）で行うのは、アプリでも Service Role で行っている次の2つだけ。
- *   - プランナーの user_profiles 作成（bootstrap-demo-planner.mts と同じ）
+ *   - プランナーの user_profiles 作成
  *   - 招待URLからの初回登録（/api/auth/initial-register と同じ手順）
  *
  * Auth ユーザーの作成だけは DB からはできないので、呼び出し側から {@link DemoAuth} で受け取る。
@@ -349,7 +349,7 @@ export async function seedDemo(
     displayName: DEMO_PLANNER.displayName,
     password: options.plannerPassword,
   });
-  await ensureProfile(db, plannerAuthId, {
+  const plannerProfileId = await ensureProfile(db, plannerAuthId, {
     role: 'planner',
     email: DEMO_PLANNER.email,
     displayName: DEMO_PLANNER.displayName,
@@ -365,6 +365,13 @@ export async function seedDemo(
       ]),
     );
     if (exists.rows.length > 0) {
+      const existing = await db.asOwner(() =>
+        db.query<{ id: string }>(
+          'select id from wedding_cases where venue_id = $1 and notes like $2',
+          [DEMO_VENUE_ID, `${DEMO_NOTE_PREFIX}${demo.key}]%`],
+        ),
+      );
+      await seedScreenExamples(db, existing.rows[0].id, plannerProfileId, demo);
       result.skipped.push(demo.key);
       continue;
     }
@@ -407,7 +414,90 @@ export async function seedDemo(
     }
 
     result.created.push(seeded);
+    await seedScreenExamples(db, caseId, plannerProfileId, demo);
   }
 
   return result;
+}
+
+/** 画面の動きをログイン直後から見せるための履歴データ。実際の通知配信は行わない。 */
+async function seedScreenExamples(
+  db: DemoDb,
+  caseId: string,
+  plannerProfileId: string,
+  demo: DemoCase,
+): Promise<void> {
+  await db.asOwner(async () => {
+    const sheet = await db.query('select 1 from meeting_sheets where case_id = $1 limit 1', [
+      caseId,
+    ]);
+    if (sheet.rows.length === 0) {
+      await db.query(
+        `insert into meeting_sheets (case_id, generated_by, summary_json)
+         values ($1, $2, $3::jsonb)`,
+        [
+          caseId,
+          plannerProfileId,
+          JSON.stringify({ demo: true, note: '模擬データ：打ち合わせ前準備シートの履歴例' }),
+        ],
+      );
+    }
+
+    const follow = await db.query('select 1 from follow_logs where case_id = $1 limit 1', [caseId]);
+    if (follow.rows.length === 0) {
+      await db.query(
+        `insert into follow_logs (case_id, planner_id, method, note, followed_at)
+         values ($1, $2, 'phone', $3, now() - interval '2 days')`,
+        [
+          caseId,
+          plannerProfileId,
+          '模擬記録：宿題の進み具合を確認し、次回の連絡予定を相談しました。',
+        ],
+      );
+    }
+
+    const communication = await db.query(
+      'select 1 from communication_logs where case_id = $1 and source = $2 limit 1',
+      [caseId, 'demo_seed'],
+    );
+    if (communication.rows.length === 0) {
+      await db.query(
+        `insert into communication_logs
+          (case_id, channel, direction, source, summary, occurred_at, created_by)
+         values ($1, 'email', 'outbound', 'demo_seed', $2, now() - interval '3 days', $3)`,
+        [caseId, '模擬記録：次回の打ち合わせまでに確認する宿題を案内しました。', plannerProfileId],
+      );
+    }
+
+    const recipients = await db.query<{ id: string; partner_role: 'groom' | 'bride' }>(
+      `select cp.user_profile_id as id, cp.partner_role
+         from couple_profiles cp
+        where cp.case_id = $1 and cp.user_profile_id is not null`,
+      [caseId],
+    );
+    for (const recipient of recipients.rows) {
+      const title = '【模擬】宿題の確認状況をお知らせします';
+      const exists = await db.query(
+        `select 1 from notifications
+          where case_id = $1 and recipient_user_id = $2 and title = $3 limit 1`,
+        [caseId, recipient.id, title],
+      );
+      if (exists.rows.length === 0) {
+        await db.query(
+          `insert into notifications
+            (venue_id, case_id, recipient_user_id, created_by, channel,
+             notification_type, title, body, status, sent_at)
+           values ($1, $2, $3, $4, 'in_app', 'info', $5, $6, 'sent', now())`,
+          [
+            DEMO_VENUE_ID,
+            caseId,
+            recipient.id,
+            plannerProfileId,
+            title,
+            `${demo.purpose}（これは画面確認用の模擬通知です。実際には配信されていません）`,
+          ],
+        );
+      }
+    }
+  });
 }

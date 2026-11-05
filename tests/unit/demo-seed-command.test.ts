@@ -6,6 +6,7 @@ const fixture = vi.hoisted(() => ({
   connect: vi.fn(),
   query: vi.fn(),
   end: vi.fn(),
+  from: vi.fn(),
   listUsers: vi.fn(),
   createUser: vi.fn(),
   updateUser: vi.fn(),
@@ -53,6 +54,17 @@ beforeEach(() => {
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});
   fixture.createClient.mockReturnValue({
+    from: fixture.from.mockImplementation(() => {
+      const builder = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        like: vi.fn(),
+      };
+      builder.select.mockReturnValue(builder);
+      builder.eq.mockReturnValue(builder);
+      builder.like.mockResolvedValue({ data: [], error: null });
+      return builder;
+    }),
     auth: {
       admin: {
         listUsers: fixture.listUsers,
