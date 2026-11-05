@@ -12,6 +12,7 @@ import { CaseForm, type PlanOption } from './CaseForm';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { requirePageUser } from '@/lib/auth/session';
+import type { Role } from '@/lib/constants';
 import { todayInJst } from '@/lib/format';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -26,6 +27,18 @@ interface PlanTypeRow {
     due_offset_days_override: number | null;
     task_templates: { id: string; name: string; due_offset_days: number; active: boolean } | null;
   }[];
+}
+
+/**
+ * プラン種別が無いときの案内。登録できる人と画面を、閲覧者と実行モードに合わせて示す。
+ * D1 ではプラン種別画面（/plan-types）が移行対象外で開けないため、画面への誘導はしない。
+ */
+function noPlanMessage(role: Role): string {
+  const lead = '利用できるプラン種別がありません。';
+  if (usingD1())
+    return `${lead}この環境ではプラン種別を画面から登録できないため、システムの担当者にご連絡ください。`;
+  if (role === 'admin') return `${lead}メニューの「プラン種別」から登録してください。`;
+  return `${lead}式場管理者にプラン種別の登録をご依頼ください。`;
 }
 
 export default async function CaseCreatePage() {
@@ -104,7 +117,7 @@ export default async function CaseCreatePage() {
       )}
 
       {!error && plans.length === 0 ? (
-        <EmptyState message="利用できるプラン種別がありません。式場管理者にプラン種別の登録をご依頼ください。" />
+        <EmptyState message={noPlanMessage(user.role)} />
       ) : (
         <CaseForm plans={plans} today={today} />
       )}

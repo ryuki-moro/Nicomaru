@@ -81,6 +81,8 @@ export default async function CaseListPage({ searchParams }: Props) {
 
   const params = await searchParams;
   const canSeeArchived = user.role === 'admin' || user.role === 'system_admin';
+  // 案件登録（K03）は planner／admin のみ。ボタンと空状態の案内をこの判定でそろえる
+  const canCreate = user.role === 'planner' || user.role === 'admin';
   const scope = params.scope === 'archived' && canSeeArchived ? 'archived' : 'active';
   // 4-3 K01: 並び順の既定は挙式日順。リスクスコア順は機能6-2（Phase 2）で追加する。
   const sort = params.sort === 'risk' ? 'risk' : 'wedding_date';
@@ -135,7 +137,7 @@ export default async function CaseListPage({ searchParams }: Props) {
 
       <div className="flex items-center justify-between gap-3">
         <h1 className="section-head">案件一覧</h1>
-        {(user.role === 'planner' || user.role === 'admin') && (
+        {canCreate && (
           <Link href="/cases/new" className="btn-primary w-auto whitespace-nowrap px-5 text-center">
             新規案件登録
           </Link>
@@ -195,7 +197,11 @@ export default async function CaseListPage({ searchParams }: Props) {
           message={
             keyword
               ? '条件に合う案件は見つかりませんでした。キーワードを変えてお試しください。'
-              : 'まだ案件がありません。「新規案件登録」から登録できます。'
+              : scope === 'archived'
+                ? 'アーカイブ済みの案件はありません。'
+                : canCreate
+                  ? 'まだ案件がありません。上の「新規案件登録」から登録できます。'
+                  : 'まだ案件がありません。案件は各式場のプランナーまたは式場管理者が登録します。'
           }
         />
       )}

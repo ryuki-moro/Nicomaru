@@ -378,6 +378,10 @@ export function LoginForm({
               onChange={(event) => setPassword(event.target.value)}
             />
             <FieldError id="login-password-error" message={fieldErrors.password} />
+            {/* 切り替えボタンの「プランナー・管理者」を、役割を選ぶボタンと読み違えないようにする */}
+            <p className="mt-1 text-caption text-text-muted">
+              ログイン後に使える画面は、入力したアカウントの権限で決まります。
+            </p>
           </div>
         )}
 
