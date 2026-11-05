@@ -29,7 +29,7 @@ import {
 } from '@/lib/ai/defectCheck';
 
 /** CSV として扱う条件。拡張子と MIME の両方を見る（ブラウザによって MIME が空になる）。 */
-function looksLikeCsv(fileName: string | null, mimeType: string | null): boolean {
+export function looksLikeCsv(fileName: string | null, mimeType: string | null): boolean {
   if (mimeType && /csv|text\/plain/i.test(mimeType)) return true;
   return /\.csv$/i.test(fileName ?? '');
 }
@@ -110,9 +110,13 @@ export async function checkSubmittedCsv(
     console.warn('[ai] 提出ファイルを取得できませんでした', file.objectPath, error);
     return null;
   }
+  return checkCsvText(await data.text(), schema);
+}
 
+/** 取得済みのCSV本文に①をかける（D1版はR2から読んだ本文を渡す）。 */
+export function checkCsvText(raw: string, schema: CsvSchemaDefinition): CsvCheckResult {
   // Excel が出力する CSV は BOM 付き UTF-8 が多い。BOM が残ると先頭列名が一致しない。
-  const text = (await data.text()).replace(/^﻿/, '');
+  const text = raw.replace(/^﻿/, '');
   const rows = parseCsv(text);
 
   return {

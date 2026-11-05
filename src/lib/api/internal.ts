@@ -12,6 +12,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { safeEqual } from '@/lib/crypto';
 import { unauthenticated } from '@/lib/errors';
 import { verifyInternalCronSecret } from '@/lib/supabase/admin';
 
@@ -33,6 +34,19 @@ export function requireInternalCall(request: Request): void {
   const header = request.headers.get('x-internal-cron-secret');
   if (!verifyInternalCronSecret(header)) {
     throw unauthenticated('内部呼び出しの認証に失敗しました');
+  }
+}
+
+/**
+ * ローカルLLMワーカーの認証（7-3）。D1にはDBロールが無いため、DB接続情報の代わりに
+ * 「ジョブ取得・結果書込み・心拍」しかできない共有トークンを配る。短いトークンは受け付けない。
+ */
+export function requireAiWorkerCall(request: Request): void {
+  const expected = process.env.AI_WORKER_TOKEN ?? '';
+  const header = request.headers.get('authorization') ?? '';
+  const given = header.startsWith('Bearer ') ? header.slice(7) : '';
+  if (expected.length < 32 || !safeEqual(given, expected)) {
+    throw unauthenticated('ワーカーの認証に失敗しました');
   }
 }
 

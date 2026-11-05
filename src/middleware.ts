@@ -91,12 +91,15 @@ export async function middleware(request: NextRequest) {
       '/api/auth/password-update',
       '/dev/mailbox',
       '/api/dev/mailbox',
+      '/api/ai/status',
+      '/api/ai/jobs',
+      '/api/internal/ai-worker',
     ];
     const casePage = /^\/cases\/[^/]+(?:\/edit)?$/.test(path) && path !== '/cases/new';
     const caseApi =
       /^\/api\/cases\/[^/]+(?:\/(?:assign-tasks|invitations)(?:\/[^/]+\/send)?)?$/.test(path);
     const tasks =
-      /^\/(?:mypage\/tasks\/[^/]+|submissions\/[^/]+|api\/tasks\/[^/]+\/submit|api\/submissions\/[^/]+\/review|api\/cases\/[^/]+\/tasks(?:\/[^/]+)?|api\/files\/[^/]+\/download)$/.test(
+      /^\/(?:mypage\/tasks\/[^/]+|submissions\/[^/]+|api\/tasks\/[^/]+\/submit|api\/submissions\/[^/]+\/(?:review|defect-check)|api\/ai\/jobs\/[^/]+|api\/cases\/[^/]+\/tasks(?:\/[^/]+)?|api\/files\/[^/]+\/download)$/.test(
         path,
       );
     const registration = /^\/register\/[^/]+$/.test(path);

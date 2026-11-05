@@ -36,6 +36,8 @@ const internalRoutes = new Set([
   '/api/internal/audit-log-purge',
 ]);
 const webhookPath = '/api/line/webhook';
+/** ローカルLLMワーカー専用。Originの代わりに AI_WORKER_TOKEN で認証する。 */
+const aiWorkerPath = '/api/internal/ai-worker';
 const unsafeMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
 type Handler = (
   request: Request,
@@ -174,7 +176,7 @@ describe('全APIの適用範囲（新規Routeも自動列挙）', () => {
     const checked: string[] = [];
     for (const [file, load] of Object.entries(moduleLoaders)) {
       const path = file.replace('../../src/app', '').replace('/route.ts', '');
-      if (internalRoutes.has(path) || path === webhookPath) continue;
+      if (internalRoutes.has(path) || path === webhookPath || path === aiWorkerPath) continue;
       const routeModule = await load();
       for (const method of unsafeMethods) {
         if (typeof routeModule[method] !== 'function') continue;
@@ -209,6 +211,23 @@ describe('全APIの適用範囲（新規Routeも自動列挙）', () => {
     expect(admin).not.toHaveBeenCalled();
     expect(server).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('AIワーカーAPIはトークンが無い・違うときは本文を読まず401にする', async () => {
+    vi.stubEnv('AI_WORKER_TOKEN', 'w'.repeat(32));
+    const routeModule = await moduleLoaders[`../../src/app${aiWorkerPath}/route.ts`]();
+    for (const headers of [{}, { origin: ORIGIN }, { authorization: `Bearer ${'x'.repeat(32)}` }]) {
+      const request = new Request(`${ORIGIN}${aiWorkerPath}`, {
+        method: 'POST',
+        headers,
+        body: '{broken json',
+      });
+      const response = await (routeModule.POST as Handler)(request, {
+        params: Promise.resolve({}),
+      });
+      expect(response.status).toBe(401);
+      expect(request.bodyUsed).toBe(false);
+    }
   });
 
   it.each([...internalRoutes])(

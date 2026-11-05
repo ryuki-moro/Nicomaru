@@ -36,6 +36,7 @@ const ROUTES = [
   '/api/files/[fileId]/download',
   '/api/health',
   '/api/internal/ai-job-reclaim',
+  '/api/internal/ai-worker',
   '/api/internal/case-purge',
   '/api/internal/notifications-dispatch',
   '/api/internal/rate-limit-cleanup',

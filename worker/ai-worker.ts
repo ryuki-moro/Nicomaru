@@ -47,9 +47,6 @@ const DEFAULT_MODEL = process.env.OLLAMA_MODEL ?? 'gemma3:12b';
 interface ClaimedJob {
   id: string;
   job_type: AiJobType;
-  venue_id: string;
-  case_id: string | null;
-  related_task_id: string | null;
   input_ref: {
     ref?: { table: string; id: string };
     text?: string;
@@ -57,12 +54,79 @@ interface ClaimedJob {
   };
   model_name: string | null;
   prompt_text: string | null;
-  prompt_template_id: string | null;
   attempts: number;
+}
+
+/** ジョブの受け渡し口。Supabase版はDB関数、D1版はアプリの /api/internal/ai-worker。 */
+interface Queue {
+  ping(): Promise<void>;
+  claim(): Promise<ClaimedJob | null>;
+  complete(id: string, output: unknown, error: string | null, model: string): Promise<void>;
+  close(): Promise<void>;
 }
 
 const workerId = `${hostname()}:${process.pid}`;
 let stopping = false;
+
+async function pgQueue(url: string): Promise<Queue> {
+  const client = new Client({ connectionString: url });
+  await client.connect();
+  return {
+    ping: async () => {
+      await client.query('select ai_worker_ping($1, $2)', [workerId, DEFAULT_MODEL]);
+    },
+    claim: async () =>
+      (
+        await client.query<ClaimedJob>('select * from claim_ai_job($1, $2)', [
+          workerId,
+          AI_JOB_TYPES as unknown as string[],
+        ])
+      ).rows[0] ?? null,
+    complete: async (id, output, error, model) => {
+      await client.query('select complete_ai_job($1, $2, $3::jsonb, $4, $5)', [
+        id,
+        workerId,
+        error ? null : JSON.stringify(output),
+        error,
+        model,
+      ]);
+    },
+    close: () => client.end(),
+  };
+}
+
+/**
+ * D1版。DB接続情報を配らず、3操作しかできない共有トークンだけを持たせる（7-3）。
+ * 向きはワーカー→アプリのアウトバウンドのままなので、LLMサーバーを外部公開しない。
+ */
+function httpQueue(baseUrl: string, token: string): Queue {
+  const { protocol, hostname: host } = new URL(baseUrl);
+  if (protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(host)) {
+    throw new Error(
+      'AI_WORKER_API_URL は https で指定してください（トークンを平文で送らないため）',
+    );
+  }
+  const call = async <T>(body: Record<string, unknown>): Promise<T> => {
+    const response = await fetch(new URL('/api/internal/ai-worker', baseUrl), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ worker: workerId, ...body }),
+    });
+    if (!response.ok) throw new Error(`アプリがエラーを返しました: ${response.status}`);
+    return (await response.json()) as T;
+  };
+  return {
+    ping: async () => {
+      await call({ action: 'ping', model: DEFAULT_MODEL });
+    },
+    claim: async () =>
+      (await call<{ job: ClaimedJob | null }>({ action: 'claim', jobTypes: AI_JOB_TYPES })).job,
+    complete: async (id, output, error, model) => {
+      await call({ action: 'complete', id, output: error ? undefined : output, error, model });
+    },
+    close: async () => undefined,
+  };
+}
 
 function log(message: string, extra?: unknown) {
   // 本文や個人情報は出さない（7-4）。出すのは job_type と id まで。
@@ -123,18 +187,18 @@ function buildInput(job: ClaimedJob): string {
   return parts.join('\n\n');
 }
 
-async function processJob(client: Client, job: ClaimedJob): Promise<void> {
+async function processJob(queue: Queue, job: ClaimedJob): Promise<void> {
   const model = job.model_name ?? DEFAULT_MODEL;
 
   // プロンプトは ai_prompt_templates（DB管理）から来る（7-6）。
   // 見つからない場合はコードに埋め込んだ文言で代用せず、失敗させて設定漏れを表面化させる。
   if (!job.prompt_text) {
-    await client.query('select complete_ai_job($1, $2, null, $3, $4)', [
+    await queue.complete(
       job.id,
-      workerId,
+      null,
       `job_type=${job.job_type} の有効なプロンプトテンプレートがありません`,
       model,
-    ]);
+    );
     log('プロンプト未設定のため failed', { id: job.id, jobType: job.job_type });
     return;
   }
@@ -155,12 +219,7 @@ async function processJob(client: Client, job: ClaimedJob): Promise<void> {
       return;
     }
 
-    await client.query('select complete_ai_job($1, $2, $3::jsonb, null, $4)', [
-      job.id,
-      workerId,
-      JSON.stringify(validated.value),
-      model,
-    ]);
+    await queue.complete(job.id, validated.value, null, model);
     log('完了', { id: job.id, jobType: job.job_type });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -168,12 +227,7 @@ async function processJob(client: Client, job: ClaimedJob): Promise<void> {
     // 試行上限に達していれば failed として確定させ、画面を手動運用へ倒す（7-1）。
     // 達していなければ processing のまま抜け、滞留回収で queued へ戻す。
     if (job.attempts >= 3) {
-      await client.query('select complete_ai_job($1, $2, null, $3, $4)', [
-        job.id,
-        workerId,
-        message,
-        model,
-      ]);
+      await queue.complete(job.id, null, message, model);
       log('試行上限のため failed', { id: job.id, message });
     } else {
       log('失敗。再試行に回します', { id: job.id, message });
@@ -182,18 +236,19 @@ async function processJob(client: Client, job: ClaimedJob): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  const apiUrl = process.env.AI_WORKER_API_URL;
+  const token = process.env.AI_WORKER_TOKEN;
   const url = process.env.AI_WORKER_DATABASE_URL;
-  if (!url) {
+  let queue: Queue;
+  if (apiUrl && token) queue = httpQueue(apiUrl, token);
+  else if (url) queue = await pgQueue(url);
+  else {
     console.error(
-      'AI_WORKER_DATABASE_URL が設定されていません。' +
-        'ワーカー専用ロール（ai_worker）の接続情報を渡してください（7-3）。',
+      'D1版は AI_WORKER_API_URL と AI_WORKER_TOKEN を、Supabase版は AI_WORKER_DATABASE_URL を設定してください（7-3）。',
     );
     process.exit(1);
   }
-
-  const client = new Client({ connectionString: url });
-  await client.connect();
-  log('起動しました', { models: DEFAULT_MODEL });
+  log('起動しました', { models: DEFAULT_MODEL, via: apiUrl && token ? 'api' : 'db' });
 
   const shutdown = () => {
     stopping = true;
@@ -207,19 +262,15 @@ async function main(): Promise<void> {
       // 心拍。7-3 (4)「『利用不可』表示は、最終ポーリングから10分以上経過したことを
       // 判定条件とする」。ジョブの有無に関わらず毎回打つ。
       // ジョブが無い間は locked_at が動かないので、それでは「暇」と「停止」を区別できない。
-      await client.query('select ai_worker_ping($1, $2)', [workerId, DEFAULT_MODEL]);
+      await queue.ping();
 
-      const claimed = await client.query<ClaimedJob>('select * from claim_ai_job($1, $2)', [
-        workerId,
-        AI_JOB_TYPES as unknown as string[],
-      ]);
-
-      if (claimed.rows.length === 0) {
+      const claimed = await queue.claim();
+      if (!claimed) {
         await new Promise((resolve) => setTimeout(resolve, IDLE_INTERVAL_MS));
         continue;
       }
 
-      await processJob(client, claimed.rows[0]);
+      await processJob(queue, claimed);
       // ジョブがあった直後は続けて取りに行く（滞留を減らす）
     } catch (error) {
       // 接続断などはここで拾う。落としてしまうと再起動まで止まる。
@@ -228,7 +279,7 @@ async function main(): Promise<void> {
     }
   }
 
-  await client.end();
+  await queue.close();
   log('終了しました');
 }
 

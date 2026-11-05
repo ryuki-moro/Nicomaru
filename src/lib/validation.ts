@@ -537,6 +537,10 @@ export const aiJobCreateSchema = z.object({
   relatedTaskId: z.string().uuid().optional().nullable(),
   input: aiJobInputSchema,
 });
+/** D1版の宿題IDはUUIDに限らない（検証用データ）。範囲はD1側の権限SQLで縛る。 */
+export const aiJobCreateSchemaD1 = aiJobCreateSchema.extend({
+  relatedTaskId: z.string().min(1).max(64).optional().nullable(),
+});
 
 /**
  * PATCH /api/ai/jobs/{jobId}（7-3）。
