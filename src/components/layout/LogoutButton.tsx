@@ -13,7 +13,7 @@ export function LogoutButton() {
   return (
     <button
       type="button"
-      className="text-caption text-link hover:underline disabled:opacity-50"
+      className="btn-ghost min-h-[36px] px-3 py-1 text-caption"
       disabled={pending}
       onClick={async () => {
         setPending(true);

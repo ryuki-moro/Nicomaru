@@ -11,6 +11,11 @@ import {
   ALLOWED_FILE_TYPES,
   CONTACT_CHANNELS,
   FOLLOW_METHODS,
+  GUEST_AGE_CATEGORIES,
+  GUEST_ASSISTANCE_NEEDS,
+  GUEST_GENDERS,
+  GUEST_RELATIONSHIPS,
+  GUEST_RESPONSE_MAX_PEOPLE,
   IMPORTANCE_LEVELS,
   INPUT_LIMITS,
   PARTNER_ROLES,
@@ -19,6 +24,7 @@ import {
   SUBMISSION_FORMATS,
 } from '@/lib/constants';
 import { type ErrorDetail } from '@/lib/errors';
+import { GUEST_TAG_MAX_PER_CASE, GUEST_TAG_NAME_MAX } from '@/lib/guest-tags';
 import { todayInJst } from '@/lib/format';
 import { aiJobInputSchema } from '@/lib/ai/schemas';
 import { NOTIFICATION_TYPES } from '@/lib/notify/templates';
@@ -246,6 +252,54 @@ export const reviewSubmissionSchema = z
       ctx.addIssue({ code: 'custom', path: ['comment'], message: '不備の内容を入力してください' });
     }
   });
+
+// ------------------------------------------------------------ ゲストの出欠回答
+const guestPersonSchema = z
+  .object({
+    fullName: shortText,
+    kana: z.string().trim().max(INPUT_LIMITS.shortText).optional().nullable(),
+    ageCategory: z.enum(GUEST_AGE_CATEGORIES, { message: '年齢区分を選択してください' }),
+    gender: z.enum(GUEST_GENDERS, { message: '性別を選択してください' }),
+    /** 空欄は「アレルギーなし」。欠席の回答では保存しない */
+    allergyNote: z.string().trim().max(INPUT_LIMITS.guestAllergyNote).optional().nullable(),
+    /** 身体的なご事情の区分（足腰・車いすなど）。空配列は「特になし」。欠席の回答では保存しない */
+    assistanceNeeds: z
+      .array(z.enum(GUEST_ASSISTANCE_NEEDS, { message: 'ご事情の区分が正しくありません' }))
+      .max(GUEST_ASSISTANCE_NEEDS.length)
+      .default([]),
+    assistanceNote: z.string().trim().max(INPUT_LIMITS.guestAssistanceNote).optional().nullable(),
+  })
+  .refine((v) => !v.assistanceNeeds.includes('other') || Boolean(v.assistanceNote), {
+    path: ['assistanceNote'],
+    message: '「その他」を選んだ場合は内容をご記入ください',
+  });
+
+/** 先頭が回答者本人、2人目以降が同伴者。欠席の回答に同伴者は付けない。 */
+export const guestResponseSchema = z
+  .object({
+    attending: z.boolean({ message: 'ご出席・ご欠席を選択してください' }),
+    guestSide: z.enum(PARTNER_ROLES, { message: '新郎側・新婦側を選択してください' }),
+    relationship: z.enum(GUEST_RELATIONSHIPS, { message: 'ご関係を選択してください' }),
+    guests: z.array(guestPersonSchema).min(1).max(GUEST_RESPONSE_MAX_PEOPLE),
+  })
+  .refine((v) => v.attending || v.guests.length === 1, {
+    path: ['guests'],
+    message: 'ご欠席の場合、同伴者は登録できません',
+  });
+
+/** ゲストの自由タグ（作成・名前変更）。 */
+export const guestTagSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'タグ名を入力してください')
+    .max(GUEST_TAG_NAME_MAX, `${GUEST_TAG_NAME_MAX}文字以内で入力してください`),
+});
+
+/** ゲスト1人の自由タグの付け替え。指定した内容に置き換える。 */
+export const guestTagAssignmentSchema = z.object({
+  tagIds: z.array(z.string().uuid()).max(GUEST_TAG_MAX_PER_CASE),
+});
 
 // ------------------------------------------------------ 招待・フォロー・利用者
 export const invitationIssueSchema = z

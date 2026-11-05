@@ -17,6 +17,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { submittedListHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { api, ApiCallError, handleApiError, type ApiErrorBody } from '@/lib/api/client';
 import {
@@ -46,6 +47,8 @@ interface Props {
    * case_tasks.status と食い違うため、その場合は出さない（サーバー側も 422 で拒否する）。
    */
   canSaveDraft: boolean;
+  /** 「戻る」の行き先。M03 へ入ってきた画面（taskBackHref） */
+  backHref: string;
 }
 
 /** 拡張子の正規化。サーバー側 /api/files/upload と同じ規則にそろえる。 */
@@ -111,6 +114,7 @@ export function SubmitForm({
   defaultFileName,
   submitLabel,
   canSaveDraft,
+  backHref,
 }: Props) {
   const router = useRouter();
   const [text, setText] = useState(defaultText);
@@ -157,7 +161,8 @@ export function SubmitForm({
         setNotice('入力中の内容を保存しました。あとから続きを入力できます。');
         router.refresh();
       } else {
-        router.push('/mypage/tasks');
+        // 提出は一覧へ戻り、一覧の上で「提出しました」を知らせる（一時保存と扱いをそろえる）
+        router.push(submittedListHref(taskId));
         router.refresh();
       }
     } catch (caught) {
@@ -327,7 +332,7 @@ export function SubmitForm({
             一時保存
           </button>
         )}
-        <Link href="/mypage/tasks" className="btn-ghost self-center">
+        <Link href={backHref} className="btn-ghost self-center">
           戻る
         </Link>
       </div>
