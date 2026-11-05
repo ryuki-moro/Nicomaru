@@ -232,7 +232,10 @@ max_frequency = "1s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+# 基本設計書 5-3 のワンタイムコードの有効期限（10分）。画面の OTP.ttlSeconds（src/lib/constants.ts）と
+# メール本文（templates/magic_link.html）を同じ値にそろえる（tests/unit/auth-email-config.test.ts で検査）。
+# 共有環境は Authentication → Email の「Email OTP Expiration」を同じ値にする（docs/環境の使い分け.md 3-1）。
+otp_expiry = 600
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]
