@@ -1,6 +1,6 @@
 'use client';
 
-import { publicD1, publicLocalD1 } from '@/lib/d1/mode';
+import { publicD1, publicDemoLogin, publicLocalD1 } from '@/lib/d1/mode';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { startTransition, useCallback, useEffect, useRef, useState } from 'react';
@@ -308,6 +308,21 @@ export function LoginForm({
     }
   };
 
+  // npm run demo: 入力を確かめず、方式に応じた役割でログインする
+  const signInDemo = async () => {
+    setPending(true);
+    setError(null);
+    try {
+      const result = await api.post<{ redirectTo: string }>('/api/auth/demo-login', {
+        role: mode === 'password' ? 'planner' : 'couple',
+      });
+      goToLanding(result.redirectTo);
+    } catch (cause) {
+      handleFailure(cause, 'デモにログインできませんでした');
+      setPending(false);
+    }
+  };
+
   const switchMode = (nextMode: Mode) => {
     setMode(nextMode);
     setCodeSent(false);
@@ -334,6 +349,7 @@ export function LoginForm({
         onSubmit={(event) => {
           event.preventDefault();
           if (pending) return;
+          if (publicDemoLogin()) return void signInDemo();
           if (mode === 'password') return void signInWithPassword();
           if (!codeSent) return void requestOtp();
           return void verifyOtp(code);
@@ -349,7 +365,7 @@ export function LoginForm({
             type="email"
             inputMode="email"
             autoComplete="email"
-            required
+            required={!publicDemoLogin()}
             disabled={pending || (codeSent && !emailEditable)}
             placeholder="you@example.com"
             value={email}
@@ -370,7 +386,7 @@ export function LoginForm({
               className="field"
               type="password"
               autoComplete="current-password"
-              required
+              required={!publicDemoLogin()}
               disabled={pending}
               value={password}
               aria-invalid={fieldErrors.password ? true : undefined}
