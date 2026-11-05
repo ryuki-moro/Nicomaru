@@ -30,7 +30,7 @@
 
 ## 利用者の操作が必要なもの
 
-- メール送信：Resendのドメイン認証後、`RESEND_API_KEY`（シークレット）と `RESEND_FROM`（テキスト）をランタイム変数へ登録する。未設定の間は確認コード・招待メールが届かない。
+- メール送信：`RESEND_API_KEY`（シークレット）はダッシュボードに登録済み（2026-11-05）。`RESEND_FROM` は `wrangler.jsonc` の `vars` で試用送信元 `onboarding@resend.dev` に固定しており、Resend登録者本人の宛先にしか届かない。独自ドメインを認証したら `vars` の値を差し替える。
 - 添付ファイル：R2を有効化し（利用規約への同意が必要）、バケット `nicomaru-files` を作り、`wrangler.jsonc` の `r2_buckets` を戻す。未設定の間は添付APIが503。
 
 ## 未完了・未確認
