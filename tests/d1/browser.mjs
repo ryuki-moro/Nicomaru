@@ -159,7 +159,13 @@ test(
         await page.getByLabel('メールアドレス', { exact: true }).fill(users[name].email);
         await page.getByLabel('パスワード', { exact: true }).fill(users[name].password);
         await page.getByRole('button', { name: 'パスワードでログイン', exact: true }).click();
-        await page.waitForURL(name === 'coupleA' ? '**/mypage' : '**/cases');
+        const landing = { adminA: 'users', plannerA: 'cases', system: 'users', coupleA: 'mypage' };
+        await page.waitForURL(`**/${landing[name]}`);
+        if (landing[name] === 'users') {
+          const label = name === 'system' ? '職員管理' : 'プランナー管理';
+          await page.getByRole('heading', { name: label, exact: true }).waitFor();
+          await page.goto(origin + '/cases');
+        }
         if (name === 'coupleA') {
           await page.getByRole('heading', { name: '次にやること' }).waitFor();
           assert.equal((await page.locator('body').innerText()).includes('内部メモ'), false);
