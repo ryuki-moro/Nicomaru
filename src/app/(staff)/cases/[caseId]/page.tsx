@@ -15,6 +15,8 @@ import { redirect } from 'next/navigation';
 
 import { InvitationSection } from './InvitationSection';
 import { RiskSection, type CaseRisk } from './RiskSection';
+import { GuestResponseList } from '@/components/guests/GuestResponseList';
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import type { RiskReasonView } from '@/components/ui/RiskBadge';
 import { TaskSection, type CaseTaskRow } from './TaskSection';
 import { adoptedOutput, AI_JOB_COLUMNS, type AiJobRow } from '@/lib/ai/assist';
@@ -35,6 +37,7 @@ import {
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { formatDate } from '@/lib/format';
+import { loadGuestBook } from '@/lib/services/guests';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -97,7 +100,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
     try {
       row = await caseRow(await localDB(), user, caseId);
     } catch (error) {
-      if ((error as { code?: string }).code === 'NOT_FOUND') redirect('/error');
+      if ((error as { code?: string }).code === 'NOT_FOUND') redirect('/error?code=404');
       throw error;
     }
   } else {
@@ -107,7 +110,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
       .select(CASE_SELECT)
       .eq('id', caseId)
       .maybeSingle();
-    if (!data) redirect('/error');
+    if (!data) redirect('/error?code=404');
     row = data as unknown as CaseRow;
   }
 
@@ -180,25 +183,17 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
   const isAdmin = user.role === 'admin' || user.role === 'system_admin';
   const archived = row.archived_at !== null;
 
+  // ゲストの出欠回答とタグ。回答の追加は新郎新婦が配るURLから行い、タグは新郎新婦が付けたものを確認・修正できる。
+  // D1 ローカル検証の対象外
+  const guestBook = d1
+    ? undefined
+    : await loadGuestBook(await createSupabaseServerClient(), row.id);
+
   return (
     <div className="space-y-5">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href="/cases" className="text-link hover:underline">
-              案件一覧
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page">{row.case_code}</li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        items={[DASHBOARD_CRUMB, { label: '案件一覧', href: '/cases' }, { label: row.case_code }]}
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="section-head">
@@ -324,6 +319,19 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
           readOnly={archived}
         />
       }
+
+      {guestBook !== undefined && (
+        <section className="space-y-3">
+          <h2 className="section-head">ゲストの出欠</h2>
+          {guestBook === null ? (
+            <div role="alert" className="banner-error">
+              <span>ゲストの回答を読み込めませんでした。</span>
+            </div>
+          ) : (
+            <GuestResponseList caseId={row.id} book={guestBook} editable={!archived} />
+          )}
+        </section>
+      )}
     </div>
   );
 }

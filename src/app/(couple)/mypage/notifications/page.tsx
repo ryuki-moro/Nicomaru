@@ -69,6 +69,11 @@ export default async function NotificationsPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* お知らせは下部ナビに項目を持たないマイページの子画面（遷移図 M01 → M05）。
+          入口がマイページの小さなボタンだけなので、戻り先を見出しの上に示す */}
+      <Link href="/mypage" className="btn-ghost self-start">
+        ホームへ戻る
+      </Link>
       <h1 className="section-head">お知らせ</h1>
 
       {error && (
