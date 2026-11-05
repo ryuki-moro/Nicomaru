@@ -69,6 +69,7 @@ export async function middleware(request: NextRequest) {
       '/mypage/timeline',
       '/mypage/case',
       '/mypage/notifications',
+      '/mypage/guests',
       '/api/notifications',
       '/api/notifications/send',
       '/submissions',
@@ -98,6 +99,10 @@ export async function middleware(request: NextRequest) {
         path,
       );
     const registration = /^\/register\/[^/]+$/.test(path);
+    const guests =
+      /^\/(?:rsvp\/[^/]+|api\/rsvp\/[^/]+|api\/cases\/[^/]+\/(?:guest-form|guest-tags(?:\/[^/]+)?|guests\/[^/]+\/tags))$/.test(
+        path,
+      );
     const staffUser = /^\/(?:users|api\/admin\/users)\/[^/]+$/.test(path) && path !== '/users/new';
     if (
       !allowed.includes(path) &&
@@ -105,6 +110,7 @@ export async function middleware(request: NextRequest) {
       !casePage &&
       !caseApi &&
       !registration &&
+      !guests &&
       !tasks &&
       !path.startsWith('/_next/')
     ) {

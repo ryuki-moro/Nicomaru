@@ -6,6 +6,7 @@
  */
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
+import { usingD1 } from '@/lib/d1/mode';
 import { fromPostgresError, unprocessable } from '@/lib/errors';
 import { GUEST_TAG_MAX_PER_CASE } from '@/lib/guest-tags';
 import { assertGuestTagsEditable } from '@/lib/services/guest-tag-access';
@@ -14,9 +15,14 @@ import { guestTagSchema } from '@/lib/validation';
 
 export const POST = route(
   async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
-    await requireRole('couple', 'planner', 'admin', 'system_admin');
+    const user = await requireRole('couple', 'planner', 'admin', 'system_admin');
     const { caseId } = await context.params;
     const input = await parseBody(request, guestTagSchema);
+    if (usingD1()) {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { createGuestTag } = await import('@/lib/d1/guests');
+      return ok(await createGuestTag(await localDB(), user, caseId, input.name), 201);
+    }
     const supabase = await createSupabaseServerClient();
     await assertGuestTagsEditable(supabase, caseId);
 
