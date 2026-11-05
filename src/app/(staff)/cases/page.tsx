@@ -130,6 +130,11 @@ export default async function CaseListPage({ searchParams }: Props) {
     const qs = search.toString();
     return qs ? `/cases?${qs}` : '/cases';
   };
+  const clearKeywordSearch = new URLSearchParams();
+  if (scope === 'archived') clearKeywordSearch.set('scope', scope);
+  if (sort === 'risk') clearKeywordSearch.set('sort', sort);
+  const clearKeywordQuery = clearKeywordSearch.toString();
+  const clearKeywordHref = clearKeywordQuery ? `/cases?${clearKeywordQuery}` : '/cases';
 
   return (
     <div className="space-y-4">
@@ -156,7 +161,14 @@ export default async function CaseListPage({ searchParams }: Props) {
           <label htmlFor="q" className="field-label">
             検索キーワード（案件番号・カップル名）
           </label>
-          <input id="q" name="q" defaultValue={keyword} className="field" maxLength={100} />
+          <input
+            key={keyword}
+            id="q"
+            name="q"
+            defaultValue={keyword}
+            className="field"
+            maxLength={100}
+          />
         </div>
 
         {canSeeArchived && (
@@ -184,6 +196,11 @@ export default async function CaseListPage({ searchParams }: Props) {
         <button type="submit" className="btn-secondary w-auto px-6">
           絞り込む
         </button>
+        {keyword && (
+          <Link href={clearKeywordHref} className="btn-ghost">
+            検索を解除
+          </Link>
+        )}
       </form>
 
       {loadError && (
@@ -193,17 +210,24 @@ export default async function CaseListPage({ searchParams }: Props) {
       )}
 
       {!loadError && visible.length === 0 && (
-        <EmptyState
-          message={
-            keyword
-              ? '条件に合う案件は見つかりませんでした。キーワードを変えてお試しください。'
-              : scope === 'archived'
-                ? 'アーカイブ済みの案件はありません。'
-                : canCreate
-                  ? 'まだ案件がありません。上の「新規案件登録」から登録できます。'
-                  : 'まだ案件がありません。案件は各式場のプランナーまたは式場管理者が登録します。'
-          }
-        />
+        <div className="space-y-2">
+          <EmptyState
+            message={
+              keyword
+                ? '条件に合う案件は見つかりませんでした。キーワードを変えてお試しください。'
+                : scope === 'archived'
+                  ? 'アーカイブ済みの案件はありません。'
+                  : canCreate
+                    ? 'まだ案件がありません。上の「新規案件登録」から登録できます。'
+                    : 'まだ案件がありません。案件は各式場のプランナーまたは式場管理者が登録します。'
+            }
+          />
+          {keyword && (
+            <Link href={clearKeywordHref} className="btn-ghost inline-block">
+              検索を解除して一覧に戻る
+            </Link>
+          )}
+        </div>
       )}
 
       {visible.length > 0 && (
