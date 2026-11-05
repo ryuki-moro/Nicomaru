@@ -67,18 +67,28 @@ GitHub を触ったことがない場合は、先に
 
 ## セットアップ
 
+### まず起動する（D1ローカル版・おすすめ）
+
+Cloudflareアカウント・Supabase・`.env.local` は不要です。Node.js 22.13以上（または24以上）で、リポジトリのルートで実行します。
+
 ```bash
-npm install
+npm ci
+npm run dev:d1
 ```
 
-環境変数は `.env.example` をコピーして `.env.local` を作る。
-個人情報の暗号化鍵は 32 バイトを base64 で与える。
+**http://127.0.0.1:3104/login** を開きます。検証用アカウントは初回起動時に
+`.wrangler/app-local/credentials.json` へ作られます（共有・コミットしない）。
+データはこのPCの中だけに保存され、メールは外部へ送らず **http://127.0.0.1:3104/dev/mailbox** に届きます。
+詳しい確認手順は [開発のはじめかた](docs/開発のはじめかた.md) の「D1で本体のログイン・案件・招待・宿題をローカル検証する」を参照。
+
+### Supabase版で起動する（Supabaseの鍵を持っている人だけ）
+
+`.env.example` をコピーして `.env.local` を作り、Supabaseの接続情報を入れる。
+個人情報の暗号化鍵は 32 バイトを base64 で与える。鍵がないとこの起動方法は失敗するので、上のD1ローカル版を使う。
 
 ```bash
 openssl rand -base64 32
 ```
-
-### 開発サーバー
 
 ```bash
 npm run dev
