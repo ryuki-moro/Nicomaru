@@ -15,8 +15,10 @@ import Link from 'next/link';
 import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
+import { requirePageUser } from '@/lib/auth/session';
+import { usingD1 } from '@/lib/d1/mode';
 import { formatDateJp } from '@/lib/format';
-import { type IsoDate } from '@/lib/services/schedule';
+import { phaseNameFor, type IsoDate } from '@/lib/services/schedule';
 import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -52,24 +54,55 @@ function groupByPhase(rows: readonly TimelineRow[]): PhaseGroup[] {
   return groups;
 }
 
+/** D1には timeline_items がない。Supabase版でも自動項目は宿題と1対1なので、宿題から同じ形を作る。 */
+async function loadD1Timeline(from: number) {
+  const user = await requirePageUser('couple');
+  const { localDB } = await import('@/lib/d1/runtime');
+  const { listCases, caseRow } = await import('@/lib/d1/cases');
+  try {
+    const db = await localDB();
+    const id = (await listCases(db, user)).items[0]?.id;
+    if (!id) return { data: [] as TimelineRow[], error: null };
+    const row = await caseRow(db, user, id);
+    const data: TimelineRow[] = row.case_tasks
+      .slice(from, from + LIST_PAGE_SIZE + 1)
+      .map((task) => ({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        due_date: task.due_date as IsoDate,
+        phase_name:
+          task.phase_name ?? phaseNameFor(row.wedding_date as IsoDate, task.due_date as IsoDate),
+        related_task_id: task.id,
+      }));
+    return { data, error: null };
+  } catch (error) {
+    console.error('[timeline] D1の読み込みに失敗しました', error);
+    return { data: null, error: true };
+  }
+}
+
 export default async function TimelinePage({
   searchParams,
 }: {
   searchParams: Promise<{ page?: string | string[] }>;
 }) {
   const page = resolvePage((await searchParams).page);
-  const supabase = await createSupabaseServerClient();
 
   // 既定の表示件数は50件、以降はページング（4-3 一覧画面共通）。
   // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する。
   const from = (page - 1) * LIST_PAGE_SIZE;
-  const { data, error } = await supabase
-    .from('timeline_items')
-    .select('id, title, description, due_date, phase_name, related_task_id')
-    .order('due_date', { ascending: true })
-    .order('display_order', { ascending: true })
-    .order('id', { ascending: true })
-    .range(from, from + LIST_PAGE_SIZE);
+  const { data, error } = usingD1()
+    ? await loadD1Timeline(from)
+    : await (
+        await createSupabaseServerClient()
+      )
+        .from('timeline_items')
+        .select('id, title, description, due_date, phase_name, related_task_id')
+        .order('due_date', { ascending: true })
+        .order('display_order', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, from + LIST_PAGE_SIZE);
 
   if (error) {
     return (

@@ -63,6 +63,8 @@ export async function middleware(request: NextRequest) {
       '/cases',
       '/mypage',
       '/mypage/tasks',
+      '/mypage/timeline',
+      '/mypage/case',
       '/mypage/notifications',
       '/api/notifications',
       '/api/notifications/send',

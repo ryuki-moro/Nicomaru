@@ -70,9 +70,7 @@ export function CoupleNav() {
       className="no-print fixed inset-x-0 bottom-0 z-10 border-t border-border-light bg-surface"
     >
       <ul className="mx-auto flex max-w-phone">
-        {ITEMS.filter(
-          (item) => !publicD1() || ['/mypage', '/mypage/tasks'].includes(item.href),
-        ).map((item) => {
+        {ITEMS.filter((item) => !publicD1() || item.href !== '/mypage/account').map((item) => {
           const active = isCoupleNavActive(item, pathname);
           return (
             <li key={item.href} className="flex-1">
