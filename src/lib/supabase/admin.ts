@@ -8,6 +8,7 @@
  * これにより「どの行で許可された使用なのか」がコード上で追跡でき、
  * AI がRLSエラー回避のために Service Role へ逃げる典型的な失敗をレビューで機械的に検出できる。
  */
+import { usingD1 } from '../d1/mode';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createAuthRateLimitFetch } from './auth-rate-limit-fetch';
 
@@ -20,7 +21,11 @@ export const SERVICE_ROLE_USE_CASES = {
     'case_invitations の token_hash 照合と expires_at／used_at／revoked_at／purpose／max_uses チェックを必須実施。' +
     'recipient_email が設定された招待は入力メールとの一致も必須。検証と消費は単一 UPDATE ... RETURNING（6-6-1）',
   'auth.rate-limit':
-    'auth_rate_limits は authenticated から直接参照させないため、判定関数の呼び出しにのみ用いる（付録A）',
+    'auth_rate_limits は authenticated から直接参照させないため、判定関数の呼び出しにのみ用いる（付録A）。' +
+    '未ログインのゲスト出欠回答（guest_rsvp）の判定も同じ関数で行う',
+  'guest.rsvp':
+    '未ログインのゲストの出欠回答。形式確認済みトークンのハッシュで peek_guest_form／submit_guest_response を' +
+    '呼ぶだけで、表を直接参照・更新しない。返すのは挙式日と新郎新婦の氏名のみ。案件IDは応答に出さない',
   'admin.users':
     '呼び出し元JWTの role が admin／system_admin であることを検証。venue_id は呼び出し元の値に固定し、' +
     'role は U02 の自動設定規則に従う（任意指定を受け付けない）',
@@ -67,7 +72,7 @@ let cachedRateLimit: SupabaseClient | null = null;
  * @param useCase 表6-4 のどの行にあたる使用かを明示する。
  */
 export function createSupabaseAdminClient(useCase: ServiceRoleUseCase): SupabaseClient {
-  if (process.env.NICOMARU_DB === 'd1-local') throw new Error('D1検証中はSupabaseへ接続できません');
+  if (usingD1()) throw new Error('D1検証中はSupabaseへ接続できません');
   if (!(useCase in SERVICE_ROLE_USE_CASES)) {
     throw new Error(
       `Service Role の使用範囲表（6-3-5 表6-4）にない用途です: ${useCase}。` +

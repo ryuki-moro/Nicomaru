@@ -15,7 +15,9 @@
 import Link from 'next/link';
 
 import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
+import { createdRoleLabelFor, usersLabelFor } from '@/components/layout/staffNavItems';
 import { requirePageUser } from '@/lib/auth/session';
+import { usingD1 } from '@/lib/d1/mode';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { loadUserList, sanitizeKeyword, type UserProfileRow } from '@/lib/services/users';
 import { resolvePage } from '@/lib/pagination';
@@ -43,15 +45,20 @@ export default async function UserListPage({
   const user = await requirePageUser('admin', 'system_admin');
 
   const keyword = sanitizeKeyword(q);
-  const supabase = await createSupabaseServerClient();
+  const d1 = usingD1();
+  const supabase = d1 ? null : await createSupabaseServerClient();
 
   // 取得・検索語のエスケープ・次ページ判定はサービス層に置く。
   // 同じ処理が GET /api/admin/users にもあり、片方だけ直す事故が起こりうる形だった（#18）。
-  let profiles: UserProfileRow[] = [];
+  let profiles: (UserProfileRow & { venue_name?: string | null })[] = [];
   let hasNext = false;
   let loadError = false;
   try {
-    const result = await loadUserList(supabase, { keyword: q, page });
+    const result = supabase
+      ? await loadUserList(supabase, { keyword: q, page })
+      : await (
+          await import('@/lib/d1/staff')
+        ).listStaff(await (await import('@/lib/d1/runtime')).localDB(), user, { keyword: q, page });
     profiles = result.rows;
     hasNext = result.hasNext;
   } catch {
@@ -61,7 +68,9 @@ export default async function UserListPage({
   // 所属式場名は system_admin のときだけ必要。admin は自式場しか見えないため列を出さない
   const showVenue = user.role === 'system_admin';
   const venueNames = new Map<string, string>();
-  if (showVenue && profiles.length > 0) {
+  for (const p of profiles)
+    if (p.venue_id && p.venue_name) venueNames.set(p.venue_id, p.venue_name);
+  if (supabase && showVenue && profiles.length > 0) {
     const venueIds = [
       ...new Set(profiles.map((p) => p.venue_id).filter((v): v is string => v != null)),
     ];
@@ -84,12 +93,12 @@ export default async function UserListPage({
 
   return (
     <div className="space-y-4">
-      <Breadcrumbs items={[homeCrumbFor(user.role), { label: '利用者管理' }]} />
+      <Breadcrumbs items={[homeCrumbFor(user.role), { label: usersLabelFor(user.role) }]} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="section-head">利用者管理</h1>
+        <h1 className="section-head">{usersLabelFor(user.role)}</h1>
         <Link href="/users/new" className="btn-primary w-auto">
-          新規登録
+          {createdRoleLabelFor(user.role)}を登録
         </Link>
       </div>
 

@@ -9,6 +9,7 @@
  * 文面は付録D のテンプレートから組み立てる。自由文を直接送らせないのは、
  * 第11章「通知文面レビュー」が求める文面の統制を、送信経路の側で担保するため。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireStaff } from '@/lib/auth/session';
 import { COUPLE_PROFILE_COLUMNS } from '@/lib/constants';
@@ -25,6 +26,11 @@ export const runtime = 'nodejs';
 export const POST = route(async (request: Request) => {
   const user = await requireStaff();
   const input = await parseBody(request, notificationSendSchema);
+  if (usingD1()) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { createNotification } = await import('@/lib/d1/notifications');
+    return ok(await createNotification(await localDB(), user, input), 201);
+  }
   const supabase = await createSupabaseServerClient();
 
   // 宛名（新郎新婦名）は暗号化列。RLS 経由で取得する。

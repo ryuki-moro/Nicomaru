@@ -60,7 +60,7 @@ export async function seedAppFixtures(db, encode = (value) => value) {
         )
         .bind(`account-${name}`, ids[name], ids[name], hash, now, now),
       db
-        .prepare('INSERT INTO user_profiles VALUES (?,?,?,?)')
+        .prepare('INSERT INTO user_profiles(id,venue_id,role,status) VALUES (?,?,?,?)')
         .bind(ids[name], venue ? ids[venue] : null, role, status),
     );
   }

@@ -11,8 +11,11 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
 import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
-import { getAppUser } from '@/lib/auth/session';
+import { usersLabelFor } from '@/components/layout/staffNavItems';
+import { getAppUser, type AppUser } from '@/lib/auth/session';
 import { ROLE_LABEL, type Role, type UserStatus } from '@/lib/constants';
+import { usingD1 } from '@/lib/d1/mode';
+import { ApiError } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 import { UserEditForm, type SuccessorOption } from './UserEditForm';
@@ -34,6 +37,25 @@ export default async function UserEditPage({ params }: { params: Promise<{ userI
   if (!user) redirect('/login');
   if (user.role !== 'admin' && user.role !== 'system_admin') redirect('/error?code=403');
 
+  if (usingD1()) {
+    const db = await (await import('@/lib/d1/runtime')).localDB();
+    const staff = await import('@/lib/d1/staff');
+    const target = await staff.managedStaff(db, user, userId).catch((error: unknown) => {
+      if (error instanceof ApiError && error.code === 'NOT_FOUND') notFound();
+      throw error;
+    });
+    const { assignedCaseCount, successors } = await staff.handoverOptions(db, target);
+    return (
+      <UserEditView
+        user={user}
+        target={target}
+        venueName={target.venue_name}
+        assignedCaseCount={assignedCaseCount}
+        successorOptions={assignedCaseCount > 0 ? successors : []}
+      />
+    );
+  }
+
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
@@ -51,9 +73,6 @@ export default async function UserEditPage({ params }: { params: Promise<{ userI
       ? target.role === 'planner' && target.venue_id === user.venueId
       : target.role === 'planner' || target.role === 'admin';
   if (!manageable) notFound();
-
-  // 削除済みは変更対象にしない（5-1 削除方針の論理削除）
-  const isDeleted = target.status === 'deleted';
 
   const { data: venue } = target.venue_id
     ? await supabase.from('venues').select('name').eq('id', target.venue_id).maybeSingle()
@@ -87,11 +106,37 @@ export default async function UserEditPage({ params }: { params: Promise<{ userI
   }
 
   return (
+    <UserEditView
+      user={user}
+      target={target}
+      venueName={(venue as { name: string } | null)?.name ?? null}
+      assignedCaseCount={assignedCaseCount}
+      successorOptions={successorOptions}
+    />
+  );
+}
+
+function UserEditView({
+  user,
+  target,
+  venueName,
+  assignedCaseCount,
+  successorOptions,
+}: {
+  user: AppUser;
+  target: ProfileRow;
+  venueName: string | null;
+  assignedCaseCount: number;
+  successorOptions: SuccessorOption[];
+}) {
+  // 削除済みは変更対象にしない（5-1 削除方針の論理削除）
+  const isDeleted = target.status === 'deleted';
+  return (
     <div className="space-y-4">
       <Breadcrumbs
         items={[
           homeCrumbFor(user.role),
-          { label: '利用者管理', href: '/users' },
+          { label: usersLabelFor(user.role), href: '/users' },
           { label: target.display_name },
         ]}
       />
@@ -111,7 +156,7 @@ export default async function UserEditPage({ params }: { params: Promise<{ userI
         <UserEditForm
           userId={target.id}
           roleLabel={ROLE_LABEL[target.role]}
-          venueName={(venue as { name: string } | null)?.name ?? '未設定'}
+          venueName={venueName ?? '未設定'}
           initial={{
             displayName: target.display_name,
             email: target.email,

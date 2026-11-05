@@ -115,7 +115,7 @@ export default async function NotificationHistoryPage({ searchParams }: Props) {
                   <td>{formatDateTime(row.sent_at ?? row.created_at)}</td>
                   <td>
                     {row.case_id ? (
-                      <Link href={`/cases/${row.case_id}`} className="text-link hover:underline">
+                      <Link href={`/cases/${row.case_id}`} className="btn-ghost">
                         {row.wedding_cases?.case_code ?? '—'}
                       </Link>
                     ) : (

@@ -1,5 +1,4 @@
 /// <reference types="vite/client" />
-import { createHmac } from 'node:crypto';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -171,7 +170,7 @@ describe('共通RouteのOrigin検証', () => {
 });
 
 describe('全APIの適用範囲（新規Routeも自動列挙）', () => {
-  it('全32ブラウザー更新APIで不正Originを拒否し、認証・DB・外部通信を呼ばない', async () => {
+  it('全38ブラウザー更新APIで不正Originを拒否し、認証・DB・外部通信を呼ばない', async () => {
     const checked: string[] = [];
     for (const [file, load] of Object.entries(moduleLoaders)) {
       const path = file.replace('../../src/app', '').replace('/route.ts', '');
@@ -193,7 +192,9 @@ describe('全APIの適用範囲（新規Routeも自動列挙）', () => {
         checked.push(`${method} ${path}`);
       }
     }
-    expect(checked).toHaveLength(32);
+    expect(checked).toHaveLength(38);
+    expect(checked).toContain('PUT /api/cases/[caseId]/guests/[guestId]/tags');
+    expect(checked).toContain('POST /api/rsvp/[token]');
     expect(checked).toContain('POST /api/auth/sign-out');
     expect(checked).toContain('POST /api/auth/dev-admin');
     expect(checked).toContain('POST /api/auth/password-login');
@@ -236,27 +237,15 @@ describe('全APIの適用範囲（新規Routeも自動列挙）', () => {
     },
   );
 
-  it('LINE WebhookはOriginなしでも実際のraw body署名を検証する', async () => {
+  it('廃止したLINE Webhookは処理を行わず410を返す', async () => {
     const routeModule = await moduleLoaders['../../src/app/api/line/webhook/route.ts']();
     const handler = routeModule.POST as Handler;
-    const body = '{ "events": [] }';
-    const signature = createHmac('sha256', 'unit-only-line-secret').update(body).digest('base64');
-    const send = (signature?: string, rawBody = body) =>
-      handler(
-        new Request(`${ORIGIN}${webhookPath}`, {
-          method: 'POST',
-          body: rawBody,
-          headers: signature ? { 'x-line-signature': signature } : {},
-        }),
-        { params: Promise.resolve({}) },
-      );
-    expect((await send()).status).toBe(401);
-    expect((await send('wrong')).status).toBe(401);
-    expect((await send(signature, '{"events":[]}')).status).toBe(401);
+    const response = await handler(
+      new Request(`${ORIGIN}${webhookPath}`, { method: 'POST', body: '{}' }),
+      { params: Promise.resolve({}) },
+    );
+    expect(response.status).toBe(410);
     expect(admin).not.toHaveBeenCalled();
-    admin.mockReturnValue({});
-    expect((await send(signature)).status).toBe(200);
-    expect(admin).toHaveBeenCalledExactlyOnceWith('line.webhook');
     expect(fetch).not.toHaveBeenCalled();
   });
 });

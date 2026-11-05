@@ -27,7 +27,9 @@ import {
   PARTNER_ROLE_LABEL,
   type PartnerRole,
 } from '@/lib/constants';
+import { requirePageUser } from '@/lib/auth/session';
 import { readPii } from '@/lib/crypto';
+import { usingD1 } from '@/lib/d1/mode';
 import { formatDateJp } from '@/lib/format';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -47,7 +49,43 @@ interface ProfileRow {
   full_name: string | null;
 }
 
+/** D1では案件・氏名・宿題を caseRow でまとめて読み、Supabase版と同じ形にする。 */
+async function D1CoupleCase() {
+  const user = await requirePageUser('couple');
+  const { localDB } = await import('@/lib/d1/runtime');
+  const { listCases, caseRow } = await import('@/lib/d1/cases');
+  let row;
+  try {
+    const db = await localDB();
+    const id = (await listCases(db, user)).items[0]?.id;
+    row = id ? await caseRow(db, user, id) : null;
+  } catch (error) {
+    console.error('[mypage/case] D1の読み込みに失敗しました', error);
+    return <LoadError />;
+  }
+  if (!row) return <Waiting />;
+  const incomplete = row.case_tasks.filter((t) => INCOMPLETE_TASK_STATUSES.includes(t.status));
+  return (
+    <CaseView
+      weddingCase={{ ...row, plan_types: row.plan_types ? { name: row.plan_types.name } : null }}
+      profileByRole={new Map(row.couple_profiles.map((p) => [p.partner_role, p]))}
+      total={row.case_tasks.length}
+      done={row.case_tasks.length - incomplete.length}
+    />
+  );
+}
+
+const LoadError = () => (
+  <div role="alert" className="banner-error">
+    <span>挙式の情報を読み込めませんでした。時間をおいて開き直してください。</span>
+  </div>
+);
+const Waiting = () => (
+  <EmptyState message="担当プランナーが準備を進めています。案件の情報が届くまでお待ちください。" />
+);
+
 export default async function CoupleCasePage() {
+  if (usingD1()) return D1CoupleCase();
   const supabase = await createSupabaseServerClient();
 
   // 案件の絞り込みは書かない。どれが見えるかは付録A の RLS が決める（6-5）。
@@ -60,19 +98,8 @@ export default async function CoupleCasePage() {
     .limit(1)
     .maybeSingle();
 
-  if (error) {
-    return (
-      <div role="alert" className="banner-error">
-        <span>挙式の情報を読み込めませんでした。時間をおいて開き直してください。</span>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <EmptyState message="担当プランナーが準備を進めています。案件の情報が届くまでお待ちください。" />
-    );
-  }
+  if (error) return <LoadError />;
+  if (!data) return <Waiting />;
 
   // plan_types の埋め込みを含む select は supabase-js の型パーサが行の形を推論しきれないため、
   // 上の CaseRow を正本として扱う。
@@ -104,6 +131,22 @@ export default async function CoupleCasePage() {
   const total = totalResult.count ?? 0;
   const done = total - (incompleteResult.count ?? 0);
 
+  return (
+    <CaseView weddingCase={weddingCase} profileByRole={profileByRole} total={total} done={done} />
+  );
+}
+
+function CaseView({
+  weddingCase,
+  profileByRole,
+  total,
+  done,
+}: {
+  weddingCase: CaseRow;
+  profileByRole: Map<PartnerRole, ProfileRow>;
+  total: number;
+  done: number;
+}) {
   return (
     <div className="flex flex-col gap-[14px]">
       <h1 className="section-head">挙式情報</h1>
@@ -158,6 +201,13 @@ export default async function CoupleCasePage() {
       <p className="text-caption text-text-muted">
         内容の変更が必要なときは、担当プランナーへお知らせください。
       </p>
+
+      {/* ゲスト出欠はD1へ未移行 */}
+      {!usingD1() && (
+        <Link href="/mypage/guests" className="btn-secondary block text-center">
+          ゲストの出欠を見る
+        </Link>
+      )}
 
       <Link href="/mypage/tasks" className="btn-secondary block text-center">
         宿題・提出物を見る

@@ -13,6 +13,7 @@
  *   (4) 途中失敗時は補償処理で巻き戻す。自動リトライはしない。
  *   (5) communication_logs に source='initial_register' で自動記録する。
  */
+import { clientIp, localD1, usingD1 } from '@/lib/d1/mode';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { landingPathFor } from '@/lib/auth/session';
 import { COUPLE_PROFILE_COLUMNS } from '@/lib/constants';
@@ -83,11 +84,18 @@ async function establishSession(
 }
 
 export const POST = route(async (request) => {
-  if (process.env.NICOMARU_DB === 'd1-local') {
+  if (usingD1()) {
     const body = await parseBody(request, initialRegisterSchema.strict());
     const { localDB } = await import('@/lib/d1/runtime');
     const db = await localDB();
-    await (await import('@/lib/d1/auth-limits')).authLimit(db, 'initial_register', body.email);
+    await (
+      await import('@/lib/d1/auth-limits')
+    ).authLimit(
+      db,
+      'initial_register',
+      body.email,
+      localD1() ? undefined : clientIp(request.headers),
+    );
     const session = await (
       await (await import('@/lib/d1/auth')).d1Auth()
     ).api.getSession({ headers: request.headers });

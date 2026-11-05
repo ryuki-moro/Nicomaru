@@ -167,14 +167,20 @@ export async function issuePasswordSetupLink(
 }
 
 /** 初回パスワード設定リンクの本文（U02／U03）。圧迫感を与えない案内文にする（要件 8）。 */
-export function sendPasswordSetupMail(params: {
+export function sendPasswordSetupMail(params: PasswordSetupMailParams): Promise<SendResult> {
+  return sendMail(passwordSetupMessage(params));
+}
+
+interface PasswordSetupMailParams {
   to: string;
   displayName: string;
   roleLabel: string;
   venueName?: string | null;
   actionLink: string;
   isResend?: boolean;
-}): Promise<SendResult> {
+}
+
+export function passwordSetupMessage(params: PasswordSetupMailParams): MailMessage {
   const belongs = params.venueName ? `${params.venueName}の` : '';
   const subject = params.isResend
     ? '【にこまる】パスワード設定リンクの再送のご案内'
@@ -195,5 +201,5 @@ export function sendPasswordSetupMail(params: {
     'お心当たりのない場合は、このメールは破棄していただいて差し支えありません。',
   ].join('\n');
 
-  return sendMail({ to: params.to, subject, text });
+  return { to: params.to, subject, text };
 }
