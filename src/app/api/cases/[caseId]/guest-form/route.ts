@@ -8,6 +8,7 @@
 import { ok, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
 import { encryptPii } from '@/lib/crypto';
+import { usingD1 } from '@/lib/d1/mode';
 import { fromPostgresError } from '@/lib/errors';
 import { buildGuestFormUrl } from '@/lib/services/guests';
 import { generateInvitationToken, hashInvitationToken } from '@/lib/services/invitations';
@@ -17,8 +18,14 @@ import { appBaseUrl } from '../../../auth/shared';
 
 export const POST = route(
   async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
-    await requireRole('couple', 'planner', 'admin', 'system_admin');
+    const user = await requireRole('couple', 'planner', 'admin', 'system_admin');
     const { caseId } = await context.params;
+    if (usingD1()) {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { reissueGuestForm } = await import('@/lib/d1/guests');
+      const token = await reissueGuestForm(await localDB(), user, caseId);
+      return ok({ url: buildGuestFormUrl(appBaseUrl(request), token) }, 201);
+    }
     const supabase = await createSupabaseServerClient();
 
     const token = generateInvitationToken();

@@ -1,5 +1,6 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { hmacHash, normalizeEmail } from '@/lib/crypto';
+import { RATE_LIMITS } from '@/lib/constants';
 import { rateLimited } from '@/lib/errors';
 
 async function limit(db: D1Database, key: string, max: number, windowSeconds: number) {
@@ -13,6 +14,11 @@ async function limit(db: D1Database, key: string, max: number, windowSeconds: nu
     .bind(hmacHash(key), now, now - windowSeconds * 1000, now - windowSeconds * 1000)
     .first<{ count: number }>();
   if (!row || row.count > max) throw rateLimited();
+}
+/** ゲストの出欠回答。送信元IP＋回答URLで数え、同じURLを使う別回線のゲストを巻き込まない。 */
+export async function guestRsvpLimit(db: D1Database, tokenHash: string, ip: string) {
+  const { windowSeconds, max } = RATE_LIMITS.guest_rsvp;
+  await limit(db, `guest_rsvp:${ip}:${tokenHash}`, max, windowSeconds);
 }
 export async function authLimit(
   db: D1Database,

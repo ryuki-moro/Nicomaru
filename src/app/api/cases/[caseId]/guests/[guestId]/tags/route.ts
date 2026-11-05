@@ -6,15 +6,22 @@
  */
 import { noContent, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
+import { usingD1 } from '@/lib/d1/mode';
 import { fromPostgresError, notFound } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { guestTagAssignmentSchema } from '@/lib/validation';
 
 export const PUT = route(
   async (request: Request, context: { params: Promise<{ caseId: string; guestId: string }> }) => {
-    await requireRole('couple', 'planner', 'admin', 'system_admin');
+    const user = await requireRole('couple', 'planner', 'admin', 'system_admin');
     const { caseId, guestId } = await context.params;
     const input = await parseBody(request, guestTagAssignmentSchema);
+    if (usingD1()) {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { setGuestTags } = await import('@/lib/d1/guests');
+      await setGuestTags(await localDB(), user, caseId, guestId, input.tagIds);
+      return noContent();
+    }
     const supabase = await createSupabaseServerClient();
 
     // パスの caseId とゲストの所属が食い違う指定は、存在しないものとして扱う
