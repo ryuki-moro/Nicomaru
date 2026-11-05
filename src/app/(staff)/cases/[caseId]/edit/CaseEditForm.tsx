@@ -13,7 +13,7 @@
  * つまり「1回目の送信＝プレビュー取得」「2回目の送信＝適用」であり、
  * 画面に出した差分とDBへ適用される内容が必ず一致する。
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -72,6 +72,35 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
   const [summary, setSummary] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<PlanChangePreview | null>(null);
+
+  useEffect(() => {
+    const fieldOrder = [
+      'weddingDate',
+      'weddingTime',
+      'groomName',
+      'brideName',
+      'primaryContact',
+      'contactEmail',
+      'contactChannel',
+      'guestCount',
+      'planTypeId',
+      'primaryPlannerId',
+    ];
+    const firstInvalid = fieldOrder.find((field) => fieldErrors[field]);
+    if (!firstInvalid) return;
+    const input = document.getElementById(firstInvalid);
+    input?.focus({ preventScroll: true });
+    input?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [fieldErrors]);
+
+  const fieldA11y = (field: string, helpId?: string) => {
+    const invalid = Boolean(fieldErrors[field]);
+    return {
+      'aria-invalid': invalid || undefined,
+      'aria-describedby':
+        [helpId, invalid ? `${field}-error` : undefined].filter(Boolean).join(' ') || undefined,
+    };
+  };
 
   const update = <K extends keyof CaseEditInitial>(key: K, value: CaseEditInitial[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -157,9 +186,10 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.weddingDate}
               onChange={(e) => update('weddingDate', e.target.value)}
+              {...fieldA11y('weddingDate')}
               required
             />
-            <FieldError message={fieldErrors.weddingDate} />
+            <FieldError id="weddingDate-error" message={fieldErrors.weddingDate} />
           </div>
 
           <div>
@@ -172,8 +202,9 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.weddingTime}
               onChange={(e) => update('weddingTime', e.target.value)}
+              {...fieldA11y('weddingTime')}
             />
-            <FieldError message={fieldErrors.weddingTime} />
+            <FieldError id="weddingTime-error" message={fieldErrors.weddingTime} />
           </div>
 
           <div>
@@ -186,9 +217,10 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               maxLength={INPUT_LIMITS.shortText}
               value={form.groomName}
               onChange={(e) => update('groomName', e.target.value)}
+              {...fieldA11y('groomName')}
               required
             />
-            <FieldError message={fieldErrors.groomName} />
+            <FieldError id="groomName-error" message={fieldErrors.groomName} />
           </div>
 
           <div>
@@ -201,9 +233,10 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               maxLength={INPUT_LIMITS.shortText}
               value={form.brideName}
               onChange={(e) => update('brideName', e.target.value)}
+              {...fieldA11y('brideName')}
               required
             />
-            <FieldError message={fieldErrors.brideName} />
+            <FieldError id="brideName-error" message={fieldErrors.brideName} />
           </div>
 
           <div>
@@ -215,6 +248,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.primaryContact}
               onChange={(e) => update('primaryContact', e.target.value as PartnerRole)}
+              {...fieldA11y('primaryContact')}
             >
               {PARTNER_ROLES.map((role) => (
                 <option key={role} value={role}>
@@ -222,7 +256,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
                 </option>
               ))}
             </select>
-            <FieldError message={fieldErrors.primaryContact} />
+            <FieldError id="primaryContact-error" message={fieldErrors.primaryContact} />
           </div>
 
           <div>
@@ -235,9 +269,10 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.contactEmail}
               onChange={(e) => update('contactEmail', e.target.value)}
+              {...fieldA11y('contactEmail')}
               required
             />
-            <FieldError message={fieldErrors.contactEmail} />
+            <FieldError id="contactEmail-error" message={fieldErrors.contactEmail} />
           </div>
 
           <div>
@@ -249,6 +284,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.contactChannel}
               onChange={(e) => update('contactChannel', e.target.value as ContactChannel)}
+              {...fieldA11y('contactChannel')}
             >
               {SENDABLE_CHANNELS.map((channel) => (
                 <option key={channel} value={channel}>
@@ -256,7 +292,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
                 </option>
               ))}
             </select>
-            <FieldError message={fieldErrors.contactChannel} />
+            <FieldError id="contactChannel-error" message={fieldErrors.contactChannel} />
           </div>
 
           <div>
@@ -271,8 +307,9 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.guestCount}
               onChange={(e) => update('guestCount', e.target.value)}
+              {...fieldA11y('guestCount')}
             />
-            <FieldError message={fieldErrors.guestCount} />
+            <FieldError id="guestCount-error" message={fieldErrors.guestCount} />
           </div>
 
           <div>
@@ -284,6 +321,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.planTypeId}
               onChange={(e) => update('planTypeId', e.target.value)}
+              {...fieldA11y('planTypeId')}
               required
             >
               <option value="">選択してください</option>
@@ -293,7 +331,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
                 </option>
               ))}
             </select>
-            <FieldError message={fieldErrors.planTypeId} />
+            <FieldError id="planTypeId-error" message={fieldErrors.planTypeId} />
           </div>
 
           {planners && (
@@ -306,6 +344,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
                 className="field"
                 value={form.primaryPlannerId}
                 onChange={(e) => update('primaryPlannerId', e.target.value)}
+                {...fieldA11y('primaryPlannerId')}
               >
                 {planners.map((planner) => (
                   <option key={planner.id} value={planner.id}>
@@ -313,7 +352,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
                   </option>
                 ))}
               </select>
-              <FieldError message={fieldErrors.primaryPlannerId} />
+              <FieldError id="primaryPlannerId-error" message={fieldErrors.primaryPlannerId} />
             </div>
           )}
         </div>
