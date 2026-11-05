@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { LogoutButton } from '@/components/layout/LogoutButton';
 import { StaffNav } from '@/components/layout/StaffNav';
 import { isStaff, ROLE_LABEL, type Role } from '@/lib/constants';
+import { demoMailbox } from '@/lib/d1/mode';
 
 interface Props {
   role: Role;
@@ -34,6 +35,11 @@ export function AppHeader({ role, displayName, minimal = false }: Props) {
           <span className="text-caption text-text-muted">
             {ROLE_LABEL[role]} / {displayName}
           </span>
+          {role === 'system_admin' && demoMailbox() && (
+            <Link href="/dev/mailbox" prefetch={false} className="btn-ghost">
+              デモ受信箱
+            </Link>
+          )}
           <LogoutButton />
         </div>
       </div>

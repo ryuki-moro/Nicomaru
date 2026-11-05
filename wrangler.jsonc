@@ -16,6 +16,8 @@
     "NICOMARU_DB": "d1",
     "NEXT_PUBLIC_NICOMARU_DB": "d1",
     "RESEND_FROM": "にこまる <onboarding@resend.dev>",
+    // デモ中だけ有効。確認コード等を外部送信せず system_admin の受信箱へ保存する。実利用前に外す。
+    "DEMO_MAILBOX": "on",
   },
   "d1_databases": [
     {

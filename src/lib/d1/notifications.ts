@@ -2,7 +2,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import type { AppUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { scope } from './cases';
-import { localD1 } from './mode';
+import { captureOnly } from './mode';
 import { sendEmail } from '@/lib/notify/send';
 import { notificationUrl } from '@/lib/services/notifications';
 import { encryptPii, readPii } from '@/lib/crypto';
@@ -66,7 +66,7 @@ export async function createNotification(
       input.taskId ?? null,
     );
   const statements = [statement];
-  if (input.channel === 'email' && localD1()) {
+  if (input.channel === 'email' && captureOnly()) {
     statements.push(
       db
         .prepare(
@@ -89,7 +89,7 @@ export async function createNotification(
   }
   const results = await db.batch(statements);
   if (!results[0].results.length) throw notFound();
-  if (input.channel === 'in_app' || localD1())
+  if (input.channel === 'in_app' || captureOnly())
     return {
       notificationId: id,
       channel: input.channel,
