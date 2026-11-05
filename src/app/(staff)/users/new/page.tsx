@@ -8,10 +8,10 @@
  * 本画面が表示するのは「サーバー側で決まる値」の確認だけで、
  * 実際の role／venue_id は /api/admin/users が呼び出し元のロールから決める。
  */
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import { getAppUser, landingPathFor } from '@/lib/auth/session';
+import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
+import { getAppUser } from '@/lib/auth/session';
 import { ROLE_LABEL } from '@/lib/constants';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -20,7 +20,7 @@ import { UserForm } from './UserForm';
 export default async function UserCreatePage() {
   const user = await getAppUser();
   if (!user) redirect('/login');
-  if (user.role !== 'admin' && user.role !== 'system_admin') redirect(landingPathFor(user.role));
+  if (user.role !== 'admin' && user.role !== 'system_admin') redirect('/error?code=403');
 
   const supabase = await createSupabaseServerClient();
 
@@ -52,28 +52,13 @@ export default async function UserCreatePage() {
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          {/* system_admin は Phase 1 の着地点が本画面のため、親リンクを出さない（4-2） */}
-          {user.role === 'admin' && (
-            <li className="flex items-center gap-1">
-              <Link href="/dashboard" className="text-link hover:underline">
-                ダッシュボード
-              </Link>
-              <span aria-hidden>/</span>
-            </li>
-          )}
-          <li>
-            <Link href="/users" className="text-link hover:underline">
-              利用者管理
-            </Link>
-          </li>
-          <li className="flex items-center gap-1">
-            <span aria-hidden>/</span>
-            <span aria-current="page">新規登録</span>
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        items={[
+          homeCrumbFor(user.role),
+          { label: '利用者管理', href: '/users' },
+          { label: '新規登録' },
+        ]}
+      />
 
       <h1 className="section-head">利用者の新規登録</h1>
 

@@ -25,6 +25,7 @@ vi.mock('@/lib/supabase/server', () => ({
 
 import {
   getAppUser,
+  landingLabelFor,
   landingPathFor,
   requireAppUser,
   requirePageUser,
@@ -126,7 +127,12 @@ describe('検証済みセッションと有効プロフィールの境界', () =
     mocks.maybeSingle.mockResolvedValue({ data: profile('couple'), error: null });
     await expect(requireStaff()).rejects.toMatchObject({ status: 403 });
     await expect(requireRole('admin', 'system_admin')).rejects.toMatchObject({ status: 403 });
-    await expect(requirePageUser('planner', 'admin')).rejects.toThrow('REDIRECT:/mypage');
+    await expect(requirePageUser('planner', 'admin')).rejects.toThrow('REDIRECT:/error?code=403');
+  });
+
+  it('staff どうしでもロールが足りなければ P04（403）へ送る', async () => {
+    mocks.maybeSingle.mockResolvedValue({ data: profile('planner'), error: null });
+    await expect(requirePageUser('admin')).rejects.toThrow('REDIRECT:/error?code=403');
   });
 
   it.each([
@@ -136,5 +142,14 @@ describe('検証済みセッションと有効プロフィールの境界', () =
     ['system_admin', '/system'],
   ] as const)('%s の初期遷移先は %s', (role, path) => {
     expect(landingPathFor(role)).toBe(path);
+  });
+
+  it.each([
+    ['couple', 'マイページ'],
+    ['planner', 'ダッシュボード'],
+    ['admin', 'ダッシュボード'],
+    ['system_admin', '利用状況'],
+  ] as const)('%s の着地点の画面名は %s', (role, label) => {
+    expect(landingLabelFor(role)).toBe(label);
   });
 });

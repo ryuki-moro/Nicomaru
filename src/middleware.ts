@@ -22,12 +22,15 @@ import { buildNext } from '@/lib/auth/next';
  * 後者は Supabase Free の一時停止対策として GitHub Actions から叩く（6-12）。
  * ここでログイン画面へ流すと、定期処理も死活監視も 307 を受け取って全滅する。
  * 実際の認証は各ハンドラの requireInternalCall() が行う。
+ *
+ * /rsvp/** はゲストの出欠回答画面。ゲストはアカウントを持たず、回答URLのトークンだけで到達する。
  */
 const PUBLIC_PREFIXES = [
   '/login',
   '/register',
   '/password',
   '/error',
+  '/rsvp',
   '/api/auth',
   '/api/internal',
   '/api/health',

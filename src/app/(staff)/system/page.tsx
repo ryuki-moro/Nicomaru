@@ -21,6 +21,7 @@ import {
   type SystemAlert,
   type UsageSnapshot,
 } from './MonitoringSummary';
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser } from '@/lib/auth/session';
 import { formatDateTime } from '@/lib/format';
@@ -119,11 +120,7 @@ export default async function SystemStatusPage() {
 
   return (
     <div className="space-y-6">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li aria-current="page">利用状況・通知ログ</li>
-        </ol>
-      </nav>
+      <Breadcrumbs items={[{ label: '利用状況・通知ログ' }]} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="section-head">利用状況・通知ログ</h1>

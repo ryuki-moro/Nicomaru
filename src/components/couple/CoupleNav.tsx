@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { isCoupleNavActive, type CoupleNavItem } from '@/components/couple/coupleNavActive';
+
 /**
  * couple 側の主要導線を下部に固定表示する（4-3 全画面共通仕様）。
  *
@@ -13,10 +15,11 @@ import { usePathname } from 'next/navigation';
  * 現在地は色だけに頼らず、上部のバー・太字でも示す。アイコンは Tabler Icons（design_guide 6）。
  * `fixed inset-x-0 bottom-0` は scripts/screenshots.mts が PC の全体撮影で隠すときの目印にしている。
  */
-const ITEMS = [
+const ITEMS: readonly CoupleNavItem[] = [
   {
     href: '/mypage',
     label: 'ホーム',
+    children: ['/mypage/notifications'],
     icon: [
       'M5 12l-2 0l9 -9l9 9l-2 0',
       'M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7',
@@ -55,7 +58,7 @@ const ITEMS = [
     label: 'アカウント',
     icon: ['M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0', 'M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2'],
   },
-] as const;
+];
 
 export function CoupleNav() {
   const pathname = usePathname();
@@ -71,8 +74,7 @@ export function CoupleNav() {
             process.env.NEXT_PUBLIC_NICOMARU_DB !== 'd1-local' ||
             ['/mypage', '/mypage/tasks'].includes(item.href),
         ).map((item) => {
-          const active =
-            pathname === item.href || (item.href !== '/mypage' && pathname.startsWith(item.href));
+          const active = isCoupleNavActive(item, pathname);
           return (
             <li key={item.href} className="flex-1">
               <Link

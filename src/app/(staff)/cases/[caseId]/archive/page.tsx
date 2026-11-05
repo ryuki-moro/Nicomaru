@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { COUPLE_PROFILE_COLUMNS, type PartnerRole } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
@@ -38,7 +39,8 @@ async function archiveCase(formData: FormData) {
   if (!caseId) return;
 
   const actor = await getAppUser();
-  if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin')) redirect('/error');
+  if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin'))
+    redirect('/error?code=403');
 
   const supabase = await createSupabaseServerClient();
   try {
@@ -74,7 +76,7 @@ export default async function CaseArchivePage({
     .eq('id', caseId)
     .maybeSingle();
 
-  if (!data) redirect('/error');
+  if (!data) redirect('/error?code=404');
   const row = data as unknown as CaseRow;
   if (row.archived_at !== null) redirect('/cases?scope=archived');
 
@@ -87,23 +89,14 @@ export default async function CaseArchivePage({
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/cases" className="text-link hover:underline">
-              案件一覧
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href={`/cases/${row.id}`} className="text-link hover:underline">
-              {row.case_code}
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page">アーカイブ</li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        items={[
+          DASHBOARD_CRUMB,
+          { label: '案件一覧', href: '/cases' },
+          { label: row.case_code, href: `/cases/${row.id}` },
+          { label: 'アーカイブ' },
+        ]}
+      />
 
       <h1 className="section-head">案件をアーカイブします</h1>
 
