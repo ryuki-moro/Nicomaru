@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { FollowForm } from '@/app/(staff)/cases/[caseId]/follow/FollowForm';
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
   COUPLE_PROFILE_COLUMNS,
@@ -117,29 +118,15 @@ export default async function FollowLogPage({
 
   return (
     <div>
-      <nav aria-label="パンくず" className="mb-3">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href="/cases" className="text-link hover:underline">
-              案件一覧
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href={`/cases/${caseId}`} className="text-link hover:underline">
-              {weddingCase.case_code}
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page">フォロー記録</li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        className="mb-3"
+        items={[
+          DASHBOARD_CRUMB,
+          { label: '案件一覧', href: '/cases' },
+          { label: weddingCase.case_code, href: `/cases/${caseId}` },
+          { label: 'フォロー記録' },
+        ]}
+      />
 
       <h1 className="section-head">フォロー記録</h1>
       <p className="mt-1 text-caption text-text-muted">

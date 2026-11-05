@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { z } from 'zod';
 
+import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
 import { getAppUser } from '@/lib/auth/session';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -47,19 +48,13 @@ export default async function VenueEditPage({ params }: { params: Promise<{ venu
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/venues" className="text-link hover:underline">
-              式場一覧
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page" className="min-w-0 max-w-full break-all">
-            {venue?.name ?? '式場の詳細・変更'}
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        items={[
+          homeCrumbFor(user.role),
+          { label: '式場一覧', href: '/venues' },
+          { label: venue?.name ?? '式場の詳細・変更' },
+        ]}
+      />
 
       <h1 className="section-head">式場の詳細・変更</h1>
 

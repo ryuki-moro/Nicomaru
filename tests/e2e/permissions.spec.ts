@@ -2,8 +2,9 @@
  * #19 権限・エラーまわり（4-3／6-3）。
  *   - 未ログインで保護ページを開くとログインへ戻る
  *   - /api は未ログインでもリダイレクトせず 401 JSON を返す
- *   - 役割の違う画面は自分の入口へ戻される
- *   - 権限外・不存在の案件はエラー画面（P04）
+ *   - 新郎新婦とプランナーの取り違えは自分の入口へ戻される
+ *   - プランナー側でロールが足りない画面・権限外・不存在の案件はエラー画面（P04）
+ *   - エラー画面の出口は、ログイン中なら着地点
  *   - セッションが切れるとログイン画面へ戻る
  */
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
@@ -65,13 +66,13 @@ test.describe('ログイン済みの権限', () => {
     await couple.waitForURL(/\/mypage$/);
   });
 
-  test('存在しない案件は権限外と同じくエラー画面へ（P04）', async () => {
+  test('存在しない案件は権限外と同じく「見つからない」エラー画面へ（P04）', async () => {
     await planner.goto('/cases/00000000-0000-4000-8000-000000000000');
-    await planner.waitForURL(/\/error$/);
-    await expect(
-      planner.getByRole('heading', { name: 'ページを表示できませんでした' }),
-    ).toBeVisible();
-    await expect(planner.getByRole('link', { name: 'ログイン画面へ戻る' })).toBeVisible();
+    await planner.waitForURL(/\/error\?code=404$/);
+    await expect(planner.getByRole('heading', { name: 'ページが見つかりません' })).toBeVisible();
+    // ログイン中は「ログイン画面へ戻る」ではなく着地点へ戻す（/login は着地点へ送り返すだけのため）
+    await planner.getByRole('link', { name: 'ダッシュボードへ戻る' }).click();
+    await planner.waitForURL(/\/dashboard$/);
   });
 
   test('system_admin 専用画面は 403 の文面', async () => {
@@ -80,6 +81,18 @@ test.describe('ログイン済みの権限', () => {
     await expect(
       planner.getByRole('heading', { name: 'このページは表示できません' }),
     ).toBeVisible();
+  });
+
+  test('admin 専用画面も黙って戻さず 403 の文面（画面遷移図の「権限不足 → P04」）', async () => {
+    await planner.goto('/templates');
+    await planner.waitForURL(/\/error\?code=403$/);
+    await expect(planner.getByRole('link', { name: 'ダッシュボードへ戻る' })).toBeVisible();
+  });
+
+  test('ログイン中に存在しないURLを開くと、着地点へ戻るボタンを出す', async () => {
+    await couple.goto('/mypage/no-such-page');
+    await expect(couple.getByRole('heading', { name: 'ページが見つかりません' })).toBeVisible();
+    await expect(couple.getByRole('link', { name: 'マイページへ戻る' })).toBeVisible();
   });
 
   test('セッションが切れるとログイン画面へ戻る（新郎新婦）', async () => {
