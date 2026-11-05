@@ -446,11 +446,9 @@ export function LoginForm({
           </button>
         )}
 
-        {!publicD1() && (
-          <Link href="/password" className="btn-ghost self-center">
-            パスワードをお忘れの方
-          </Link>
-        )}
+        <Link href="/password" className="btn-ghost self-center">
+          パスワードをお忘れの方
+        </Link>
       </>
     </div>
   );

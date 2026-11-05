@@ -11,7 +11,7 @@ import type { Role } from '@/lib/constants';
 export function StaffNav({ role }: { role: Role }) {
   const pathname = usePathname();
   const items = staffNavItemsFor(role).filter(
-    (item) => !publicD1() || ['/cases', '/submissions'].includes(item.href),
+    (item) => !publicD1() || ['/cases', '/submissions', '/users'].includes(item.href),
   );
 
   return (

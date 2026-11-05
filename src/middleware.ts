@@ -76,6 +76,12 @@ export async function middleware(request: NextRequest) {
       '/api/auth/otp-request',
       '/api/auth/otp-verify',
       '/cases/new',
+      '/users',
+      '/users/new',
+      '/api/admin/users',
+      '/password',
+      '/api/auth/password-reset',
+      '/api/auth/password-update',
       '/dev/mailbox',
       '/api/dev/mailbox',
     ];
@@ -87,8 +93,10 @@ export async function middleware(request: NextRequest) {
         path,
       );
     const registration = /^\/register\/[^/]+$/.test(path);
+    const staffUser = /^\/(?:users|api\/admin\/users)\/[^/]+$/.test(path) && path !== '/users/new';
     if (
       !allowed.includes(path) &&
+      !staffUser &&
       !casePage &&
       !caseApi &&
       !registration &&

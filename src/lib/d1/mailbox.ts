@@ -5,7 +5,7 @@ import { sendMail, type SendResult } from '@/lib/notify/mailer';
 import { localD1 } from './mode';
 
 export interface LocalMail {
-  kind: 'otp' | 'invitation' | 'notification';
+  kind: 'otp' | 'invitation' | 'notification' | 'password';
   email: string | null;
   code?: string;
   url?: string;
