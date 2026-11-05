@@ -14,6 +14,8 @@
 import { ok, route } from '@/lib/api/route';
 import { fetchAiAssistStatus } from '@/lib/ai/assist';
 import { requireAppUser } from '@/lib/auth/session';
+import { aiAssistStatus } from '@/lib/d1/ai';
+import { localDB, usingD1 } from '@/lib/d1/runtime';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
@@ -22,6 +24,7 @@ export const GET = route(async () => {
   // couple も 9-7（Phase 3拡張）で使うため staff に限定しない。
   // 返すのは可否と最終心拍だけで、案件データは含まない。
   await requireAppUser();
+  if (usingD1()) return ok(await aiAssistStatus(await localDB()));
 
   const supabase = await createSupabaseServerClient();
   const status = await fetchAiAssistStatus(supabase);

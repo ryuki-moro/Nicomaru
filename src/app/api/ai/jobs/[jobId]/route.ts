@@ -14,6 +14,8 @@ import { ok, parseBody, route } from '@/lib/api/route';
 import { AI_JOB_COLUMNS, type AiJobRow } from '@/lib/ai/assist';
 import { validateAiOutput } from '@/lib/ai/schemas';
 import { requireStaff } from '@/lib/auth/session';
+import { jobRow, reviewJob } from '@/lib/d1/ai';
+import { localDB, usingD1 } from '@/lib/d1/runtime';
 import { badRequest, conflict, fromPostgresError, notFound } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { aiJobReviewSchema } from '@/lib/validation';
@@ -22,8 +24,9 @@ export const runtime = 'nodejs';
 
 export const GET = route(
   async (_request: Request, context: { params: Promise<{ jobId: string }> }) => {
-    await requireStaff();
+    const user = await requireStaff();
     const { jobId } = await context.params;
+    if (usingD1()) return ok(await jobRow(await localDB(), user, jobId));
 
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
@@ -40,9 +43,11 @@ export const GET = route(
 
 export const PATCH = route(
   async (request: Request, context: { params: Promise<{ jobId: string }> }) => {
-    await requireStaff();
+    const user = await requireStaff();
     const { jobId } = await context.params;
     const input = await parseBody(request, aiJobReviewSchema);
+    if (usingD1())
+      return ok(await reviewJob(await localDB(), user, jobId, input.decision, input.output));
 
     const supabase = await createSupabaseServerClient();
 

@@ -14,7 +14,8 @@
  */
 import Link from 'next/link';
 import { requireStaff } from '@/lib/auth/session';
-import { usingD1, localDB } from '@/lib/d1/runtime';
+import { usingD1, localDB, localFiles } from '@/lib/d1/runtime';
+import { aiAssistStatus, checkStoredCsv, latestJobForTask as d1AiJob } from '@/lib/d1/ai';
 import { submissionRow, coupleNames as d1CoupleNames } from '@/lib/d1/tasks';
 import { notFound } from 'next/navigation';
 
@@ -152,8 +153,18 @@ export default async function SubmissionReviewPage({
   // ---------------------------------------------------------------- AI補助（7-2）
   // ワーカーの死活と、この宿題に紐づく最新ジョブ。
   // どれも取得に失敗したら null（＝出さない）に倒れるので、ここで例外にはならない。
-  const [aiStatus, classificationJob, defectJob] = usingD1()
-    ? ([{ available: false, lastSeenAt: null }, null, null] as const)
+  const d1 = usingD1() ? await localDB() : null;
+  const d1Job = (jobType: 'classification' | 'defect_check') =>
+    d1AiJob(d1!, user, task.id, jobType).catch((error: unknown) => {
+      console.warn('[ai] ジョブを取得できませんでした', jobType, error);
+      return null;
+    });
+  const [aiStatus, classificationJob, defectJob] = d1
+    ? await Promise.all([
+        aiAssistStatus(d1).catch(() => ({ available: false, lastSeenAt: null })),
+        d1Job('classification'),
+        d1Job('defect_check'),
+      ])
     : await Promise.all([
         fetchAiAssistStatus(supabase!),
         latestJobForTask(supabase!, task.id, 'classification'),
@@ -164,12 +175,12 @@ export default async function SubmissionReviewPage({
   // 検査できない宿題（csvSchema 未設定・CSV以外）は null のままにして、欄ごと出さない。
   let ruleFindings: DefectFinding[] | null = null;
   const csvSchema = csvSchemaOf(task.options);
-  if (
-    !usingD1() &&
-    csvSchema &&
-    submission.submission_type === 'file' &&
-    submission.storage_files
-  ) {
+  if (d1 && csvSchema && submission.submission_type === 'file' && submission.storage_files) {
+    const checked = await localFiles()
+      .then((files) => checkStoredCsv(files, submission.storage_files!, task.options))
+      .catch(() => null);
+    if (checked) ruleFindings = checked.findings;
+  } else if (csvSchema && submission.submission_type === 'file' && submission.storage_files) {
     const checked = await checkSubmittedCsv(
       supabase!,
       {
@@ -272,17 +283,15 @@ export default async function SubmissionReviewPage({
         )}
       </section>
 
-      {!usingD1() && <ClassificationPanel initialJob={classificationJob} />}
+      <ClassificationPanel initialJob={classificationJob} />
 
-      {!usingD1() && (
-        <DefectPanel
-          submissionId={submission.id}
-          ruleFindings={ruleFindings}
-          initialJob={defectJob}
-          aiAvailable={aiStatus.available}
-          lastSeenAt={aiStatus.lastSeenAt}
-        />
-      )}
+      <DefectPanel
+        submissionId={submission.id}
+        ruleFindings={ruleFindings}
+        initialJob={defectJob}
+        aiAvailable={aiStatus.available}
+        lastSeenAt={aiStatus.lastSeenAt}
+      />
 
       {isPending ? (
         <section className="card mt-4">

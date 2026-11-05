@@ -11,12 +11,12 @@ import { ApiError, badRequest } from '@/lib/errors';
 import { toErrorDetails } from '@/lib/validation';
 import { recordApiPerformance } from '@/lib/observability/performance';
 
-import { requireInternalCall } from './internal';
+import { requireAiWorkerCall, requireInternalCall } from './internal';
 import { requireSameOrigin } from './origin';
 
 interface RouteOptions {
   /** 内部cronだけはOriginの代わりに共有secretで認証する。検証の無効化ではない。 */
-  source?: 'browser' | 'internal-cron';
+  source?: 'browser' | 'internal-cron' | 'ai-worker';
 }
 
 /** リクエストボディを zod で検証する。失敗時は 400 VALIDATION_ERROR。 */
@@ -59,6 +59,8 @@ export function route<Args extends unknown[]>(
     try {
       if (options.source === 'internal-cron') {
         requireInternalCall(request);
+      } else if (options.source === 'ai-worker') {
+        requireAiWorkerCall(request);
       } else if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
         requireSameOrigin(request);
       }

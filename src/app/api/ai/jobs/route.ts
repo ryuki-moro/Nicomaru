@@ -16,17 +16,21 @@
 import { ok, parseBody, route } from '@/lib/api/route';
 import { AI_JOB_COLUMNS } from '@/lib/ai/assist';
 import { requireStaff } from '@/lib/auth/session';
+import { enqueueJob, jobList } from '@/lib/d1/ai';
+import { localDB, usingD1 } from '@/lib/d1/runtime';
 import { AI_JOB_TYPES } from '@/lib/ai/schemas';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { fromPostgresError } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { aiJobCreateSchema } from '@/lib/validation';
+import { aiJobCreateSchema, aiJobCreateSchemaD1 } from '@/lib/validation';
 
 export const runtime = 'nodejs';
 
 export const POST = route(async (request: Request) => {
-  await requireStaff();
-  const input = await parseBody(request, aiJobCreateSchema);
+  const user = await requireStaff();
+  const input = await parseBody(request, usingD1() ? aiJobCreateSchemaD1 : aiJobCreateSchema);
+  if (usingD1())
+    return ok({ id: await enqueueJob(await localDB(), user, input), status: 'queued' }, 201);
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase.rpc('enqueue_ai_job', {
@@ -42,11 +46,15 @@ export const POST = route(async (request: Request) => {
 });
 
 export const GET = route(async (request: Request) => {
-  await requireStaff();
+  const user = await requireStaff();
 
   const url = new URL(request.url);
   const caseId = url.searchParams.get('caseId');
   const jobType = url.searchParams.get('jobType');
+  if (usingD1())
+    return ok({
+      items: await jobList(await localDB(), user, caseId ?? undefined, jobType ?? undefined),
+    });
 
   const supabase = await createSupabaseServerClient();
   let query = supabase
