@@ -11,6 +11,7 @@
  * 読み取りは 6-5 の原則どおり Server Component から Supabase 直アクセス（RLS適用）で行い、
  * Route Handler は経由しない。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -49,7 +50,7 @@ async function restoreCase(formData: FormData) {
     redirect('/error?code=403');
 
   try {
-    if (process.env.NICOMARU_DB === 'd1-local') {
+    if (usingD1()) {
       const { localDB } = await import('@/lib/d1/runtime');
       const { patchCase } = await import('@/lib/d1/cases');
       await patchCase(await localDB(), actor, caseId, { archived: false });
@@ -94,14 +95,13 @@ export default async function CaseListPage({ searchParams }: Props) {
   let truncated = false;
   let loadError = false;
   try {
-    const load =
-      process.env.NICOMARU_DB === 'd1-local'
-        ? async (options: Parameters<typeof loadCaseList>[1]) => {
-            const { localDB } = await import('@/lib/d1/runtime');
-            return (await import('@/lib/d1/cases')).listCases(await localDB(), user, options);
-          }
-        : async (options: Parameters<typeof loadCaseList>[1]) =>
-            loadCaseList(await createSupabaseServerClient(), options);
+    const load = usingD1()
+      ? async (options: Parameters<typeof loadCaseList>[1]) => {
+          const { localDB } = await import('@/lib/d1/runtime');
+          return (await import('@/lib/d1/cases')).listCases(await localDB(), user, options);
+        }
+      : async (options: Parameters<typeof loadCaseList>[1]) =>
+          loadCaseList(await createSupabaseServerClient(), options);
     const result = await load({
       scope,
       sort,

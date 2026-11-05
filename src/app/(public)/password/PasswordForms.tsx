@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { api, ApiCallError } from '@/lib/api/client';
 import { PASSWORD_MIN_LENGTH } from '@/lib/constants';
+import { publicD1 } from '@/lib/d1/mode';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { passwordUpdateSchema, toErrorDetails } from '@/lib/validation';
 
@@ -50,10 +51,26 @@ export function PasswordForms({ mode }: { mode: Mode }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [token, setToken] = useState<string | null>(null);
 
   // メール内リンクからの着地処理。初回マウント時に1度だけ行う。
   useEffect(() => {
     let cancelled = false;
+
+    if (publicD1()) {
+      // D1はリンクのフラグメントにトークンを載せる。検証は送信時にサーバーで行う。
+      const linkToken = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('token');
+      if (linkToken)
+        window.history.replaceState(null, '', `${window.location.pathname}?mode=${mode}`);
+      void Promise.resolve().then(() => {
+        if (cancelled) return;
+        setToken(linkToken);
+        setStep(linkToken ? 'update' : 'request');
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
 
     void (async () => {
       const supabase = createSupabaseBrowserClient();
@@ -140,6 +157,22 @@ export function PasswordForms({ mode }: { mode: Mode }) {
     }
 
     setPending(true);
+    if (token) {
+      try {
+        await api.post('/api/auth/password-update', { ...parsed.data, token });
+      } catch (cause) {
+        setPending(false);
+        setError(
+          cause instanceof ApiCallError
+            ? cause.message
+            : 'パスワード設定を完了できませんでした。時間をおいてお試しください',
+        );
+        return;
+      }
+      router.replace('/login?mode=password&reset=done');
+      router.refresh();
+      return;
+    }
     const supabase = createSupabaseBrowserClient();
     try {
       await api.post('/api/auth/password-update', parsed.data);

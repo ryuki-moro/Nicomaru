@@ -6,6 +6,7 @@
  *   - 「担当プランナー」を追加し、自式場の planner から選択する（変更は admin のみ）
  *   - 挙式日・プラン種別の変更時は確定前に差分確認ダイアログ（実装は CaseEditForm）
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { redirect } from 'next/navigation';
 
 import { CaseEditForm, type CaseEditInitial } from './CaseEditForm';
@@ -42,7 +43,7 @@ export default async function CaseEditPage({ params }: { params: Promise<{ caseI
   let row: CaseRow;
   let plans: { id: string; name: string }[];
   let planners: { id: string; displayName: string }[] | null = null;
-  if (process.env.NICOMARU_DB === 'd1-local') {
+  if (usingD1()) {
     const { localDB } = await import('@/lib/d1/runtime');
     const { caseRow } = await import('@/lib/d1/cases');
     const db = await localDB();

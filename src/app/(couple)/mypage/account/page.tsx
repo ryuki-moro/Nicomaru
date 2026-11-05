@@ -12,7 +12,6 @@
  * linkToken が無い状態で開かれた場合は、先に友だち追加してもらう案内を出す。
  */
 
-import { LineLinkButton } from './LineLinkButton';
 import { requirePageUser } from '@/lib/auth/session';
 import { COUPLE_PROFILE_COLUMNS, PARTNER_ROLE_LABEL, type PartnerRole } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
@@ -20,32 +19,21 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-interface Props {
-  searchParams: Promise<{ linkToken?: string }>;
-}
-
-export default async function AccountPage({ searchParams }: Props) {
+export default async function AccountPage() {
   const user = await requirePageUser();
 
-  const params = await searchParams;
-  const linkToken = (params.linkToken ?? '').trim();
-
   const supabase = await createSupabaseServerClient();
-  const [profileResult, meResult] = await Promise.all([
-    supabase
-      .from('couple_profiles')
-      .select(COUPLE_PROFILE_COLUMNS)
-      .eq('user_profile_id', user.id)
-      .maybeSingle(),
-    supabase.from('user_profiles').select('line_user_id').eq('id', user.id).maybeSingle(),
-  ]);
+  const profileResult = await supabase
+    .from('couple_profiles')
+    .select(COUPLE_PROFILE_COLUMNS)
+    .eq('user_profile_id', user.id)
+    .maybeSingle();
 
   const profile = profileResult.data as unknown as {
     partner_role: PartnerRole;
     full_name: string;
     email: string | null;
   } | null;
-  const linked = Boolean((meResult.data as { line_user_id: string | null } | null)?.line_user_id);
 
   return (
     <div className="space-y-5">
@@ -72,43 +60,6 @@ export default async function AccountPage({ searchParams }: Props) {
         <p className="text-caption text-text-muted">
           ご登録内容の変更は、担当プランナーへお知らせください。
         </p>
-      </section>
-
-      <section className="card space-y-3">
-        <h2 className="text-label font-bold text-text-primary">公式LINEとの連携</h2>
-
-        {linked ? (
-          <>
-            <p className="text-label text-text-secondary">
-              連携が完了しています。大切なお知らせは公式LINEでお届けします。
-            </p>
-            <p className="text-caption text-text-muted">
-              連携を解除したい場合は、公式LINEをブロックしていただければ自動で解除されます。
-              その後のお知らせはメールでお届けします。
-            </p>
-          </>
-        ) : linkToken ? (
-          <>
-            <p className="text-label text-text-secondary">
-              公式LINEとマイページを連携すると、大切なお知らせをLINEでお受け取りいただけます。
-            </p>
-            <LineLinkButton linkToken={linkToken} />
-            <p className="text-caption text-text-muted">
-              連携は任意です。連携しない場合もメールでお届けします。
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="text-label text-text-secondary">
-              まだ連携されていません。連携をご希望の場合は、
-              式場の公式LINEを友だち追加してください。
-              追加後にLINEへ届くご案内から、この画面に戻って連携できます。
-            </p>
-            <p className="text-caption text-text-muted">
-              連携は任意です。連携しない場合もメールでお届けします。
-            </p>
-          </>
-        )}
       </section>
     </div>
   );

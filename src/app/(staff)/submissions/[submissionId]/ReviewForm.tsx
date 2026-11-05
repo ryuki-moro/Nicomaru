@@ -11,6 +11,7 @@
  */
 'use client';
 
+import { publicD1 } from '@/lib/d1/mode';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -112,7 +113,7 @@ export function ReviewForm({
         <FieldError message={fieldErrors.decision} />
       </fieldset>
 
-      {process.env.NEXT_PUBLIC_NICOMARU_DB !== 'd1-local' && (
+      {!publicD1() && (
         <DraftAssist
           caseId={caseId}
           taskId={taskId}

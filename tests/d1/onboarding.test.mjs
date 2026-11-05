@@ -67,6 +67,7 @@ async function send(email) {
   return (await readMailbox(db)).find((m) => m.email === email && m.kind === 'otp').code;
 }
 before(async () => {
+  process.env.NICOMARU_DB = 'd1-local';
   process.env.APP_BASE_URL = 'http://127.0.0.1:3104';
   process.env.BETTER_AUTH_SECRET = randomBytes(32).toString('hex');
   process.env.PII_ENCRYPTION_KEY = randomBytes(32).toString('base64');
@@ -93,6 +94,60 @@ before(async () => {
 });
 after(async () => {
   await platform?.dispose();
+});
+
+test('未設定の招待先を暗号化して登録し、既存宛先の変更と重複を拒否する', async () => {
+  const { created, email } = await fresh();
+  const recipient = `${randomUUID()}@example.test`;
+  const issued = await issueInvitation(
+    db,
+    planner,
+    created.caseId,
+    'groom',
+    'email',
+    undefined,
+    recipient,
+  );
+  const stored = await db
+    .prepare("SELECT email FROM couple_profiles WHERE case_id=? AND partner_role='groom'")
+    .bind(created.caseId)
+    .first();
+  assert.notEqual(stored.email, recipient);
+  assert.equal(
+    (await caseRow(db, planner, created.caseId)).couple_profiles.find(
+      (p) => p.partner_role === 'groom',
+    ).email,
+    recipient,
+  );
+  assert.equal(
+    (await readMailbox(db)).find((m) => m.kind === 'invitation' && m.url === issued.url).email,
+    recipient,
+  );
+  await assert.rejects(
+    issueInvitation(
+      db,
+      planner,
+      created.caseId,
+      'groom',
+      'email',
+      undefined,
+      'different@example.test',
+    ),
+  );
+  await assert.rejects(
+    issueInvitation(db, planner, created.caseId, 'groom', 'email', undefined, email),
+  );
+  const other = await fresh();
+  await assert.rejects(
+    issueInvitation(db, planner, other.created.caseId, 'groom', 'email', undefined, other.email),
+  );
+  const competing = await fresh();
+  const shared = `${randomUUID()}@example.test`;
+  const outcomes = await Promise.allSettled([
+    issueInvitation(db, planner, competing.created.caseId, 'groom', 'email', undefined, shared),
+    issueInvitation(db, planner, competing.created.caseId, 'bride', 'email', undefined, shared),
+  ]);
+  assert.equal(outcomes.filter((result) => result.status === 'fulfilled').length, 1);
 });
 
 test('案件登録は自式場・自身担当で2招待を発行し、宿題割当は冪等', async () => {
@@ -310,4 +365,6 @@ test('再送60秒・1時間5回・検証20回の制限をD1で保持', async () 
     await assert.rejects(authLimit(db, 'otp_request', email), { code: 'RATE_LIMITED' });
   for (let i = 0; i < 20; i++) await authLimit(db, 'otp_verify', email);
   await assert.rejects(authLimit(db, 'otp_verify', email), { code: 'RATE_LIMITED' });
+  // 他の接続元からの誤入力では本人の検証を締め出さない。
+  await authLimit(db, 'otp_verify', email, '198.51.100.7');
 });

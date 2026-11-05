@@ -8,6 +8,7 @@
  * ブラウザから直接 signInWithOtp を呼ばずに本APIを挟むのは、
  * check_rate_limit（Service Role 専用RPC）で 429 を返せるようにするためである（4-3 P01）。
  */
+import { clientIp, localD1, usingD1 } from '@/lib/d1/mode';
 import { noContent, parseBody, route } from '@/lib/api/route';
 import { loginLinkUrl } from '@/lib/auth/login-link';
 import { normalizeNext } from '@/lib/auth/next';
@@ -18,10 +19,12 @@ import { appBaseUrl, enforceAuthRateLimit } from '../shared';
 
 export const POST = route(async (request) => {
   const body = await parseBody(request, otpRequestSchema);
-  if (process.env.NICOMARU_DB === 'd1-local') {
+  if (usingD1()) {
     const { localDB } = await import('@/lib/d1/runtime');
     const db = await localDB();
-    await (await import('@/lib/d1/auth-limits')).authLimit(db, 'otp_request', body.email);
+    await (
+      await import('@/lib/d1/auth-limits')
+    ).authLimit(db, 'otp_request', body.email, localD1() ? undefined : clientIp(request.headers));
     if (await (await import('@/lib/d1/onboarding')).otpEligible(db, body.email)) {
       const auth = await (await import('@/lib/d1/auth')).d1Auth();
       await auth.api.sendVerificationOTP({

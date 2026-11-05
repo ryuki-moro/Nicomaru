@@ -7,6 +7,7 @@
  * 認可（どのデータに触れられるか）は RLS が最終防衛線であり、
  * ここでの遮断は導線を正すためのものにすぎない（6-5）。
  */
+import { localD1, usingD1 } from '@/lib/d1/mode';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { createServerClient } from '@supabase/ssr';
@@ -37,14 +38,27 @@ const PUBLIC_PREFIXES = [
 ];
 
 export async function middleware(request: NextRequest) {
-  if (process.env.NICOMARU_DB === 'd1-local') {
+  if (request.nextUrl.pathname.startsWith('/api/line/')) {
+    return NextResponse.json(
+      { error: { code: 'GONE', message: 'LINE連携は終了しました' } },
+      { status: 410 },
+    );
+  }
+  if (usingD1()) {
     const path = request.nextUrl.pathname;
     const origin = process.env.APP_BASE_URL;
-    if (origin !== 'http://127.0.0.1:3104' || request.headers.get('host') !== '127.0.0.1:3104') {
+    if (!origin) return new NextResponse('APP_BASE_URLが未設定です', { status: 500 });
+    if (
+      localD1() &&
+      (origin !== 'http://127.0.0.1:3104' || request.headers.get('host') !== '127.0.0.1:3104')
+    ) {
       return new NextResponse('ローカル検証専用です', { status: 403 });
     }
     if (path === '/dashboard' || path === '/system')
       return NextResponse.redirect(new URL('/cases', origin));
+    // 受信箱はローカル検証専用。本番D1では外部送信するため存在しない扱いにする。
+    if (!localD1() && (path === '/dev/mailbox' || path === '/api/dev/mailbox'))
+      return new NextResponse(null, { status: 404 });
     const allowed = [
       '/',
       '/login',
@@ -52,6 +66,11 @@ export async function middleware(request: NextRequest) {
       '/cases',
       '/mypage',
       '/mypage/tasks',
+      '/mypage/timeline',
+      '/mypage/case',
+      '/mypage/notifications',
+      '/api/notifications',
+      '/api/notifications/send',
       '/submissions',
       '/api/files/upload',
       '/api/cases',
@@ -62,6 +81,12 @@ export async function middleware(request: NextRequest) {
       '/api/auth/otp-request',
       '/api/auth/otp-verify',
       '/cases/new',
+      '/users',
+      '/users/new',
+      '/api/admin/users',
+      '/password',
+      '/api/auth/password-reset',
+      '/api/auth/password-update',
       '/dev/mailbox',
       '/api/dev/mailbox',
     ];
@@ -73,8 +98,10 @@ export async function middleware(request: NextRequest) {
         path,
       );
     const registration = /^\/register\/[^/]+$/.test(path);
+    const staffUser = /^\/(?:users|api\/admin\/users)\/[^/]+$/.test(path) && path !== '/users/new';
     if (
       !allowed.includes(path) &&
+      !staffUser &&
       !casePage &&
       !caseApi &&
       !registration &&

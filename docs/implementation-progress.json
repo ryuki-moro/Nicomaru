@@ -2183,9 +2183,9 @@
       "evidence": [
         "src/app/api/line/webhook/route.ts",
         "supabase/migrations/20260828001500_line_link.sql",
-        "tests/unit/line.test.ts"
+        "tests/unit/middleware.test.ts"
       ],
-      "note": "raw body署名とイベントID/nonce検証。",
+      "note": "LINE連携の終了により廃止。/api/line/* は410を返し、DB定義と過去データだけを残す。",
       "next": "",
       "issues": [],
       "prs": [],
@@ -3057,12 +3057,10 @@
       "screens": [],
       "evidence": [
         "src/app/api/line/webhook/route.ts",
-        "src/lib/notify/line.ts",
-        "docs/メンバー向けデモと運用手順.md",
-        "tests/unit/line.test.ts"
+        "docs/メンバー向けデモと運用手順.md"
       ],
-      "note": "校内の既定デモは実LINE送信を使わず、模擬SDK/署名試験と通常ブラウザーで説明する。",
-      "next": "実接続を採用する場合のみ、チャネル担当/端末/送信範囲を合意して別途記録。",
+      "note": "LINE連携の終了により実施しない。/api/line/* は410を返す。",
+      "next": "再開する場合のみ、チャネル担当/端末/送信範囲を合意して別途記録。",
       "issues": [
         14
       ],

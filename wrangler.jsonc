@@ -1,0 +1,26 @@
+// Cloudflare本番（OpenNext）。ローカル検証は cloudflare/wrangler.jsonc を使う。
+// APP_BASE_URL・RESEND_FROM と秘密値はダッシュボードで設定する。
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nicomaru",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "nicomaru" }],
+  // ダッシュボードで設定した APP_BASE_URL・RESEND_FROM を配備で消さない。
+  "keep_vars": true,
+  "vars": { "NICOMARU_DB": "d1", "NEXT_PUBLIC_NICOMARU_DB": "d1" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nicomaru",
+      "database_id": "9a210477-8a24-482b-a138-a04f1cdc4bdc",
+      "migrations_dir": "cloudflare/migrations",
+    },
+  ],
+  // R2を有効化したら追加する: "r2_buckets": [{ "binding": "FILES", "bucket_name": "nicomaru-files" }],
+  "observability": { "enabled": true },
+}

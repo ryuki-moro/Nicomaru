@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { PARTNER_ROLE_LABEL, type PartnerRole } from '@/lib/constants';
 import { isEncrypted, readPii } from '@/lib/crypto';
+import { usingD1 } from '@/lib/d1/mode';
 import { formatDateJp } from '@/lib/format';
 import { GUEST_FORM_TOKEN_PATTERN } from '@/lib/services/guests';
 import { hashInvitationToken } from '@/lib/services/invitations';
@@ -25,7 +26,7 @@ interface PeekRow {
  */
 export default async function GuestRsvpPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  if (process.env.NICOMARU_DB === 'd1-local') return <Unavailable />;
+  if (usingD1()) return <Unavailable />;
   if (!GUEST_FORM_TOKEN_PATTERN.test(token)) return <InvalidForm />;
 
   const admin = createSupabaseAdminClient('guest.rsvp');

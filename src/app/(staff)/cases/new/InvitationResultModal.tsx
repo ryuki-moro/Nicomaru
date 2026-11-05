@@ -16,7 +16,7 @@ import { useRouter } from 'next/navigation';
 import { ApiCallError, api } from '@/lib/api/client';
 import { formatDateTime } from '@/lib/format';
 import {
-  CONTACT_CHANNELS,
+  SENDABLE_CHANNELS,
   CONTACT_CHANNEL_LABEL,
   PARTNER_ROLE_LABEL,
   type ContactChannel,
@@ -249,7 +249,7 @@ export function InvitationResultModal({
                 >
                   コピー
                 </button>
-                {CONTACT_CHANNELS.map((channel) => (
+                {SENDABLE_CHANNELS.map((channel) => (
                   <button
                     key={channel}
                     type="button"

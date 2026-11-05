@@ -43,6 +43,8 @@ interface Task {
   importance: Importance;
   display_order: number;
   submission_format: SubmissionFormat;
+  description: string | null;
+  phase_name: string | null;
 }
 export interface D1Case {
   id: string;
