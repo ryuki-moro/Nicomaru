@@ -23,6 +23,7 @@ const ITEMS: readonly NavItem[] = [
   { href: '/notifications', label: '通知履歴', roles: ['planner', 'admin', 'system_admin'] },
   { href: '/templates', label: '宿題テンプレート', roles: ['admin'] },
   { href: '/plan-types', label: 'プラン種別', roles: ['admin'] },
+  // 名前は立場で変わる（usersLabelFor）。同じ画面でも管理する相手が違うため。
   { href: '/users', label: '利用者管理', roles: ['admin', 'system_admin'] },
   { href: '/venues', label: '式場管理', roles: ['system_admin'] },
   { href: '/system', label: '利用状況', roles: ['system_admin'] },
@@ -30,5 +31,17 @@ const ITEMS: readonly NavItem[] = [
 
 /** ロールが開ける画面だけを並び順のまま返す。 */
 export function staffNavItemsFor(role: Role): readonly NavItem[] {
-  return ITEMS.filter((item) => item.roles.includes(role));
+  return ITEMS.filter((item) => item.roles.includes(role)).map((item) =>
+    item.href === '/users' ? { ...item, label: usersLabelFor(role) } : item,
+  );
+}
+
+/** 利用者管理（U01）の画面名。system_admin は式場管理者とプランナー、admin は自式場のプランナーを扱う。 */
+export function usersLabelFor(role: Role): string {
+  return role === 'system_admin' ? '職員管理' : 'プランナー管理';
+}
+
+/** 利用者登録（U02）で作られる種別。表4-19 の自動設定と同じ規則。 */
+export function createdRoleLabelFor(role: Role): string {
+  return role === 'system_admin' ? '式場管理者' : 'プランナー';
 }
