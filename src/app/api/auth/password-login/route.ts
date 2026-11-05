@@ -1,3 +1,4 @@
+import { clientIp, usingD1 } from '@/lib/d1/mode';
 import { ok, route } from '@/lib/api/route';
 import { ApiError, rateLimited, unauthenticated } from '@/lib/errors';
 import { recordAuthenticationFailure } from '@/lib/services/audit';
@@ -8,6 +9,29 @@ import { enforceAuthRateLimit } from '../shared';
 
 export const POST = route(async (request) => {
   const body = await parsePasswordBody(request, passwordLoginSchema);
+  if (usingD1()) {
+    const { d1Auth } = await import('@/lib/d1/auth');
+    const auth = await d1Auth();
+    const result = await auth.handler(
+      new Request(new URL('/api/auth/sign-in/email', process.env.APP_BASE_URL), {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          origin: process.env.APP_BASE_URL!,
+          'x-nicomaru-local-ip': clientIp(request.headers),
+        },
+        body: JSON.stringify(body),
+      }),
+    );
+    if (!result.ok) {
+      if (result.status === 429) throw rateLimited();
+      throw unauthenticated('メールアドレスまたはパスワードが正しくありません');
+    }
+    const response = ok({ redirectTo: '/' });
+    for (const cookie of result.headers.getSetCookie())
+      response.headers.append('set-cookie', cookie);
+    return response;
+  }
   await enforceAuthRateLimit(request, 'password_login', body.email);
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.signInWithPassword(body).catch(() => {

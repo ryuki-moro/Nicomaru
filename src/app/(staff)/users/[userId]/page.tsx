@@ -10,8 +10,11 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
-import { getAppUser, landingPathFor } from '@/lib/auth/session';
+import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
+import { getAppUser, type AppUser } from '@/lib/auth/session';
 import { ROLE_LABEL, type Role, type UserStatus } from '@/lib/constants';
+import { usingD1 } from '@/lib/d1/mode';
+import { ApiError } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 import { UserEditForm, type SuccessorOption } from './UserEditForm';
@@ -31,7 +34,26 @@ export default async function UserEditPage({ params }: { params: Promise<{ userI
 
   const user = await getAppUser();
   if (!user) redirect('/login');
-  if (user.role !== 'admin' && user.role !== 'system_admin') redirect(landingPathFor(user.role));
+  if (user.role !== 'admin' && user.role !== 'system_admin') redirect('/error?code=403');
+
+  if (usingD1()) {
+    const db = await (await import('@/lib/d1/runtime')).localDB();
+    const staff = await import('@/lib/d1/staff');
+    const target = await staff.managedStaff(db, user, userId).catch((error: unknown) => {
+      if (error instanceof ApiError && error.code === 'NOT_FOUND') notFound();
+      throw error;
+    });
+    const { assignedCaseCount, successors } = await staff.handoverOptions(db, target);
+    return (
+      <UserEditView
+        user={user}
+        target={target}
+        venueName={target.venue_name}
+        assignedCaseCount={assignedCaseCount}
+        successorOptions={assignedCaseCount > 0 ? successors : []}
+      />
+    );
+  }
 
   const supabase = await createSupabaseServerClient();
 
@@ -50,9 +72,6 @@ export default async function UserEditPage({ params }: { params: Promise<{ userI
       ? target.role === 'planner' && target.venue_id === user.venueId
       : target.role === 'planner' || target.role === 'admin';
   if (!manageable) notFound();
-
-  // 削除済みは変更対象にしない（5-1 削除方針の論理削除）
-  const isDeleted = target.status === 'deleted';
 
   const { data: venue } = target.venue_id
     ? await supabase.from('venues').select('name').eq('id', target.venue_id).maybeSingle()
@@ -86,29 +105,40 @@ export default async function UserEditPage({ params }: { params: Promise<{ userI
   }
 
   return (
+    <UserEditView
+      user={user}
+      target={target}
+      venueName={(venue as { name: string } | null)?.name ?? null}
+      assignedCaseCount={assignedCaseCount}
+      successorOptions={successorOptions}
+    />
+  );
+}
+
+function UserEditView({
+  user,
+  target,
+  venueName,
+  assignedCaseCount,
+  successorOptions,
+}: {
+  user: AppUser;
+  target: ProfileRow;
+  venueName: string | null;
+  assignedCaseCount: number;
+  successorOptions: SuccessorOption[];
+}) {
+  // 削除済みは変更対象にしない（5-1 削除方針の論理削除）
+  const isDeleted = target.status === 'deleted';
+  return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          {/* system_admin は Phase 1 の着地点が本画面のため、親リンクを出さない（4-2） */}
-          {user.role === 'admin' && (
-            <li className="flex items-center gap-1">
-              <Link href="/dashboard" className="text-link hover:underline">
-                ダッシュボード
-              </Link>
-              <span aria-hidden>/</span>
-            </li>
-          )}
-          <li>
-            <Link href="/users" className="text-link hover:underline">
-              利用者管理
-            </Link>
-          </li>
-          <li className="flex items-center gap-1">
-            <span aria-hidden>/</span>
-            <span aria-current="page">{target.display_name}</span>
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        items={[
+          homeCrumbFor(user.role),
+          { label: '利用者管理', href: '/users' },
+          { label: target.display_name },
+        ]}
+      />
 
       <h1 className="section-head">利用者の変更：{target.display_name}</h1>
 
@@ -125,7 +155,7 @@ export default async function UserEditPage({ params }: { params: Promise<{ userI
         <UserEditForm
           userId={target.id}
           roleLabel={ROLE_LABEL[target.role]}
-          venueName={(venue as { name: string } | null)?.name ?? '未設定'}
+          venueName={venueName ?? '未設定'}
           initial={{
             displayName: target.display_name,
             email: target.email,

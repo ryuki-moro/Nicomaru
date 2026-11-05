@@ -72,6 +72,30 @@ describe('未ログイン時のログイン先', () => {
     expect([...target.searchParams]).toEqual([['next', '/venues/%2F%2Fevil.example.test']]);
   });
 
+  it('一覧の絞り込み（許可キー tab・page）だけをnextに引き継ぐ', async () => {
+    vi.stubEnv('APP_BASE_URL', 'https://app.example.test');
+    const response = await middleware(
+      new NextRequest(
+        'https://app.example.test/mypage/tasks?token=private&tab=needs_fix&linkToken=private&page=2',
+      ),
+    );
+    const target = new URL(response.headers.get('location')!);
+
+    expect([...target.searchParams]).toEqual([['next', '/mypage/tasks?tab=needs_fix&page=2']]);
+    expect(response.headers.get('location')).not.toContain('private');
+  });
+
+  it('許可キーでも値が規則外ならnextに載せない', async () => {
+    vi.stubEnv('APP_BASE_URL', 'https://app.example.test');
+    const response = await middleware(
+      new NextRequest('https://app.example.test/mypage/tasks?tab=https%3A%2F%2Fevil.example.test'),
+    );
+
+    expect(response.headers.get('location')).toBe(
+      'https://app.example.test/login?next=%2Fmypage%2Ftasks',
+    );
+  });
+
   it('ルートからのログインにはnextを付けない', async () => {
     vi.stubEnv('APP_BASE_URL', 'https://app.example.test');
     const response = await middleware(new NextRequest('https://app.example.test/?next=/venues'));
@@ -116,5 +140,53 @@ describe('ログイン先へ転送しない経路', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.has('location')).toBe(false);
+  });
+});
+
+describe('Cloudflare本番のD1（NICOMARU_DB=d1）', () => {
+  beforeEach(() => {
+    vi.stubEnv('NICOMARU_DB', 'd1');
+    vi.stubEnv('APP_BASE_URL', 'https://nicomaru.example.test');
+  });
+
+  it('ループバック以外のHostでも移行済みの画面へ進める', async () => {
+    const response = await middleware(new NextRequest('https://nicomaru.example.test/cases'));
+    expect(response.status).toBe(200);
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it('ローカル受信箱は存在しない扱いにする', async () => {
+    for (const path of ['/dev/mailbox', '/api/dev/mailbox']) {
+      const response = await middleware(new NextRequest(`https://nicomaru.example.test${path}`));
+      expect(response.status).toBe(404);
+    }
+  });
+
+  it('未移行の機能は503で遮断し、Supabaseへフォールバックしない', async () => {
+    const response = await middleware(new NextRequest('https://nicomaru.example.test/venues'));
+    expect(response.status).toBe(503);
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it('APP_BASE_URL未設定では処理しない', async () => {
+    vi.stubEnv('APP_BASE_URL', undefined);
+    const response = await middleware(new NextRequest('https://nicomaru.example.test/cases'));
+    expect(response.status).toBe(500);
+  });
+
+  it('LINE連携のAPIは410を返す', async () => {
+    const response = await middleware(
+      new NextRequest('https://nicomaru.example.test/api/line/webhook'),
+    );
+    expect(response.status).toBe(410);
+  });
+});
+
+describe('ローカル検証のD1（NICOMARU_DB=d1-local）', () => {
+  it('ループバック以外のHostを拒否する', async () => {
+    vi.stubEnv('NICOMARU_DB', 'd1-local');
+    vi.stubEnv('APP_BASE_URL', 'http://127.0.0.1:3104');
+    const response = await middleware(new NextRequest('https://nicomaru.example.test/cases'));
+    expect(response.status).toBe(403);
   });
 });

@@ -15,6 +15,7 @@
  * 表6-6 には現れないが、Storage への書き込みと storage_files への記録という
  * 複数リソースの更新を伴うため Route Handler に置く（6-5 の原則）。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { randomUUID } from 'node:crypto';
 
 import { ok, route } from '@/lib/api/route';
@@ -79,20 +80,30 @@ export const POST = route(async (request: Request) => {
 
   const taskId = form.get('taskId');
   const file = form.get('file');
-  if (typeof taskId !== 'string' || !isUuid(taskId)) {
+  if (typeof taskId !== 'string' || (!isUuid(taskId) && !usingD1())) {
     throw badRequest([{ field: 'taskId', reason: '宿題を特定できませんでした' }]);
   }
   if (!(file instanceof File) || file.size === 0) {
     throw badRequest([{ field: 'file', reason: 'ファイルを選んでください' }]);
   }
 
-  const supabase = await createSupabaseServerClient();
+  const d1 = usingD1();
+  const supabase = d1 ? null : await createSupabaseServerClient();
 
-  const taskResult = await supabase
-    .from('case_tasks')
-    .select('id, case_id, submission_format, allowed_file_types, status')
-    .eq('id', taskId)
-    .maybeSingle();
+  const taskResult = d1
+    ? {
+        data: await (async () => {
+          const { localDB } = await import('@/lib/d1/runtime');
+          const { taskRow } = await import('@/lib/d1/tasks');
+          return taskRow(await localDB(), user, taskId);
+        })(),
+        error: null,
+      }
+    : await supabase!
+        .from('case_tasks')
+        .select('id, case_id, submission_format, allowed_file_types, status')
+        .eq('id', taskId)
+        .maybeSingle();
   if (taskResult.error) throw fromPostgresError(taskResult.error);
   if (!taskResult.data) throw notFound();
   const task = taskResult.data as CaseTaskRow;
@@ -147,7 +158,15 @@ export const POST = route(async (request: Request) => {
 
   // 案件あたりの合計上限（4-3 冒頭）。RLS で見えない planner_only のファイルは
   // 集計から漏れるが、couple 起点の上限判定としてはこれで足りる。
-  const usedResult = await supabase
+  if (d1) {
+    const { localDB, localFiles } = await import('@/lib/d1/runtime');
+    const { uploadFile } = await import('@/lib/d1/files');
+    return ok(
+      await uploadFile(await localDB(), await localFiles(), user, taskId, file, bytes),
+      201,
+    );
+  }
+  const usedResult = await supabase!
     .from('storage_files')
     .select('file_size_bytes')
     .eq('case_id', task.case_id);
@@ -161,7 +180,7 @@ export const POST = route(async (request: Request) => {
   }
 
   // object_path の先頭は venue_id（表5-16）。案件から辿る。
-  const caseResult = await supabase
+  const caseResult = await supabase!
     .from('wedding_cases')
     .select('venue_id')
     .eq('id', task.case_id)
@@ -174,7 +193,7 @@ export const POST = route(async (request: Request) => {
   const fileId = randomUUID();
   const objectPath = `${venueId}/${task.case_id}/${taskId}/${fileId}`;
 
-  const uploaded = await supabase.storage.from(BUCKET).upload(objectPath, bytes, {
+  const uploaded = await supabase!.storage.from(BUCKET).upload(objectPath, bytes, {
     contentType: file.type,
     // パスに UUID を含むため衝突しない。上書きを許すと他人のファイルを潰す余地が生まれる。
     upsert: false,
@@ -184,7 +203,7 @@ export const POST = route(async (request: Request) => {
     throw unprocessable('ファイルを保存できませんでした。時間をおいてお試しください');
   }
 
-  const inserted = await supabase
+  const inserted = await supabase!
     .from('storage_files')
     .insert({
       id: fileId,
@@ -203,7 +222,7 @@ export const POST = route(async (request: Request) => {
 
   if (inserted.error) {
     // メタを記録できないと 6-11 の自動削除からも漏れる。実体を戻してから失敗させる。
-    const rollback = await supabase.storage.from(BUCKET).remove([objectPath]);
+    const rollback = await supabase!.storage.from(BUCKET).remove([objectPath]);
     if (rollback.error) {
       console.error('[files.upload] 実体の巻き戻しに失敗しました', objectPath, rollback.error);
     }

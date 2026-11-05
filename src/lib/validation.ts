@@ -9,8 +9,13 @@ import { z } from 'zod';
 
 import {
   ALLOWED_FILE_TYPES,
-  CONTACT_CHANNELS,
+  SENDABLE_CHANNELS,
   FOLLOW_METHODS,
+  GUEST_AGE_CATEGORIES,
+  GUEST_ASSISTANCE_NEEDS,
+  GUEST_GENDERS,
+  GUEST_RELATIONSHIPS,
+  GUEST_RESPONSE_MAX_PEOPLE,
   IMPORTANCE_LEVELS,
   INPUT_LIMITS,
   PARTNER_ROLES,
@@ -19,6 +24,7 @@ import {
   SUBMISSION_FORMATS,
 } from '@/lib/constants';
 import { type ErrorDetail } from '@/lib/errors';
+import { GUEST_TAG_MAX_PER_CASE, GUEST_TAG_NAME_MAX } from '@/lib/guest-tags';
 import { todayInJst } from '@/lib/format';
 import { aiJobInputSchema } from '@/lib/ai/schemas';
 import { NOTIFICATION_TYPES } from '@/lib/notify/templates';
@@ -66,6 +72,8 @@ const notPastDate = (value: string) => value >= todayInJst();
 // ------------------------------------------------------------------ 認証（P01〜P03）
 export const otpRequestSchema = z.object({
   email,
+  /** ログイン後の戻り先（P01 の ?next=）。形の検証と許可キーへの絞り込みは route 側で行う */
+  next: z.string().max(2048).optional(),
 });
 
 export const otpVerifySchema = z.object({
@@ -116,7 +124,7 @@ export const caseCreateSchema = z.object({
   contactEmail: email,
   /** K03「主連絡先」。選択した側に is_primary_contact=true と recipient_email を設定する（6-6-1） */
   primaryContact: z.enum(PARTNER_ROLES),
-  contactChannel: z.enum(CONTACT_CHANNELS),
+  contactChannel: z.enum(SENDABLE_CHANNELS),
   guestCount: z.number().int().min(0).optional().nullable(),
   planTypeId: z.string().uuid('プラン種別を選択してください'),
   venueRoom: z.string().trim().max(INPUT_LIMITS.shortText).optional().nullable(),
@@ -245,16 +253,76 @@ export const reviewSubmissionSchema = z
     }
   });
 
-// ------------------------------------------------------ 招待・フォロー・利用者
-export const invitationIssueSchema = z.object({
-  targetPartnerRole: z.enum(PARTNER_ROLES),
-  /** 発行と同時に送信する場合に指定する。省略時は発行のみ（URLを応答で1度だけ返す） */
-  send: z.enum(CONTACT_CHANNELS).optional(),
+// ------------------------------------------------------------ ゲストの出欠回答
+const guestPersonSchema = z
+  .object({
+    fullName: shortText,
+    kana: z.string().trim().max(INPUT_LIMITS.shortText).optional().nullable(),
+    ageCategory: z.enum(GUEST_AGE_CATEGORIES, { message: '年齢区分を選択してください' }),
+    gender: z.enum(GUEST_GENDERS, { message: '性別を選択してください' }),
+    /** 空欄は「アレルギーなし」。欠席の回答では保存しない */
+    allergyNote: z.string().trim().max(INPUT_LIMITS.guestAllergyNote).optional().nullable(),
+    /** 身体的なご事情の区分（足腰・車いすなど）。空配列は「特になし」。欠席の回答では保存しない */
+    assistanceNeeds: z
+      .array(z.enum(GUEST_ASSISTANCE_NEEDS, { message: 'ご事情の区分が正しくありません' }))
+      .max(GUEST_ASSISTANCE_NEEDS.length)
+      .default([]),
+    assistanceNote: z.string().trim().max(INPUT_LIMITS.guestAssistanceNote).optional().nullable(),
+  })
+  .refine((v) => !v.assistanceNeeds.includes('other') || Boolean(v.assistanceNote), {
+    path: ['assistanceNote'],
+    message: '「その他」を選んだ場合は内容をご記入ください',
+  });
+
+/** 先頭が回答者本人、2人目以降が同伴者。欠席の回答に同伴者は付けない。 */
+export const guestResponseSchema = z
+  .object({
+    attending: z.boolean({ message: 'ご出席・ご欠席を選択してください' }),
+    guestSide: z.enum(PARTNER_ROLES, { message: '新郎側・新婦側を選択してください' }),
+    relationship: z.enum(GUEST_RELATIONSHIPS, { message: 'ご関係を選択してください' }),
+    guests: z.array(guestPersonSchema).min(1).max(GUEST_RESPONSE_MAX_PEOPLE),
+  })
+  .refine((v) => v.attending || v.guests.length === 1, {
+    path: ['guests'],
+    message: 'ご欠席の場合、同伴者は登録できません',
+  });
+
+/** ゲストの自由タグ（作成・名前変更）。 */
+export const guestTagSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'タグ名を入力してください')
+    .max(GUEST_TAG_NAME_MAX, `${GUEST_TAG_NAME_MAX}文字以内で入力してください`),
 });
 
-export const invitationSendSchema = z.object({
-  channel: z.enum(CONTACT_CHANNELS),
+/** ゲスト1人の自由タグの付け替え。指定した内容に置き換える。 */
+export const guestTagAssignmentSchema = z.object({
+  tagIds: z.array(z.string().uuid()).max(GUEST_TAG_MAX_PER_CASE),
 });
+
+// ------------------------------------------------------ 招待・フォロー・利用者
+export const invitationIssueSchema = z
+  .object({
+    targetPartnerRole: z.enum(PARTNER_ROLES),
+    /** 発行と同時に送信する場合に指定する。省略時は発行のみ（URLを応答で1度だけ返す） */
+    send: z.enum(SENDABLE_CHANNELS).optional(),
+    recipientEmail: email.optional(),
+  })
+  .refine((v) => !v.recipientEmail || v.send === 'email', {
+    path: ['recipientEmail'],
+    message: 'メール送信時のみ宛先を指定できます',
+  });
+
+export const invitationSendSchema = z
+  .object({
+    channel: z.enum(SENDABLE_CHANNELS),
+    recipientEmail: email.optional(),
+  })
+  .refine((v) => !v.recipientEmail || v.channel === 'email', {
+    path: ['recipientEmail'],
+    message: 'メール送信時のみ宛先を指定できます',
+  });
 
 export const followLogSchema = z.object({
   method: z.enum(FOLLOW_METHODS),
@@ -378,8 +446,9 @@ export const notificationSendSchema = z
   .object({
     caseId: z.string().uuid(),
     recipientUserId: z.string().uuid(),
-    channel: z.enum(['line', 'email', 'in_app']),
+    channel: z.enum(['email', 'in_app']),
     notificationType: z.enum(NOTIFICATION_TYPES),
+    taskId: z.string().uuid().optional().nullable(),
     taskName: z.string().trim().max(120).optional().nullable(),
     dueDate: z.string().trim().max(40).optional().nullable(),
     comment: z.string().trim().max(INPUT_LIMITS.textArea).optional().nullable(),
@@ -424,11 +493,6 @@ export const venueUpdateSchema = z
   .refine((value) => Object.values(value).some((item) => item !== undefined), {
     message: '更新する項目を指定してください',
   });
-
-/** POST /api/line/link（機能1-3、Phase 2）。linkToken は follow イベント経由で受け取った値。 */
-export const lineLinkSchema = z.object({
-  linkToken: z.string().trim().min(1).max(200),
-});
 
 /** POST /api/ai/jobs（機能9-6、Phase 3）。faq_answer は専用APIから投入する（7-3）。 */
 export const aiJobCreateSchema = z.object({

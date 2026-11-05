@@ -12,6 +12,7 @@
  *
  * 自動リトライは行わない（二重作成回避）。失敗時はエラーを返し、画面側で再実行を促す。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { ok, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
 import { fromPostgresError, notFound, unprocessable } from '@/lib/errors';
@@ -21,8 +22,14 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const POST = route(
   async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
-    await requireRole('planner', 'admin', 'system_admin');
+    const actor = await requireRole('planner', 'admin', 'system_admin');
     const { caseId } = await context.params;
+    if (usingD1()) {
+      const { localDB } = await import('@/lib/d1/runtime');
+      return ok(
+        await (await import('@/lib/d1/onboarding')).assignTasks(await localDB(), actor, caseId),
+      );
+    }
     const supabase = await createSupabaseServerClient();
 
     const { data: caseData, error: caseError } = await supabase

@@ -11,6 +11,7 @@
  */
 'use client';
 
+import { publicD1 } from '@/lib/d1/mode';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -26,7 +27,7 @@ import {
 
 interface Props {
   submissionId: string;
-  /** 「確定する」「キャンセル」いずれも K02 案件詳細へ戻る（4-3 D02） */
+  /** 9-3 の下書き依頼に使う */
   caseId: string;
   /** 9-3 の下書き依頼に使う（ジョブを宿題に紐づける） */
   taskId: string;
@@ -71,7 +72,10 @@ export function ReviewForm({
         decision,
         comment: comment.trim() === '' ? null : comment.trim(),
       });
-      router.push(`/cases/${caseId}`);
+      // 確定後は提出物確認の一覧へ戻し、一覧の上で結果を知らせる（?reviewed= は ID だけを渡す）。
+      // 4-3 D02 は「K02 案件詳細へ」だが、この画面へはグローバルナビの一覧から入るので、
+      // 1件ごとに案件詳細へ飛ばすと一覧へ戻り直す手間になる（docs/ui-review/p2 中-4）。
+      router.push(`/submissions?reviewed=${submissionId}`);
       router.refresh();
     } catch (error) {
       // 4-3 エラー表示規約: 権限エラー・不存在は P04 へ遷移する。
@@ -109,16 +113,18 @@ export function ReviewForm({
         <FieldError message={fieldErrors.decision} />
       </fieldset>
 
-      <DraftAssist
-        caseId={caseId}
-        taskId={taskId}
-        taskTitle={taskTitle}
-        decision={decision}
-        memo={comment}
-        aiAvailable={aiAvailable}
-        lastSeenAt={lastSeenAt}
-        onAdopt={setComment}
-      />
+      {!publicD1() && (
+        <DraftAssist
+          caseId={caseId}
+          taskId={taskId}
+          taskTitle={taskTitle}
+          decision={decision}
+          memo={comment}
+          aiAvailable={aiAvailable}
+          lastSeenAt={lastSeenAt}
+          onAdopt={setComment}
+        />
+      )}
 
       <div className="mb-4">
         <label htmlFor="review-comment" className="field-label">
@@ -148,7 +154,7 @@ export function ReviewForm({
           type="button"
           className="btn-secondary sm:w-40"
           disabled={pending}
-          onClick={() => router.push(`/cases/${caseId}`)}
+          onClick={() => router.push('/submissions')}
         >
           キャンセル
         </button>

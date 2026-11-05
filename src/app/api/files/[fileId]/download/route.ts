@@ -7,6 +7,7 @@
  * Service Role は使わない。表6-4 に本用途の行が無く、
  * RLS を迂回した瞬間に 1 の条件が形骸化するため（6-3-5）。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { requireAppUser } from '@/lib/auth/session';
 import { ok, route } from '@/lib/api/route';
 import { isStaff } from '@/lib/constants';
@@ -31,6 +32,17 @@ export const GET = route(
     const user = await requireAppUser();
     if (!isUuid(fileId)) throw notFound();
 
+    if (usingD1()) {
+      const { localDB, localFiles } = await import('@/lib/d1/runtime');
+      const { downloadFile } = await import('@/lib/d1/files');
+      return downloadFile(
+        await localDB(),
+        await localFiles(),
+        user,
+        fileId,
+        new URL(_request.url).searchParams.get('raw') === '1',
+      );
+    }
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from('storage_files')

@@ -24,7 +24,8 @@ create schema if not exists extensions;
 
 create table if not exists auth.users (
   id    uuid primary key default gen_random_uuid(),
-  email text unique
+  email text unique,
+  last_sign_in_at timestamptz
 );
 
 -- Supabase の auth.uid() と同じく、リクエストの JWT クレームから読む。

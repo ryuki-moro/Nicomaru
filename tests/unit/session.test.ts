@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Role } from '@/lib/constants';
 
@@ -8,12 +8,14 @@ const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   select: vi.fn(),
   eq: vi.fn(),
+  d1: vi.fn(),
   redirect: vi.fn((path: string): never => {
     throw new Error(`REDIRECT:${path}`);
   }),
 }));
 
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
+vi.mock('@/lib/d1/auth', () => ({ resolveD1User: mocks.d1 }));
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn(async () => ({
     auth: { getUser: mocks.getUser },
@@ -23,6 +25,7 @@ vi.mock('@/lib/supabase/server', () => ({
 
 import {
   getAppUser,
+  landingLabelFor,
   landingPathFor,
   requireAppUser,
   requirePageUser,
@@ -43,14 +46,28 @@ const profile = (role: Role = 'planner') => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv('NICOMARU_DB', '');
   mocks.getUser.mockResolvedValue({ data: { user: { id: 'verified-auth-id' } }, error: null });
   mocks.maybeSingle.mockResolvedValue({ data: profile(), error: null });
   mocks.from.mockReturnValue({ select: mocks.select });
   mocks.select.mockReturnValue({ eq: mocks.eq });
   mocks.eq.mockReturnValue({ maybeSingle: mocks.maybeSingle });
 });
+afterEach(() => vi.unstubAllEnvs());
 
 describe('検証済みセッションと有効プロフィールの境界', () => {
+  it('D1モードではD1の検証結果を使い、Supabaseへ問い合わせない', async () => {
+    vi.stubEnv('NICOMARU_DB', 'd1-local');
+    const result = {
+      state: 'active',
+      user: { id: 'd1-user', role: 'planner', venueId: 'd1-venue' },
+    };
+    mocks.d1.mockResolvedValue(result);
+    expect(await resolveAppUser()).toBe(result);
+    expect(mocks.d1).toHaveBeenCalledTimes(1);
+    expect(mocks.getUser).not.toHaveBeenCalled();
+    expect(mocks.from).not.toHaveBeenCalled();
+  });
   it('未認証はプロフィールを検索しない', async () => {
     mocks.getUser.mockResolvedValue({ data: { user: null }, error: { message: 'expired' } });
     expect(await resolveAppUser()).toEqual({ state: 'anonymous' });
@@ -110,7 +127,12 @@ describe('検証済みセッションと有効プロフィールの境界', () =
     mocks.maybeSingle.mockResolvedValue({ data: profile('couple'), error: null });
     await expect(requireStaff()).rejects.toMatchObject({ status: 403 });
     await expect(requireRole('admin', 'system_admin')).rejects.toMatchObject({ status: 403 });
-    await expect(requirePageUser('planner', 'admin')).rejects.toThrow('REDIRECT:/mypage');
+    await expect(requirePageUser('planner', 'admin')).rejects.toThrow('REDIRECT:/error?code=403');
+  });
+
+  it('staff どうしでもロールが足りなければ P04（403）へ送る', async () => {
+    mocks.maybeSingle.mockResolvedValue({ data: profile('planner'), error: null });
+    await expect(requirePageUser('admin')).rejects.toThrow('REDIRECT:/error?code=403');
   });
 
   it.each([
@@ -120,5 +142,14 @@ describe('検証済みセッションと有効プロフィールの境界', () =
     ['system_admin', '/system'],
   ] as const)('%s の初期遷移先は %s', (role, path) => {
     expect(landingPathFor(role)).toBe(path);
+  });
+
+  it.each([
+    ['couple', 'マイページ'],
+    ['planner', 'ダッシュボード'],
+    ['admin', 'ダッシュボード'],
+    ['system_admin', '利用状況'],
+  ] as const)('%s の着地点の画面名は %s', (role, label) => {
+    expect(landingLabelFor(role)).toBe(label);
   });
 });

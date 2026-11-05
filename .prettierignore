@@ -16,3 +16,8 @@ docs/images/
 docs/詳細設計/generated/
 # C4 図の HTML は同じフォルダの C4アーキテクチャ.json から生成する。
 docs/詳細設計/C4アーキテクチャ.html
+
+.next-d1/
+.next-dev-admin/
+.wrangler/
+spikes/

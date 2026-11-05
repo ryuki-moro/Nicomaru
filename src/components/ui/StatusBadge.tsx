@@ -11,11 +11,20 @@ import {
   type TaskStatus,
 } from '@/lib/constants';
 
-const TASK_TONE: Record<TaskStatus, string> = {
-  not_started: 'badge-neutral',
-  submitted: 'badge-success',
+/**
+ * 宿題と提出物の確認状態で名前が共通する状態の色。両方の対応表がここから取るので、
+ * 同じ「提出済」が画面によって違う色になることはない。緑は「確認済」だけに使い、
+ * 提出済（確認待ち）は警告色で「まだ相手の番」と分かるようにする。
+ */
+const SHARED_TONE = {
+  submitted: 'badge-warning',
   needs_fix: 'badge-danger',
   confirmed: 'badge-success',
+} as const satisfies Partial<Record<TaskStatus & ReviewStatus, string>>;
+
+const TASK_TONE: Record<TaskStatus, string> = {
+  ...SHARED_TONE,
+  not_started: 'badge-neutral',
   waived: 'badge-neutral',
 };
 
@@ -24,10 +33,8 @@ export function TaskStatusBadge({ status }: { status: TaskStatus }) {
 }
 
 const REVIEW_TONE: Record<ReviewStatus, string> = {
+  ...SHARED_TONE,
   draft: 'badge-neutral',
-  submitted: 'badge-warning',
-  needs_fix: 'badge-danger',
-  confirmed: 'badge-success',
 };
 
 export function ReviewStatusBadge({ status }: { status: ReviewStatus }) {

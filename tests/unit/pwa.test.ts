@@ -5,6 +5,36 @@ import { describe, expect, it, vi } from 'vitest';
 import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server';
 
 import { config } from '@/middleware';
+import { installGuideKind } from '@/lib/install-guide';
+
+describe('ホーム画面追加の案内条件', () => {
+  const safari = 'Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 Version/18.0 Mobile Safari/604.1';
+  const chrome =
+    'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130.0 Mobile Safari/537.36';
+  const check = (userAgent: string, overrides = {}) =>
+    installGuideKind({ userAgent, standalone: false, dismissed: false, ...overrides });
+  it('iOS Safari と Android Chrome に案内する', () => {
+    expect(check(safari)).toBe('ios');
+    expect(check(chrome)).toBe('android');
+    expect(
+      check('Mozilla/5.0 (Macintosh) Version/18.0 Safari/605.1.15', { maxTouchPoints: 5 }),
+    ).toBe('ios');
+  });
+  it('追加済み、閉じた状態、LINE 内ブラウザには表示しない', () => {
+    for (const userAgent of [safari, chrome]) {
+      expect(check(userAgent, { standalone: true })).toBeNull();
+      expect(check(userAgent, { dismissed: true })).toBeNull();
+      expect(check(userAgent + ' Line/14.0')).toBeNull();
+    }
+  });
+  it('他のブラウザと Android WebView に Safari/Chrome の手順を出さない', () => {
+    expect(check(safari + ' CriOS/130.0')).toBeNull();
+    expect(check(chrome + ' EdgA/130.0')).toBeNull();
+    expect(check(chrome + ' SamsungBrowser/27.0')).toBeNull();
+    expect(check(chrome.replace('Android 14)', 'Android 14; wv)'))).toBeNull();
+    expect(check('Mozilla/5.0 (Windows NT 10.0) Chrome/130.0 Safari/537.36')).toBeNull();
+  });
+});
 
 describe('PWAは機微データをオフライン保存しない', () => {
   it('manifestのアイコンに実際の192/512px PNGがあり、maskableとAppleアイコンも揃う', () => {

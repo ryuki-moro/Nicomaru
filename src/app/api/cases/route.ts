@@ -10,6 +10,7 @@
  * 一連の書き込みは security definer 関数 create_wedding_case()（20260828000800）へ集約し、
  * ここからは RPC を1回だけ呼ぶ。case_code の採番と UNIQUE 違反時の再試行（5-7）も関数内で行う。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole, requireStaff } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE, PARTNER_ROLES, type PartnerRole } from '@/lib/constants';
@@ -28,9 +29,8 @@ import { caseCreateSchema } from '@/lib/validation';
 
 export const GET = route(async (request: Request) => {
   const started = performance.now();
-  await requireStaff();
+  const user = await requireStaff();
   const authenticated = performance.now();
-  const supabase = await createSupabaseServerClient();
 
   const params = new URL(request.url).searchParams;
   const limit = Math.min(Number(params.get('limit')) || LIST_PAGE_SIZE, LIST_PAGE_SIZE);
@@ -38,7 +38,14 @@ export const GET = route(async (request: Request) => {
 
   // 一覧の組み立ては K01 画面と同じサービス層を使う。
   // 以前はここに別の実装があり、q（キーワード）を無視してリスクも返していなかった（#18）。
-  const result = await loadCaseList(supabase, {
+  const load = usingD1()
+    ? async (options: Parameters<typeof loadCaseList>[1]) => {
+        const { localDB } = await import('@/lib/d1/runtime');
+        return (await import('@/lib/d1/cases')).listCases(await localDB(), user, options);
+      }
+    : async (options: Parameters<typeof loadCaseList>[1]) =>
+        loadCaseList(await createSupabaseServerClient(), options);
+  const result = await load({
     scope: params.get('scope') === 'archived' ? 'archived' : 'active',
     sort: params.get('sort') === 'risk' ? 'risk' : 'wedding_date',
     keyword: params.get('q'),
@@ -74,6 +81,14 @@ export const POST = route(async (request: Request) => {
   const actor = await requireRole('planner', 'admin');
   if (!actor.venueId) throw forbidden('式場に所属していない利用者は案件を登録できません');
 
+  if (usingD1()) {
+    const input = await parseBody(request, caseCreateSchema.strict());
+    const { localDB } = await import('@/lib/d1/runtime');
+    return ok(
+      await (await import('@/lib/d1/onboarding')).createCase(await localDB(), actor, input),
+      201,
+    );
+  }
   const input = await parseBody(request, caseCreateSchema);
   const supabase = await createSupabaseServerClient();
 

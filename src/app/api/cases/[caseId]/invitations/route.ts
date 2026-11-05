@@ -9,6 +9,7 @@
  * 同一トランザクションで行い、応答で平文URLを1度だけ返す。
  * 失効と発行を別々に呼ぶとトークンが2本同時に有効な瞬間が生まれるため、DB側の1関数へ閉じている。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
 import {
@@ -18,6 +19,7 @@ import {
   type PartnerRole,
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
+import { saveInvitationRecipient } from '@/lib/services/invitation-recipient';
 import { fromPostgresError, notFound } from '@/lib/errors';
 import { sendInvitation } from '@/lib/notify/send';
 import {
@@ -62,14 +64,13 @@ const INVITATION_COLUMNS =
 
 /** 送信先の解決に必要な列。couple_profiles は memo を剥奪しているため列を明示する（付録A）。 */
 const CASE_WITH_PARTNERS_SELECT = `id, case_code, contact_channel,
-   couple_profiles ( ${COUPLE_PROFILE_COLUMNS}, user_profiles ( id, line_user_id ) )`;
+   couple_profiles ( ${COUPLE_PROFILE_COLUMNS} )`;
 
 interface PartnerRow {
   partner_role: PartnerRole;
   full_name: string;
   email: string | null;
   email_hash: string | null;
-  user_profiles: { id: string; line_user_id: string | null } | null;
 }
 
 /**
@@ -105,8 +106,14 @@ function summarize(rows: InvitationRow[], now = new Date()): InvitationSummary[]
 
 export const GET = route(
   async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
-    await requireRole('planner', 'admin', 'system_admin');
+    const actor = await requireRole('planner', 'admin', 'system_admin');
     const { caseId } = await context.params;
+    if (usingD1()) {
+      const { localDB } = await import('@/lib/d1/runtime');
+      return ok(
+        await (await import('@/lib/d1/onboarding')).listInvitations(await localDB(), actor, caseId),
+      );
+    }
     const supabase = await createSupabaseServerClient();
 
     const { data, error } = await supabase
@@ -116,14 +123,44 @@ export const GET = route(
       .eq('purpose', 'initial_registration');
     if (error) throw fromPostgresError(error);
 
-    return ok({ invitations: summarize((data ?? []) as unknown as InvitationRow[]) });
+    const { data: partners, error: partnerError } = await supabase
+      .from('couple_profiles')
+      .select('partner_role, email')
+      .eq('case_id', caseId);
+    if (partnerError) throw fromPostgresError(partnerError);
+    return ok({
+      invitations: summarize((data ?? []) as unknown as InvitationRow[]).map((item) => ({
+        ...item,
+        hasEmail: (partners ?? []).some(
+          (p) => p.partner_role === item.targetPartnerRole && p.email !== null,
+        ),
+      })),
+    });
   },
 );
 
 export const POST = route(
   async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
-    await requireRole('planner', 'admin', 'system_admin');
+    const actor = await requireRole('planner', 'admin', 'system_admin');
     const { caseId } = await context.params;
+    if (usingD1()) {
+      const input = await parseBody(request, invitationIssueSchema.strict());
+      const { localDB } = await import('@/lib/d1/runtime');
+      return ok(
+        await (
+          await import('@/lib/d1/onboarding')
+        ).issueInvitation(
+          await localDB(),
+          actor,
+          caseId,
+          input.targetPartnerRole,
+          input.send,
+          undefined,
+          input.recipientEmail,
+        ),
+        201,
+      );
+    }
     const input = await parseBody(request, invitationIssueSchema);
     const supabase = await createSupabaseServerClient();
 
@@ -144,6 +181,19 @@ export const POST = route(
 
     const partner = target.couple_profiles.find((p) => p.partner_role === input.targetPartnerRole);
     if (!partner) throw notFound('対象の新郎新婦プロフィールが見つかりません');
+
+    if (input.recipientEmail) {
+      const saved = await saveInvitationRecipient(
+        supabase,
+        caseId,
+        partner.partner_role,
+        partner,
+        target.couple_profiles,
+        input.recipientEmail,
+      );
+      partner.email = saved.email;
+      partner.email_hash = saved.email_hash;
+    }
 
     const token = generateInvitationToken();
     const expiresAt = invitationExpiresAt('initial_registration');
@@ -179,7 +229,6 @@ export const POST = route(
         input.send,
         {
           email: readPii(partner.email) || null,
-          lineUserId: partner.user_profiles?.line_user_id ?? null,
         },
         {
           caseCode: target.case_code,

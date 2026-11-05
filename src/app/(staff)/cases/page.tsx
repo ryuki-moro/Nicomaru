@@ -11,10 +11,12 @@
  * 読み取りは 6-5 の原則どおり Server Component から Supabase 直アクセス（RLS適用）で行い、
  * Route Handler は経由しない。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { CASE_STATUS_LABEL, LIST_PAGE_SIZE } from '@/lib/constants';
@@ -44,11 +46,18 @@ async function restoreCase(formData: FormData) {
   if (!caseId) return;
 
   const actor = await getAppUser();
-  if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin')) redirect('/error');
+  if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin'))
+    redirect('/error?code=403');
 
-  const supabase = await createSupabaseServerClient();
   try {
-    await setCaseArchived(supabase, caseId, false);
+    if (usingD1()) {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { patchCase } = await import('@/lib/d1/cases');
+      await patchCase(await localDB(), actor, caseId, { archived: false });
+    } else {
+      const supabase = await createSupabaseServerClient();
+      await setCaseArchived(supabase, caseId, false);
+    }
   } catch {
     redirect('/cases?scope=archived&error=restore');
   }
@@ -68,7 +77,7 @@ interface Props {
 }
 
 export default async function CaseListPage({ searchParams }: Props) {
-  const user = await requirePageUser();
+  const user = await requirePageUser('planner', 'admin', 'system_admin');
 
   const params = await searchParams;
   const canSeeArchived = user.role === 'admin' || user.role === 'system_admin';
@@ -79,8 +88,6 @@ export default async function CaseListPage({ searchParams }: Props) {
   const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
 
-  const supabase = await createSupabaseServerClient();
-
   // 取得・復号・並べ替え・キーワード絞り込みはサービス層に置く。
   // 画面と GET /api/cases に同じ処理が二重にあり、挙動が食い違っていた（#18）。
   let visible: CaseListItem[] = [];
@@ -88,7 +95,14 @@ export default async function CaseListPage({ searchParams }: Props) {
   let truncated = false;
   let loadError = false;
   try {
-    const result = await loadCaseList(supabase, {
+    const load = usingD1()
+      ? async (options: Parameters<typeof loadCaseList>[1]) => {
+          const { localDB } = await import('@/lib/d1/runtime');
+          return (await import('@/lib/d1/cases')).listCases(await localDB(), user, options);
+        }
+      : async (options: Parameters<typeof loadCaseList>[1]) =>
+          loadCaseList(await createSupabaseServerClient(), options);
+    const result = await load({
       scope,
       sort,
       keyword,
@@ -117,21 +131,11 @@ export default async function CaseListPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page">案件一覧</li>
-        </ol>
-      </nav>
+      <Breadcrumbs items={[DASHBOARD_CRUMB, { label: '案件一覧' }]} />
 
       <div className="flex items-center justify-between gap-3">
         <h1 className="section-head">案件一覧</h1>
-        {user.role === 'planner' && (
+        {(user.role === 'planner' || user.role === 'admin') && (
           <Link href="/cases/new" className="btn-primary w-auto whitespace-nowrap px-5 text-center">
             新規案件登録
           </Link>
@@ -216,12 +220,12 @@ export default async function CaseListPage({ searchParams }: Props) {
                 <tr key={row.id}>
                   {/* 案件番号は途中で折り返すと読み違えやすいので1行に保つ（スマホでは表を横に送る） */}
                   <td className="whitespace-nowrap">
-                    <Link href={`/cases/${row.id}`} className="text-link hover:underline">
+                    <Link href={`/cases/${row.id}`} className="btn-ghost">
                       {row.caseCode}
                     </Link>
                   </td>
                   <td>
-                    <Link href={`/cases/${row.id}`} className="text-link hover:underline">
+                    <Link href={`/cases/${row.id}`} className="btn-ghost">
                       {row.coupleName || '（氏名未登録）'}
                     </Link>
                   </td>

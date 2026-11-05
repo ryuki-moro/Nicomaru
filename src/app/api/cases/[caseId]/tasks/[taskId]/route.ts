@@ -8,6 +8,7 @@
  * 古い期限が残る。2テーブルを1トランザクションで揃えるため update_case_task() へ集約する。
  * waived（DB値）は表6-9 により画面上は「対応不要」と表示する。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { noContent, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
 import { badRequest, fromPostgresError, notFound } from '@/lib/errors';
@@ -17,9 +18,15 @@ import { caseTaskUpdateSchema } from '@/lib/validation';
 
 export const PATCH = route(
   async (request: Request, context: { params: Promise<{ caseId: string; taskId: string }> }) => {
-    await requireRole('planner', 'admin', 'system_admin');
+    const user = await requireRole('planner', 'admin', 'system_admin');
     const { caseId, taskId } = await context.params;
     const input = await parseBody(request, caseTaskUpdateSchema);
+    if (usingD1()) {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { updateTask } = await import('@/lib/d1/tasks');
+      await updateTask(await localDB(), user, caseId, taskId, input);
+      return noContent();
+    }
     const supabase = await createSupabaseServerClient();
 
     if (Object.keys(input).length === 0) {

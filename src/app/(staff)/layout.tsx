@@ -1,3 +1,4 @@
+import { localD1 } from '@/lib/d1/mode';
 import { redirect } from 'next/navigation';
 
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -6,7 +7,7 @@ import { isStaff } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
 
-/** planner／admin／system_admin 向け画面の外枠。パンくずは各画面が自前で描画する（4-3）。 */
+/** planner／admin／system_admin 向け画面の外枠。パンくずは各画面が Breadcrumbs で描画する（4-3）。 */
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const user = await getAppUser();
   if (!user) redirect('/login');
@@ -15,7 +16,14 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-dvh bg-bg">
       <AppHeader role={user.role} displayName={user.displayName} />
-      <main className="mx-auto w-full max-w-6xl px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-6xl px-4 py-6">
+        {localD1() && (
+          <p className="banner-info">
+            ローカル検証：案件の登録・更新・招待、宿題の提出・確認が利用できます。外部への送信は行いません。
+          </p>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

@@ -6,6 +6,7 @@
  */
 'use client';
 
+import { buildNext } from '@/lib/auth/next';
 import type { ErrorCode, ErrorDetail } from '@/lib/errors';
 
 export interface ApiErrorBody {
@@ -113,6 +114,7 @@ export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body ?? {}),
+  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body ?? {}),
   del: <T>(path: string, body?: unknown) => request<T>('DELETE', path, body),
 };
 
@@ -149,7 +151,10 @@ export function handleApiError(
     // セッション切れ。middleware は /api を遮断しないので（6-5-1 の 401 を返すため）、
     // 操作の途中で切れたことに気づけるのはこの経路だけ。ログイン後は元の画面へ戻す（4-2）。
     if (error.status === 401) {
-      const next = typeof window === 'undefined' ? '' : window.location.pathname;
+      const next =
+        typeof window === 'undefined'
+          ? null
+          : buildNext(window.location.pathname, new URLSearchParams(window.location.search));
       router.push(next ? `/login?next=${encodeURIComponent(next)}` : '/login');
       return true;
     }

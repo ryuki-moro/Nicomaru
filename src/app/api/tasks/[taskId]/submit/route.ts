@@ -36,6 +36,7 @@
  *   - 連絡履歴の記録とAIジョブの投入。どちらも副次的な記録で、
  *     失敗を理由に提出そのものを取り消すべきではない（7-1）
  */
+import { usingD1 } from '@/lib/d1/mode';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { ok, parseBody, route } from '@/lib/api/route';
@@ -125,12 +126,17 @@ async function removeOrphanFile(supabase: SupabaseClient, fileId: string): Promi
 export const POST = route(
   async (request: Request, context: { params: Promise<{ taskId: string }> }) => {
     // 表6-6: 認証必須（couple、自身の案件のみ）。案件の範囲は RLS が担保する。
-    await requireRole('couple');
+    const user = await requireRole('couple');
 
     const { taskId } = await context.params;
-    if (!isUuid(taskId)) throw notFound();
+    if (!isUuid(taskId) && !usingD1()) throw notFound();
 
     const body = await parseBody(request, submitTaskSchema);
+    if (usingD1()) {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { submitTask } = await import('@/lib/d1/tasks');
+      return ok(await submitTask(await localDB(), user, taskId, body));
+    }
     const supabase = await createSupabaseServerClient();
 
     const taskResult = await supabase

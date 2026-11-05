@@ -14,6 +14,7 @@
  * 後者にIPを混ぜると、接続元を変えるだけで別カウンタになり失効しない。
  * 前者をメールだけにすると、1人の利用者への嫌がらせで正規の再送まで塞がれる。
  */
+import { clientIp, localD1, usingD1 } from '@/lib/d1/mode';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { landingPathFor } from '@/lib/auth/session';
 import type { Role } from '@/lib/constants';
@@ -31,6 +32,35 @@ import {
 
 export const POST = route(async (request) => {
   const body = await parseBody(request, otpVerifySchema);
+  if (usingD1()) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const db = await localDB();
+    await (
+      await import('@/lib/d1/auth-limits')
+    ).authLimit(db, 'otp_verify', body.email, localD1() ? undefined : clientIp(request.headers));
+    const fail = () =>
+      unprocessable('ワンタイムコードが正しくないか、有効期限が切れています', [
+        { field: 'code', reason: 'コードを確認するか、送信し直してください' },
+      ]);
+    if (!(await (await import('@/lib/d1/onboarding')).otpEligible(db, body.email))) throw fail();
+    const auth = await (await import('@/lib/d1/auth')).d1Auth();
+    const result = await auth.handler(
+      new Request(new URL('/api/auth/sign-in/email-otp', process.env.APP_BASE_URL), {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          origin: process.env.APP_BASE_URL!,
+          'x-nicomaru-local-ip': clientIp(request.headers),
+        },
+        body: JSON.stringify({ email: body.email.trim().toLowerCase(), otp: body.code }),
+      }),
+    );
+    if (!result.ok) throw fail();
+    const response = ok({ redirectTo: '/mypage' });
+    for (const cookie of result.headers.getSetCookie())
+      response.headers.append('set-cookie', cookie);
+    return response;
+  }
   // 総当たり対策。上限超過は 429（5-3 otp_verify）
   await enforceAuthRateLimit(request, 'otp_verify', body.email);
 

@@ -9,6 +9,7 @@
  * 文面は付録D のテンプレートから組み立てる。自由文を直接送らせないのは、
  * 第11章「通知文面レビュー」が求める文面の統制を、送信経路の側で担保するため。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireStaff } from '@/lib/auth/session';
 import { COUPLE_PROFILE_COLUMNS } from '@/lib/constants';
@@ -25,6 +26,11 @@ export const runtime = 'nodejs';
 export const POST = route(async (request: Request) => {
   const user = await requireStaff();
   const input = await parseBody(request, notificationSendSchema);
+  if (usingD1()) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { createNotification } = await import('@/lib/d1/notifications');
+    return ok(await createNotification(await localDB(), user, input), 201);
+  }
   const supabase = await createSupabaseServerClient();
 
   // 宛名（新郎新婦名）は暗号化列。RLS 経由で取得する。
@@ -36,6 +42,19 @@ export const POST = route(async (request: Request) => {
     .maybeSingle();
   if (profile.error) throw fromPostgresError(profile.error);
   if (!profile.data) throw notFound('宛先が見つかりません');
+
+  let linkPath = '/mypage/tasks';
+  if (input.taskId) {
+    const task = await supabase
+      .from('case_tasks')
+      .select('id')
+      .eq('id', input.taskId)
+      .eq('case_id', input.caseId)
+      .maybeSingle();
+    if (task.error) throw fromPostgresError(task.error);
+    if (!task.data) throw notFound('宿題が見つかりません');
+    linkPath = `/mypage/tasks/${input.taskId}`;
+  }
 
   const rendered = renderNotification(input.notificationType, {
     coupleName: readPii((profile.data as unknown as { full_name: string }).full_name),
@@ -66,6 +85,7 @@ export const POST = route(async (request: Request) => {
     p_notification_type: input.notificationType,
     p_title: rendered.title,
     p_body: rendered.body,
+    p_link_path: linkPath,
   });
   if (created.error) throw fromPostgresError(created.error);
 
@@ -75,7 +95,7 @@ export const POST = route(async (request: Request) => {
   const row = await admin
     .from('notifications')
     .select(
-      'id, venue_id, case_id, recipient_user_id, channel, notification_type, title, body, status',
+      'id, venue_id, case_id, recipient_user_id, channel, notification_type, title, body, status, link_path',
     )
     .eq('id', created.data as string)
     .single();

@@ -29,15 +29,29 @@ jobs:
           set -euo pipefail
           # 一過性の接続失敗で警告せず、10秒間隔で2回連続した失敗をCI通知へつなぐ。
           # DB不通時はDB自身に記録できないため、この外部監視が検知先となる。
+          # 失敗時に「何が返ったか」をログへ残す。ステータスコードも応答本文も記録せずに
+          # 落とすと、障害時にジョブログから原因（503か接続不可か等）を切り分けられない
+          # （2026-10-22〜の連続失敗で実際に切り分けられなかった）。/api/health の応答は
+          # {ok: true/false} だけで秘密情報を含まないため、そのまま記録してよい。
+          body_file=$(mktemp)
+          err_file=$(mktemp)
+          last_status=""
+          last_detail=""
           for attempt in 1 2; do
-            status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
-              "${APP_BASE_URL%/}/api/health" 2>/dev/null || true)
+            status=$(curl -sS -o "$body_file" -w '%{http_code}' --max-time 30 \
+              "${APP_BASE_URL%/}/api/health" 2>"$err_file" || true)
             if [ "$status" = "200" ]; then
-              echo "Keepalive succeeded (attempt $attempt)"
+              echo "Keepalive succeeded (attempt $attempt, HTTP $status)"
               exit 0
             fi
-            echo "Keepalive failed (attempt $attempt)"
+            last_status="$status"
+            last_detail="body: $(cat "$body_file")"
+            err_text=$(cat "$err_file")
+            if [ -n "$err_text" ]; then
+              last_detail="$last_detail / curl: $err_text"
+            fi
+            echo "Keepalive failed (attempt $attempt, HTTP ${status:-none}) - $last_detail"
             if [ "$attempt" = "1" ]; then sleep 10; fi
           done
-          echo "::error::Keepalive failed twice consecutively. Check the application and Supabase status."
+          echo "::error::Keepalive failed twice consecutively (last HTTP ${last_status:-none}). $last_detail - Check the application and Supabase status."
           exit 1

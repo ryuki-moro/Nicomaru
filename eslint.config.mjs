@@ -8,6 +8,10 @@ const config = [
     ignores: [
       '.next/**',
       '.next-dev-admin/**',
+      '.next-d1/**',
+      '.wrangler/**',
+      '.open-next/**',
+      'spikes/**',
       'node_modules/**',
       'next-env.d.ts',
       '.env*/**',

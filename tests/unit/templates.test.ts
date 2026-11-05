@@ -23,7 +23,6 @@ const vars: TemplateVars = {
   reviewComment: 'ご住所の記載',
   subject: '会場のご案内',
   message: '当日の受付時間が決まりました。',
-  url: 'https://example.test/mypage',
 };
 
 describe('renderNotification（付録D 表81）', () => {

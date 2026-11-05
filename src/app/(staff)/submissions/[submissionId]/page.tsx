@@ -13,6 +13,9 @@
  * いずれも失敗しても確認作業は続けられる（7-1「他機能の利用に影響を与えない」）。
  */
 import Link from 'next/link';
+import { requireStaff } from '@/lib/auth/session';
+import { usingD1, localDB } from '@/lib/d1/runtime';
+import { submissionRow, coupleNames as d1CoupleNames } from '@/lib/d1/tasks';
 import { notFound } from 'next/navigation';
 
 import { ClassificationPanel } from '@/app/(staff)/submissions/[submissionId]/ClassificationPanel';
@@ -21,6 +24,7 @@ import {
   ReviewForm,
   SubmissionFileLink,
 } from '@/app/(staff)/submissions/[submissionId]/ReviewForm';
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { ReviewStatusBadge, TaskStatusBadge } from '@/components/ui/StatusBadge';
 import { fetchAiAssistStatus, latestJobForTask } from '@/lib/ai/assist';
 import type { DefectFinding } from '@/lib/ai/defectCheck';
@@ -88,19 +92,29 @@ export default async function SubmissionReviewPage({
   params: Promise<{ submissionId: string }>;
 }) {
   const { submissionId } = await params;
-  const supabase = await createSupabaseServerClient();
+  const user = await requireStaff();
+  const supabase = usingD1() ? null : await createSupabaseServerClient();
 
-  const { data, error } = await supabase
-    .from('task_submissions')
-    .select(
-      'id, submission_type, text_value, selected_value, content_json, file_id, comment,' +
-        ' review_status, planner_feedback, submitted_at, reviewed_at,' +
-        ' case_tasks!inner ( id, title, description, due_date, status, case_id, options,' +
-        ' wedding_cases!inner ( id, case_code, wedding_date ) ),' +
-        ' storage_files ( id, bucket, object_path, original_filename, mime_type, file_size_bytes )',
-    )
-    .eq('id', submissionId)
-    .maybeSingle();
+  const { data, error } = usingD1()
+    ? {
+        data: await submissionRow(await localDB(), user, submissionId).catch((error: unknown) => {
+          if (error && typeof error === 'object' && 'status' in error && error.status === 404)
+            notFound();
+          throw error;
+        }),
+        error: null,
+      }
+    : await supabase!
+        .from('task_submissions')
+        .select(
+          'id, submission_type, text_value, selected_value, content_json, file_id, comment,' +
+            ' review_status, planner_feedback, submitted_at, reviewed_at,' +
+            ' case_tasks!inner ( id, title, description, due_date, status, case_id, options,' +
+            ' wedding_cases!inner ( id, case_code, wedding_date ) ),' +
+            ' storage_files ( id, bucket, object_path, original_filename, mime_type, file_size_bytes )',
+        )
+        .eq('id', submissionId)
+        .maybeSingle();
   // RLS で弾かれた場合も 0 行になるため、404 として扱う（存在有無を漏らさない。4-3／6-5-1）
   if (error) throw fromPostgresError(error);
   if (!data) notFound();
@@ -110,10 +124,12 @@ export default async function SubmissionReviewPage({
   const weddingCase = task.wedding_cases;
 
   // couple_profiles は memo が列レベルで剥奪されているため COUPLE_PROFILE_COLUMNS を使う（付録A）
-  const { data: profiles, error: profileError } = await supabase
-    .from('couple_profiles')
-    .select(COUPLE_PROFILE_COLUMNS)
-    .eq('case_id', task.case_id);
+  const { data: profiles, error: profileError } = usingD1()
+    ? { data: await d1CoupleNames(await localDB(), user, [task.case_id]), error: null }
+    : await supabase!
+        .from('couple_profiles')
+        .select(COUPLE_PROFILE_COLUMNS)
+        .eq('case_id', task.case_id);
   if (profileError) throw fromPostgresError(profileError);
 
   const coupleName = ((profiles ?? []) as unknown as CoupleProfileRow[])
@@ -127,25 +143,35 @@ export default async function SubmissionReviewPage({
   // API 側も 422 で弾くが（/api/submissions/{id}/review）、押せるボタンを出したまま
   // エラーで返すのは導線として不親切なので、フォーム自体を出さない（表6-9）。
   const isWaived = task.status === 'waived';
-  const isPending = submission.review_status === 'submitted' && !isWaived;
+  const isPending =
+    (!usingD1() || Boolean((data as { is_latest?: number }).is_latest)) &&
+    submission.review_status === 'submitted' &&
+    !isWaived;
   const textValue = readPii(submission.text_value);
 
   // ---------------------------------------------------------------- AI補助（7-2）
   // ワーカーの死活と、この宿題に紐づく最新ジョブ。
   // どれも取得に失敗したら null（＝出さない）に倒れるので、ここで例外にはならない。
-  const [aiStatus, classificationJob, defectJob] = await Promise.all([
-    fetchAiAssistStatus(supabase),
-    latestJobForTask(supabase, task.id, 'classification'),
-    latestJobForTask(supabase, task.id, 'defect_check'),
-  ]);
+  const [aiStatus, classificationJob, defectJob] = usingD1()
+    ? ([{ available: false, lastSeenAt: null }, null, null] as const)
+    : await Promise.all([
+        fetchAiAssistStatus(supabase!),
+        latestJobForTask(supabase!, task.id, 'classification'),
+        latestJobForTask(supabase!, task.id, 'defect_check'),
+      ]);
 
   // 9-4 ①ルールベースは描画のたびにかけ直す（保存しない。submissionCheck.ts の冒頭を参照）。
   // 検査できない宿題（csvSchema 未設定・CSV以外）は null のままにして、欄ごと出さない。
   let ruleFindings: DefectFinding[] | null = null;
   const csvSchema = csvSchemaOf(task.options);
-  if (csvSchema && submission.submission_type === 'file' && submission.storage_files) {
+  if (
+    !usingD1() &&
+    csvSchema &&
+    submission.submission_type === 'file' &&
+    submission.storage_files
+  ) {
     const checked = await checkSubmittedCsv(
-      supabase,
+      supabase!,
       {
         bucket: submission.storage_files.bucket,
         objectPath: submission.storage_files.object_path,
@@ -159,30 +185,23 @@ export default async function SubmissionReviewPage({
 
   return (
     <div>
-      <nav aria-label="パンくず" className="mb-3">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href="/submissions" className="text-link hover:underline">
-              提出物確認
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page">{task.title}</li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        className="mb-3"
+        items={[
+          DASHBOARD_CRUMB,
+          { label: '提出物確認', href: '/submissions' },
+          { label: task.title },
+        ]}
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="section-head">{task.title}</h1>
         <ReviewStatusBadge status={submission.review_status} />
       </div>
       <p className="mt-1 text-caption text-text-muted">
-        {weddingCase.case_code}
+        <Link href={`/cases/${task.case_id}`} className="btn-ghost mr-2">
+          {weddingCase.case_code}
+        </Link>
         {coupleName && ` / ${coupleName} さま`}
       </p>
 
@@ -253,15 +272,17 @@ export default async function SubmissionReviewPage({
         )}
       </section>
 
-      <ClassificationPanel initialJob={classificationJob} />
+      {!usingD1() && <ClassificationPanel initialJob={classificationJob} />}
 
-      <DefectPanel
-        submissionId={submission.id}
-        ruleFindings={ruleFindings}
-        initialJob={defectJob}
-        aiAvailable={aiStatus.available}
-        lastSeenAt={aiStatus.lastSeenAt}
-      />
+      {!usingD1() && (
+        <DefectPanel
+          submissionId={submission.id}
+          ruleFindings={ruleFindings}
+          initialJob={defectJob}
+          aiAvailable={aiStatus.available}
+          lastSeenAt={aiStatus.lastSeenAt}
+        />
+      )}
 
       {isPending ? (
         <section className="card mt-4">
@@ -296,9 +317,12 @@ export default async function SubmissionReviewPage({
               {submission.planner_feedback}
             </p>
           )}
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link href="/submissions" className="btn-ghost">
+              提出物確認へ戻る
+            </Link>
             <Link href={`/cases/${task.case_id}`} className="btn-ghost">
-              案件詳細へ戻る
+              案件詳細を見る
             </Link>
           </div>
         </section>

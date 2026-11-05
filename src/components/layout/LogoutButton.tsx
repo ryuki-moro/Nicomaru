@@ -1,5 +1,6 @@
 'use client';
 
+import { publicD1 } from '@/lib/d1/mode';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -13,11 +14,23 @@ export function LogoutButton() {
   return (
     <button
       type="button"
-      className="text-caption text-link hover:underline disabled:opacity-50"
+      className="btn-ghost min-h-[36px] px-3 py-1 text-caption"
       disabled={pending}
       onClick={async () => {
         setPending(true);
-        await createSupabaseBrowserClient().auth.signOut();
+        if (publicD1()) {
+          const result = await fetch('/api/auth/sign-out', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: '{}',
+          });
+          if (!result.ok) {
+            setPending(false);
+            return;
+          }
+        } else {
+          await createSupabaseBrowserClient().auth.signOut();
+        }
         router.replace('/login');
         router.refresh();
       }}

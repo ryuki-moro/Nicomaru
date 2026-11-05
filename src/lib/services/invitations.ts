@@ -91,3 +91,13 @@ export function matchRecipientEmail(
   if (recipientEmailHash === null) return 'requires_verification';
   return recipientEmailHash === inputEmailHash ? 'match' : 'mismatch';
 }
+
+/** P02表示用の判定。消費処理や登録APIの最終判定を置き換えない。 */
+export function invitationLanding(
+  state: InvitationState | null,
+  ownsInvitation: boolean,
+): 'form' | 'registered' | 'invalid' | 'mypage' {
+  if (state === 'unused') return 'form';
+  if (state === 'used') return ownsInvitation ? 'mypage' : 'registered';
+  return 'invalid';
+}

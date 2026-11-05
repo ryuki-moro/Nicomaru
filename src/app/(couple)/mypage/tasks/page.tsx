@@ -12,8 +12,12 @@
  * 「自分の案件だけ」の絞り込みは付録A の RLS が担保するため、ここでは case_id を指定しない。
  */
 import Link from 'next/link';
+import { requireRole } from '@/lib/auth/session';
+import { usingD1, localDB } from '@/lib/d1/runtime';
+import { taskList, taskRow } from '@/lib/d1/tasks';
 
 import { TaskFilterTabs } from '@/app/(couple)/mypage/tasks/TaskFilterTabs';
+import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TaskStatusBadge } from '@/components/ui/StatusBadge';
 import {
@@ -29,6 +33,7 @@ import { daysBetween, type IsoDate } from '@/lib/services/schedule';
 import { resolvePage } from '@/lib/pagination';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { relativeTaskDeadline, TASK_ANSWER_METHOD_LABEL } from '@/lib/task-display';
+import { isUuid } from '@/lib/uuid';
 
 export const metadata = { title: '宿題・提出物' };
 
@@ -48,6 +53,29 @@ function resolveTab(raw: string | undefined) {
   return TASK_FILTER_TABS.find((tab) => tab.key === raw) ?? TASK_FILTER_TABS[0];
 }
 
+/**
+ * 提出の直後（M03 から ?submitted=<宿題ID> で戻ってきたとき）の知らせ。
+ *
+ * 文言は URL から受け取らず、ID から引いた宿題名で組み立てる。
+ * 見えない宿題（RLS の範囲外）や、提出済みでない宿題では何も出さない。
+ */
+async function submittedNotice(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  taskId: string | undefined,
+): Promise<string | null> {
+  if (!isUuid(taskId)) return null;
+  const { data } = await supabase
+    .from('case_tasks')
+    .select('title, status, submission_format')
+    .eq('id', taskId)
+    .maybeSingle();
+  const task = data as Pick<TaskRow, 'title' | 'status' | 'submission_format'> | null;
+  if (!task || task.status !== 'submitted') return null;
+  return task.submission_format === 'none'
+    ? `『${task.title}』の確認をプランナーに伝えました。`
+    : `『${task.title}』を提出しました。プランナーの確認をお待ちください。`;
+}
+
 function pageHref(tabKey: string, page: number): string {
   const query = new URLSearchParams();
   if (tabKey !== 'all') query.set('tab', tabKey);
@@ -56,15 +84,34 @@ function pageHref(tabKey: string, page: number): string {
   return search ? `/mypage/tasks?${search}` : '/mypage/tasks';
 }
 
+async function submittedD1Notice(taskId: string | undefined): Promise<string | null> {
+  if (!isUuid(taskId)) return null;
+  const user = await requireRole('couple');
+  try {
+    const task = await taskRow(await localDB(), user, taskId);
+    if (task.status !== 'submitted') return null;
+    return task.submission_format === 'none'
+      ? `『${task.title}』の確認をプランナーに伝えました。`
+      : `『${task.title}』を提出しました。プランナーの確認をお待ちください。`;
+  } catch (error) {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404)
+      return null;
+    throw error;
+  }
+}
+
 export default async function TaskListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; page?: string | string[] }>;
+  searchParams: Promise<{ tab?: string; page?: string | string[]; submitted?: string }>;
 }) {
   const query = await searchParams;
   const tab = resolveTab(query.tab);
   const page = resolvePage(query.page);
-  const supabase = await createSupabaseServerClient();
+  const supabase = usingD1() ? null : await createSupabaseServerClient();
+  const notice = supabase
+    ? await submittedNotice(supabase, query.submitted)
+    : await submittedD1Notice(query.submitted);
 
   // 「すべて」は waived を除外する。除外リストの補集合を .in() に渡すことで、
   // PostgREST の not.in 記法（値のクォート規則が独特）に依存せず値域を constants 側へ寄せる。
@@ -74,14 +121,19 @@ export default async function TaskListPage({
   // 既定の表示件数は50件、以降はページング（4-3 一覧画面共通）。
   // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する。
   const from = (page - 1) * LIST_PAGE_SIZE;
-  const { data, error } = await supabase
-    .from('case_tasks')
-    .select('id, title, due_date, status, submission_format')
-    .in('status', [...statuses])
-    .order('due_date', { ascending: true })
-    .order('display_order', { ascending: true })
-    .order('id', { ascending: true })
-    .range(from, from + LIST_PAGE_SIZE);
+  const { data, error } = usingD1()
+    ? {
+        data: await taskList(await localDB(), await requireRole('couple'), statuses, from),
+        error: null,
+      }
+    : await supabase!
+        .from('case_tasks')
+        .select('id, title, due_date, status, submission_format')
+        .in('status', [...statuses])
+        .order('due_date', { ascending: true })
+        .order('display_order', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, from + LIST_PAGE_SIZE);
 
   const fetched = (data ?? []) as TaskRow[];
   const hasNext = fetched.length > LIST_PAGE_SIZE;
@@ -91,6 +143,11 @@ export default async function TaskListPage({
   return (
     <div>
       <h1 className="section-head mb-3">宿題・提出物</h1>
+      {notice && (
+        <div role="status" className="banner-info mb-3">
+          <span>{notice}</span>
+        </div>
+      )}
       <TaskFilterTabs current={tab.key} />
 
       {error ? (
@@ -113,18 +170,22 @@ export default async function TaskListPage({
               daysBetween(task.due_date, today) <= DUE_SOON_DAYS;
             return (
               <li key={task.id}>
-                <Link href={`/mypage/tasks/${task.id}`} className="card flex items-center gap-3">
+                <Link href={taskDetailHref(task.id)} className="card flex items-center gap-3">
                   <span className="flex-1">
                     <span className="block text-base text-text-primary">{task.title}</span>
                     <span className="block text-label text-text-secondary">
                       回答方法：{TASK_ANSWER_METHOD_LABEL[task.submission_format]}
                     </span>
+                    {/* 相対期限が次の行に回ったとき全角「（」の左の空きで字下げに見えないよう、
+                        かっこを半角幅（halt）で組む。同じ行に並ぶときの空きは gap で取る */}
                     <span
-                      className={`block text-label ${dueSoon ? 'text-warning-text' : 'text-text-muted'}`}
+                      className={`flex flex-wrap gap-x-1 text-label ${dueSoon ? 'text-warning-text' : 'text-text-muted'}`}
                     >
-                      {formatDateJp(task.due_date)}まで
+                      <span>{formatDateJp(task.due_date)}まで</span>
                       {relativeDeadline && (
-                        <span className="inline-block">（{relativeDeadline}）</span>
+                        <span className="inline-block [font-feature-settings:'halt']">
+                          （{relativeDeadline}）
+                        </span>
                       )}
                     </span>
                   </span>

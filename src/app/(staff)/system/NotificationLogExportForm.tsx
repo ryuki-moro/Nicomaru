@@ -129,9 +129,25 @@ export function NotificationLogExportForm() {
           </div>
         </div>
       </fieldset>
-      <button type="submit" className="btn-secondary w-auto" disabled={busy}>
-        {busy ? '取得中…' : 'ログをCSV出力'}
-      </button>
+      <div className="flex flex-wrap gap-3">
+        <button type="submit" className="btn-secondary w-auto" disabled={busy}>
+          {busy ? '取得中…' : 'ログをCSV出力'}
+        </button>
+        <button
+          type="button"
+          className="btn-secondary w-auto"
+          disabled={busy}
+          onClick={(event) => {
+            if (downloading.current) return;
+            event.currentTarget.form?.reset();
+            setSummary(null);
+            setFieldErrors({});
+            setNotice(null);
+          }}
+        >
+          期間をクリア
+        </button>
+      </div>
       {notice && (
         <p role="status" className="banner-info">
           {notice}

@@ -1,5 +1,6 @@
 'use client';
 
+import { publicD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -9,7 +10,9 @@ import type { Role } from '@/lib/constants';
 /** planner／admin／system_admin 側の全画面に常設するグローバルナビ（ヘッダー内の横並び）。項目は staffNavItems.ts。 */
 export function StaffNav({ role }: { role: Role }) {
   const pathname = usePathname();
-  const items = staffNavItemsFor(role);
+  const items = staffNavItemsFor(role).filter(
+    (item) => !publicD1() || ['/cases', '/submissions', '/users'].includes(item.href),
+  );
 
   return (
     <nav aria-label="メインメニュー" className="mx-auto w-full max-w-6xl px-4">

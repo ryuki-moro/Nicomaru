@@ -9,6 +9,7 @@
  * この行自体は revoked_at が付いて失効する。応答の id は新しく発行された行を指す。
  * 成功時に sent_at を記録する。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
 import {
@@ -19,6 +20,7 @@ import {
   type PartnerRole,
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
+import { saveInvitationRecipient } from '@/lib/services/invitation-recipient';
 import { fromPostgresError, notFound } from '@/lib/errors';
 import { sendInvitation } from '@/lib/notify/send';
 import {
@@ -36,7 +38,6 @@ interface PartnerRow {
   full_name: string;
   email: string | null;
   email_hash: string | null;
-  user_profiles: { id: string; line_user_id: string | null } | null;
 }
 
 export const POST = route(
@@ -44,8 +45,25 @@ export const POST = route(
     request: Request,
     context: { params: Promise<{ caseId: string; invitationId: string }> },
   ) => {
-    await requireRole('planner', 'admin', 'system_admin');
+    const actor = await requireRole('planner', 'admin', 'system_admin');
     const { caseId, invitationId } = await context.params;
+    if (usingD1()) {
+      const input = await parseBody(request, invitationSendSchema.strict());
+      const { localDB } = await import('@/lib/d1/runtime');
+      return ok(
+        await (
+          await import('@/lib/d1/onboarding')
+        ).issueInvitation(
+          await localDB(),
+          actor,
+          caseId,
+          'bride',
+          input.channel,
+          invitationId,
+          input.recipientEmail,
+        ),
+      );
+    }
     const input = await parseBody(request, invitationSendSchema);
     const supabase = await createSupabaseServerClient();
 
@@ -65,9 +83,7 @@ export const POST = route(
 
     const { data: caseData, error: caseError } = await supabase
       .from('wedding_cases')
-      .select(
-        `id, case_code, couple_profiles ( ${COUPLE_PROFILE_COLUMNS}, user_profiles ( id, line_user_id ) )`,
-      )
+      .select(`id, case_code, couple_profiles ( ${COUPLE_PROFILE_COLUMNS} )`)
       .eq('id', caseId)
       .maybeSingle();
     if (caseError) throw fromPostgresError(caseError);
@@ -81,6 +97,19 @@ export const POST = route(
       (p) => p.partner_role === invitation.target_partner_role,
     );
     if (!partner) throw notFound('対象の新郎新婦プロフィールが見つかりません');
+
+    if (input.recipientEmail) {
+      const saved = await saveInvitationRecipient(
+        supabase,
+        caseId,
+        partner.partner_role,
+        partner,
+        target.couple_profiles,
+        input.recipientEmail,
+      );
+      partner.email = saved.email;
+      partner.email_hash = saved.email_hash;
+    }
 
     const channel: ContactChannel = input.channel;
     const token = generateInvitationToken();
@@ -116,7 +145,6 @@ export const POST = route(
       channel,
       {
         email: readPii(partner.email) || null,
-        lineUserId: partner.user_profiles?.line_user_id ?? null,
       },
       {
         caseCode: target.case_code,

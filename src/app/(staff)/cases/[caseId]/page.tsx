@@ -10,11 +10,14 @@
  * リスクスコアは Phase 2 のため表示しない。
  * couple 向けの K02 は (couple) 側の画面として別に用意する（本画面は (staff) レイアウト配下）。
  */
+import { usingD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { InvitationSection } from './InvitationSection';
 import { RiskSection, type CaseRisk } from './RiskSection';
+import { GuestResponseList } from '@/components/guests/GuestResponseList';
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import type { RiskReasonView } from '@/components/ui/RiskBadge';
 import { TaskSection, type CaseTaskRow } from './TaskSection';
 import { adoptedOutput, AI_JOB_COLUMNS, type AiJobRow } from '@/lib/ai/assist';
@@ -35,6 +38,7 @@ import {
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { formatDate } from '@/lib/format';
+import { loadGuestBook } from '@/lib/services/guests';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -86,20 +90,30 @@ interface CaseRow {
 }
 
 export default async function CaseDetailPage({ params }: { params: Promise<{ caseId: string }> }) {
-  const user = await requirePageUser();
+  const user = await requirePageUser('planner', 'admin', 'system_admin');
 
   const { caseId } = await params;
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from('wedding_cases')
-    .select(CASE_SELECT)
-    .eq('id', caseId)
-    .maybeSingle();
-
-  // 権限外・不存在はどちらも P04 エラーページへ（4-3 エラー表示規約）。
-  // RLS により権限外は 0 行として返るため、ここで区別しない（存在の有無を漏らさない）。
-  if (!data) redirect('/error');
-  const row = data as unknown as CaseRow;
+  const d1 = usingD1();
+  let row: CaseRow;
+  if (d1) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { caseRow } = await import('@/lib/d1/cases');
+    try {
+      row = await caseRow(await localDB(), user, caseId);
+    } catch (error) {
+      if ((error as { code?: string }).code === 'NOT_FOUND') redirect('/error?code=404');
+      throw error;
+    }
+  } else {
+    const supabase = await createSupabaseServerClient();
+    const { data } = await supabase
+      .from('wedding_cases')
+      .select(CASE_SELECT)
+      .eq('id', caseId)
+      .maybeSingle();
+    if (!data) redirect('/error?code=404');
+    row = data as unknown as CaseRow;
+  }
 
   // 6-8: 現在値を読むだけ。表示のたびに再計算はしない。
   const snapshot = row.risk_score_snapshots?.find((r) => r.is_current) ?? null;
@@ -126,21 +140,24 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
   // 9-1 の分類（7-2「画面: D02, K02」）。
   // 一覧の補助表示なので、取得に失敗しても案件詳細は出す。
   const classifications = new Map<string, string[]>();
-  const { data: aiJobs, error: aiError } = await supabase
-    .from('ai_jobs')
-    .select(AI_JOB_COLUMNS)
-    .eq('case_id', caseId)
-    .eq('job_type', 'classification')
-    .in('status', ['done', 'confirmed'])
-    .order('created_at', { ascending: true });
-  if (aiError) {
-    console.warn('[case] 分類を取得できませんでした', aiError);
-  } else {
-    // created_at 昇順で回して上書きするので、宿題ごとに最新のジョブが残る
-    for (const job of (aiJobs ?? []) as unknown as AiJobRow[]) {
-      if (!job.related_task_id) continue;
-      const labels = adoptedOutput('classification', job)?.labels;
-      if (labels && labels.length > 0) classifications.set(job.related_task_id, [...labels]);
+  if (!d1) {
+    const supabase = await createSupabaseServerClient();
+    const { data: aiJobs, error: aiError } = await supabase
+      .from('ai_jobs')
+      .select(AI_JOB_COLUMNS)
+      .eq('case_id', caseId)
+      .eq('job_type', 'classification')
+      .in('status', ['done', 'confirmed'])
+      .order('created_at', { ascending: true });
+    if (aiError) {
+      console.warn('[case] 分類を取得できませんでした', aiError);
+    } else {
+      // created_at 昇順で回して上書きするので、宿題ごとに最新のジョブが残る
+      for (const job of (aiJobs ?? []) as unknown as AiJobRow[]) {
+        if (!job.related_task_id) continue;
+        const labels = adoptedOutput('classification', job)?.labels;
+        if (labels && labels.length > 0) classifications.set(job.related_task_id, [...labels]);
+      }
     }
   }
 
@@ -167,25 +184,17 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
   const isAdmin = user.role === 'admin' || user.role === 'system_admin';
   const archived = row.archived_at !== null;
 
+  // ゲストの出欠回答とタグ。回答の追加は新郎新婦が配るURLから行い、タグは新郎新婦が付けたものを確認・修正できる。
+  // D1 ローカル検証の対象外
+  const guestBook = d1
+    ? undefined
+    : await loadGuestBook(await createSupabaseServerClient(), row.id);
+
   return (
     <div className="space-y-5">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li>
-            <Link href="/cases" className="text-link hover:underline">
-              案件一覧
-            </Link>
-          </li>
-          <li aria-hidden>/</li>
-          <li aria-current="page">{row.case_code}</li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        items={[DASHBOARD_CRUMB, { label: '案件一覧', href: '/cases' }, { label: row.case_code }]}
+      />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="section-head">
@@ -201,12 +210,12 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
             </Link>
           )}
           {/* 4-3 K02 のボタン「打ち合わせ前準備シート（D03、Phase 2）」 */}
-          {!archived && (
+          {!archived && !d1 && (
             <Link href={`/cases/${row.id}/sheet`} className="btn-secondary w-auto px-5 text-center">
               打ち合わせ前準備シート
             </Link>
           )}
-          {!archived && (
+          {!archived && !d1 && (
             <Link
               href={`/cases/${row.id}/follow`}
               className="btn-secondary w-auto px-5 text-center"
@@ -216,7 +225,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
           )}
           {/* 4-3 D05 打ち合わせ記録・宿題起票（Phase 3）。
               D04 フォロー記録が「連絡したこと」、こちらが「決まったこと」 */}
-          {!archived && (
+          {!archived && !d1 && (
             <Link
               href={`/cases/${row.id}/meeting-notes`}
               className="btn-secondary w-auto px-5 text-center"
@@ -224,7 +233,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
               打ち合わせ記録
             </Link>
           )}
-          {isAdmin && !archived && (
+          {isAdmin && !archived && !d1 && (
             <Link
               href={`/cases/${row.id}/archive`}
               className="btn-secondary w-auto px-5 text-center"
@@ -242,7 +251,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
       )}
 
       {/* 4-3 K02: リスクは planner／admin のみ。couple 向けの案件詳細では表示しない（6-3） */}
-      <RiskSection caseId={row.id} risk={currentRisk} />
+      {!d1 && <RiskSection caseId={row.id} risk={currentRisk} />}
 
       <section className="card space-y-2">
         <h2 className="section-head">基本情報</h2>
@@ -303,12 +312,27 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
 
       <InvitationSection caseId={row.id} readOnly={archived} />
 
-      <TaskSection
-        caseId={row.id}
-        tasks={tasks}
-        hasPlanType={row.plan_type_id !== null}
-        readOnly={archived}
-      />
+      {
+        <TaskSection
+          caseId={row.id}
+          tasks={tasks}
+          hasPlanType={row.plan_type_id !== null}
+          readOnly={archived}
+        />
+      }
+
+      {guestBook !== undefined && (
+        <section className="space-y-3">
+          <h2 className="section-head">ゲストの出欠</h2>
+          {guestBook === null ? (
+            <div role="alert" className="banner-error">
+              <span>ゲストの回答を読み込めませんでした。</span>
+            </div>
+          ) : (
+            <GuestResponseList caseId={row.id} book={guestBook} editable={!archived} />
+          )}
+        </section>
+      )}
     </div>
   );
 }
