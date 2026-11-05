@@ -28,6 +28,8 @@ const ROUTES = [
   '/api/cases/[caseId]/invitations',
   '/api/cases/[caseId]/invitations/[invitationId]/send',
   '/api/cases/[caseId]/risk/recalculate',
+  '/api/cases/[caseId]/seating-layouts',
+  '/api/cases/[caseId]/seating-layouts/[layoutId]',
   '/api/cases/[caseId]/tasks',
   '/api/cases/[caseId]/tasks/[taskId]',
   '/api/dashboard/follow-up-today',
