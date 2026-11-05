@@ -16,6 +16,21 @@ export const passwordLink = (mode: 'reset' | 'invite', token: string) =>
 export async function d1Auth() {
   return createD1Auth(await localDB());
 }
+/** メールアドレス＋パスワードで認証する。成功時の応答は Set-Cookie を持つ。 */
+export async function signInD1WithPassword(email: string, password: string, ip: string) {
+  return (await d1Auth()).handler(
+    new Request(new URL('/api/auth/sign-in/email', process.env.APP_BASE_URL), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        origin: process.env.APP_BASE_URL!,
+        'x-nicomaru-local-ip': ip,
+      },
+      body: JSON.stringify({ email, password }),
+    }),
+  );
+}
+
 export function createD1Auth(db: D1Database) {
   return betterAuth({
     database: db,
