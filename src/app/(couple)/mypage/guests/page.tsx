@@ -88,6 +88,10 @@ export default async function CoupleGuestsPage() {
         </p>
       </section>
 
+      <Link href="/mypage/seating" className="btn-primary block text-center">
+        席次をつくる
+      </Link>
+
       <Link href="/mypage/case" className="btn-secondary block text-center">
         挙式情報へ戻る
       </Link>

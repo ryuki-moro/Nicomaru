@@ -16,6 +16,8 @@ import {
   GUEST_GENDERS,
   GUEST_RELATIONSHIPS,
   GUEST_RESPONSE_MAX_PEOPLE,
+  GUEST_SEAT_ROLES,
+  GUEST_SEAT_TITLE_MAX,
   IMPORTANCE_LEVELS,
   INPUT_LIMITS,
   PARTNER_ROLES,
@@ -351,6 +353,40 @@ export const seatingLayoutSchema = z
 
 /** 新郎新婦に送る／送るのをやめる */
 export const seatingLayoutOfferSchema = z.object({ offered: z.boolean() }).strict();
+
+// ------------------------------------------------------------ 席次（#181）
+/** 席次の保存。version は読み込んだときの版（まだ席次が無ければ 0）。送らなかった人は未配置になる */
+export const seatingChartSaveSchema = z
+  .object({
+    layoutId: z.string().uuid().nullable(),
+    version: z.number().int().min(0),
+    assignments: z
+      .array(z.object({ guestId: z.string().uuid(), tableId: z.string().uuid() }).strict())
+      .max(500),
+  })
+  .strict();
+
+/** 席次の提出 */
+export const seatingChartSubmitSchema = z.object({ version: z.number().int().min(0) }).strict();
+
+/**
+ * ゲスト1人の確認・修正（#179）。送った項目だけを更新する。
+ * seatRole／seatTitle は null で「なし」「自動の候補に戻す」。
+ */
+export const guestReviewSchema = z
+  .object({
+    checked: z.boolean().optional(),
+    relationship: z.enum(GUEST_RELATIONSHIPS, { message: 'ご関係を選択してください' }).optional(),
+    seatRole: z.enum(GUEST_SEAT_ROLES, { message: '役割が正しくありません' }).nullable().optional(),
+    seatTitle: z
+      .string()
+      .trim()
+      .max(GUEST_SEAT_TITLE_MAX, `${GUEST_SEAT_TITLE_MAX}文字以内で入力してください`)
+      .nullable()
+      .optional(),
+  })
+  .strict()
+  .refine((v) => Object.keys(v).length > 0, { message: '変更する項目がありません' });
 
 // ------------------------------------------------------ 招待・フォロー・利用者
 export const invitationIssueSchema = z
