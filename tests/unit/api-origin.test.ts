@@ -214,7 +214,12 @@ describe('全APIの適用範囲（新規Routeも自動列挙）', () => {
   it('AIワーカーAPIはトークンが無い・違うときは本文を読まず401にする', async () => {
     vi.stubEnv('AI_WORKER_TOKEN', 'w'.repeat(32));
     const routeModule = await moduleLoaders[`../../src/app${aiWorkerPath}/route.ts`]();
-    for (const headers of [{}, { origin: ORIGIN }, { authorization: `Bearer ${'x'.repeat(32)}` }]) {
+    const rejected: HeadersInit[] = [
+      {},
+      { origin: ORIGIN },
+      { authorization: `Bearer ${'x'.repeat(32)}` },
+    ];
+    for (const headers of rejected) {
       const request = new Request(`${ORIGIN}${aiWorkerPath}`, {
         method: 'POST',
         headers,
