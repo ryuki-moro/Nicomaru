@@ -154,6 +154,33 @@ describe('デモで見せる状態', () => {
     expect(linked.rows[0].n).toBe(0);
   });
 
+  it('ログイン後の画面確認用に準備シートと模擬通知が入る（実配信しない）', async () => {
+    const caseId = await caseIdOf('demo-02');
+    const sheet = await db.asOwner(() =>
+      db.query<{ n: number }>('select count(*)::int as n from meeting_sheets where case_id = $1', [
+        caseId,
+      ]),
+    );
+    const notifications = await db.asOwner(() =>
+      db.query<{ n: number; channel: string }>(
+        `select count(*)::int as n, min(channel) as channel from notifications
+          where case_id = $1 and title like '【模擬】%'`,
+        [caseId],
+      ),
+    );
+    const activity = await db.asOwner(() =>
+      db.query<{ follows: number; communications: number }>(
+        `select
+           (select count(*)::int from follow_logs where case_id = $1) as follows,
+           (select count(*)::int from communication_logs where case_id = $1 and source = 'demo_seed') as communications`,
+        [caseId],
+      ),
+    );
+    expect(sheet.rows[0].n).toBe(1);
+    expect(notifications.rows[0]).toMatchObject({ n: 2, channel: 'in_app' });
+    expect(activity.rows[0]).toEqual({ follows: 1, communications: 1 });
+  });
+
   it('新郎新婦は自分の案件だけを見られる（RLS がそのまま効いている）', async () => {
     const auth = await db.asOwner(() =>
       db.query<{ id: string }>('select id from auth.users where email = $1', [
@@ -164,6 +191,11 @@ describe('デモで見せる状態', () => {
       db.query<{ notes: string | null; id: string }>('select id from wedding_cases'),
     );
     expect(visible.rows.map((r) => r.id)).toEqual([await caseIdOf('demo-02')]);
+    const inbox = await db.asUser(auth.rows[0].id, () =>
+      db.query<{ title: string }>('select title from notifications'),
+    );
+    expect(inbox.rows).toHaveLength(1);
+    expect(inbox.rows[0].title).toContain('【模擬】');
   });
 });
 
@@ -172,6 +204,18 @@ describe('作り直し', () => {
     const again = await seedDemo(db, stubAuth(db), options);
     expect(again.created).toEqual([]);
     expect(again.skipped).toEqual(DEMO_CASES.map((c) => c.key));
+    const caseId = await caseIdOf('demo-02');
+    const related = await db.asOwner(() =>
+      db.query<{ sheets: number; notifications: number; follows: number; communications: number }>(
+        `select
+           (select count(*)::int from meeting_sheets where case_id = $1) as sheets,
+           (select count(*)::int from notifications where case_id = $1 and title like '【模擬】%') as notifications,
+           (select count(*)::int from follow_logs where case_id = $1) as follows,
+           (select count(*)::int from communication_logs where case_id = $1 and source = 'demo_seed') as communications`,
+        [caseId],
+      ),
+    );
+    expect(related.rows[0]).toEqual({ sheets: 1, notifications: 2, follows: 1, communications: 1 });
   });
 
   it('--reset で目印つきの案件だけを消し、同じアカウントで作り直せる', async () => {
