@@ -9,7 +9,7 @@ import {
   summarizeGuestResponses,
   type GuestRow,
 } from '@/lib/services/guests';
-import { guestResponseSchema } from '@/lib/validation';
+import { guestResponseSchema, guestReviewSchema } from '@/lib/validation';
 
 const guest = (overrides: Record<string, unknown> = {}) => ({
   fullName: '山田 花子',
@@ -102,13 +102,22 @@ const row = (overrides: Partial<GuestRow>): GuestRow => ({
   created_at: '2026-10-01T00:00:00Z',
   assistance_needs: [],
   assistance_note: null,
+  checked_at: null,
+  relationship_override: null,
+  seat_role: null,
+  seat_title: null,
   ...overrides,
 });
 
 describe('groupGuestResponses／summarizeGuestResponses', () => {
   const rows: GuestRow[] = [
     row({ id: 'g2', full_name: '同伴', is_companion: true, age_category: 'child' }),
-    row({ id: 'g1', allergy_note: 'えび', assistance_needs: ['wheelchair', 'mobility'] }),
+    row({
+      id: 'g1',
+      allergy_note: 'えび',
+      assistance_needs: ['wheelchair', 'mobility'],
+      checked_at: '2026-10-03T00:00:00Z',
+    }),
     row({
       id: 'g3',
       full_name: '欠席者',
@@ -137,6 +146,7 @@ describe('groupGuestResponses／summarizeGuestResponses', () => {
       byAge: { adult: 1, child: 1, infant: 0 },
       allergyPeople: 1,
       assistancePeople: 1,
+      pendingPeople: 1,
     });
   });
 });
@@ -144,5 +154,70 @@ describe('groupGuestResponses／summarizeGuestResponses', () => {
 describe('buildGuestFormUrl', () => {
   it('末尾のスラッシュを重ねない', () => {
     expect(buildGuestFormUrl('https://example.test/', 'abc')).toBe('https://example.test/rsvp/abc');
+  });
+});
+
+describe('ゲスト一覧の確認（#179）', () => {
+  it('直したご関係を使い、回答のご関係も残す', () => {
+    const [response] = groupGuestResponses([
+      row({
+        relationship: 'other',
+        relationship_override: 'colleague',
+        checked_at: '2026-10-03T00:00:00Z',
+      }),
+    ]);
+    const [person] = response.people;
+    expect(person.relationship).toBe('colleague');
+    expect(person.answeredRelationship).toBe('other');
+    expect(person.checked).toBe(true);
+  });
+
+  it('肩書きは入力が無ければ新郎新婦側とご関係から作り、同伴の子どもは「ご家族」を付ける', () => {
+    const [response] = groupGuestResponses([
+      row({ id: 'g1', guest_side: 'groom', relationship: 'colleague' }),
+      row({
+        id: 'g2',
+        is_companion: true,
+        age_category: 'child',
+        created_at: '2026-10-01T00:00:01Z',
+      }),
+      row({
+        id: 'g3',
+        guest_side: 'groom',
+        relationship: 'colleague',
+        is_companion: true,
+        created_at: '2026-10-01T00:00:02Z',
+      }),
+    ]);
+    expect(response.people.map((p) => p.seatTitle)).toEqual([
+      '新郎同僚',
+      '新郎同僚ご家族',
+      '新郎同僚',
+    ]);
+  });
+
+  it('入力済みの肩書きと役割はそのまま使い、候補も見本として残す', () => {
+    const [response] = groupGuestResponses([
+      row({
+        guest_side: 'groom',
+        relationship: 'colleague',
+        seat_title: '新郎上司',
+        seat_role: 'chief',
+      }),
+    ]);
+    const [person] = response.people;
+    expect(person.seatTitle).toBe('新郎上司');
+    expect(person.suggestedSeatTitle).toBe('新郎同僚');
+    expect(person.seatRole).toBe('chief');
+  });
+});
+
+describe('guestReviewSchema', () => {
+  it('送った項目だけを受け付け、空の変更と知らない項目は拒否する', () => {
+    expect(guestReviewSchema.safeParse({ checked: true }).success).toBe(true);
+    expect(guestReviewSchema.safeParse({ seatRole: null, seatTitle: null }).success).toBe(true);
+    expect(guestReviewSchema.safeParse({}).success).toBe(false);
+    expect(guestReviewSchema.safeParse({ fullName: '別人' }).success).toBe(false);
+    expect(guestReviewSchema.safeParse({ seatRole: 'mc' }).success).toBe(false);
   });
 });
