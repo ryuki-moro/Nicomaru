@@ -25,12 +25,12 @@
  * 打ち合わせの場で見た内容を後から再現できないと、
  * 「あのとき何が未提出だったか」を追えなくなる（D03 は打ち合わせの根拠資料）。
  */
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
 import { PrintButton } from './PrintButton';
 import { SheetDraftPanel } from './SheetDraftPanel';
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { adoptedOutput, AI_JOB_COLUMNS, fetchAiAssistStatus, type AiJobRow } from '@/lib/ai/assist';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import {
@@ -265,29 +265,14 @@ export default async function MeetingSheetPage({
     <div className="space-y-4">
       {/* 印刷には出さない操作群 */}
       <div className="no-print space-y-4">
-        <nav aria-label="パンくず">
-          <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-            <li>
-              <Link href="/dashboard" className="text-link hover:underline">
-                ダッシュボード
-              </Link>
-            </li>
-            <li aria-hidden>/</li>
-            <li>
-              <Link href="/cases" className="text-link hover:underline">
-                案件一覧
-              </Link>
-            </li>
-            <li aria-hidden>/</li>
-            <li>
-              <Link href={`/cases/${caseId}`} className="text-link hover:underline">
-                {target.case_code}
-              </Link>
-            </li>
-            <li aria-hidden>/</li>
-            <li aria-current="page">打ち合わせ前準備シート</li>
-          </ol>
-        </nav>
+        <Breadcrumbs
+          items={[
+            DASHBOARD_CRUMB,
+            { label: '案件一覧', href: '/cases' },
+            { label: target.case_code, href: `/cases/${caseId}` },
+            { label: '打ち合わせ前準備シート' },
+          ]}
+        />
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="section-head">打ち合わせ前準備シート</h1>

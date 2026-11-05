@@ -9,11 +9,11 @@
  * 「admin かつ自式場」を保証するため、API 層で式場境界を再実装しない。
  * 書き込みは Server Action に置き、秘匿値やエラー写像をブラウザへ持ち出さない。
  */
-import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
-import { getAppUser, landingPathFor } from '@/lib/auth/session';
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
+import { getAppUser } from '@/lib/auth/session';
 import { type AllowedFileType, type Importance, type SubmissionFormat } from '@/lib/constants';
 import { fromPostgresError } from '@/lib/errors';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -116,7 +116,7 @@ export default async function TemplateEditPage({
 
   const user = await getAppUser();
   if (!user) redirect('/login');
-  if (user.role !== 'admin') redirect(landingPathFor(user.role));
+  if (user.role !== 'admin') redirect('/error?code=403');
 
   const isNew = templateId === 'new';
   let record: TemplateRecord | null = null;
@@ -151,25 +151,13 @@ export default async function TemplateEditPage({
 
   return (
     <div className="space-y-4">
-      <nav aria-label="パンくず">
-        <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/dashboard" className="text-link hover:underline">
-              ダッシュボード
-            </Link>
-          </li>
-          <li className="flex items-center gap-1">
-            <span aria-hidden>/</span>
-            <Link href="/templates" className="text-link hover:underline">
-              宿題テンプレート
-            </Link>
-          </li>
-          <li className="flex items-center gap-1">
-            <span aria-hidden>/</span>
-            <span aria-current="page">{isNew ? '新規登録' : '編集'}</span>
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        items={[
+          DASHBOARD_CRUMB,
+          { label: '宿題テンプレート', href: '/templates' },
+          { label: isNew ? '新規登録' : '編集' },
+        ]}
+      />
 
       <h1 className="section-head">
         {isNew ? '宿題テンプレートの新規登録' : `宿題テンプレートの編集：${record?.name ?? ''}`}

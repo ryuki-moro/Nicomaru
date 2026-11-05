@@ -87,12 +87,7 @@ function RegistrationContent({ token, user }: { token: string; user: AppUser | n
         </span>
       </div>
       {process.env.NICOMARU_DB === 'd1-local' && (
-        <a
-          href="/dev/mailbox"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-link underline"
-        >
+        <a href="/dev/mailbox" target="_blank" rel="noopener noreferrer" className="btn-ghost">
           ローカル受信箱で確認コードを見る
         </a>
       )}
