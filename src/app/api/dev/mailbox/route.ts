@@ -1,9 +1,9 @@
 import { ok, route } from '@/lib/api/route';
 import { localDB } from '@/lib/d1/runtime';
-import { readMailbox, requireLocalMailbox } from '@/lib/d1/mailbox';
+import { readMailbox, requireMailbox } from '@/lib/d1/mailbox';
 
 export const GET = route(async (request: Request) => {
-  requireLocalMailbox(request.headers);
+  await requireMailbox(request.headers);
   const response = ok({ messages: await readMailbox(await localDB()) });
   response.headers.set('Cache-Control', 'no-store');
   response.headers.set('X-Frame-Options', 'DENY');

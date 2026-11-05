@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
 import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
+import { usersLabelFor } from '@/components/layout/staffNavItems';
 import { getAppUser, type AppUser } from '@/lib/auth/session';
 import { ROLE_LABEL, type Role, type UserStatus } from '@/lib/constants';
 import { usingD1 } from '@/lib/d1/mode';
@@ -135,7 +136,7 @@ function UserEditView({
       <Breadcrumbs
         items={[
           homeCrumbFor(user.role),
-          { label: '利用者管理', href: '/users' },
+          { label: usersLabelFor(user.role), href: '/users' },
           { label: target.display_name },
         ]}
       />

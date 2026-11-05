@@ -8,6 +8,7 @@ import { encryptPii } from '../../src/lib/crypto.ts';
 import { createCase, issueInvitation } from '../../src/lib/d1/onboarding.ts';
 import { createNotification } from '../../src/lib/d1/notifications.ts';
 import { createD1Auth } from '../../src/lib/d1/auth.ts';
+import { readMailbox } from '../../src/lib/d1/mailbox.ts';
 
 // 本番D1（NICOMARU_DB=d1）ではローカル受信箱へ保存せず、Resendへ送信する。
 let platform, db;
@@ -129,6 +130,27 @@ test('確認コードをメールで送り、受信箱には保存しない', as
   assert.deepEqual(mails[0].to, ['couplea@example.test']);
   assert.match(mails[0].text, /確認コード: \d{6}/);
   assert.equal(await mailboxCount(), 0);
+});
+
+test('デモ受信箱では確認コードを外部送信せず、暗号化して受信箱へ保存する', async () => {
+  process.env.DEMO_MAILBOX = 'on';
+  try {
+    const before = await mailboxCount();
+    await createD1Auth(db).api.sendVerificationOTP({
+      body: { email: 'couplea@example.test', type: 'sign-in' },
+    });
+    assert.equal(mails.length, 0);
+    assert.equal(await mailboxCount(), before + 1);
+    const [mail] = await readMailbox(db);
+    assert.equal(mail.kind, 'otp');
+    assert.match(mail.code, /^\d{6}$/);
+    const row = await db
+      .prepare('SELECT payload FROM local_mailbox ORDER BY created_at DESC,rowid DESC LIMIT 1')
+      .first();
+    assert.ok(!row.payload.includes(mail.code));
+  } finally {
+    delete process.env.DEMO_MAILBOX;
+  }
 });
 
 test('メール通知を送信し、状態をsentにしてリンクを付ける', async () => {

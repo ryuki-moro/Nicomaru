@@ -15,7 +15,7 @@ test('入力省略で管理画面に入り、再読み込みとログアウト�
   await page.reload();
   await expect(page.getByRole('heading', { name: 'ダッシュボード', exact: true })).toBeVisible();
   await page.goto('/users');
-  await expect(page.getByRole('heading', { name: '利用者管理', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'プランナー管理', exact: true })).toBeVisible();
   expect((await page.request.get('/api/admin/users')).status()).toBe(200);
   await page.goto('/templates');
   await expect(page.getByRole('heading', { name: '宿題テンプレート', exact: true })).toBeVisible();
