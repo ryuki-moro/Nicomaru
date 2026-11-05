@@ -9,6 +9,9 @@ import { seedDemoFixtures } from './d1-demo-fixtures.mjs';
 // --demo: ログイン不要デモ（架空の5案件・ログイン素通り）。--reset でデモのデータを作り直す。
 const demo = process.argv.includes('--demo');
 const dir = demo ? '.wrangler/demo' : '.wrangler/app-local';
+// dev:d1 と同時に起動できるよう、デモは別のポートで待ち受ける（src/lib/d1/mode.ts の isLocalD1Origin）。
+const port = demo ? '3105' : '3104';
+const origin = `http://127.0.0.1:${port}`;
 process.env.WRANGLER_SEND_METRICS = 'false';
 if (demo && process.argv.includes('--reset')) await rm(dir, { recursive: true, force: true });
 await mkdir(dir, { recursive: true });
@@ -63,20 +66,20 @@ try {
 const demoLogin = demo ? JSON.parse(await readFile(`${dir}/credentials.json`, 'utf8')) : null;
 console.log(
   demo
-    ? 'デモの準備完了。http://127.0.0.1:3104/login を開き、そのままログインしてください。'
+    ? `デモの準備完了。${origin}/login を開き、そのままログインしてください。`
     : 'D1ローカル準備完了。検証アカウント: .wrangler/app-local/credentials.json',
 );
 if (process.argv.includes('--setup-only')) process.exit(0);
 const child = spawn(
   process.execPath,
-  ['node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', '3104'],
+  ['node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', port],
   {
     stdio: 'inherit',
     env: {
       ...process.env,
       NICOMARU_DB: 'd1-local',
       NEXT_PUBLIC_NICOMARU_DB: 'd1-local',
-      APP_BASE_URL: 'http://127.0.0.1:3104',
+      APP_BASE_URL: origin,
       NICOMARU_D1_DIR: dir,
       BETTER_AUTH_SECRET: secret,
       DEV_ADMIN_LOGIN_ENABLED: 'false',

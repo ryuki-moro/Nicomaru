@@ -2,6 +2,9 @@
 export const usingD1 = () =>
   process.env.NICOMARU_DB === 'd1' || process.env.NICOMARU_DB === 'd1-local';
 export const localD1 = () => process.env.NICOMARU_DB === 'd1-local';
+/** ローカルD1の待受先。3104 は npm run dev:d1、3105 は npm run demo。 */
+export const isLocalD1Origin = (origin: string | undefined) =>
+  origin === 'http://127.0.0.1:3104' || origin === 'http://127.0.0.1:3105';
 /** 本番D1のデモ用受信箱。外部送信の代わりに保存し、system_admin だけが読む。実利用者を入れる前に外す。 */
 export const demoMailbox = () =>
   process.env.NICOMARU_DB === 'd1' && process.env.DEMO_MAILBOX === 'on';

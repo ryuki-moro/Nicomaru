@@ -1,6 +1,7 @@
 import type { D1Database, R2Bucket } from '@cloudflare/workers-types';
 import { ApiError } from '@/lib/errors';
 
+import { isLocalD1Origin } from './mode';
 export { usingD1, localD1 } from './mode';
 
 interface Bindings {
@@ -19,7 +20,7 @@ async function bindings(): Promise<Bindings> {
   if (
     process.env.NICOMARU_DB !== 'd1-local' ||
     process.env.NODE_ENV !== 'development' ||
-    origin.origin !== 'http://127.0.0.1:3104'
+    !isLocalD1Origin(origin.origin)
   ) {
     throw new Error('D1ローカル検証専用の接続です');
   }

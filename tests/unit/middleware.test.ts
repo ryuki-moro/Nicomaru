@@ -189,4 +189,25 @@ describe('ローカル検証のD1（NICOMARU_DB=d1-local）', () => {
     const response = await middleware(new NextRequest('https://nicomaru.example.test/cases'));
     expect(response.status).toBe(403);
   });
+  it.each([
+    ['http://127.0.0.1:3104', 200],
+    ['http://127.0.0.1:3105', 200],
+    ['http://127.0.0.1:3000', 403],
+  ])('待受先 %s を dev:d1・demo のものだけに限る', async (origin, status) => {
+    vi.stubEnv('NICOMARU_DB', 'd1-local');
+    vi.stubEnv('APP_BASE_URL', origin);
+    const response = await middleware(
+      new NextRequest(`${origin}/cases`, { headers: { host: new URL(origin).host } }),
+    );
+    expect(response.status).toBe(status);
+  });
+
+  it('APP_BASE_URLと異なるポートへの要求を拒否する', async () => {
+    vi.stubEnv('NICOMARU_DB', 'd1-local');
+    vi.stubEnv('APP_BASE_URL', 'http://127.0.0.1:3105');
+    const response = await middleware(
+      new NextRequest('http://127.0.0.1:3104/cases', { headers: { host: '127.0.0.1:3104' } }),
+    );
+    expect(response.status).toBe(403);
+  });
 });

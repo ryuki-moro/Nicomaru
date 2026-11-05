@@ -112,7 +112,7 @@ export async function seedDemoFixtures(db, encode, password) {
   const hash = await hashPassword(password);
   const now = Date.now();
   const today = jstToday();
-  const year = Number(today.slice(0, 4));
+  const counters = new Map();
   const statements = [];
   const run = (sql, ...args) => statements.push(db.prepare(sql).bind(...args));
   const addUser = (id, name, email, role) => {
@@ -156,13 +156,16 @@ export async function seedDemoFixtures(db, encode, password) {
   DEMO_CASES.forEach((demo, caseIndex) => {
     const caseId = uuid('51111111', caseIndex + 1);
     const weddingDate = shift(today, demo.daysUntilWedding);
+    // 本番（src/lib/d1/onboarding.ts）と同じく挙式年ごとに採番する
+    const year = Number(weddingDate.slice(0, 4));
+    counters.set(year, (counters.get(year) ?? 0) + 1);
     run(
       'INSERT INTO wedding_cases(id,venue_id,primary_planner_id,plan_type_id,case_code,wedding_date,guest_count) VALUES (?,?,?,?,?,?,?)',
       caseId,
       VENUE_ID,
       PLANNER_ID,
       DEMO_PLAN_TYPES[demo.planType],
-      `BRIDAL01-${year}-${String(caseIndex + 1).padStart(4, '0')}`,
+      `BRIDAL01-${year}-${String(counters.get(year)).padStart(4, '0')}`,
       weddingDate,
       demo.guestCount,
     );
@@ -229,12 +232,8 @@ export async function seedDemoFixtures(db, encode, password) {
       );
     });
   });
-  run(
-    'INSERT INTO case_counters(venue_id,year,value) VALUES (?,?,?)',
-    VENUE_ID,
-    year,
-    DEMO_CASES.length,
-  );
+  for (const [year, value] of counters)
+    run('INSERT INTO case_counters(venue_id,year,value) VALUES (?,?,?)', VENUE_ID, year, value);
   await db.batch(statements);
   return { planner: DEMO_PLANNER.email, couple: coupleEmail };
 }
