@@ -15,6 +15,7 @@
 import Link from 'next/link';
 
 import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
+import { createdRoleLabelFor, usersLabelFor } from '@/components/layout/staffNavItems';
 import { requirePageUser } from '@/lib/auth/session';
 import { usingD1 } from '@/lib/d1/mode';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
@@ -92,12 +93,12 @@ export default async function UserListPage({
 
   return (
     <div className="space-y-4">
-      <Breadcrumbs items={[homeCrumbFor(user.role), { label: '利用者管理' }]} />
+      <Breadcrumbs items={[homeCrumbFor(user.role), { label: usersLabelFor(user.role) }]} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="section-head">利用者管理</h1>
+        <h1 className="section-head">{usersLabelFor(user.role)}</h1>
         <Link href="/users/new" className="btn-primary w-auto">
-          新規登録
+          {createdRoleLabelFor(user.role)}を登録
         </Link>
       </div>
 

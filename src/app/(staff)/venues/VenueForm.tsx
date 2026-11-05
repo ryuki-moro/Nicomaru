@@ -78,7 +78,7 @@ export function VenueForm() {
         ) : (
           <p className="text-label text-text-secondary">
             管理者アカウントは作成していません{result.reason ? `（${result.reason}）` : ''}。
-            利用者管理から追加してください。
+            職員管理から追加してください。
           </p>
         )}
         <div className="flex flex-wrap gap-3">
