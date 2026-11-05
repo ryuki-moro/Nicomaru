@@ -15,7 +15,7 @@ import {
 import { planTasks, phaseNameFor, type TemplateForAssign } from '@/lib/services/schedule';
 import type { caseCreateSchema, initialRegisterSchema } from '@/lib/validation';
 import { caseRow, scope } from './cases';
-import { localD1 } from './mode';
+import { captureOnly } from './mode';
 import { sendInvitation } from '@/lib/notify/send';
 
 const staffScope = `${scope} AND c.archived_at IS NULL AND EXISTS (SELECT 1 FROM user_profiles w WHERE w.id=? AND w.status='active' AND w.role IN ('planner','admin','system_admin'))`;
@@ -362,7 +362,7 @@ export async function issueInvitation(
         )
         .bind(encryptPii(recipient), id, role, invitation),
     );
-  if (send && localD1())
+  if (send && captureOnly())
     statements.push(
       db
         .prepare(
@@ -385,7 +385,7 @@ export async function issueInvitation(
     );
   const results = await db.batch(statements);
   if (!results[1].results.length) throw conflict();
-  if (!send || localD1())
+  if (!send || captureOnly())
     return {
       ...tokenResult(invitation, role, channel, expiresAt, token),
       sentAt: null,

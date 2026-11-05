@@ -40,6 +40,7 @@ interface DevAccount {
 }
 
 async function prepareAccount(): Promise<DevAccount> {
+  let replaceAccountFile = false;
   if (existsSync(accountFile)) {
     const account: DevAccount = JSON.parse(readFileSync(accountFile, 'utf8'));
     if (
@@ -54,25 +55,60 @@ async function prepareAccount(): Promise<DevAccount> {
         '.env.dev-admin.json が現在の開発環境と一致しません。README の管理者モードを確認してください',
       );
     }
-    const profile = await admin
-      .from('user_profiles')
-      .select('id, role, status, venue_id, email')
-      .eq('auth_user_id', account.authUserId)
-      .maybeSingle();
-    if (
-      profile.error ||
-      !profile.data ||
-      profile.data.id !== account.profileId ||
-      profile.data.email !== account.email ||
-      profile.data.role !== 'admin' ||
-      profile.data.status !== 'active' ||
-      profile.data.venue_id !== venueId
-    ) {
-      throw new Error(
-        '開発用adminが利用できない状態です。既存アカウントの権限やパスワードは変更していません',
-      );
+
+    const authUser = await admin.auth.admin.getUserById(account.authUserId);
+    if (authUser.error) {
+      if (authUser.error.status !== 404) {
+        throw new Error('開発用adminを確認できませんでした。Supabase の接続先を確認してください');
+      }
+      // `supabase db reset` でAuthも初期化されると、このローカル設定だけが古く残る。
+      // 参照先のユーザーが無いことを確認した場合だけ、新しい開発用アカウントに置き換える。
+      replaceAccountFile = true;
+    } else {
+      if (authUser.data.user.email?.toLowerCase() !== account.email.toLowerCase()) {
+        throw new Error('開発用adminのAuthユーザーが設定ファイルと一致しません');
+      }
+      const profile = await admin
+        .from('user_profiles')
+        .select('id, role, status, venue_id, email')
+        .eq('auth_user_id', account.authUserId)
+        .maybeSingle();
+      if (profile.error) {
+        throw new Error('開発用adminを確認できませんでした。Supabase の接続先を確認してください');
+      }
+      if (!profile.data) {
+        const restored = await admin
+          .from('user_profiles')
+          .insert({
+            auth_user_id: account.authUserId,
+            venue_id: venueId,
+            role: 'admin',
+            display_name: '開発用admin',
+            email: account.email,
+            status: 'active',
+          })
+          .select('id')
+          .single();
+        if (restored.error || !restored.data) {
+          throw new Error('開発用adminのプロフィールを復旧できませんでした');
+        }
+        const repaired = { ...account, profileId: restored.data.id };
+        writeFileSync(accountFile, `${JSON.stringify(repaired, null, 2)}\n`, { mode: 0o600 });
+        return repaired;
+      }
+      if (
+        profile.data.id !== account.profileId ||
+        profile.data.email !== account.email ||
+        profile.data.role !== 'admin' ||
+        profile.data.status !== 'active' ||
+        profile.data.venue_id !== venueId
+      ) {
+        throw new Error(
+          '開発用adminが利用できない状態です。既存アカウントの権限やパスワードは変更していません',
+        );
+      }
+      return account;
     }
-    return account;
   }
 
   const venue = await admin
@@ -117,7 +153,7 @@ async function prepareAccount(): Promise<DevAccount> {
       profileId: profile.data.id,
     };
     writeFileSync(accountFile, `${JSON.stringify(account, null, 2)}\n`, {
-      flag: 'wx',
+      flag: replaceAccountFile ? 'w' : 'wx',
       mode: 0o600,
     });
     return account;

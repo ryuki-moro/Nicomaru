@@ -121,9 +121,13 @@ npm run demo
 ### デモ・テスト用の模擬データ
 
 ```bash
-npx supabase start   # ローカル Supabase（Docker が必要）
-npm run demo:seed    # 架空のプランナー1人・案件5件を入れる。作り直しは npm run demo:reset
+npx supabase start       # ローカル Supabase（Docker が必要）
+npx supabase db reset    # DB を初期化する場合
+npm run demo:reset       # 架空のプランナー・案件・画面確認用の状態を入れる
+npm run dev              # アプリを起動
 ```
+
+管理者は `npm run dev:admin`、プランナーは `planner@nicomaru.test`、新郎新婦は `demo-02-groom@demo.nicomaru.test` などでログインできます。認証方法と見える範囲は [開発のはじめかた](docs/開発のはじめかた.md#supabaseで画面確認用の模擬データを入れる) を参照してください。模擬通知は画面確認用で、実際には配信されません。
 
 環境は「ローカル」「CI」「共有デモ環境（必要な場合のみ）」の3つだけで、本番・ステージングは作らない。
 接続先・データの扱い・共有デモ環境の準備は **[docs/環境の使い分け.md](docs/環境の使い分け.md)** を参照。

@@ -11,6 +11,7 @@
 import { redirect } from 'next/navigation';
 
 import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
+import { createdRoleLabelFor, usersLabelFor } from '@/components/layout/staffNavItems';
 import { getAppUser } from '@/lib/auth/session';
 import { ROLE_LABEL } from '@/lib/constants';
 import { usingD1 } from '@/lib/d1/mode';
@@ -62,12 +63,12 @@ export default async function UserCreatePage() {
       <Breadcrumbs
         items={[
           homeCrumbFor(user.role),
-          { label: '利用者管理', href: '/users' },
-          { label: '新規登録' },
+          { label: usersLabelFor(user.role), href: '/users' },
+          { label: `${createdRoleLabelFor(user.role)}の登録` },
         ]}
       />
 
-      <h1 className="section-head">利用者の新規登録</h1>
+      <h1 className="section-head">{createdRoleLabelFor(user.role)}の登録</h1>
 
       <UserForm
         roleLabel={ROLE_LABEL[createdRole]}

@@ -45,7 +45,7 @@
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
     "better-auth": "1.7.13",
-    "next": "15.5.28",
+    "next": "15.5.29",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "zod": "^4.6.7"
@@ -55,7 +55,7 @@
     "@electric-sql/pglite": "^0.5.11",
     "@eslint/compat": "^2.0.0",
     "@next/eslint-plugin-next": "14.2.35",
-    "@opennextjs/cloudflare": "1.20.14",
+    "@opennextjs/cloudflare": "1.20.16",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^22.20.5",

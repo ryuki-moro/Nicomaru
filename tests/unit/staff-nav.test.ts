@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { staffNavItemsFor } from '@/components/layout/staffNavItems';
+import {
+  createdRoleLabelFor,
+  staffNavItemsFor,
+  usersLabelFor,
+} from '@/components/layout/staffNavItems';
 
 const labels = (role: Parameters<typeof staffNavItemsFor>[0]) =>
   staffNavItemsFor(role).map((item) => item.label);
@@ -18,7 +22,7 @@ describe('プランナー側のグローバルナビ', () => {
       '通知履歴',
       '宿題テンプレート',
       'プラン種別',
-      '利用者管理',
+      'プランナー管理',
     ]);
   });
 
@@ -28,9 +32,20 @@ describe('プランナー側のグローバルナビ', () => {
       '案件一覧',
       '提出物確認',
       '通知履歴',
-      '利用者管理',
+      '職員管理',
       '式場管理',
       '利用状況',
+    ]);
+  });
+
+  it('利用者管理の名前と登録ボタンは、管理する相手に合わせる', () => {
+    expect([usersLabelFor('system_admin'), createdRoleLabelFor('system_admin')]).toEqual([
+      '職員管理',
+      '式場管理者',
+    ]);
+    expect([usersLabelFor('admin'), createdRoleLabelFor('admin')]).toEqual([
+      'プランナー管理',
+      'プランナー',
     ]);
   });
 
