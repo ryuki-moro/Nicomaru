@@ -66,12 +66,7 @@ export default async function LoginPage({
 
       {showDevAdmin && <DevAdminLoginButton />}
       {localD1() && (
-        <a
-          href="/dev/mailbox"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-link underline"
-        >
+        <a href="/dev/mailbox" target="_blank" rel="noopener noreferrer" className="btn-ghost">
           ローカル受信箱で確認コードを見る
         </a>
       )}
