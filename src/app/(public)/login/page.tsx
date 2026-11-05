@@ -50,11 +50,10 @@ export default async function LoginPage({
       <div>
         <h1 className="text-title font-bold text-text-primary">ログイン</h1>
         <p className="mt-1 text-label text-text-muted">
+          {/* フォーム内の切り替えでは書き換わらないため、方式によらない説明にする */}
           {localD1()
-            ? '新郎新婦は確認コード、プランナー・管理者はパスワードでログインできます。'
-            : initialMode === 'password'
-              ? 'プランナー・管理者はメールアドレスとパスワードでログインしてください。'
-              : '新郎新婦さまはメールアドレスだけでログインできます。'}
+            ? '新郎新婦は確認コード、プランナー・式場管理者・システム管理者はパスワードでログインできます。'
+            : '新郎新婦さまはメールアドレスだけで、プランナー・式場管理者・システム管理者はパスワードでログインできます。'}
         </p>
       </div>
 
