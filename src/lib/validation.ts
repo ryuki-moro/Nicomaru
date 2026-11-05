@@ -26,6 +26,16 @@ import {
 import { type ErrorDetail } from '@/lib/errors';
 import { GUEST_TAG_MAX_PER_CASE, GUEST_TAG_NAME_MAX } from '@/lib/guest-tags';
 import { todayInJst } from '@/lib/format';
+import {
+  HALL_SHAPES,
+  LAYOUT_NAME_MAX,
+  TABLE_CAPACITY_MAX,
+  TABLE_CAPACITY_MIN,
+  TABLE_NAME_MAX,
+  TABLE_SHAPES,
+  TABLE_TAGS_MAX,
+  TABLES_PER_LAYOUT_MAX,
+} from '@/lib/seating/layout';
 import { aiJobInputSchema } from '@/lib/ai/schemas';
 import { NOTIFICATION_TYPES } from '@/lib/notify/templates';
 
@@ -300,6 +310,47 @@ export const guestTagSchema = z.object({
 export const guestTagAssignmentSchema = z.object({
   tagIds: z.array(z.string().uuid()).max(GUEST_TAG_MAX_PER_CASE),
 });
+
+// ------------------------------------------------------ 卓の配置パターン（#180）
+/** 卓の「座れる人」に使えるタグのキー（src/lib/guest-tags.ts のキーと同じ形） */
+const SEATING_TAG_KEY =
+  /^(side|relationship|age|assistance|role):[a-z_]+$|^allergy$|^tag:[0-9a-f-]{36}$/;
+
+export const seatingTableSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z
+    .string()
+    .trim()
+    .min(1, '卓の名前を入力してください')
+    .max(TABLE_NAME_MAX, `卓の名前は${TABLE_NAME_MAX}文字以内で入力してください`),
+  capacity: z
+    .number()
+    .int('定員は整数で入力してください')
+    .min(TABLE_CAPACITY_MIN, `定員は${TABLE_CAPACITY_MIN}名以上にしてください`)
+    .max(TABLE_CAPACITY_MAX, `定員は${TABLE_CAPACITY_MAX}名以下にしてください`),
+  shape: z.enum(TABLE_SHAPES),
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  allowedTags: z
+    .array(z.string().regex(SEATING_TAG_KEY, '座れる人の条件の形が正しくありません'))
+    .max(TABLE_TAGS_MAX),
+});
+
+/** 配置パターンの保存（新規・更新とも、卓は全件を送る。送らなかった卓は消える） */
+export const seatingLayoutSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1, '配置の名前を入力してください')
+      .max(LAYOUT_NAME_MAX, `配置の名前は${LAYOUT_NAME_MAX}文字以内で入力してください`),
+    hallShape: z.enum(HALL_SHAPES),
+    tables: z.array(seatingTableSchema).min(1).max(TABLES_PER_LAYOUT_MAX),
+  })
+  .strict();
+
+/** 新郎新婦に送る／送るのをやめる */
+export const seatingLayoutOfferSchema = z.object({ offered: z.boolean() }).strict();
 
 // ------------------------------------------------------ 招待・フォロー・利用者
 export const invitationIssueSchema = z

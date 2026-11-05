@@ -18,6 +18,7 @@ import { InvitationSection } from './InvitationSection';
 import { RiskSection, type CaseRisk } from './RiskSection';
 import { GuestResponseList } from '@/components/guests/GuestResponseList';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
+import { SeatingLayoutEditor } from '@/components/seating/SeatingLayoutEditor';
 import type { RiskReasonView } from '@/components/ui/RiskBadge';
 import { TaskSection, type CaseTaskRow } from './TaskSection';
 import { adoptedOutput, AI_JOB_COLUMNS, type AiJobRow } from '@/lib/ai/assist';
@@ -38,7 +39,10 @@ import {
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { formatDate } from '@/lib/format';
+import { AUTO_GUEST_TAGS, customTagKey } from '@/lib/guest-tags';
+import { needsFrom } from '@/lib/seating/layout';
 import { loadGuestBook } from '@/lib/services/guests';
+import { loadSeatingLayouts } from '@/lib/services/seating-layouts';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -189,6 +193,27 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
   const guestBook = d1
     ? undefined
     : await loadGuestBook(await createSupabaseServerClient(), row.id);
+  // 卓の配置パターン（#180）。席次のルールに渡す出席人数は、読み込んだ回答から数える
+  const seatingLayouts = d1
+    ? undefined
+    : await loadSeatingLayouts(await createSupabaseServerClient(), row.id);
+  const seatingNeeds = needsFrom(
+    (guestBook?.responses ?? []).map((r) => ({
+      attending: r.attending,
+      guestSide: r.guestSide,
+      relationship: r.relationship,
+      people: r.people.length,
+    })),
+  );
+  const attendingPeople = (guestBook?.responses ?? [])
+    .filter((r) => r.attending)
+    .reduce((sum, r) => sum + r.people.length, 0);
+  const seatingTagOptions = [
+    ...AUTO_GUEST_TAGS.filter(
+      (tag) => tag.key.startsWith('side:') || tag.key.startsWith('relationship:'),
+    ).map(({ key, label }) => ({ key, label })),
+    ...(guestBook?.tags ?? []).map((tag) => ({ key: customTagKey(tag.id), label: tag.name })),
+  ];
 
   return (
     <div className="space-y-5">
@@ -330,6 +355,26 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
             </div>
           ) : (
             <GuestResponseList caseId={row.id} book={guestBook} editable={!archived} />
+          )}
+        </section>
+      )}
+
+      {seatingLayouts !== undefined && (
+        <section className="space-y-3">
+          <h2 className="section-head">卓の配置パターン</h2>
+          {seatingLayouts === null ? (
+            <div role="alert" className="banner-error">
+              <span>卓の配置パターンを読み込めませんでした。</span>
+            </div>
+          ) : (
+            <SeatingLayoutEditor
+              caseId={row.id}
+              layouts={seatingLayouts}
+              needs={seatingNeeds}
+              attendingPeople={attendingPeople}
+              tagOptions={seatingTagOptions}
+              editable={!archived}
+            />
           )}
         </section>
       )}
