@@ -25,8 +25,9 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
 
 import { todayInJst } from '../src/lib/format';
+import { recalculateCaseRisk, persistViaServiceRole } from '../src/lib/services/riskStore';
 import { pgDemoDb } from './demo/pgDb';
-import { DEMO_CASES, DEMO_PLANNER } from './demo/scenario';
+import { DEMO_CASES, DEMO_NOTE_PREFIX, DEMO_PLANNER, DEMO_VENUE_ID } from './demo/scenario';
 import { resetDemo, seedDemo, type DemoAuth } from './demo/seed';
 import { assertDemoAppTarget, assertDemoProjectTargets } from './demo/targets';
 
@@ -216,24 +217,16 @@ await client.end();
 
 // ------------------------------------------------------------------ リスクの再計算
 
-async function recalculateRisk(): Promise<string> {
-  const secret = process.env.INTERNAL_CRON_SECRET;
-  if (!secret) return 'INTERNAL_CRON_SECRET が無いので省略しました';
-  try {
-    const res = await fetch(`${appBaseUrl.replace(/\/+$/, '')}/api/internal/risk-recalculate`, {
-      method: 'POST',
-      headers: { 'x-internal-cron-secret': secret },
-    });
-    if (!res.ok) return `失敗しました（HTTP ${res.status}）`;
-    const body = (await res.json()) as { processed?: number };
-    return `${body.processed ?? 0} 件を再計算しました`;
-  } catch {
-    return `アプリ（${appBaseUrl}）に接続できないので省略しました`;
-  }
+const demoCases = await admin
+  .from('wedding_cases')
+  .select('id')
+  .eq('venue_id', DEMO_VENUE_ID)
+  .like('notes', `${DEMO_NOTE_PREFIX}%`);
+if (demoCases.error) die(`模擬案件を確認できませんでした: ${demoCases.error.message}`);
+for (const row of demoCases.data ?? []) {
+  await recalculateCaseRisk(admin, row.id, persistViaServiceRole(admin, row.id));
 }
-
-const riskMessage =
-  result.created.length > 0 ? await recalculateRisk() : '新しい案件が無いので省略しました';
+const riskMessage = `${demoCases.data?.length ?? 0} 件を再計算しました`;
 
 // ------------------------------------------------------------------ 結果の表示
 

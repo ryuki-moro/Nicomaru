@@ -145,6 +145,20 @@ describe('検証済みセッションと有効プロフィールの境界', () =
   });
 
   it.each([
+    ['couple', '/mypage', 'マイページ'],
+    ['planner', '/cases', '案件一覧'],
+    ['admin', '/users', 'プランナー管理'],
+    ['system_admin', '/users', '職員管理'],
+  ] as const)('D1版の %s は %s（%s）から始める', (role, path, label) => {
+    vi.stubEnv('NICOMARU_DB', 'd1');
+    try {
+      expect([landingPathFor(role), landingLabelFor(role)]).toEqual([path, label]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it.each([
     ['couple', 'マイページ'],
     ['planner', 'ダッシュボード'],
     ['admin', 'ダッシュボード'],

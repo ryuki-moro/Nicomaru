@@ -8,6 +8,7 @@
  *     invited／suspended／deleted の利用者はDB層で全拒否になる。
  *     API 層はこの状態を 403（FORBIDDEN）として扱い、再ログインを促す（6-3-4）。
  */
+import { d1HomeCrumbFor } from '@/components/layout/breadcrumbItems';
 import { usingD1 } from '@/lib/d1/mode';
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
@@ -109,6 +110,8 @@ export async function requireRole(...roles: Role[]): Promise<AppUser> {
 
 /** ログイン後の遷移先（4-2）。 */
 export function landingPathFor(role: Role): string {
+  const d1 = usingD1() ? d1HomeCrumbFor(role) : undefined;
+  if (d1) return d1.href;
   switch (role) {
     case 'couple':
       return '/mypage';
@@ -124,6 +127,8 @@ export function landingPathFor(role: Role): string {
 
 /** 着地点の画面名。エラー画面の「◯◯へ戻る」に使う。landingPathFor と対にする。 */
 export function landingLabelFor(role: Role): string {
+  const d1 = usingD1() ? d1HomeCrumbFor(role) : undefined;
+  if (d1) return d1.label;
   switch (role) {
     case 'couple':
       return 'マイページ';

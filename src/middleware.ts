@@ -7,7 +7,7 @@
  * 認可（どのデータに触れられるか）は RLS が最終防衛線であり、
  * ここでの遮断は導線を正すためのものにすぎない（6-5）。
  */
-import { localD1, usingD1 } from '@/lib/d1/mode';
+import { demoMailbox, localD1, usingD1 } from '@/lib/d1/mode';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { createServerClient } from '@supabase/ssr';
@@ -57,7 +57,7 @@ export async function middleware(request: NextRequest) {
     if (path === '/dashboard' || path === '/system')
       return NextResponse.redirect(new URL('/cases', origin));
     // 受信箱はローカル検証専用。本番D1では外部送信するため存在しない扱いにする。
-    if (!localD1() && (path === '/dev/mailbox' || path === '/api/dev/mailbox'))
+    if (!localD1() && !demoMailbox() && (path === '/dev/mailbox' || path === '/api/dev/mailbox'))
       return new NextResponse(null, { status: 404 });
     const allowed = [
       '/',

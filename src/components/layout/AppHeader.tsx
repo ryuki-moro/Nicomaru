@@ -9,6 +9,14 @@ import Link from 'next/link';
 import { LogoutButton } from '@/components/layout/LogoutButton';
 import { StaffNav } from '@/components/layout/StaffNav';
 import { isStaff, ROLE_LABEL, type Role } from '@/lib/constants';
+import { demoMailbox } from '@/lib/d1/mode';
+
+/** 立場ごとの帯。同じ画面構成でも、誰として操作しているかを色と文言で示す。白文字とのコントラスト比は4.5以上。 */
+const ROLE_BAND: Partial<Record<Role, { className: string; note: string }>> = {
+  system_admin: { className: 'bg-[#1f3a5f]', note: '式場管理者の登録・管理を行います' },
+  admin: { className: 'bg-[#2f6b4f]', note: '自式場のプランナーと案件を管理します' },
+  planner: { className: 'bg-[#a3385f]', note: '担当案件と提出物を確認します' },
+};
 
 interface Props {
   role: Role;
@@ -18,8 +26,16 @@ interface Props {
 }
 
 export function AppHeader({ role, displayName, minimal = false }: Props) {
+  const band = minimal ? undefined : ROLE_BAND[role];
   return (
     <header className="no-print border-b border-border-light bg-surface">
+      {band && (
+        <p className={`${band.className} text-caption text-white`}>
+          <span className="mx-auto block w-full max-w-6xl px-4 py-1">
+            <strong>{ROLE_LABEL[role]}</strong>として操作中　{band.note}
+          </span>
+        </p>
+      )}
       <div
         className={
           minimal
@@ -34,6 +50,11 @@ export function AppHeader({ role, displayName, minimal = false }: Props) {
           <span className="text-caption text-text-muted">
             {ROLE_LABEL[role]} / {displayName}
           </span>
+          {role === 'system_admin' && demoMailbox() && (
+            <Link href="/dev/mailbox" prefetch={false} className="btn-ghost">
+              デモ受信箱
+            </Link>
+          )}
           <LogoutButton />
         </div>
       </div>
