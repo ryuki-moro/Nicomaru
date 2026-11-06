@@ -81,7 +81,7 @@ test('AI下書きは専用ワーカーで処理され、人が採用してから
     const queued = (await created.json()) as { id: string; status: string };
     expect(queued.status).toBe('queued');
     expect(queued.id).toMatch(/^[0-9a-f-]{36}$/);
-    await expect(page.getByRole('button', { name: 'コメント欄に入れる' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '下書きを採用する' })).toHaveCount(0);
     await expect(comment).toHaveValue(memo);
     expect(await worker.completeDraft(queued.id, { text: '未取得のジョブは完了できない' })).toBe(
       false,
@@ -126,12 +126,15 @@ test('AI下書きは専用ワーカーで処理され、人が採用してから
         new URL(response.url()).pathname === `/api/ai/jobs/${queued.id}` &&
         response.request().method() === 'PATCH',
     );
-    await page.getByRole('button', { name: 'コメント欄に入れる', exact: true }).click();
+    // コメント欄には要点（memo）が入力済みなので、採用前に上書き確認が出る。
+    await page.getByRole('button', { name: '下書きを採用する', exact: true }).click();
+    await expect(page.getByRole('button', { name: '置き換える', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '置き換える', exact: true }).click();
     const reviewed = await reviewedResponse;
     expect(reviewed.status()).toBe(200);
     expect((await reviewed.json()).status).toBe('confirmed');
     await expect(comment).toHaveValue(draft);
-    await expect(page.getByRole('button', { name: 'コメント欄に入れる' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '下書きを採用する' })).toHaveCount(0);
     const confirmed = await page.request.get(`/api/ai/jobs/${queued.id}`);
     expect(confirmed.status()).toBe(200);
     expect((await confirmed.json()).status).toBe('confirmed');

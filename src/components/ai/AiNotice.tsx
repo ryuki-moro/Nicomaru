@@ -12,10 +12,18 @@
  * ここに集約して、AI由来の表示は必ずこの見出しの下に置く。
  *
  * Server Component からも Client Component からも使うため 'use client' は付けない。
+ * （折りたたみは <details> で実現し、クライアントJSを要しない）
  */
 import type { ReactNode } from 'react';
 
 import type { AiJobStatus } from '@/lib/ai/assist';
+import {
+  AI_ADOPTED_MESSAGE,
+  AI_DISCARDED_MESSAGE,
+  AI_PENDING_MESSAGE,
+  AI_TIMEOUT_MESSAGE,
+  humanAiError,
+} from '@/lib/ai/aiMessages';
 import { formatDateTime } from '@/lib/format';
 
 /** 7-2 の表記に合わせた見出し。ここに無い文言を画面側で作らない。 */
@@ -47,8 +55,10 @@ export function AiHeading({
 
 /**
  * ワーカー停止時の案内（7-1）。
- * 「使えない」だけでなく「手でやれば済む」ことまで書く。
- * AI が落ちていても業務が止まらないことが 7-1 の趣旨のため。
+ *
+ * 普段は1行だけを出し、本来の作業（コメント欄など）を押し出さない
+ * （docs/ui-review/p2 低-5）。手作業で進められる旨と最終確認時刻は
+ * 折りたたみの中に置き、知りたい人だけが開く。
  */
 export function AiUnavailable({
   lastSeenAt,
@@ -58,45 +68,102 @@ export function AiUnavailable({
   fallback: string;
 }) {
   return (
-    <div className="banner-info">
-      <div>
-        <p>ただいまAI補助を利用できません。{fallback}</p>
-        {lastSeenAt && (
-          <p className="mt-1 text-caption">
-            最後にAIサーバーの応答を確認したのは {formatDateTime(lastSeenAt)} です。
-          </p>
-        )}
+    <details className="text-label text-text-secondary">
+      <summary className="cursor-pointer py-1 text-text-muted">
+        ただいまAI補助を利用できません（詳細）
+      </summary>
+      <div className="banner-info mt-1">
+        <div>
+          <p>{fallback}</p>
+          {lastSeenAt && (
+            <p className="mt-1 text-caption">
+              最後にAIサーバーの応答を確認したのは {formatDateTime(lastSeenAt)} です。
+            </p>
+          )}
+        </div>
       </div>
-    </div>
+    </details>
   );
 }
 
-/** 生成待ち・失敗の共通表示。done／confirmed のときは呼び出し側が中身を描く。 */
+/** ポーリング打ち切り（タイムアウト）の統一表示。文言は aiMessages を単一ソースにする。 */
+export function AiTimeoutNotice() {
+  return (
+    <p className="mt-2 text-caption text-text-muted" role="status">
+      {AI_TIMEOUT_MESSAGE}
+    </p>
+  );
+}
+
+/** 採用済み・破棄済みの墓標。結果を消さず、状態が残ることを利用者に伝える。 */
+export function AiOutcomeTombstone({ status }: { status: 'confirmed' | 'discarded' }) {
+  if (status === 'confirmed') {
+    return (
+      <p className="mt-2 flex items-center gap-2 text-label text-text-secondary" role="status">
+        <span className="badge-success">採用済み</span>
+        {AI_ADOPTED_MESSAGE}
+      </p>
+    );
+  }
+  return (
+    <p className="mt-2 flex items-center gap-2 text-label text-text-secondary" role="status">
+      <span className="badge-neutral">破棄済み</span>
+      {AI_DISCARDED_MESSAGE}
+    </p>
+  );
+}
+
+/**
+ * 生成待ち・失敗・破棄の共通表示。done／confirmed のときは呼び出し側が中身を描く
+ * （confirmed は AiOutcomeTombstone と併用できる）。
+ */
 export function AiJobState({
   status,
   errorMessage,
   fallback,
+  onRetry,
+  retryLabel = 'もう一度依頼する',
 }: {
   status: AiJobStatus;
   errorMessage: string | null;
   fallback: string;
+  /** 失敗時にその場で再依頼できる場合に渡す。再依頼の経路が無い画面では省略する */
+  onRetry?: () => void;
+  retryLabel?: string;
 }) {
   if (status === 'queued' || status === 'processing') {
     return (
-      <p className="text-label text-text-muted">
-        AIに依頼しています。数分後にこの画面を開き直すと結果が表示されます。
+      <p
+        className="flex items-center gap-2 text-label text-text-muted"
+        role="status"
+        aria-live="polite"
+      >
+        <span
+          aria-hidden="true"
+          className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent"
+        />
+        {AI_PENDING_MESSAGE}
       </p>
     );
   }
   if (status === 'failed') {
     return (
-      <div className="banner-info">
+      <div className="banner-error" role="alert">
         <div>
-          <p>AIの処理に失敗しました。{fallback}</p>
-          {errorMessage && <p className="mt-1 text-caption">理由: {errorMessage}</p>}
+          <p>
+            {humanAiError(errorMessage)} {fallback}
+          </p>
+          {onRetry && (
+            <button type="button" className="btn-ghost mt-2" onClick={onRetry}>
+              {retryLabel}
+            </button>
+          )}
         </div>
       </div>
     );
+  }
+  if (status === 'discarded') {
+    return <AiOutcomeTombstone status="discarded" />;
   }
   return null;
 }

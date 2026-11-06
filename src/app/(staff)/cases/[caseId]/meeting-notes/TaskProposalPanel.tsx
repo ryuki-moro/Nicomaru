@@ -21,7 +21,13 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { AiHeading, AiJobState, AiUnavailable } from '@/components/ai/AiNotice';
+import {
+  AiHeading,
+  AiJobState,
+  AiOutcomeTombstone,
+  AiTimeoutNotice,
+  AiUnavailable,
+} from '@/components/ai/AiNotice';
 import { useAiJob, type AiJobView } from '@/components/ai/useAiJob';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { adoptedOutput } from '@/lib/ai/assist';
@@ -147,9 +153,7 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
       )}
 
       {timedOut && (job?.status === 'queued' || job?.status === 'processing') && (
-        <p className="text-caption text-text-muted">
-          時間がかかっています。画面を開き直すと最新の状態が表示されます。
-        </p>
+        <AiTimeoutNotice />
       )}
 
       <ErrorSummary message={summary} />
@@ -219,18 +223,20 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
           </ul>
         ))}
 
+      {job?.status === 'confirmed' && <AiOutcomeTombstone status="confirmed" />}
+
       {job?.status === 'done' && (
         <div className="mt-3 flex flex-wrap gap-3">
           <button
             type="button"
-            className="btn-secondary w-auto px-5"
+            className="btn-primary w-auto px-5"
             onClick={() => finish('confirmed')}
           >
-            確認を終える
+            起票案を採用する
           </button>
           <button
             type="button"
-            className="btn-secondary w-auto px-5"
+            className="btn-ghost w-auto px-5"
             onClick={() => finish('discarded')}
           >
             この案を破棄する
