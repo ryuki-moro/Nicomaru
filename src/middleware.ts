@@ -70,6 +70,7 @@ export async function middleware(request: NextRequest) {
       '/mypage/case',
       '/mypage/notifications',
       '/mypage/guests',
+      '/mypage/seating',
       '/api/notifications',
       '/api/notifications/send',
       '/submissions',
@@ -116,6 +117,10 @@ export async function middleware(request: NextRequest) {
         path,
       );
     const staffUser = /^\/(?:users|api\/admin\/users)\/[^/]+$/.test(path) && path !== '/users/new';
+    const seating =
+      /^\/api\/cases\/[^/]+\/(?:seating-layouts(?:\/[^/]+)?|seating-chart(?:\/(?:submit|review))?)$/.test(
+        path,
+      );
     if (
       !allowed.includes(path) &&
       !staffUser &&
@@ -124,6 +129,7 @@ export async function middleware(request: NextRequest) {
       !registration &&
       !guests &&
       !tasks &&
+      !seating &&
       !path.startsWith('/_next/')
     ) {
       return NextResponse.json(

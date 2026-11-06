@@ -17,6 +17,8 @@ import { redirect } from 'next/navigation';
 import { InvitationSection } from './InvitationSection';
 import { RiskSection, type CaseRisk } from './RiskSection';
 import { GuestResponseList } from '@/components/guests/GuestResponseList';
+import { SeatingChartReview } from '@/components/seating/SeatingChartReview';
+import { SeatingLayoutEditor } from '@/components/seating/SeatingLayoutEditor';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import type { RiskReasonView } from '@/components/ui/RiskBadge';
 import { TaskSection, type CaseTaskRow } from './TaskSection';
@@ -38,6 +40,9 @@ import {
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { formatDate } from '@/lib/format';
+import { AUTO_GUEST_TAGS, customTagKey } from '@/lib/guest-tags';
+import { needsFrom } from '@/lib/seating/layout';
+import { seatGuestsFromBook } from '@/lib/seating/guests';
 import { loadGuestBook } from '@/lib/services/guests';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -87,6 +92,23 @@ interface CaseRow {
     calculated_at: string;
     is_current: boolean;
   }[];
+}
+
+/** 席次（#180〜#182、D1版）。補助表示なので、読めなくても案件詳細は出す（null はエラー表示）。 */
+async function loadD1Seating(user: { id: string }, caseId: string) {
+  try {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { loadSeatingChart, loadSeatingLayouts } = await import('@/lib/d1/seating');
+    const db = await localDB();
+    const [layouts, chart] = await Promise.all([
+      loadSeatingLayouts(db, user, caseId),
+      loadSeatingChart(db, user, caseId),
+    ]);
+    return { layouts, chart };
+  } catch (error) {
+    console.error('[case] D1の席次を読み込めませんでした', error);
+    return null;
+  }
 }
 
 /** 補助表示なので、読めなくても案件詳細は出す（null はエラー表示）。 */
@@ -200,6 +222,31 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
   const guestBook = d1
     ? await loadD1GuestBook(user, row.id)
     : await loadGuestBook(await createSupabaseServerClient(), row.id);
+
+  // 席次（#180 配置パターン / #182 承認・差し戻し）。D1版でのみ提供する。
+  // 席次のルールに渡す出席人数と「座れる人」の候補は、読み込んだ回答から数える
+  const seating = d1 ? await loadD1Seating(user, row.id) : undefined;
+  const seatingNeeds = needsFrom(
+    (guestBook?.responses ?? []).map((r) => ({
+      attending: r.attending,
+      guestSide: r.guestSide,
+      relationship: r.relationship,
+      people: r.people.length,
+    })),
+  );
+  const attendingPeople = (guestBook?.responses ?? [])
+    .filter((r) => r.attending)
+    .reduce((sum, r) => sum + r.people.length, 0);
+  const seatingTagOptions = [
+    ...AUTO_GUEST_TAGS.filter(
+      (tag) => tag.key.startsWith('side:') || tag.key.startsWith('relationship:'),
+    ).map(({ key, label }) => ({ key, label })),
+    ...(guestBook?.tags ?? []).map((tag) => ({ key: customTagKey(tag.id), label: tag.name })),
+  ];
+  const seatingInfo = guestBook ? seatGuestsFromBook(guestBook).info : {};
+  const seatingLayout = seating?.chart.layoutId
+    ? (seating.layouts.find((l) => l.id === seating.chart.layoutId) ?? null)
+    : null;
 
   return (
     <div className="space-y-5">
@@ -342,6 +389,39 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
           ) : (
             <GuestResponseList caseId={row.id} book={guestBook} editable={!archived} />
           )}
+        </section>
+      )}
+
+      {seating !== undefined && (
+        <section className="space-y-3">
+          <h2 className="section-head">卓の配置パターン</h2>
+          {seating === null ? (
+            <div role="alert" className="banner-error">
+              <span>卓の配置パターンを読み込めませんでした。</span>
+            </div>
+          ) : (
+            <SeatingLayoutEditor
+              caseId={row.id}
+              layouts={seating.layouts}
+              needs={seatingNeeds}
+              attendingPeople={attendingPeople}
+              tagOptions={seatingTagOptions}
+              editable={!archived}
+            />
+          )}
+        </section>
+      )}
+
+      {seating && (
+        <section className="space-y-3">
+          <h2 className="section-head">席次の確認</h2>
+          <SeatingChartReview
+            caseId={row.id}
+            chart={seating.chart}
+            layout={seatingLayout}
+            info={seatingInfo}
+            editable={!archived}
+          />
         </section>
       )}
     </div>

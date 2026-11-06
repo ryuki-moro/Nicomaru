@@ -30,6 +30,16 @@ import { GUEST_TAG_MAX_PER_CASE, GUEST_TAG_NAME_MAX } from '@/lib/guest-tags';
 import { todayInJst } from '@/lib/format';
 import { aiJobInputSchema } from '@/lib/ai/schemas';
 import { NOTIFICATION_TYPES } from '@/lib/notify/templates';
+import {
+  HALL_SHAPES,
+  LAYOUT_NAME_MAX,
+  TABLE_CAPACITY_MAX,
+  TABLE_CAPACITY_MIN,
+  TABLE_NAME_MAX,
+  TABLE_SHAPES,
+  TABLE_TAGS_MAX,
+  TABLES_PER_LAYOUT_MAX,
+} from '@/lib/seating/layout';
 
 /**
  * staff が /api/ai/jobs から投入できる job_type。
@@ -336,6 +346,74 @@ export const guestReviewSchema = z
   })
   .strict()
   .refine((v) => Object.keys(v).length > 0, { message: '変更する項目がありません' });
+
+// ------------------------------------------------------ 卓の配置パターン（#180）
+/** 卓の「座れる人」に使えるタグのキー（src/lib/guest-tags.ts のキーと同じ形） */
+const SEATING_TAG_KEY =
+  /^(side|relationship|age|assistance|role):[a-z_]+$|^allergy$|^tag:[0-9a-f-]{36}$/;
+
+export const seatingTableSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z
+    .string()
+    .trim()
+    .min(1, '卓の名前を入力してください')
+    .max(TABLE_NAME_MAX, `卓の名前は${TABLE_NAME_MAX}文字以内で入力してください`),
+  capacity: z
+    .number()
+    .int('定員は整数で入力してください')
+    .min(TABLE_CAPACITY_MIN, `定員は${TABLE_CAPACITY_MIN}名以上にしてください`)
+    .max(TABLE_CAPACITY_MAX, `定員は${TABLE_CAPACITY_MAX}名以下にしてください`),
+  shape: z.enum(TABLE_SHAPES),
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  allowedTags: z
+    .array(z.string().regex(SEATING_TAG_KEY, '座れる人の条件の形が正しくありません'))
+    .max(TABLE_TAGS_MAX),
+});
+
+/** 配置パターンの保存（新規・更新とも、卓は全件を送る。送らなかった卓は消える） */
+export const seatingLayoutSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1, '配置の名前を入力してください')
+      .max(LAYOUT_NAME_MAX, `配置の名前は${LAYOUT_NAME_MAX}文字以内で入力してください`),
+    hallShape: z.enum(HALL_SHAPES),
+    tables: z.array(seatingTableSchema).min(1).max(TABLES_PER_LAYOUT_MAX),
+  })
+  .strict();
+
+/** 新郎新婦に送る／送るのをやめる */
+export const seatingLayoutOfferSchema = z.object({ offered: z.boolean() }).strict();
+
+// ------------------------------------------------------------ 席次（#181・#182）
+/** 席次の保存。version は読み込んだときの版（まだ席次が無ければ 0）。送らなかった人は未配置になる */
+export const seatingChartSaveSchema = z
+  .object({
+    layoutId: z.string().uuid().nullable(),
+    version: z.number().int().min(0),
+    assignments: z
+      .array(z.object({ guestId: z.string().uuid(), tableId: z.string().uuid() }).strict())
+      .max(500),
+  })
+  .strict();
+
+/** 席次の提出 */
+export const seatingChartSubmitSchema = z.object({ version: z.number().int().min(0) }).strict();
+
+/** 席次の確認（#182）。差し戻しはコメント必須、承認でも任意で付けられる */
+export const seatingChartReviewSchema = z
+  .object({
+    decision: z.enum(['approved', 'returned']),
+    feedback: z.string().trim().max(1000).optional().nullable(),
+  })
+  .strict()
+  .refine((v) => v.decision !== 'returned' || Boolean(v.feedback), {
+    path: ['feedback'],
+    message: '修正のお願いには、直してほしい内容を入力してください',
+  });
 
 // ------------------------------------------------------ 招待・フォロー・利用者
 export const invitationIssueSchema = z
