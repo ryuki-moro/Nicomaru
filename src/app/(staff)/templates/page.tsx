@@ -25,6 +25,7 @@ import {
   type SubmissionFormat,
 } from '@/lib/constants';
 import { resolvePage } from '@/lib/pagination';
+import { usingD1 } from '@/lib/d1/mode';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 interface TemplateRow {
@@ -71,29 +72,55 @@ export default async function TemplateListPage({
   if (!user) redirect('/login');
   if (user.role !== 'admin') redirect('/error?code=403');
 
-  const supabase = await createSupabaseServerClient();
+  const d1Mode = usingD1();
+  const supabase = d1Mode ? null : await createSupabaseServerClient();
 
   // 停止中を下に、準備の早いもの（逆算日数の大きいもの）から並べる。同着は id でタイブレーク（4-3 一覧画面共通）
   // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する。
   const from = (page - 1) * LIST_PAGE_SIZE;
-  const [templatesResult, assignmentsResult, planTypesResult] = await Promise.all([
-    supabase
-      .from('task_templates')
-      .select('id, name, submission_format, due_offset_days, importance, is_required, active')
-      .order('active', { ascending: false })
-      .order('due_offset_days', { ascending: false })
-      .order('name')
-      .order('id')
-      .range(from, from + LIST_PAGE_SIZE),
-    supabase.from('plan_task_templates').select('task_template_id, plan_type_id'),
-    supabase.from('plan_types').select('id, name'),
-  ]);
+  const [templatesResult, assignmentsResult, planTypesResult] = supabase
+    ? await Promise.all([
+        supabase
+          .from('task_templates')
+          .select('id, name, submission_format, due_offset_days, importance, is_required, active')
+          .order('active', { ascending: false })
+          .order('due_offset_days', { ascending: false })
+          .order('name')
+          .order('id')
+          .range(from, from + LIST_PAGE_SIZE),
+        supabase.from('plan_task_templates').select('task_template_id, plan_type_id'),
+        supabase.from('plan_types').select('id, name'),
+      ])
+    : [{ data: null, error: null }, { data: null }, { data: null }];
 
-  const fetched: TemplateRow[] = templatesResult.data ?? [];
-  const hasNext = fetched.length > LIST_PAGE_SIZE;
+  let fetched: TemplateRow[] = templatesResult.data ?? [];
+  let assignments: AssignmentRow[] = assignmentsResult.data ?? [];
+  let planTypes: PlanTypeRow[] = planTypesResult.data ?? [];
+  let d1HasNext: boolean | null = null;
+  if (d1Mode) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { listTemplatesD1, listPlanTypesD1 } = await import('@/lib/d1/admin');
+    const db = await localDB();
+    const d1 = await listTemplatesD1(db, user, page);
+    fetched = d1.rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      submission_format: r.submission_format as SubmissionFormat,
+      due_offset_days: r.due_offset_days,
+      importance: r.importance as Importance,
+      is_required: r.is_required,
+      active: r.active,
+    }));
+    d1HasNext = d1.hasNext;
+    const plans = await listPlanTypesD1(db, user, 1);
+    planTypes = plans.rows.map((pl) => ({ id: pl.id, name: pl.name }));
+    const { results: assignRows } = await db
+      .prepare('SELECT task_template_id, plan_type_id FROM plan_task_templates')
+      .all<AssignmentRow>();
+    assignments = assignRows;
+  }
+  const hasNext = d1HasNext ?? fetched.length > LIST_PAGE_SIZE;
   const templates = fetched.slice(0, LIST_PAGE_SIZE);
-  const assignments: AssignmentRow[] = assignmentsResult.data ?? [];
-  const planTypes: PlanTypeRow[] = planTypesResult.data ?? [];
 
   // PostgREST の埋め込み（!inner 等）に頼らず JS 側で突き合わせる。件数が小さく、
   // 埋め込み名の揺れで一覧が落ちるリスクを避けたいため（6-4 の想定規模は式場あたり数十件）
@@ -107,7 +134,7 @@ export default async function TemplateListPage({
     planNamesByTemplate.set(a.task_template_id, list);
   }
 
-  const loadFailed = templatesResult.error != null;
+  const loadFailed = !d1Mode && templatesResult.error != null;
 
   return (
     <div className="space-y-4">

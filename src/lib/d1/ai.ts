@@ -355,3 +355,34 @@ export async function workerComplete(
     .run();
   return Boolean(result.meta.changes);
 }
+
+/** 滞留回収の単体実行 (6-12 ai_job_reclaim)。workerClaim の取得時回収と同じ条件を定期処理からも実行する。 */
+export async function reclaimStalledAiJobs(db: D1Database, now = new Date()) {
+  const iso = now.toISOString();
+  const stale = new Date(now.getTime() - STALE_MS).toISOString();
+  const failedRow = await db
+    .prepare(
+      "SELECT count(*) AS n FROM ai_jobs WHERE status='processing' AND locked_at<? AND attempts>=?",
+    )
+    .bind(stale, MAX_ATTEMPTS)
+    .first<{ n: number }>();
+  const requeuedRow = await db
+    .prepare(
+      "SELECT count(*) AS n FROM ai_jobs WHERE status='processing' AND locked_at<? AND attempts<?",
+    )
+    .bind(stale, MAX_ATTEMPTS)
+    .first<{ n: number }>();
+  await db.batch([
+    db
+      .prepare(
+        "UPDATE ai_jobs SET status='failed',error_message='ワーカーからの応答がないまま試行回数の上限に達しました',locked_by=NULL,locked_at=NULL,finished_at=?,updated_at=? WHERE status='processing' AND locked_at<? AND attempts>=?",
+      )
+      .bind(iso, iso, stale, MAX_ATTEMPTS),
+    db
+      .prepare(
+        "UPDATE ai_jobs SET status='queued',locked_by=NULL,locked_at=NULL,updated_at=? WHERE status='processing' AND locked_at<? AND attempts<?",
+      )
+      .bind(iso, stale, MAX_ATTEMPTS),
+  ]);
+  return { requeued: requeuedRow?.n ?? 0, failed: failedRow?.n ?? 0 };
+}

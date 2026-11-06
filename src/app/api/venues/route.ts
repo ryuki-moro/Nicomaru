@@ -16,6 +16,7 @@ import { requireRole } from '@/lib/auth/session';
 import { ROLE_LABEL } from '@/lib/constants';
 import { conflict, fromPostgresError } from '@/lib/errors';
 import { issuePasswordSetupLink, sendPasswordSetupMail } from '@/lib/notify/mailer';
+import { usingD1 } from '@/lib/d1/mode';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { venueCreateSchema } from '@/lib/validation';
@@ -23,7 +24,22 @@ import { venueCreateSchema } from '@/lib/validation';
 export const runtime = 'nodejs';
 
 export const GET = route(async () => {
-  await requireRole('system_admin');
+  const actor = await requireRole('system_admin');
+  if (usingD1()) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { listVenuesAdmin } = await import('@/lib/d1/admin');
+    const { rows } = await listVenuesAdmin(await localDB(), actor, 1);
+    return ok({
+      items: rows.map((v) => ({
+        id: v.id,
+        name: v.name,
+        code: v.code,
+        contact_email: v.contact_email,
+        active: v.active,
+        created_at: v.created_at,
+      })),
+    });
+  }
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
@@ -36,8 +52,38 @@ export const GET = route(async () => {
 });
 
 export const POST = route(async (request: Request) => {
-  await requireRole('system_admin');
+  const actor = await requireRole('system_admin');
   const input = await parseBody(request, venueCreateSchema);
+  if (usingD1()) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { createVenueD1 } = await import('@/lib/d1/admin');
+    const db = await localDB();
+    const { id: venueId } = await createVenueD1(db, actor, {
+      name: input.name,
+      code: input.code,
+      contactEmail: input.contactEmail ?? null,
+      active: input.active,
+    });
+    if (!input.adminEmail || !input.adminName) return ok({ id: venueId, adminCreated: false }, 201);
+    try {
+      const { createStaff } = await import('@/lib/d1/staff');
+      const created = await createStaff(db, actor, {
+        displayName: input.adminName,
+        email: input.adminEmail,
+        venueId,
+      } as never);
+      return ok(
+        { id: venueId, adminCreated: true, mailDelivered: created.mailDelivered, mailReason: null },
+        201,
+      );
+    } catch {
+      // 式場だけ残っても利用者管理から管理者を追加できる (Supabase 版と同じ扱い)
+      return ok(
+        { id: venueId, adminCreated: false, reason: '式場管理者を作成できませんでした' },
+        201,
+      );
+    }
+  }
 
   // 式場そのものは RLS 経由で作る（venues_write は system_admin のみ）。
   // API 層にバグがあっても RLS が最終防衛線として働く（6-3-5）。

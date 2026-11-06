@@ -21,6 +21,7 @@ import { todayInJst } from '@/lib/format';
 import { renderNotification, type NotificationType } from '@/lib/notify/templates';
 import { dispatchNotification, type NotificationRow } from '@/lib/services/notifications';
 import { daysBetween } from '@/lib/services/schedule';
+import { usingD1 } from '@/lib/d1/mode';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -35,6 +36,21 @@ interface TaskRow {
 // 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
 export const POST = route(
   async () => {
+    if (usingD1()) {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { runBatchD1 } = await import('@/lib/d1/batches');
+      const { dispatchNotificationsD1 } = await import('@/lib/d1/notifications-dispatch');
+      const db = await localDB();
+      const outcome = await runBatchD1(db, 'notifications_dispatch', () =>
+        dispatchNotificationsD1(db),
+      );
+      return ok({
+        cases: outcome.targetCount,
+        created: outcome.detail?.created,
+        sent: outcome.detail?.sent,
+        failed: outcome.detail?.failed,
+      });
+    }
     // 表6-4「/api/notifications/dispatch（定期処理）｜使用する（内部バッチ）」
     const admin = createSupabaseAdminClient('cron.notifications-dispatch');
     const today = todayInJst();

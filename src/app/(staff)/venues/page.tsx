@@ -18,6 +18,7 @@ import { getAppUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { formatDate } from '@/lib/format';
 import { resolvePage } from '@/lib/pagination';
+import { usingD1 } from '@/lib/d1/mode';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -46,17 +47,39 @@ export default async function VenueListPage({ searchParams }: Props) {
   const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
 
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('venues')
-    .select(
-      'id, name, code, contact_email, active, created_at, user_profiles ( display_name, role, status )',
-    )
-    .order('code', { ascending: true })
-    .range(offset, offset + LIST_PAGE_SIZE);
+  const d1Mode = usingD1();
+  const supabase = d1Mode ? null : await createSupabaseServerClient();
+  const { data, error } = supabase
+    ? await supabase
+        .from('venues')
+        .select(
+          'id, name, code, contact_email, active, created_at, user_profiles ( display_name, role, status )',
+        )
+        .order('code', { ascending: true })
+        .range(offset, offset + LIST_PAGE_SIZE)
+    : { data: null, error: null };
 
-  const rows = (data ?? []) as unknown as VenueRow[];
-  const hasNext = rows.length > LIST_PAGE_SIZE;
+  let rows = (data ?? []) as unknown as VenueRow[];
+  let hasNext = rows.length > LIST_PAGE_SIZE;
+  if (d1Mode) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { listVenuesAdmin } = await import('@/lib/d1/admin');
+    const d1 = await listVenuesAdmin(await localDB(), user, page);
+    rows = d1.rows.map((v) => ({
+      id: v.id,
+      name: v.name,
+      code: v.code,
+      contact_email: v.contact_email,
+      active: v.active,
+      created_at: v.created_at,
+      user_profiles: v.admins.map((name) => ({
+        display_name: name,
+        role: 'admin',
+        status: 'active',
+      })),
+    }));
+    hasNext = d1.hasNext;
+  }
   const visible = rows.slice(0, LIST_PAGE_SIZE);
 
   const linkTo = (next: number) => (next > 1 ? `/venues?page=${next}` : '/venues');

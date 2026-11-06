@@ -26,6 +26,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser } from '@/lib/auth/session';
 import { formatDateTime } from '@/lib/format';
 import { NOTIFICATION_TYPE_LABEL, type NotificationType } from '@/lib/notify/templates';
+import { usingD1 } from '@/lib/d1/mode';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -77,6 +78,27 @@ export default async function SystemStatusPage() {
   const user = await getAppUser();
   if (!user || user.role !== 'system_admin') redirect('/error?code=403');
 
+  if (usingD1()) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { systemSummaryD1 } = await import('@/lib/d1/admin');
+    const summary = await systemSummaryD1(await localDB(), user);
+    const checkedAtD1 = requestTime();
+    return (
+      <SystemView
+        venueCount={summary.venueCount}
+        caseCount={summary.caseCount}
+        userCount={summary.userCount}
+        batchRows={summary.batches as BatchRunRow[]}
+        logRows={summary.logs as unknown as NotificationLogRow[]}
+        usage={summary.usage as UsageSnapshot | null}
+        usageFailed={false}
+        alerts={summary.alerts as SystemAlert[]}
+        alertsFailed={false}
+        checkedAt={checkedAtD1}
+      />
+    );
+  }
+
   const supabase = await createSupabaseServerClient();
 
   const [venues, cases, users, batches, logs, usage, alerts] = await Promise.all([
@@ -119,6 +141,39 @@ export default async function SystemStatusPage() {
   const checkedAt = requestTime();
 
   return (
+    <SystemView
+      venueCount={venues.error ? null : venues.count}
+      caseCount={cases.error ? null : cases.count}
+      userCount={users.error ? null : users.count}
+      batchRows={batchRows}
+      batchesFailed={Boolean(batches.error)}
+      logRows={logRows}
+      logsFailed={Boolean(logs.error)}
+      usage={usage.data as UsageSnapshot | null}
+      usageFailed={Boolean(usage.error)}
+      alerts={(alerts.data ?? []) as SystemAlert[]}
+      alertsFailed={Boolean(alerts.error)}
+      checkedAt={checkedAt}
+    />
+  );
+}
+
+function SystemView(props: {
+  venueCount: number | null;
+  caseCount: number | null;
+  userCount: number | null;
+  batchRows: BatchRunRow[];
+  batchesFailed?: boolean;
+  logRows: NotificationLogRow[];
+  logsFailed?: boolean;
+  usage: UsageSnapshot | null;
+  usageFailed: boolean;
+  alerts: SystemAlert[];
+  alertsFailed: boolean;
+  checkedAt: number;
+}) {
+  const { batchRows, logRows } = props;
+  return (
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: '利用状況・通知ログ' }]} />
 
@@ -132,28 +187,25 @@ export default async function SystemStatusPage() {
       <section>
         <h2 className="section-head">利用状況</h2>
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
-          <Summary label="式場数" value={venues.error ? null : venues.count} />
-          <Summary label="案件数" value={cases.error ? null : cases.count} />
-          <Summary label="利用者数" value={users.error ? null : users.count} />
+          <Summary label="式場数" value={props.venueCount} />
+          <Summary label="案件数" value={props.caseCount} />
+          <Summary label="利用者数" value={props.userCount} />
         </div>
         <UsageSummary
-          snapshot={usage.data as UsageSnapshot | null}
-          failed={Boolean(usage.error)}
-          checkedAt={checkedAt}
+          snapshot={props.usage}
+          failed={props.usageFailed}
+          checkedAt={props.checkedAt}
         />
       </section>
 
-      <MonitoringSummary
-        alerts={(alerts.data ?? []) as SystemAlert[]}
-        failed={Boolean(alerts.error)}
-      />
+      <MonitoringSummary alerts={props.alerts} failed={props.alertsFailed} />
 
       <section>
         <h2 className="section-head">定期処理の直近の実行結果</h2>
         <p className="mt-1 text-caption text-text-muted">
           pg_net は結果を待たずに送るため、失敗はこの記録でしか分かりません。
         </p>
-        {batches.error ? (
+        {props.batchesFailed ? (
           <p className="mt-2" role="alert">
             実行記録を読み込めませんでした。
           </p>
@@ -198,7 +250,7 @@ export default async function SystemStatusPage() {
       <section>
         <h2 className="section-head">通知ログ</h2>
         <NotificationLogExportForm />
-        {logs.error ? (
+        {props.logsFailed ? (
           <p className="mt-2" role="alert">
             通知ログを読み込めませんでした。
           </p>
