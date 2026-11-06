@@ -26,15 +26,26 @@ interface PeekRow {
  */
 export default async function GuestRsvpPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  if (usingD1()) return <Unavailable />;
   if (!GUEST_FORM_TOKEN_PATTERN.test(token)) return <InvalidForm />;
 
-  const admin = createSupabaseAdminClient('guest.rsvp');
-  const { data, error } = await admin.rpc('peek_guest_form', {
-    p_token_hash: hashInvitationToken(token),
-  });
-  if (error) return <Unavailable />;
-  const form = (data as PeekRow[] | null)?.[0];
+  let form: PeekRow | null | undefined;
+  if (usingD1()) {
+    try {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { peekGuestForm } = await import('@/lib/d1/guests');
+      form = await peekGuestForm(await localDB(), hashInvitationToken(token));
+    } catch (error) {
+      console.error('[rsvp] D1の読み込みに失敗しました', error);
+      return <Unavailable />;
+    }
+  } else {
+    const admin = createSupabaseAdminClient('guest.rsvp');
+    const { data, error } = await admin.rpc('peek_guest_form', {
+      p_token_hash: hashInvitationToken(token),
+    });
+    if (error) return <Unavailable />;
+    form = (data as PeekRow[] | null)?.[0];
+  }
   if (!form) return <InvalidForm />;
 
   // 氏名は暗号化列（13-1）。復号できない値はゲストに見せず、区分名だけにする
