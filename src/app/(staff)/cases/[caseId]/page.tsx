@@ -14,6 +14,7 @@ import { usingD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import { CaseAiPanels } from './CaseAiPanels';
 import { InvitationSection } from './InvitationSection';
 import { RiskSection, type CaseRisk } from './RiskSection';
 import { GuestResponseList } from '@/components/guests/GuestResponseList';
@@ -191,6 +192,108 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
       aiLabels: classifications.get(task.id) ?? [],
     }));
 
+  // AI拡張（Issue #118、9-8〜9-10）: サーバー側でルール結果を先に作り、最新ジョブがあれば併せて渡す。
+  // D1 では ai-ext ヘルパーで集約し、Supabase では純関数だけでフォールバックを作る（投入は画面のボタンから汎用APIへ）。
+  let aiExt: {
+    aiAvailable: boolean;
+    lastSeenAt: string | null;
+    handoverFallback: import('@/lib/ai/handover').HandoverSummaryOutput;
+    handoverJob: import('@/components/ai/useAiJob').AiJobView | null;
+    rescheduleFallback: import('@/lib/ai/reschedule').ReschedulePlanOutput;
+    rescheduleShifts: import('@/lib/ai/reschedule').RescheduleShift[];
+    rescheduleJob: import('@/components/ai/useAiJob').AiJobView | null;
+    templateFallback: import('@/lib/ai/template-draft').TemplateDraftOutput;
+    templateJob: import('@/components/ai/useAiJob').AiJobView | null;
+  } | null = null;
+  if (!row.archived_at) {
+    try {
+      const { todayInJst } = await import('@/lib/format');
+      const today = todayInJst();
+      const { aggregateHandover, buildHandoverFallback } = await import('@/lib/ai/handover');
+      const { buildReschedulePlan } = await import('@/lib/ai/reschedule');
+      const { buildTemplateDraft } = await import('@/lib/ai/template-draft');
+      const extTasks = row.case_tasks as unknown as {
+        id: string;
+        title: string;
+        status: string;
+        due_date: string;
+        due_offset_days: number | null;
+      }[];
+      const aggregate = aggregateHandover(extTasks, today);
+      const reschedule = buildReschedulePlan({
+        weddingDate: row.wedding_date,
+        today,
+        tasks: extTasks,
+      });
+      const templateFallback = buildTemplateDraft({
+        existing: extTasks.map((t) => ({
+          name: t.title,
+          due_offset_days: t.due_offset_days ?? 0,
+        })),
+        planName: row.plan_types?.name ?? null,
+      });
+      let aiAvailable = false;
+      let lastSeenAt: string | null = null;
+      let handoverJob: import('@/components/ai/useAiJob').AiJobView | null = null;
+      let rescheduleJob: import('@/components/ai/useAiJob').AiJobView | null = null;
+      let templateJob: import('@/components/ai/useAiJob').AiJobView | null = null;
+      if (d1) {
+        const { localDB } = await import('@/lib/d1/runtime');
+        const db = await localDB();
+        const { aiAssistStatus } = await import('@/lib/d1/ai');
+        const { latestExtJob } = await import('@/lib/d1/ai-ext');
+        const status = await aiAssistStatus(db).catch(() => ({
+          available: false,
+          lastSeenAt: null,
+        }));
+        aiAvailable = status.available;
+        lastSeenAt = status.lastSeenAt;
+        const toView = (
+          j: Awaited<ReturnType<typeof latestExtJob>>,
+        ): import('@/components/ai/useAiJob').AiJobView | null =>
+          j
+            ? {
+                id: j.id,
+                status: j.status,
+                output: j.output,
+                reviewed_output: j.reviewed_output,
+                error_message: j.error_message,
+              }
+            : null;
+        [handoverJob, rescheduleJob, templateJob] = await Promise.all([
+          latestExtJob(db, user, row.id, 'handover_summary')
+            .then(toView)
+            .catch(() => null),
+          latestExtJob(db, user, row.id, 'reschedule_plan')
+            .then(toView)
+            .catch(() => null),
+          latestExtJob(db, user, row.id, 'template_draft')
+            .then(toView)
+            .catch(() => null),
+        ]);
+      }
+      aiExt = {
+        aiAvailable,
+        lastSeenAt,
+        handoverFallback: buildHandoverFallback({
+          caseCode: row.case_code,
+          weddingDate: row.wedding_date,
+          today,
+          aggregate,
+        }),
+        handoverJob,
+        rescheduleFallback: reschedule.output,
+        rescheduleShifts: reschedule.shifts,
+        rescheduleJob,
+        templateFallback,
+        templateJob,
+      };
+    } catch (error) {
+      console.warn('[case] AI拡張パネルの準備に失敗しました', error);
+      aiExt = null;
+    }
+  }
+
   const incomplete = tasks.filter((task) => INCOMPLETE_TASK_STATUSES.includes(task.status)).length;
   const done = tasks.length - incomplete;
   const isAdmin = user.role === 'admin' || user.role === 'system_admin';
@@ -331,6 +434,21 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
           readOnly={archived}
         />
       }
+
+      {aiExt && (
+        <CaseAiPanels
+          caseId={row.id}
+          aiAvailable={aiExt.aiAvailable}
+          lastSeenAt={aiExt.lastSeenAt}
+          handoverFallback={aiExt.handoverFallback}
+          handoverJob={aiExt.handoverJob}
+          rescheduleFallback={aiExt.rescheduleFallback}
+          rescheduleShifts={aiExt.rescheduleShifts}
+          rescheduleJob={aiExt.rescheduleJob}
+          templateFallback={aiExt.templateFallback}
+          templateJob={aiExt.templateJob}
+        />
+      )}
 
       {guestBook !== undefined && (
         <section className="space-y-3">
