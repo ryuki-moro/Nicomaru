@@ -1,13 +1,16 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import type { AppUser } from '@/lib/auth/session';
-import type {
-  CaseStatus,
-  ContactChannel,
-  PartnerRole,
-  TaskStatus,
-  Importance,
-  SubmissionFormat,
+import {
+  RISK_LEVEL_RANK,
+  type CaseStatus,
+  type ContactChannel,
+  type PartnerRole,
+  type RiskLevel,
+  type TaskStatus,
+  type Importance,
+  type SubmissionFormat,
 } from '@/lib/constants';
+import { getCurrentRiskD1, type RiskSnapshotView } from './risk';
 import type { CaseListItem } from '@/lib/services/cases';
 import { encryptPii, readPii } from '@/lib/crypto';
 import { badRequest, conflict, forbidden, notFound } from '@/lib/errors';
@@ -65,7 +68,7 @@ export interface D1Case {
   user_profiles: { id: string; display_name: string } | null;
   couple_profiles: Profile[];
   case_tasks: Task[];
-  risk_score_snapshots: [];
+  risk_score_snapshots: RiskSnapshotView[];
 }
 export async function caseRow(db: D1Database, user: AppUser, id: string): Promise<D1Case> {
   const row = await db
@@ -112,7 +115,9 @@ export async function caseRow(db: D1Database, user: AppUser, id: string): Promis
     case_tasks: tasks.results,
     plan_types: plan,
     user_profiles: planner,
-    risk_score_snapshots: [],
+    // couple にはリスクを見せない (6-3)。staff のみに現在値を返す。
+    risk_score_snapshots:
+      user.role === 'couple' ? [] : await getCurrentRiskD1(db, id).then((r) => (r ? [r] : [])),
   };
 }
 export async function listCases(
@@ -148,12 +153,47 @@ export async function listCases(
       task_done: number;
     }>();
   const keyword = (options.keyword ?? '').toLowerCase();
+  // 現在リスクを一括で引く。0012 未適用の DB ではリスク無しとして一覧自体は出す。
+  const riskByCase = new Map<string, RiskSnapshotView>();
+  if (user.role !== 'couple' && found.results.length) {
+    try {
+      const { results } = await db
+        .prepare(
+          'SELECT case_id,score_value,score_level,reasons,calculated_at FROM risk_score_snapshots WHERE is_current=1',
+        )
+        .all<{
+          case_id: string;
+          score_value: number;
+          score_level: RiskLevel;
+          reasons: string;
+          calculated_at: string;
+        }>();
+      for (const r of results) {
+        let reasons: RiskSnapshotView['reasons'] = [];
+        try {
+          reasons = JSON.parse(r.reasons) as RiskSnapshotView['reasons'];
+        } catch {
+          reasons = [];
+        }
+        riskByCase.set(r.case_id, {
+          score_value: r.score_value,
+          score_level: r.score_level,
+          reasons,
+          calculated_at: r.calculated_at,
+          is_current: true,
+        });
+      }
+    } catch {
+      riskByCase.clear();
+    }
+  }
   const items: CaseListItem[] = found.results
     .slice(0, 500)
     .map((row) => {
       const partners = (
         JSON.parse(row.partners_json) as { partnerRole: PartnerRole; fullName: string }[]
       ).map((p) => ({ ...p, fullName: readPii(p.fullName) }));
+      const snap = riskByCase.get(row.id);
       return {
         id: row.id,
         caseCode: row.case_code,
@@ -164,10 +204,22 @@ export async function listCases(
         partners,
         total: row.task_total,
         done: row.task_done,
-        risk: null,
+        risk: snap
+          ? { score_value: snap.score_value, score_level: snap.score_level, reasons: snap.reasons }
+          : null,
       };
     })
     .filter((r) => !keyword || `${r.caseCode} ${r.coupleName}`.toLowerCase().includes(keyword));
+  if (options.sort === 'risk') {
+    items.sort(
+      (a, b) =>
+        (b.risk ? RISK_LEVEL_RANK[b.risk.score_level] : -1) -
+          (a.risk ? RISK_LEVEL_RANK[a.risk.score_level] : -1) ||
+        (b.risk?.score_value ?? -1) - (a.risk?.score_value ?? -1) ||
+        a.weddingDate.localeCompare(b.weddingDate) ||
+        a.id.localeCompare(b.id),
+    );
+  }
   const offset = Math.max(0, Math.floor(options.offset ?? 0));
   const limit = Math.max(1, Math.min(50, Math.floor(options.limit ?? 50)));
   return {

@@ -262,7 +262,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
       )}
 
       {/* 4-3 K02: リスクは planner／admin のみ。couple 向けの案件詳細では表示しない（6-3） */}
-      {!d1 && <RiskSection caseId={row.id} risk={currentRisk} />}
+      <RiskSection caseId={row.id} risk={currentRisk} />
 
       <section className="card space-y-2">
         <h2 className="section-head">基本情報</h2>

@@ -14,6 +14,7 @@
  */
 import { ok, route } from '@/lib/api/route';
 import { runBatch } from '@/lib/api/internal';
+import { usingD1 } from '@/lib/d1/mode';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -26,6 +27,61 @@ const QUOTA_RETENTION_DAYS = 62;
 // 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
 export const POST = route(
   async () => {
+    if (usingD1()) {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { runBatchD1 } = await import('@/lib/d1/batches');
+      const db = await localDB();
+      const day = 24 * 60 * 60 * 1000;
+      const outcome = await runBatchD1(db, 'rate_limit_cleanup', async () => {
+        // D1 のレート制限は app_auth_limits (window_start は ms epoch) と
+        // better-auth の rateLimit (lastRequest は ms epoch)。
+        const cutoffMs = Date.now() - RETENTION_DAYS * day;
+        const quotaCutoff = new Date(Date.now() - QUOTA_RETENTION_DAYS * day)
+          .toISOString()
+          .slice(0, 10);
+        const count = async (sql: string, bind: unknown) =>
+          (await db.prepare(sql).bind(bind).first<{ n: number }>())?.n ?? 0;
+        const authCount = await count(
+          'SELECT count(*) AS n FROM app_auth_limits WHERE window_start<=?',
+          cutoffMs,
+        );
+        const baCount = await count(
+          'SELECT count(*) AS n FROM "rateLimit" WHERE "lastRequest"<=?',
+          cutoffMs,
+        );
+        let quotaCount = 0;
+        let hasQuota = true;
+        try {
+          quotaCount = await count(
+            'SELECT count(*) AS n FROM notification_quota_counters WHERE window_start<?',
+            quotaCutoff,
+          );
+        } catch {
+          hasQuota = false;
+        }
+        const deletions = [
+          db.prepare('DELETE FROM app_auth_limits WHERE window_start<=?').bind(cutoffMs),
+          db.prepare('DELETE FROM "rateLimit" WHERE "lastRequest"<=?').bind(cutoffMs),
+        ];
+        if (hasQuota)
+          deletions.push(
+            db
+              .prepare('DELETE FROM notification_quota_counters WHERE window_start<?')
+              .bind(quotaCutoff),
+          );
+        await db.batch(deletions);
+        return {
+          targetCount: authCount + baCount + quotaCount,
+          detail: {
+            authRateLimits: authCount,
+            betterAuthRateLimits: baCount,
+            notificationQuota: quotaCount,
+          },
+        };
+      });
+      return ok({ removed: outcome.targetCount });
+    }
+
     const admin = createSupabaseAdminClient('auth.rate-limit');
     const day = 24 * 60 * 60 * 1000;
 
