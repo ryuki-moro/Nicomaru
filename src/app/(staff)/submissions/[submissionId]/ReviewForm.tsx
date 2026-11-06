@@ -4,7 +4,8 @@
  *   確認ステータス: ラジオ（確認済／不備あり）必須
  *   コメント      : 不備あり時必須・1000字上限
  *
- * AI補助のうち 9-3（コメント下書き）はこのフォームの中に置く（DraftAssist）。
+ * AI補助のうち 9-3（コメント下書き）はこのフォームの中、コメント欄の直下に置く（DraftAssist）。
+ * 読み元・書き先であるコメント欄のすぐそばに置き、往復スクロールを無くすため。
  * 下書きは「コメント欄に入れる」までで、送信も確定もしない（7-1）。
  * 9-4（不備一次チェック）は確認結果の入力とは独立した参考情報なので、別セクションに置く。
  * 添付ファイルの署名付きURL取得も同じ画面の対話操作なので本ファイルにまとめている。
@@ -104,19 +105,6 @@ export function ReviewForm({
         <FieldError message={fieldErrors.decision} />
       </fieldset>
 
-      {!true && (
-        <DraftAssist
-          caseId={caseId}
-          taskId={taskId}
-          taskTitle={taskTitle}
-          decision={decision}
-          memo={comment}
-          aiAvailable={aiAvailable}
-          lastSeenAt={lastSeenAt}
-          onAdopt={setComment}
-        />
-      )}
-
       <div className="mb-4">
         <label htmlFor="review-comment" className="field-label">
           コメント{decision === 'needs_fix' ? '（必須）' : '（任意）'}
@@ -136,6 +124,17 @@ export function ReviewForm({
         </p>
         <FieldError message={fieldErrors.comment} />
       </div>
+
+      <DraftAssist
+        caseId={caseId}
+        taskId={taskId}
+        taskTitle={taskTitle}
+        decision={decision}
+        memo={comment}
+        aiAvailable={aiAvailable}
+        lastSeenAt={lastSeenAt}
+        onAdopt={setComment}
+      />
 
       <div className="flex flex-col gap-2 sm:flex-row-reverse">
         <button type="submit" className="btn-primary sm:w-40" disabled={pending}>

@@ -247,7 +247,11 @@ export default async function SubmissionReviewPage({
         )}
       </section>
 
-      <ClassificationPanel initialJob={classificationJob} />
+      <ClassificationPanel
+        initialJob={classificationJob}
+        aiAvailable={aiStatus.available}
+        lastSeenAt={aiStatus.lastSeenAt}
+      />
 
       <DefectPanel
         submissionId={submission.id}
