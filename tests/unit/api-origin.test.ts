@@ -172,7 +172,7 @@ describe('共通RouteのOrigin検証', () => {
 });
 
 describe('全APIの適用範囲（新規Routeも自動列挙）', () => {
-  it('全39ブラウザー更新APIで不正Originを拒否し、認証・DB・外部通信を呼ばない', async () => {
+  it('全ブラウザー更新APIで不正Originを拒否し、認証・DB・外部通信を呼ばない', async () => {
     const checked: string[] = [];
     for (const [file, load] of Object.entries(moduleLoaders)) {
       const path = file.replace('../../src/app', '').replace('/route.ts', '');
@@ -194,7 +194,14 @@ describe('全APIの適用範囲（新規Routeも自動列挙）', () => {
         checked.push(`${method} ${path}`);
       }
     }
-    expect(checked).toHaveLength(40);
+    expect(checked).toHaveLength(47);
+    expect(checked).toContain('POST /api/cases/[caseId]/seating-layouts');
+    expect(checked).toContain('PUT /api/cases/[caseId]/seating-layouts/[layoutId]');
+    expect(checked).toContain('PATCH /api/cases/[caseId]/seating-layouts/[layoutId]');
+    expect(checked).toContain('DELETE /api/cases/[caseId]/seating-layouts/[layoutId]');
+    expect(checked).toContain('PUT /api/cases/[caseId]/seating-chart');
+    expect(checked).toContain('POST /api/cases/[caseId]/seating-chart/submit');
+    expect(checked).toContain('POST /api/cases/[caseId]/seating-chart/review');
     expect(checked).toContain('PATCH /api/cases/[caseId]/guests/[guestId]');
     expect(checked).toContain('PUT /api/cases/[caseId]/guests/[guestId]/tags');
     expect(checked).toContain('POST /api/rsvp/[token]');
