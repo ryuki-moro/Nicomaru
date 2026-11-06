@@ -13,10 +13,14 @@
 import { requireRole } from '@/lib/auth/session';
 import { route } from '@/lib/api/route';
 import { buildCsv } from '@/lib/csv';
+import { usingD1 } from '@/lib/d1/mode';
 import { formatDateTime } from '@/lib/format';
-import { parseNotificationLogPeriod } from '@/lib/notification-log-export';
+import { notificationLogBounds, parseNotificationLogPeriod } from '@/lib/notification-log-export';
 import { NOTIFICATION_TYPE_LABEL } from '@/lib/notify/templates';
-import { loadNotificationLogsForExport } from '@/lib/services/notification-log-export';
+import {
+  loadNotificationLogsForExport,
+  type NotificationLogExportRow,
+} from '@/lib/services/notification-log-export';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
@@ -24,8 +28,19 @@ export const runtime = 'nodejs';
 export const GET = route(async (request: Request) => {
   await requireRole('system_admin');
   const period = parseNotificationLogPeriod(new URL(request.url).searchParams);
-  const supabase = await createSupabaseServerClient();
-  const rows = await loadNotificationLogsForExport(supabase, period);
+  let rows: NotificationLogExportRow[];
+  if (usingD1()) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { loadNotificationLogsForExportD1 } = await import('@/lib/d1/notifications');
+    const d1Rows = await loadNotificationLogsForExportD1(
+      await localDB(),
+      notificationLogBounds(period),
+    );
+    rows = d1Rows as unknown as NotificationLogExportRow[];
+  } else {
+    const supabase = await createSupabaseServerClient();
+    rows = await loadNotificationLogsForExport(supabase, period);
+  }
   const csv = buildCsv(
     ['日時', '式場', '案件番号', 'チャネル', '種別', '送信結果', 'プロバイダ側メッセージID'],
     rows.map((row) => [
