@@ -100,7 +100,8 @@ export async function middleware(request: NextRequest) {
       '/api/internal/risk-recalculate',
       '/api/system/notification-logs.csv',
     ];
-    const casePage = /^\/cases\/[^/]+(?:\/edit)?$/.test(path) && path !== '/cases/new';
+    const casePage =
+      /^\/cases\/[^/]+(?:\/edit|\/sheet|\/meeting-notes)?$/.test(path) && path !== '/cases/new';
     const caseApi =
       /^\/api\/cases\/[^/]+(?:\/(?:assign-tasks|invitations)(?:\/[^/]+\/send)?|\/risk\/recalculate)?$/.test(
         path,

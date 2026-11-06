@@ -30,6 +30,8 @@ import { revalidatePath } from 'next/cache';
 
 import { PrintButton } from './PrintButton';
 import { SheetDraftPanel } from './SheetDraftPanel';
+import { MeetingSheetPageD1 } from './SheetPageD1';
+import { usingD1 } from '@/lib/d1/mode';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { adoptedOutput, AI_JOB_COLUMNS, fetchAiAssistStatus, type AiJobRow } from '@/lib/ai/assist';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
@@ -168,9 +170,12 @@ export default async function MeetingSheetPage({
 }: {
   params: Promise<{ caseId: string }>;
 }) {
-  await requirePageUser();
+  const pageUser = await requirePageUser();
 
   const { caseId } = await params;
+  if (usingD1()) {
+    return <MeetingSheetPageD1 caseId={caseId} user={pageUser} />;
+  }
   const supabase = await createSupabaseServerClient();
   const today = todayInJst();
 

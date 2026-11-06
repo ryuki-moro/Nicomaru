@@ -19,6 +19,8 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
 import { TaskProposalPanel } from './TaskProposalPanel';
+import { MeetingNotesPageD1 } from './MeetingNotesPageD1';
+import { usingD1 } from '@/lib/d1/mode';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { AI_JOB_COLUMNS, fetchAiAssistStatus, trimForAi, type AiJobRow } from '@/lib/ai/assist';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
@@ -102,9 +104,12 @@ export default async function MeetingNotesPage({
   params: Promise<{ caseId: string }>;
 }) {
   // couple には打ち合わせ記録そのものを見せない（付録A meeting_notes_all は staff 限定）
-  await requirePageUser('planner', 'admin', 'system_admin');
+  const pageUser = await requirePageUser('planner', 'admin', 'system_admin');
 
   const { caseId } = await params;
+  if (usingD1()) {
+    return <MeetingNotesPageD1 caseId={caseId} user={pageUser} />;
+  }
   const supabase = await createSupabaseServerClient();
 
   const caseResult = await supabase
