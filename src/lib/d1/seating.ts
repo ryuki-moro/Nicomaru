@@ -1,7 +1,6 @@
 /**
  * 席次（#180 配置パターン / #181 席次作成・提出 / #182 承認・差し戻し）の D1 版。
  *
- * Supabase版（migrations 20261106000100 / 20261107000100）の規則を、D1 向けに
  * このモジュールの関数へ移したもの。書き込みはここだけが行い、次を毎回確かめる。
  *
  *   - 参照: 案件に触れられる利用者（scope）。ただし新郎新婦は送られた配置パターンだけ
@@ -14,18 +13,24 @@
  *
  * 承認・差し戻し（#182）と提出は、既存の notifications（アプリ内通知）で相手へ届ける。
  */
-import { randomUUID } from 'node:crypto';
-import type { D1Database } from '@cloudflare/workers-types';
-import type { z } from 'zod';
 import type { AppUser } from '@/lib/auth/session';
 import { conflict, forbidden, notFound, unprocessable } from '@/lib/errors';
-import { tableAccepts, LAYOUTS_PER_CASE_MAX, type HallShape, type SeatingTable, type TableShape } from '@/lib/seating/layout';
 import type { Seating } from '@/lib/seating/assign';
+import {
+  LAYOUTS_PER_CASE_MAX,
+  tableAccepts,
+  type HallShape,
+  type SeatingTable,
+  type TableShape,
+} from '@/lib/seating/layout';
 import type {
   seatingChartReviewSchema,
   seatingChartSaveSchema,
   seatingLayoutSchema,
 } from '@/lib/validation';
+import type { D1Database } from '@cloudflare/workers-types';
+import { randomUUID } from 'node:crypto';
+import type { z } from 'zod';
 import { scope } from './cases';
 
 type Actor = Pick<AppUser, 'id'>;
@@ -62,7 +67,9 @@ interface CaseHead {
 
 async function assertVisible(db: D1Database, user: Actor, caseId: string): Promise<CaseHead> {
   const row = await db
-    .prepare(`SELECT c.venue_id, c.primary_planner_id, c.archived_at FROM wedding_cases c WHERE c.id=? AND ${scope}`)
+    .prepare(
+      `SELECT c.venue_id, c.primary_planner_id, c.archived_at FROM wedding_cases c WHERE c.id=? AND ${scope}`,
+    )
     .bind(caseId, user.id)
     .first<CaseHead>();
   if (!row) throw notFound('案件が見つかりません');
@@ -78,9 +85,9 @@ async function actorRole(db: D1Database, user: Actor) {
   return row;
 }
 
-const isStaffRole = (role: string) => role === 'planner' || role === 'admin' || role === 'system_admin';
+const isStaffRole = (role: string) =>
+  role === 'planner' || role === 'admin' || role === 'system_admin';
 
-/** 担当スタッフ（Supabase版 assert_seating_editable と同じ範囲）で、アーカイブ済みでないこと。 */
 async function assertStaffEditable(db: D1Database, user: Actor, caseId: string, what: string) {
   const head = await assertVisible(db, user, caseId);
   if (head.archived_at) throw unprocessable(`アーカイブ済みの案件の${what}は変更できません`);
@@ -88,7 +95,8 @@ async function assertStaffEditable(db: D1Database, user: Actor, caseId: string, 
   const staff =
     actor.role === 'system_admin' ||
     (actor.venue_id === head.venue_id &&
-      (actor.role === 'admin' || (actor.role === 'planner' && head.primary_planner_id === user.id)));
+      (actor.role === 'admin' ||
+        (actor.role === 'planner' && head.primary_planner_id === user.id)));
   if (!staff) throw forbidden();
   return head;
 }
@@ -159,7 +167,8 @@ export async function loadSeatingLayouts(
     .bind(...ids)
     .all<TableRow>();
   const byLayout = new Map<string, TableRow[]>();
-  for (const t of tables.results) byLayout.set(t.layout_id, [...(byLayout.get(t.layout_id) ?? []), t]);
+  for (const t of tables.results)
+    byLayout.set(t.layout_id, [...(byLayout.get(t.layout_id) ?? []), t]);
   return layouts.results.map((row) => ({
     id: row.id,
     name: row.name,
@@ -180,16 +189,22 @@ export async function loadSeatingLayouts(
 // ------------------------------------------------------------ 配置パターンの保存・送付・削除
 type LayoutInput = z.infer<typeof seatingLayoutSchema>;
 
-/** 卓の「座れる人」のキーを、重複を除いて送られた順のままにする（Supabase版 seating_tag_list と同じ）。 */
 const dedupeTags = (tags: string[]) => [...new Set(tags)];
 
 async function assertTagsUsable(db: D1Database, caseId: string, input: LayoutInput) {
   const customIds = [
-    ...new Set(input.tables.flatMap((t) => t.allowedTags).filter((k) => k.startsWith('tag:')).map((k) => k.slice(4))),
+    ...new Set(
+      input.tables
+        .flatMap((t) => t.allowedTags)
+        .filter((k) => k.startsWith('tag:'))
+        .map((k) => k.slice(4)),
+    ),
   ];
   if (!customIds.length) return;
   const found = await db
-    .prepare(`SELECT count(*) AS n FROM case_guest_tags WHERE case_id=? AND id IN (${customIds.map(() => '?').join(',')})`)
+    .prepare(
+      `SELECT count(*) AS n FROM case_guest_tags WHERE case_id=? AND id IN (${customIds.map(() => '?').join(',')})`,
+    )
     .bind(caseId, ...customIds)
     .first<{ n: number }>();
   if (found?.n !== customIds.length)
@@ -233,7 +248,9 @@ export async function saveSeatingLayout(
   const givenIds = input.tables.flatMap((t) => (t.id ? [t.id] : []));
   if (givenIds.length) {
     const owned = await db
-      .prepare(`SELECT count(*) AS n FROM seating_tables WHERE layout_id=? AND id IN (${givenIds.map(() => '?').join(',')})`)
+      .prepare(
+        `SELECT count(*) AS n FROM seating_tables WHERE layout_id=? AND id IN (${givenIds.map(() => '?').join(',')})`,
+      )
       .bind(id, ...givenIds)
       .first<{ n: number }>();
     if (owned?.n !== givenIds.length) throw unprocessable('別の配置パターンの卓は変更できません');
@@ -242,7 +259,9 @@ export async function saveSeatingLayout(
   const statements = [
     layoutId
       ? db
-          .prepare('UPDATE seating_layouts SET name=?, hall_shape=?, updated_at=? WHERE id=? AND case_id=?')
+          .prepare(
+            'UPDATE seating_layouts SET name=?, hall_shape=?, updated_at=? WHERE id=? AND case_id=?',
+          )
           .bind(input.name, input.hallShape, now, id, caseId)
       : db
           .prepare(
@@ -252,7 +271,9 @@ export async function saveSeatingLayout(
     ...(givenIds.length
       ? [
           db
-            .prepare(`DELETE FROM seating_tables WHERE layout_id=? AND id NOT IN (${givenIds.map(() => '?').join(',')})`)
+            .prepare(
+              `DELETE FROM seating_tables WHERE layout_id=? AND id NOT IN (${givenIds.map(() => '?').join(',')})`,
+            )
             .bind(id, ...givenIds),
         ]
       : [db.prepare('DELETE FROM seating_tables WHERE layout_id=?').bind(id)]),
@@ -262,12 +283,35 @@ export async function saveSeatingLayout(
             .prepare(
               'UPDATE seating_tables SET name=?, capacity=?, shape=?, pos_x=?, pos_y=?, allowed_tags=?, sort_order=?, updated_at=? WHERE id=? AND layout_id=?',
             )
-            .bind(t.name, t.capacity, t.shape, Math.round(t.x * 1000) / 1000, Math.round(t.y * 1000) / 1000, JSON.stringify(dedupeTags(t.allowedTags)), i, now, t.id, id)
+            .bind(
+              t.name,
+              t.capacity,
+              t.shape,
+              Math.round(t.x * 1000) / 1000,
+              Math.round(t.y * 1000) / 1000,
+              JSON.stringify(dedupeTags(t.allowedTags)),
+              i,
+              now,
+              t.id,
+              id,
+            )
         : db
             .prepare(
               'INSERT INTO seating_tables (id, layout_id, name, capacity, shape, pos_x, pos_y, allowed_tags, sort_order, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
             )
-            .bind(randomUUID(), id, t.name, t.capacity, t.shape, Math.round(t.x * 1000) / 1000, Math.round(t.y * 1000) / 1000, JSON.stringify(dedupeTags(t.allowedTags)), i, now, now),
+            .bind(
+              randomUUID(),
+              id,
+              t.name,
+              t.capacity,
+              t.shape,
+              Math.round(t.x * 1000) / 1000,
+              Math.round(t.y * 1000) / 1000,
+              JSON.stringify(dedupeTags(t.allowedTags)),
+              i,
+              now,
+              now,
+            ),
     ),
   ];
   await db.batch(statements);
@@ -317,7 +361,6 @@ export async function deleteSeatingLayout(db: D1Database, user: Actor, layoutId:
 
 // ------------------------------------------------------------ ゲストのキーと割り当ての検証
 /**
- * ゲストのタグのキー（Supabase版 seating_guest_keys と同じ。ご関係は直した値を優先する）。
  * D1 では assistance_needs が JSON 文字列、allergy は暗号文の有無ではなく保存値の有無で見る
  * （loadGuestBook と同じく、復号は表示層の仕事なので、ここでは空でないことだけを見る）。
  */
@@ -384,7 +427,6 @@ interface Assignment {
   tableId: string;
 }
 
-/** 割り当てが、配置パターン・ゲスト・卓の条件・定員に合っているかを確かめる（Supabase版 assert_seating_assignments_valid と同じ）。 */
 async function assertAssignmentsValid(
   db: D1Database,
   caseId: string,
@@ -401,7 +443,10 @@ async function assertAssignmentsValid(
   const tableById = new Map(tables.results.map((t) => [t.id, t]));
   if (assignments.some((a) => !tableById.has(a.tableId)))
     throw unprocessable('選んだ配置パターンにない卓があります');
-  const [eligible, keys] = await Promise.all([eligibleGuestIds(db, caseId), guestKeysById(db, caseId)]);
+  const [eligible, keys] = await Promise.all([
+    eligibleGuestIds(db, caseId),
+    guestKeysById(db, caseId),
+  ]);
   if (assignments.some((a) => !eligible.has(a.guestId)))
     throw unprocessable('席次に入れられるのは、出席で確認済みの方だけです');
   const counts = new Map<string, number>();
@@ -433,7 +478,9 @@ export async function loadSeatingChart(
   await assertVisible(db, user, caseId);
   const [chart, assignments] = await db.batch([
     db
-      .prepare('SELECT status, version, layout_id, feedback, submitted_at FROM seating_charts WHERE case_id=?')
+      .prepare(
+        'SELECT status, version, layout_id, feedback, submitted_at FROM seating_charts WHERE case_id=?',
+      )
       .bind(caseId),
     db
       .prepare(
@@ -457,18 +504,21 @@ export async function loadSeatingChart(
 
 async function chartRow(db: D1Database, caseId: string): Promise<ChartRow | null> {
   return db
-    .prepare('SELECT status, version, layout_id, feedback, submitted_at FROM seating_charts WHERE case_id=?')
+    .prepare(
+      'SELECT status, version, layout_id, feedback, submitted_at FROM seating_charts WHERE case_id=?',
+    )
     .bind(caseId)
     .first<ChartRow>();
 }
 
-/** 席次を変更できる前提（状態と版）を確かめる。Supabase版 lock_seating_chart_for_couple と同じ規則。 */
 function assertChartWritable(chart: ChartRow | null, version: number) {
   const status = chart?.status ?? 'draft';
   if (status !== 'draft' && status !== 'returned')
     throw unprocessable('提出済みの席次は変更できません');
   if ((chart?.version ?? 0) !== version)
-    throw conflict('もう一人が先に席次を保存しました。最新の内容を読み込み直してから、もう一度操作してください');
+    throw conflict(
+      'もう一人が先に席次を保存しました。最新の内容を読み込み直してから、もう一度操作してください',
+    );
 }
 
 // ------------------------------------------------------------ 席次の保存・提出
@@ -522,7 +572,9 @@ export async function saveSeatingChart(
     db.prepare('DELETE FROM seating_assignments WHERE case_id=?').bind(caseId),
     ...input.assignments.map((a, i) =>
       db
-        .prepare('INSERT INTO seating_assignments (guest_id, case_id, table_id, seat_order, created_at) VALUES (?,?,?,?,?)')
+        .prepare(
+          'INSERT INTO seating_assignments (guest_id, case_id, table_id, seat_order, created_at) VALUES (?,?,?,?,?)',
+        )
         .bind(a.guestId, caseId, a.tableId, seatOrder[i], now),
     ),
   ]);
@@ -544,10 +596,13 @@ export async function submitSeatingChart(
     .prepare('SELECT offered_at FROM seating_layouts WHERE id=?')
     .bind(chart.layout_id)
     .first<{ offered_at: string | null }>();
-  if (!layout?.offered_at) throw unprocessable('配置パターンを選んで席を決めてから提出してください');
+  if (!layout?.offered_at)
+    throw unprocessable('配置パターンを選んで席を決めてから提出してください');
 
   const stored = await db
-    .prepare('SELECT guest_id, table_id FROM seating_assignments WHERE case_id=? ORDER BY table_id, seat_order')
+    .prepare(
+      'SELECT guest_id, table_id FROM seating_assignments WHERE case_id=? ORDER BY table_id, seat_order',
+    )
     .bind(caseId)
     .all<{ guest_id: string; table_id: string }>();
   const assignments = stored.results.map((r) => ({ guestId: r.guest_id, tableId: r.table_id }));
@@ -590,8 +645,7 @@ export async function reviewSeatingChart(
 ): Promise<{ status: SeatingChartStatus; version: number }> {
   await assertStaffEditable(db, user, caseId, '席次');
   const chart = await chartRow(db, caseId);
-  if (!chart || chart.status !== 'submitted')
-    throw unprocessable('提出済みの席次だけ確認できます');
+  if (!chart || chart.status !== 'submitted') throw unprocessable('提出済みの席次だけ確認できます');
   const now = new Date().toISOString();
   const nextVersion = chart.version + 1;
   const feedback = input.feedback?.trim() ? input.feedback.trim() : null;

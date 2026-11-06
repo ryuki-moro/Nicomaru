@@ -9,23 +9,23 @@
  * の順で呼ぶ。案件登録が成功した時点で招待URLの平文は二度と得られなくなるため（6-3-6）、
  * 宿題の一括割当が失敗しても登録完了モーダルは必ず開き、割当だけ後から再実行できる旨を伝える。
  */
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
-import { InvitationResultModal, type IssuedInvitation } from './InvitationResultModal';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { ApiCallError, api } from '@/lib/api/client';
 import {
-  SENDABLE_CHANNELS,
   CONTACT_CHANNEL_LABEL,
   INPUT_LIMITS,
   PARTNER_ROLES,
   PARTNER_ROLE_LABEL,
+  SENDABLE_CHANNELS,
   type ContactChannel,
   type PartnerRole,
 } from '@/lib/constants';
 import { formatDate } from '@/lib/format';
 import { dueDateFrom } from '@/lib/services/schedule';
+import { InvitationResultModal, type IssuedInvitation } from './InvitationResultModal';
 
 export interface PlanOption {
   id: string;

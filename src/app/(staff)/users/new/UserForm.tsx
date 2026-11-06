@@ -6,7 +6,6 @@
  *   利用者種別・所属式場は表示のみで、実際の値はサーバー側が決める（6-3-5 表6-4）。
  *
  * 送信先は /api/admin/users。Auth Admin API を使う処理なので、
- * ここだけは Supabase クライアント直呼びではなく Route Handler を経由する（6-5）。
  */
 'use client';
 

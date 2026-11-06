@@ -8,8 +8,8 @@ import { NextResponse } from 'next/server';
 import type { z } from 'zod';
 
 import { ApiError, badRequest } from '@/lib/errors';
-import { toErrorDetails } from '@/lib/validation';
 import { recordApiPerformance } from '@/lib/observability/performance';
+import { toErrorDetails } from '@/lib/validation';
 
 import { requireAiWorkerCall, requireInternalCall } from './internal';
 import { requireSameOrigin } from './origin';

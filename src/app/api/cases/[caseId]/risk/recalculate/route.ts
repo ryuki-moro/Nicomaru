@@ -9,25 +9,25 @@
  */
 import { ok, route } from '@/lib/api/route';
 import { requireStaff } from '@/lib/auth/session';
-import { usingD1 } from '@/lib/d1/mode';
-import { persistViaRpc, recalculateCaseRisk } from '@/lib/services/riskStore';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isUuid } from '@/lib/uuid';
-
 export const runtime = 'nodejs';
-
 export const POST = route(
-  async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
+  async (
+    _request: Request,
+    context: {
+      params: Promise<{
+        caseId: string;
+      }>;
+    },
+  ) => {
     // リスクは planner／admin 向けの情報。couple には値そのものを見せない（6-3-2／5-1）。
     await requireStaff();
-
     const { caseId } = await context.params;
     if (!isUuid(caseId)) {
       // 形式が違う時点で案件は存在しない。RLS の判定へ渡す前に落とす。
       return ok({ error: null }, 404);
     }
-
-    if (usingD1()) {
+    {
       const { localDB } = await import('@/lib/d1/runtime');
       const { recalculateCaseRiskD1 } = await import('@/lib/d1/risk');
       const { caseRow } = await import('@/lib/d1/cases');
@@ -43,16 +43,5 @@ export const POST = route(
         reasons: result.reasons,
       });
     }
-
-    const supabase = await createSupabaseServerClient();
-    // 案件のスコープ判定は RLS と save_risk_snapshot() の両方が行う（多層防御）。
-    const result = await recalculateCaseRisk(supabase, caseId, persistViaRpc(supabase, caseId));
-
-    return ok({
-      caseId,
-      scoreValue: result.scoreValue,
-      scoreLevel: result.scoreLevel,
-      reasons: result.reasons,
-    });
   },
 );

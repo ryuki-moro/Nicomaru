@@ -10,17 +10,16 @@
  * 呼び出す RPC は POST /api/cases/{caseId}/archive と同一であり、権限（admin のみ）は
  * apply_case_update() 側でも検証される。
  */
-import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
-import { COUPLE_PROFILE_COLUMNS, type PartnerRole } from '@/lib/constants';
-import { readPii } from '@/lib/crypto';
+import { type PartnerRole } from '@/lib/constants';
+import { caseRow, setCaseArchived } from '@/lib/d1/cases';
+import { localDB } from '@/lib/d1/runtime';
 import { formatDate } from '@/lib/format';
-import { setCaseArchived } from '@/lib/services/cases';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,9 +41,9 @@ async function archiveCase(formData: FormData) {
   if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin'))
     redirect('/error?code=403');
 
-  const supabase = await createSupabaseServerClient();
+  const db = await localDB();
   try {
-    await setCaseArchived(supabase, caseId, true);
+    await setCaseArchived(db, actor, caseId, true);
   } catch {
     redirect(`/cases/${caseId}/archive?error=1`);
   }
@@ -61,29 +60,18 @@ export default async function CaseArchivePage({
   searchParams: Promise<{ error?: string }>;
 }) {
   // K05 は admin のみ（4-1 表4-10）
-  await requirePageUser('admin', 'system_admin');
+  const user = await requirePageUser('admin', 'system_admin');
 
   const { caseId } = await params;
   const { error: errorFlag } = await searchParams;
 
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase
-    .from('wedding_cases')
-    .select(
-      `id, case_code, wedding_date, archived_at,
-       couple_profiles ( ${COUPLE_PROFILE_COLUMNS} )`,
-    )
-    .eq('id', caseId)
-    .maybeSingle();
-
-  if (!data) redirect('/error?code=404');
-  const row = data as unknown as CaseRow;
+  const row = await caseRow(await localDB(), user, caseId);
   if (row.archived_at !== null) redirect('/cases?scope=archived');
 
   const coupleName =
     row.couple_profiles
       // 氏名は暗号化列（13-1）。読めない値はそのまま出し、確認画面を落とさない
-      .map((profile) => readPii(profile.full_name))
+      .map((profile) => profile.full_name)
       .filter((name) => name.length > 0)
       .join('・') || '（氏名未登録）';
 

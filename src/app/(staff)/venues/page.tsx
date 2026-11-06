@@ -9,20 +9,15 @@
  * venues_select は system_admin に全件、それ以外には自式場だけを見せる（付録A）。
  * この画面は system_admin 専用なので、レイアウトのロール判定に加えてここでも絞る。
  */
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-
 import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { formatDate } from '@/lib/format';
 import { resolvePage } from '@/lib/pagination';
-import { usingD1 } from '@/lib/d1/mode';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 export const dynamic = 'force-dynamic';
-
 interface VenueRow {
   id: string;
   name: string;
@@ -31,37 +26,29 @@ interface VenueRow {
   active: boolean;
   created_at: string;
   /** 埋め込みで式場管理者を引く。複数いる場合があるので配列で受ける */
-  user_profiles: { display_name: string; role: string; status: string }[];
+  user_profiles: {
+    display_name: string;
+    role: string;
+    status: string;
+  }[];
 }
-
 interface Props {
-  searchParams: Promise<{ page?: string | string[] }>;
+  searchParams: Promise<{
+    page?: string | string[];
+  }>;
 }
-
 export default async function VenueListPage({ searchParams }: Props) {
   const user = await getAppUser();
   // 4-3: S01〜S03 は system_admin 専用（Phase 2）
   if (!user || user.role !== 'system_admin') redirect('/error?code=403');
-
   const params = await searchParams;
   const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
-
-  const d1Mode = usingD1();
-  const supabase = d1Mode ? null : await createSupabaseServerClient();
-  const { data, error } = supabase
-    ? await supabase
-        .from('venues')
-        .select(
-          'id, name, code, contact_email, active, created_at, user_profiles ( display_name, role, status )',
-        )
-        .order('code', { ascending: true })
-        .range(offset, offset + LIST_PAGE_SIZE)
-    : { data: null, error: null };
-
+  const d1Mode = true;
+  const { data, error } = { data: null, error: null };
   let rows = (data ?? []) as unknown as VenueRow[];
   let hasNext = rows.length > LIST_PAGE_SIZE;
-  if (d1Mode) {
+  {
     const { localDB } = await import('@/lib/d1/runtime');
     const { listVenuesAdmin } = await import('@/lib/d1/admin');
     const d1 = await listVenuesAdmin(await localDB(), user, page);
@@ -81,9 +68,7 @@ export default async function VenueListPage({ searchParams }: Props) {
     hasNext = d1.hasNext;
   }
   const visible = rows.slice(0, LIST_PAGE_SIZE);
-
   const linkTo = (next: number) => (next > 1 ? `/venues?page=${next}` : '/venues');
-
   return (
     <div className="space-y-4">
       <Breadcrumbs items={[homeCrumbFor(user.role), { label: '式場一覧' }]} />

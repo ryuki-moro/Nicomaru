@@ -8,28 +8,16 @@
  * GET は 4-3 一覧画面共通「既定の表示件数は50件、以降はページング」に従い ?offset= と ?limit= を取る。
  * 打ち切るだけでは51件目以降のフォロー記録を参照する手段が無くなるため。
  */
-import { requireStaff } from '@/lib/auth/session';
 import { ok, parseBody, route } from '@/lib/api/route';
+import { requireStaff } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
-import { badRequest, fromPostgresError, notFound } from '@/lib/errors';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { followLogSchema } from '@/lib/validation';
+import { createFollowLog, listFollowLogs } from '@/lib/d1/follow';
+import { localDB } from '@/lib/d1/runtime';
+import { badRequest, notFound } from '@/lib/errors';
 import { isUuid } from '@/lib/uuid';
+import { followLogSchema } from '@/lib/validation';
 
 const SELECT_COLUMNS = 'id, case_id, planner_id, method, note, followed_at, created_at';
-
-/** RLS（follow_logs_all）は accessible_case_ids() を条件に持つため、範囲外の案件は 0 行になる。 */
-async function requireVisibleCase(caseId: string) {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('wedding_cases')
-    .select('id')
-    .eq('id', caseId)
-    .maybeSingle();
-  if (error) throw fromPostgresError(error);
-  if (!data) throw notFound();
-  return supabase;
-}
 
 /**
  * ?offset= / ?limit= の読み取り。
@@ -59,56 +47,19 @@ function readPaging(request: Request): { offset: number; limit: number } {
 
 export const GET = route(
   async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
+    const user = await requireStaff();
     const { caseId } = await context.params;
-    await requireStaff();
     if (!isUuid(caseId)) throw notFound();
-
     const { offset, limit } = readPaging(request);
-
-    const supabase = await requireVisibleCase(caseId);
-    const { data, error } = await supabase
-      .from('follow_logs')
-      .select(SELECT_COLUMNS)
-      .eq('case_id', caseId)
-      // 直近の記録から見せる。同着は id を最終タイブレークにする（4-3 一覧画面共通）
-      .order('followed_at', { ascending: false })
-      .order('id', { ascending: false })
-      // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する（K01／M02 と同じ形）
-      .range(offset, offset + limit);
-    if (error) throw fromPostgresError(error);
-
-    const rows = data ?? [];
-    return ok({
-      items: rows.slice(0, limit),
-      offset,
-      limit,
-      hasNext: rows.length > limit,
-    });
+    return ok(await listFollowLogs(await localDB(), user, caseId, offset, limit));
   },
 );
-
 export const POST = route(
   async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
-    const { caseId } = await context.params;
     const user = await requireStaff();
+    const { caseId } = await context.params;
     if (!isUuid(caseId)) throw notFound();
-
     const input = await parseBody(request, followLogSchema);
-    const supabase = await requireVisibleCase(caseId);
-
-    const { data, error } = await supabase
-      .from('follow_logs')
-      .insert({
-        case_id: caseId,
-        planner_id: user.id,
-        method: input.method,
-        note: input.note ?? null,
-        followed_at: input.followedAt,
-      })
-      .select(SELECT_COLUMNS)
-      .single();
-    if (error) throw fromPostgresError(error);
-
-    return ok(data, 201);
+    return ok(await createFollowLog(await localDB(), user, caseId, input), 201);
   },
 );

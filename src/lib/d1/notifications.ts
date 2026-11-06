@@ -1,15 +1,15 @@
-import type { D1Database } from '@cloudflare/workers-types';
 import type { AppUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
-import { scope } from './cases';
-import { captureOnly } from './mode';
-import { sendEmail } from '@/lib/notify/send';
-import { notificationUrl } from '@/lib/services/notifications';
 import { encryptPii, readPii } from '@/lib/crypto';
 import { badRequest, notFound } from '@/lib/errors';
+import { sendEmail } from '@/lib/notify/send';
 import { checkNotificationText, renderNotification } from '@/lib/notify/templates';
-import type { z } from 'zod';
+import { notificationUrl } from '@/lib/services/notifications';
 import type { notificationSendSchema } from '@/lib/validation';
+import type { D1Database } from '@cloudflare/workers-types';
+import type { z } from 'zod';
+import { scope } from './cases';
+import { captureOnly } from './mode';
 
 export async function createNotification(
   db: D1Database,
@@ -191,7 +191,6 @@ export async function recordNotificationLog(
   return id;
 }
 
-/** S03 CSV 用。Supabase 版 loadNotificationLogsForExport と同じ行形・同じ並び (created_at DESC, id DESC)。 */
 export async function loadNotificationLogsForExportD1(
   db: D1Database,
   period: { from?: string; toExclusive?: string } = {},
@@ -306,5 +305,45 @@ export async function markNotificationsRead(db: D1Database, user: AppUser, ids: 
         )
         .bind(new Date().toISOString(), id, user.id, user.id),
     ),
+  );
+}
+
+/** スタッフの所属・担当範囲にある案件の送信履歴。 */
+export async function staffNotificationHistory(
+  db: D1Database,
+  user: AppUser,
+  offset = 0,
+  limit = 50,
+) {
+  if (user.role === 'couple') throw (await import('@/lib/errors')).forbidden();
+  const { results } = await db
+    .prepare(
+      `SELECT n.*,c.case_code FROM notifications n JOIN wedding_cases c ON c.id=n.case_id WHERE ${scope} ORDER BY n.created_at DESC,n.id DESC LIMIT ? OFFSET ?`,
+    )
+    .bind(user.id, limit + 1, offset)
+    .all<{
+      id: string;
+      case_id: string;
+      channel: string;
+      notification_type: import('@/lib/notify/templates').NotificationType;
+      title: string;
+      status: string;
+      sent_at: string | null;
+      created_at: string;
+      case_code: string;
+    }>();
+  return Promise.all(
+    results.map(async (row) => ({
+      ...row,
+      wedding_cases: { case_code: row.case_code },
+      notification_logs: (
+        await db
+          .prepare(
+            'SELECT provider,status,attempt_no FROM notification_logs WHERE notification_id=? ORDER BY created_at,id',
+          )
+          .bind(row.id)
+          .all<{ provider: string; status: string; attempt_no: number }>()
+      ).results,
+    })),
   );
 }

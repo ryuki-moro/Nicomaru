@@ -17,7 +17,6 @@
  * ②へ渡すテキストはここで削る。7-4「LLMへの入力は処理に必要な最小限の項目に限定する」に従い、
  * 検査対象の列だけを行番号つきで抜き出す（電話番号や住所を丸ごと渡さない）。
  */
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { AI_INPUT_TEXT_MAX } from '@/lib/ai/assist';
 import {
@@ -57,13 +56,6 @@ export interface CsvCheckResult {
   rowCount: number;
 }
 
-export interface SubmissionFileRef {
-  bucket: string;
-  objectPath: string;
-  fileName: string | null;
-  mimeType: string | null;
-}
-
 /**
  * ②へ渡す本文を作る。
  *
@@ -90,27 +82,6 @@ function buildLlmInput(rows: string[][], schema: CsvSchemaDefinition): string {
   // 招待客リストが長いと入力上限を超える。超えた分は渡さず、②は前半だけの疑い提示になる。
   // ①は全行にかかっているので、切れても決定的な指摘は落ちない（7-2 の縮退案と同じ考え方）。
   return text.length > AI_INPUT_TEXT_MAX ? text.slice(0, AI_INPUT_TEXT_MAX) : text;
-}
-
-/**
- * 提出ファイルを取得して①をかける。
- *
- * 取得できない・CSV でない・スキーマ未設定のいずれでも null を返す。
- * 9-4 は補助なので、ここで失敗しても D02 の本体（提出内容の確認）は表示できる必要がある。
- */
-export async function checkSubmittedCsv(
-  supabase: SupabaseClient,
-  file: SubmissionFileRef,
-  schema: CsvSchemaDefinition,
-): Promise<CsvCheckResult | null> {
-  if (!looksLikeCsv(file.fileName, file.mimeType)) return null;
-
-  const { data, error } = await supabase.storage.from(file.bucket).download(file.objectPath);
-  if (error || !data) {
-    console.warn('[ai] 提出ファイルを取得できませんでした', file.objectPath, error);
-    return null;
-  }
-  return checkCsvText(await data.text(), schema);
 }
 
 /** 取得済みのCSV本文に①をかける（D1版はR2から読んだ本文を渡す）。 */

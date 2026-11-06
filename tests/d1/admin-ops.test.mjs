@@ -52,6 +52,7 @@ const MIGRATIONS = [
   '0013_notifications_extra.sql',
   '0020_usage.sql',
   '0021_admin.sql',
+  '0022_follow.sql',
 ];
 
 before(async () => {

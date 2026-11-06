@@ -1,28 +1,28 @@
-import type { D1Database } from '@cloudflare/workers-types';
 import type { AppUser } from '@/lib/auth/session';
 import {
   RISK_LEVEL_RANK,
   type CaseStatus,
   type ContactChannel,
+  type Importance,
   type PartnerRole,
   type RiskLevel,
-  type TaskStatus,
-  type Importance,
   type SubmissionFormat,
+  type TaskStatus,
 } from '@/lib/constants';
-import { getCurrentRiskD1, type RiskSnapshotView } from './risk';
-import type { CaseListItem } from '@/lib/services/cases';
 import { encryptPii, readPii } from '@/lib/crypto';
 import { badRequest, conflict, forbidden, notFound } from '@/lib/errors';
+import type { CaseListItem } from '@/lib/services/cases';
 import {
+  phaseNameFor,
   planTasks,
   previewPlanChange,
   recalculateDueDates,
-  phaseNameFor,
   type TemplateForAssign,
 } from '@/lib/services/schedule';
-import type { z } from 'zod';
 import type { casePatchSchema } from '@/lib/validation';
+import type { D1Database } from '@cloudflare/workers-types';
+import type { z } from 'zod';
+import { getCurrentRiskD1, type RiskSnapshotView } from './risk';
 
 // 全ての参照・更新で同じ条件を使い、ロール・所属・停止状態はDBの現在値を読む。
 export const scope = `EXISTS (SELECT 1 FROM user_profiles a WHERE a.id=? AND a.status='active' AND (
@@ -465,4 +465,14 @@ export async function patchCase(
     waived: changes.waived.length,
     added: newTasks.length,
   };
+}
+
+/** 管理者によるアーカイブ・復元。patchCase の所属・現在ロール・version ガードを共有する。 */
+export async function setCaseArchived(
+  db: D1Database,
+  user: AppUser,
+  id: string,
+  archived: boolean,
+) {
+  return patchCase(db, user, id, { archived });
 }

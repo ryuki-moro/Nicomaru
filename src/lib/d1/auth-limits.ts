@@ -1,7 +1,7 @@
-import type { D1Database } from '@cloudflare/workers-types';
-import { hmacHash, normalizeEmail } from '@/lib/crypto';
 import { RATE_LIMITS } from '@/lib/constants';
+import { hmacHash, normalizeEmail } from '@/lib/crypto';
 import { rateLimited } from '@/lib/errors';
+import type { D1Database } from '@cloudflare/workers-types';
 
 async function limit(db: D1Database, key: string, max: number, windowSeconds: number) {
   const now = Date.now();

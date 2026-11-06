@@ -11,22 +11,17 @@
  * K01／M02 と同じく1件多く取って前後リンクを出す（?page=）。
  */
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 
 import { FollowForm } from '@/app/(staff)/cases/[caseId]/follow/FollowForm';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
-import {
-  COUPLE_PROFILE_COLUMNS,
-  FOLLOW_METHOD_LABEL,
-  LIST_PAGE_SIZE,
-  type FollowMethod,
-} from '@/lib/constants';
-import { readPii } from '@/lib/crypto';
-import { fromPostgresError } from '@/lib/errors';
+import { requireStaff } from '@/lib/auth/session';
+import { FOLLOW_METHOD_LABEL, LIST_PAGE_SIZE, type FollowMethod } from '@/lib/constants';
+import { caseRow } from '@/lib/d1/cases';
+import { listFollowLogs } from '@/lib/d1/follow';
+import { localDB } from '@/lib/d1/runtime';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { resolvePage } from '@/lib/pagination';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 interface CaseRow {
   id: string;
@@ -56,64 +51,28 @@ export default async function FollowLogPage({
 }) {
   const { caseId } = await params;
   const page = resolvePage((await searchParams).page);
-  const supabase = await createSupabaseServerClient();
-
-  const { data: caseData, error: caseError } = await supabase
-    .from('wedding_cases')
-    .select('id, case_code, wedding_date')
-    .eq('id', caseId)
-    .maybeSingle();
-  // RLS の範囲外・アーカイブ済みも 0 行になるため 404 として扱う（4-3 エラー表示規約）
-  if (caseError) throw fromPostgresError(caseError);
-  if (!caseData) notFound();
-
-  const weddingCase = caseData as unknown as CaseRow;
-
-  // couple_profiles は memo を列レベル権限で剥奪しているため COUPLE_PROFILE_COLUMNS を使う（付録A）
-  const { data: profiles, error: profileError } = await supabase
-    .from('couple_profiles')
-    .select(COUPLE_PROFILE_COLUMNS)
-    .eq('case_id', caseId);
-  if (profileError) throw fromPostgresError(profileError);
-
-  const coupleName = ((profiles ?? []) as unknown as CoupleProfileRow[])
-    .slice()
-    .sort((a, b) => Number(b.is_primary_contact) - Number(a.is_primary_contact))
-    .map((profile) => readPii(profile.full_name))
-    .filter((name) => name !== '')
-    .join('・');
-
-  // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する。
-  const from = (page - 1) * LIST_PAGE_SIZE;
-  const { data: logData, error: logError } = await supabase
-    .from('follow_logs')
-    .select('id, planner_id, method, note, followed_at')
-    .eq('case_id', caseId)
-    .order('followed_at', { ascending: false })
-    .order('id', { ascending: false })
-    .range(from, from + LIST_PAGE_SIZE);
-  if (logError) throw fromPostgresError(logError);
-
-  const fetched = (logData ?? []) as unknown as FollowLogRow[];
-  const hasNext = fetched.length > LIST_PAGE_SIZE;
-  const logs = fetched.slice(0, LIST_PAGE_SIZE);
+  const user = await requireStaff();
+  const db = await localDB();
+  const weddingCase = await caseRow(db, user, caseId);
+  const coupleName = weddingCase.couple_profiles.map((p) => p.full_name).join('・');
+  const { items: logs, hasNext } = await listFollowLogs(
+    db,
+    user,
+    caseId,
+    (page - 1) * LIST_PAGE_SIZE,
+    LIST_PAGE_SIZE,
+  );
   const pageHref = (target: number) =>
     target > 1 ? `/cases/${caseId}/follow?page=${target}` : `/cases/${caseId}/follow`;
-
-  // user_profiles の select ポリシーは「本人または同式場の admin」に限られるため、
-  // planner が他プランナーの表示名を引くと 0 行になる。埋め込みではなく別クエリにして
-  // 引けなかった分は「担当プランナー」と表示する（一覧全体を落とさないため）。
   const plannerNames = new Map<string, string>();
-  const plannerIds = [...new Set(logs.map((log) => log.planner_id))];
-  if (plannerIds.length > 0) {
-    const { data: planners, error: plannerError } = await supabase
-      .from('user_profiles')
-      .select('id, display_name')
-      .in('id', plannerIds);
-    if (plannerError) throw fromPostgresError(plannerError);
-    for (const planner of (planners ?? []) as { id: string; display_name: string }[]) {
-      plannerNames.set(planner.id, planner.display_name);
-    }
+  for (const id of new Set(logs.map((l) => l.planner_id))) {
+    const p = await db
+      .prepare(
+        `SELECT u.name FROM "user" u JOIN user_profiles p ON p.id=u.id WHERE p.id=? AND (p.id=? OR p.venue_id=?)`,
+      )
+      .bind(id, user.id, user.venueId)
+      .first<{ name: string }>();
+    if (p) plannerNames.set(id, p.name);
   }
 
   return (

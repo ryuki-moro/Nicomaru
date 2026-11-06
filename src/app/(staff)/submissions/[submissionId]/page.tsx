@@ -12,13 +12,6 @@
  *   9-4 不備チェック … ①ルールベースはここで毎回かけ、②LLM は画面から依頼（DefectPanel）
  * いずれも失敗しても確認作業は続けられる（7-1「他機能の利用に影響を与えない」）。
  */
-import Link from 'next/link';
-import { requireStaff } from '@/lib/auth/session';
-import { usingD1, localDB, localFiles } from '@/lib/d1/runtime';
-import { aiAssistStatus, checkStoredCsv, latestJobForTask as d1AiJob } from '@/lib/d1/ai';
-import { submissionRow, coupleNames as d1CoupleNames } from '@/lib/d1/tasks';
-import { notFound } from 'next/navigation';
-
 import { ClassificationPanel } from '@/app/(staff)/submissions/[submissionId]/ClassificationPanel';
 import { DefectPanel } from '@/app/(staff)/submissions/[submissionId]/DefectPanel';
 import {
@@ -27,21 +20,23 @@ import {
 } from '@/app/(staff)/submissions/[submissionId]/ReviewForm';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { ReviewStatusBadge, TaskStatusBadge } from '@/components/ui/StatusBadge';
-import { fetchAiAssistStatus, latestJobForTask } from '@/lib/ai/assist';
 import type { DefectFinding } from '@/lib/ai/defectCheck';
-import { checkSubmittedCsv, csvSchemaOf } from '@/lib/ai/submissionCheck';
+import { csvSchemaOf } from '@/lib/ai/submissionCheck';
+import { requireStaff } from '@/lib/auth/session';
 import {
-  COUPLE_PROFILE_COLUMNS,
   SUBMISSION_FORMAT_LABEL,
   type ReviewStatus,
   type SubmissionFormat,
   type TaskStatus,
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
+import { aiAssistStatus, checkStoredCsv, latestJobForTask as d1AiJob } from '@/lib/d1/ai';
+import { localDB, localFiles } from '@/lib/d1/runtime';
+import { coupleNames as d1CoupleNames, submissionRow } from '@/lib/d1/tasks';
 import { fromPostgresError } from '@/lib/errors';
 import { formatDate, formatDateTime } from '@/lib/format';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 interface SubmissionDetail {
   id: string;
   submission_type: SubmissionFormat;
@@ -63,7 +58,11 @@ interface SubmissionDetail {
     case_id: string;
     /** 9-4 ①の期待列（task_templates.default_options から複写される。7-2） */
     options: Record<string, unknown> | null;
-    wedding_cases: { id: string; case_code: string; wedding_date: string };
+    wedding_cases: {
+      id: string;
+      case_code: string;
+      wedding_date: string;
+    };
   };
   storage_files: {
     id: string;
@@ -74,123 +73,88 @@ interface SubmissionDetail {
     file_size_bytes: number | null;
   } | null;
 }
-
 interface CoupleProfileRow {
   partner_role: string;
   full_name: string | null;
   is_primary_contact: boolean;
 }
-
 function formatFileSize(bytes: number | null): string {
   if (bytes === null) return '';
   const kb = bytes / 1024;
   return kb < 1024 ? `${Math.max(1, Math.round(kb))} KB` : `${(kb / 1024).toFixed(1)} MB`;
 }
-
 export default async function SubmissionReviewPage({
   params,
 }: {
-  params: Promise<{ submissionId: string }>;
+  params: Promise<{
+    submissionId: string;
+  }>;
 }) {
   const { submissionId } = await params;
   const user = await requireStaff();
-  const supabase = usingD1() ? null : await createSupabaseServerClient();
-
-  const { data, error } = usingD1()
-    ? {
-        data: await submissionRow(await localDB(), user, submissionId).catch((error: unknown) => {
-          if (error && typeof error === 'object' && 'status' in error && error.status === 404)
-            notFound();
-          throw error;
-        }),
-        error: null,
-      }
-    : await supabase!
-        .from('task_submissions')
-        .select(
-          'id, submission_type, text_value, selected_value, content_json, file_id, comment,' +
-            ' review_status, planner_feedback, submitted_at, reviewed_at,' +
-            ' case_tasks!inner ( id, title, description, due_date, status, case_id, options,' +
-            ' wedding_cases!inner ( id, case_code, wedding_date ) ),' +
-            ' storage_files ( id, bucket, object_path, original_filename, mime_type, file_size_bytes )',
-        )
-        .eq('id', submissionId)
-        .maybeSingle();
+  const { data, error } = {
+    data: await submissionRow(await localDB(), user, submissionId).catch((error: unknown) => {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404)
+        notFound();
+      throw error;
+    }),
+    error: null,
+  };
   // RLS で弾かれた場合も 0 行になるため、404 として扱う（存在有無を漏らさない。4-3／6-5-1）
   if (error) throw fromPostgresError(error);
   if (!data) notFound();
-
   const submission = data as unknown as SubmissionDetail;
   const task = submission.case_tasks;
   const weddingCase = task.wedding_cases;
-
   // couple_profiles は memo が列レベルで剥奪されているため COUPLE_PROFILE_COLUMNS を使う（付録A）
-  const { data: profiles, error: profileError } = usingD1()
-    ? { data: await d1CoupleNames(await localDB(), user, [task.case_id]), error: null }
-    : await supabase!
-        .from('couple_profiles')
-        .select(COUPLE_PROFILE_COLUMNS)
-        .eq('case_id', task.case_id);
+  const { data: profiles, error: profileError } = {
+    data: await d1CoupleNames(await localDB(), user, [task.case_id]),
+    error: null,
+  };
   if (profileError) throw fromPostgresError(profileError);
-
   const coupleName = ((profiles ?? []) as unknown as CoupleProfileRow[])
     .slice()
     .sort((a, b) => Number(b.is_primary_contact) - Number(a.is_primary_contact))
     .map((profile) => readPii(profile.full_name))
     .filter((name) => name !== '')
     .join('・');
-
   // 「対応不要」（waived）にした宿題は確認の対象外。
   // API 側も 422 で弾くが（/api/submissions/{id}/review）、押せるボタンを出したまま
   // エラーで返すのは導線として不親切なので、フォーム自体を出さない（表6-9）。
   const isWaived = task.status === 'waived';
   const isPending =
-    (!usingD1() || Boolean((data as { is_latest?: number }).is_latest)) &&
+    Boolean(
+      (
+        data as {
+          is_latest?: number;
+        }
+      ).is_latest,
+    ) &&
     submission.review_status === 'submitted' &&
     !isWaived;
   const textValue = readPii(submission.text_value);
-
   // ---------------------------------------------------------------- AI補助（7-2）
   // ワーカーの死活と、この宿題に紐づく最新ジョブ。
   // どれも取得に失敗したら null（＝出さない）に倒れるので、ここで例外にはならない。
-  const d1 = usingD1() ? await localDB() : null;
+  const d1 = await localDB();
   const d1Job = (jobType: 'classification' | 'defect_check') =>
     d1AiJob(d1!, user, task.id, jobType).catch((error: unknown) => {
       console.warn('[ai] ジョブを取得できませんでした', jobType, error);
       return null;
     });
-  const [aiStatus, classificationJob, defectJob] = d1
-    ? await Promise.all([
-        aiAssistStatus(d1).catch(() => ({ available: false, lastSeenAt: null })),
-        d1Job('classification'),
-        d1Job('defect_check'),
-      ])
-    : await Promise.all([
-        fetchAiAssistStatus(supabase!),
-        latestJobForTask(supabase!, task.id, 'classification'),
-        latestJobForTask(supabase!, task.id, 'defect_check'),
-      ]);
-
+  const [aiStatus, classificationJob, defectJob] = await Promise.all([
+    aiAssistStatus(d1).catch(() => ({ available: false, lastSeenAt: null })),
+    d1Job('classification'),
+    d1Job('defect_check'),
+  ]);
   // 9-4 ①ルールベースは描画のたびにかけ直す（保存しない。submissionCheck.ts の冒頭を参照）。
   // 検査できない宿題（csvSchema 未設定・CSV以外）は null のままにして、欄ごと出さない。
   let ruleFindings: DefectFinding[] | null = null;
   const csvSchema = csvSchemaOf(task.options);
-  if (d1 && csvSchema && submission.submission_type === 'file' && submission.storage_files) {
+  if (csvSchema && submission.submission_type === 'file' && submission.storage_files) {
     const checked = await localFiles()
       .then((files) => checkStoredCsv(files, submission.storage_files!, task.options))
       .catch(() => null);
-    if (checked) ruleFindings = checked.findings;
-  } else if (csvSchema && submission.submission_type === 'file' && submission.storage_files) {
-    const checked = await checkSubmittedCsv(
-      supabase!,
-      {
-        bucket: submission.storage_files.bucket,
-        objectPath: submission.storage_files.object_path,
-        fileName: submission.storage_files.original_filename,
-        mimeType: submission.storage_files.mime_type,
-      },
-      csvSchema,
-    );
     if (checked) ruleFindings = checked.findings;
   }
 
@@ -339,7 +303,6 @@ export default async function SubmissionReviewPage({
     </div>
   );
 }
-
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-3">

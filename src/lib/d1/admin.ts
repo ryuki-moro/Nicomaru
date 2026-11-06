@@ -14,7 +14,7 @@ import { conflict, forbidden, notFound } from '@/lib/errors';
 import type { TemplateForAssign } from '@/lib/services/schedule';
 import type { planTypeSaveSchema, taskTemplateSchema } from '@/lib/validation';
 import { listBatchRuns } from './batches';
-import { listSystemAlerts, latestUsageSnapshot } from './monitoring';
+import { latestUsageSnapshot, listSystemAlerts } from './monitoring';
 import { loadNotificationLogsForExportD1 } from './notifications';
 
 type Actor = Pick<AppUser, 'id' | 'role' | 'venueId'>;
@@ -445,7 +445,6 @@ export async function savePlanTypeD1(
   input: z.infer<typeof planTypeSaveSchema>,
 ): Promise<{ id: string }> {
   const venueId = requireAdminVenue(actor);
-  // 他式場のテンプレートは割り当てられない (Supabase 版の可視性チェックと同じ)
   for (const a of input.assignments) {
     const visible = await db
       .prepare('SELECT id FROM task_templates WHERE id=? AND venue_id=?')
@@ -497,7 +496,6 @@ export async function savePlanTypeD1(
     if (!r) throw notFound();
   }
 
-  // 割当は差分更新 (全消し→全入れにしない。Supabase 版と同じ方針)
   const { results: existing } = await db
     .prepare('SELECT task_template_id FROM plan_task_templates WHERE plan_type_id=?')
     .bind(savedId)

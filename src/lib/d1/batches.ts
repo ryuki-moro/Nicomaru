@@ -1,6 +1,5 @@
 /**
  * 定期処理の実行記録 (batch_runs) の D1 版 (6-12)。
- * Supabase 版 src/lib/api/internal.ts の runBatch / forEachActiveCase と同じ契約:
  * 記録は成功・失敗どちらでも残し、開始記録が書けなければ副作用を始めない。
  */
 import type { D1Database } from '@cloudflare/workers-types';
@@ -46,20 +45,24 @@ export async function finishBatchRun(
     errorMessage?: string;
   },
 ): Promise<void> {
-  const r = await db
-    .prepare(
-      'UPDATE batch_runs SET finished_at=?,target_count=?,http_status=?,detail=?,error_message=? WHERE id=? RETURNING id',
-    )
-    .bind(
-      new Date().toISOString(),
-      patch.targetCount ?? 0,
-      patch.httpStatus,
-      JSON.stringify(patch.detail ?? {}),
-      patch.errorMessage ?? null,
-      runId,
-    )
-    .first<{ id: string }>();
-  if (!r?.id) throw new Error('バッチの終了記録を保存できませんでした');
+  try {
+    const r = await db
+      .prepare(
+        'UPDATE batch_runs SET finished_at=?,target_count=?,http_status=?,detail=?,error_message=? WHERE id=? RETURNING id',
+      )
+      .bind(
+        new Date().toISOString(),
+        patch.targetCount ?? 0,
+        patch.httpStatus,
+        JSON.stringify(patch.detail ?? {}),
+        patch.errorMessage ?? null,
+        runId,
+      )
+      .first<{ id: string }>();
+    if (!r?.id) throw new Error('バッチの終了記録を保存できませんでした');
+  } catch {
+    throw new Error('バッチの終了記録を保存できませんでした');
+  }
 }
 
 export async function runBatchD1(
@@ -128,7 +131,6 @@ export async function listBatchRuns(
   });
 }
 
-/** venue_id → case_id の順に進行中の案件を辿る (Supabase 版 forEachActiveCase と同等)。 */
 export async function forEachActiveCaseD1(
   db: D1Database,
   handler: (caseId: string, venueId: string) => Promise<void>,

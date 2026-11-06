@@ -1,17 +1,11 @@
 /** S02 式場詳細・変更画面（system_admin、機能8-3）。 */
+import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
+import { getAppUser } from '@/lib/auth/session';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { z } from 'zod';
-
-import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
-import { getAppUser } from '@/lib/auth/session';
-import { usingD1 } from '@/lib/d1/mode';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
 import { VenueEditForm } from './VenueEditForm';
-
 export const dynamic = 'force-dynamic';
-
 interface VenueRow {
   id: string;
   name: string;
@@ -19,18 +13,21 @@ interface VenueRow {
   contact_email: string | null;
   active: boolean;
 }
-
-export default async function VenueEditPage({ params }: { params: Promise<{ venueId: string }> }) {
+export default async function VenueEditPage({
+  params,
+}: {
+  params: Promise<{
+    venueId: string;
+  }>;
+}) {
   const user = await getAppUser();
   if (!user) redirect('/login');
   if (user.role !== 'system_admin') redirect('/error?code=403');
-
   const { venueId } = await params;
   if (!z.string().uuid().safeParse(venueId).success) notFound();
-
   let venue: VenueRow | null = null;
   let loadFailed = false;
-  if (usingD1()) {
+  {
     try {
       const { localDB } = await import('@/lib/d1/runtime');
       const { getVenueD1 } = await import('@/lib/d1/admin');
@@ -48,24 +45,9 @@ export default async function VenueEditPage({ params }: { params: Promise<{ venu
       loadFailed = true;
     }
     if (!loadFailed && !venue) notFound();
-  } else
-    try {
-      // 式場の読み取り・更新は Service Role を使わず、RLS にも認可を委ねる。
-      const supabase = await createSupabaseServerClient();
-      const { data, error } = await supabase
-        .from('venues')
-        .select('id, name, code, contact_email, active')
-        .eq('id', venueId)
-        .maybeSingle();
-      if (error) loadFailed = true;
-      else venue = data as VenueRow | null;
-    } catch {
-      loadFailed = true;
-    }
-
+  }
   // 通信失敗と、本当に対象が存在しない場合を区別する。
   if (!loadFailed && !venue) notFound();
-
   return (
     <div className="space-y-4">
       <Breadcrumbs

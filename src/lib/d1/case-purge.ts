@@ -1,6 +1,5 @@
 /**
  * 案件終了後の自動削除・匿名化の D1 版 (6-11 / 6-12)。
- * Supabase 版 src/lib/batches/case-purge.ts と同じ契約:
  * archived_at から180日を超えた案件の個人情報・提出ファイルを消し、
  * 案件行そのものは実績として残す。ファイル実体は R2 から消す。
  * D1 に無いテーブル (meeting_notes / meeting_sheets / follow_logs / communication_logs) は
@@ -51,6 +50,8 @@ export async function purgeCasesD1(db: D1Database, files?: R2Bucket | null): Pro
       'case_guest_forms',
       'case_guest_tags',
       'ai_jobs',
+      'follow_logs',
+      'communication_logs',
       'notifications',
     ]) {
       await db.prepare(`DELETE FROM ${table} WHERE case_id=?`).bind(caseId).run();

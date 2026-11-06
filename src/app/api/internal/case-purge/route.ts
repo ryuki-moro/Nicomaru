@@ -24,17 +24,11 @@
  * 消すと audit_logs から辿れなくなる）。個人が特定できる列だけを落とす。
  */
 import { ok, route } from '@/lib/api/route';
-import { runBatch } from '@/lib/api/internal';
-import { purgeCases } from '@/lib/batches/case-purge';
-import { usingD1 } from '@/lib/d1/mode';
-import { createSupabaseAdminClient } from '@/lib/supabase/admin';
-
 export const runtime = 'nodejs';
-
 // 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
 export const POST = route(
   async () => {
-    if (usingD1()) {
+    {
       const { localDB, localFiles } = await import('@/lib/d1/runtime');
       const { runBatchD1 } = await import('@/lib/d1/batches');
       const { purgeCasesD1 } = await import('@/lib/d1/case-purge');
@@ -49,14 +43,6 @@ export const POST = route(
         aiRowsDeleted: outcome.detail?.aiRowsDeleted,
       });
     }
-    const admin = createSupabaseAdminClient('cron.case-purge');
-    const outcome = await runBatch(admin, 'case_purge', () => purgeCases(admin));
-    return ok({
-      purged: outcome.targetCount,
-      filesRemoved: outcome.detail?.filesRemoved,
-      aiPayloadsCleared: outcome.detail?.aiPayloadsCleared,
-      aiRowsDeleted: outcome.detail?.aiRowsDeleted,
-    });
   },
   { source: 'internal-cron' },
 );

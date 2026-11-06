@@ -10,11 +10,6 @@
  * 添付ファイルの署名付きURL取得も同じ画面の対話操作なので本ファイルにまとめている。
  */
 'use client';
-
-import { publicD1 } from '@/lib/d1/mode';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-
 import { DraftAssist } from '@/app/(staff)/submissions/[submissionId]/DraftAssist';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { ApiCallError, api, handleApiError } from '@/lib/api/client';
@@ -24,7 +19,8 @@ import {
   REVIEW_STATUS_LABEL,
   type ReviewDecision,
 } from '@/lib/constants';
-
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 interface Props {
   submissionId: string;
   /** 9-3 の下書き依頼に使う */
@@ -35,7 +31,6 @@ interface Props {
   aiAvailable: boolean;
   lastSeenAt: string | null;
 }
-
 export function ReviewForm({
   submissionId,
   caseId,
@@ -50,12 +45,10 @@ export function ReviewForm({
   const [pending, setPending] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSummaryError(null);
     setFieldErrors({});
-
     // 送信前の入力チェック（4-3 エラー表示規約。サーバー側でも同じ規則を再検証する）
     if (!decision) {
       setFieldErrors({ decision: '確認結果を選択してください' });
@@ -65,7 +58,6 @@ export function ReviewForm({
       setFieldErrors({ comment: '不備の内容を入力してください' });
       return;
     }
-
     setPending(true);
     try {
       await api.post(`/api/submissions/${submissionId}/review`, {
@@ -87,7 +79,6 @@ export function ReviewForm({
       setPending(false);
     }
   }
-
   return (
     <form onSubmit={handleSubmit} noValidate>
       <ErrorSummary message={summaryError} />
@@ -113,7 +104,7 @@ export function ReviewForm({
         <FieldError message={fieldErrors.decision} />
       </fieldset>
 
-      {!publicD1() && (
+      {!true && (
         <DraftAssist
           caseId={caseId}
           taskId={taskId}
@@ -162,7 +153,6 @@ export function ReviewForm({
     </form>
   );
 }
-
 /**
  * 提出ファイルのダウンロード（6-5 表6-6 /api/files/{fileId}/download）。
  * 署名付きURLは TTL 60秒・都度発行のため、ページに URL を焼き込まずクリック時に取得する。
@@ -170,12 +160,13 @@ export function ReviewForm({
 export function SubmissionFileLink({ fileId, fileName }: { fileId: string; fileName: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   async function handleClick() {
     setError(null);
     setPending(true);
     try {
-      const { url } = await api.get<{ url: string }>(`/api/files/${fileId}/download`);
+      const { url } = await api.get<{
+        url: string;
+      }>(`/api/files/${fileId}/download`);
       // await のあとの window.open はポップアップブロックに掛かることがあるため、
       // アンカーの programmatic click で開く。
       const anchor = document.createElement('a');
@@ -195,7 +186,6 @@ export function SubmissionFileLink({ fileId, fileName }: { fileId: string; fileN
       setPending(false);
     }
   }
-
   return (
     <div>
       <button type="button" className="btn-ghost" onClick={handleClick} disabled={pending}>

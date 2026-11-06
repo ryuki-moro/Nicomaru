@@ -6,20 +6,14 @@
  *   リスクスコアなど『責められている』と感じさせる表現は使用しない（4-3 M01）ため、
  *   risk_score_snapshots は参照せず、遅延・超過を強調する配色も使わない。
  *
- * 読み取りのみの画面なので Route Handler を介さず Supabase クライアントから直接 select する
- * （6-5「本表に現れない画面操作は Supabase クライアント経由の直接アクセス（RLS適用）」）。
  * どの案件が見えるかは付録A の accessible_case_ids() が決めるため、
  * 本画面では case_id の絞り込みを自前で書かず RLS に委ねる。
  */
-import { usingD1 } from '@/lib/d1/mode';
-import Link from 'next/link';
-import { requirePageUser } from '@/lib/auth/session';
-
 import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { InstallGuide } from '@/components/InstallGuide';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { requirePageUser } from '@/lib/auth/session';
 import {
-  COUPLE_PROFILE_COLUMNS,
   PARTNER_ROLES,
   UNSUBMITTED_TASK_STATUSES,
   type PartnerRole,
@@ -28,11 +22,9 @@ import {
 import { isEncrypted, readPii } from '@/lib/crypto';
 import { formatDateJp, todayInJst } from '@/lib/format';
 import { daysUntilWedding, nextActions, type IsoDate } from '@/lib/services/schedule';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { relativeTaskDeadline } from '@/lib/task-display';
-
+import Link from 'next/link';
 export const metadata = { title: 'マイページ' };
-
 interface TaskRow {
   id: string;
   title: string;
@@ -40,35 +32,23 @@ interface TaskRow {
   status: TaskStatus;
   display_order: number;
 }
-
 interface ProfileRow {
   partner_role: PartnerRole;
   full_name: string | null;
 }
-
 export default async function MyPage() {
-  const d1 = usingD1();
+  const d1 = true;
   const user = await requirePageUser('couple');
   let local: Awaited<ReturnType<(typeof import('@/lib/d1/cases'))['caseRow']>> | null = null;
-  if (d1) {
+  {
     const { localDB } = await import('@/lib/d1/runtime');
     const { listCases, caseRow } = await import('@/lib/d1/cases');
     const db = await localDB();
     const id = (await listCases(db, user)).items[0]?.id;
     if (id) local = await caseRow(db, user, id);
   }
-  const supabase = d1 ? null : await createSupabaseServerClient();
-
   // RLS により couple には自分の案件しか見えない。複数ある場合は挙式日が近いものを主とする。
-  const { data: weddingCase, error } = d1
-    ? { data: local, error: null }
-    : await supabase!
-        .from('wedding_cases')
-        .select('id, wedding_date')
-        .order('wedding_date', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
+  const { data: weddingCase, error } = { data: local, error: null };
   if (error) {
     return (
       <div role="alert" className="banner-error">
@@ -76,44 +56,24 @@ export default async function MyPage() {
       </div>
     );
   }
-
   if (!weddingCase) {
     return (
       <EmptyState message="担当プランナーが準備を進めています。案件の情報が届くまでお待ちください。" />
     );
   }
-
   const caseId = weddingCase.id as string;
   const weddingDate = weddingCase.wedding_date as IsoDate;
-
   // 「次にやること」と「これから提出する宿題」は同じ母集合から作る。
   // 6-8 の未提出判定（not_started／needs_fix。waived は対象外）に一本化することで、
   // 「0件」と表示しながら提出済みの宿題が並ぶ矛盾を防ぐ。
   // 提出済み（submitted）は新郎新婦の手を離れているので「次にやること」ではない。
   // 件数用の別クエリを持たないのは、母集合が二重定義になると同じ矛盾が再発するため。
-  const [profileResult, taskResult] = d1
-    ? [
-        { data: local?.couple_profiles ?? [] },
-        {
-          data: (local?.case_tasks ?? []).filter((t) =>
-            UNSUBMITTED_TASK_STATUSES.includes(t.status),
-          ),
-        },
-      ]
-    : await Promise.all([
-        supabase!.from('couple_profiles').select(COUPLE_PROFILE_COLUMNS).eq('case_id', caseId),
-        supabase!
-          .from('case_tasks')
-          .select('id, title, due_date, status, display_order')
-          .eq('case_id', caseId)
-          .in('status', [...UNSUBMITTED_TASK_STATUSES])
-          // 並びの正本は 4-3／6-6-2 の ORDER BY due_date, display_order, id
-          .order('due_date', { ascending: true })
-          .order('display_order', { ascending: true })
-          .order('id', { ascending: true }),
-      ]);
-
-  // COUPLE_PROFILE_COLUMNS は連結で組み立てた string のため supabase-js の
+  const [profileResult, taskResult] = [
+    { data: local?.couple_profiles ?? [] },
+    {
+      data: (local?.case_tasks ?? []).filter((t) => UNSUBMITTED_TASK_STATUSES.includes(t.status)),
+    },
+  ];
   // 型レベル select パーサが解決できない。行の形は上の ProfileRow が正本。
   const profiles = (profileResult.data ?? []) as unknown as ProfileRow[];
   const names = [...profiles]
@@ -123,7 +83,6 @@ export default async function MyPage() {
     // 鍵未設定・改ざんで復号できなかった値は暗号文のまま返る。
     // 新郎新婦に暗号文を見せる意味はないので名前だけ落とし、カウントダウンは表示する。
     .filter((name) => name !== '' && !isEncrypted(name));
-
   const tasks = (taskResult.data ?? []) as TaskRow[];
   // 「最大3件」の切り出しはサービス層の nextActions() に寄せる（11章の単体テスト対象）。
   // nextActions は「未完了」で絞るが、渡す時点で未提出だけに揃えてあるので結果は変わらない。
@@ -131,10 +90,8 @@ export default async function MyPage() {
     tasks.map((t) => ({ ...t, dueDate: t.due_date, displayOrder: t.display_order })),
   );
   const unsubmitted = tasks.length;
-
   const today = todayInJst();
   const remaining = daysUntilWedding(weddingDate, today);
-
   return (
     <div className="flex flex-col gap-[14px]">
       {/* 見た目上の画面名はヘッダーとナビで足りるので、見出し移動用に読み上げだけに置く */}
@@ -222,7 +179,6 @@ export default async function MyPage() {
     </div>
   );
 }
-
 /** Tabler Icons の chevron-right（design_guide 6 のアイコンセット）。 */
 function ChevronRight() {
   return (

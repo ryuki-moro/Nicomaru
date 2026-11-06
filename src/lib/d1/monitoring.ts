@@ -1,12 +1,11 @@
 /**
  * 容量集計 (usage_rollup) と障害条件の監視 (monitoring) の D1 版 (6-12 / GAP-03・04)。
- * Supabase 版 src/lib/monitoring/service.ts の RPC 2 本を、D1 では通常の集計クエリで再表現する。
  */
 import type { D1Database } from '@cloudflare/workers-types';
 
 import type { BatchOutcome } from '@/lib/api/internal';
-import { capacityLimit, monitoredJobs } from '@/lib/monitoring/config';
 import { todayInJst } from '@/lib/format';
+import { capacityLimit, monitoredJobs } from '@/lib/monitoring/config';
 
 const count = async (db: D1Database, sql: string, ...binds: unknown[]) => {
   const row = await db
@@ -118,7 +117,6 @@ interface Candidate {
   count: number;
 }
 
-/** Supabase 版 evaluate_system_alerts と同じ候補条件で system_alerts を更新する。 */
 export async function monitorSystemD1(db: D1Database, now = new Date()): Promise<BatchOutcome> {
   const nowIso = now.toISOString();
   const jobs = monitoredJobs();
@@ -221,7 +219,6 @@ export async function monitorSystemD1(db: D1Database, now = new Date()): Promise
       });
   }
 
-  // D1 の監査には Supabase 版の集約行 (auth.login_failures) は無いため、行が無ければ 0 件で素通りする。
   const authFailures = await count(
     db,
     "SELECT count(*) AS n FROM audit_logs WHERE action='auth.login_failures' AND created_at>? AND created_at<=?",

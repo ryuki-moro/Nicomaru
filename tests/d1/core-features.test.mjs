@@ -1,3 +1,11 @@
+import {
+  createFollowLog,
+  listFollowLogs,
+  logCommunication,
+  listCommunications,
+} from '../../src/lib/d1/follow.ts';
+import { dashboard } from '../../src/lib/d1/dashboard.ts';
+import { staffNotificationHistory } from '../../src/lib/d1/notifications.ts';
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
@@ -12,7 +20,7 @@ import {
   BatchFailure,
 } from '../../src/lib/d1/batches.ts';
 import { recalculateCaseRiskD1, getCurrentRiskD1 } from '../../src/lib/d1/risk.ts';
-import { caseRow, listCases } from '../../src/lib/d1/cases.ts';
+import { caseRow, listCases, setCaseArchived } from '../../src/lib/d1/cases.ts';
 import {
   getNotificationSettingsD1,
   incrementNotificationQuotaD1,
@@ -45,6 +53,7 @@ before(async () => {
     '0011_batch.sql',
     '0012_risk.sql',
     '0013_notifications_extra.sql',
+    '0022_follow.sql',
   ]) {
     const sql = await readFile(`cloudflare/migrations/${file}`, 'utf8');
     await db.batch(
@@ -194,4 +203,101 @@ test('notifications extra: 設定の既定値と式場別上書き、クォー�
   assert.equal(await incrementNotificationQuotaD1(db, 'venue_month', ids.venueA, '2028-01-01'), 1);
   assert.equal(await incrementNotificationQuotaD1(db, 'venue_month', ids.venueA, '2028-01-01'), 2);
   assert.equal(await incrementNotificationQuotaD1(db, 'venue_month', ids.venueA, '2028-02-01'), 1);
+});
+
+test('D1 follow: 他式場・非担当・停止・coupleを拒否し、ページ境界を維持する', async () => {
+  const planner = actor('planner', ids.plannerA);
+  const input = { method: 'phone', note: '引継ぎ', followedAt: '2026-11-06T10:00:00Z' };
+  await assert.rejects(
+    createFollowLog(db, actor('planner', ids.plannerB, ids.venueB), ids.caseA, input),
+  );
+  await assert.rejects(createFollowLog(db, planner, ids.caseA2, input));
+  await assert.rejects(createFollowLog(db, actor('couple', ids.coupleA), ids.caseA, input));
+  const one = await createFollowLog(db, planner, ids.caseA, input);
+  const two = await createFollowLog(db, planner, ids.caseA, input);
+  const first = await listFollowLogs(db, planner, ids.caseA, 0, 1);
+  const second = await listFollowLogs(db, planner, ids.caseA, 1, 1);
+  assert.equal(first.hasNext, true);
+  assert.equal(second.hasNext, false);
+  assert.equal(new Set([...first.items, ...second.items].map((x) => x.id)).size, 2);
+  await db
+    .prepare("UPDATE user_profiles SET status='suspended' WHERE id=?")
+    .bind(ids.plannerA)
+    .run();
+  try {
+    await assert.rejects(createFollowLog(db, planner, ids.caseA, input));
+  } finally {
+    await db
+      .prepare("UPDATE user_profiles SET status='active' WHERE id=?")
+      .bind(ids.plannerA)
+      .run();
+  }
+  await db.prepare('DELETE FROM follow_logs WHERE id IN (?,?)').bind(one.id, two.id).run();
+});
+
+test('D1 archive: adminの所属範囲のみ更新・解除でき、plannerから見えなくなる', async () => {
+  const admin = actor('admin', ids.adminA);
+  await assert.rejects(setCaseArchived(db, actor('planner', ids.plannerA), ids.caseA, true));
+  await assert.rejects(
+    setCaseArchived(db, actor('admin', ids.adminB, ids.venueB), ids.caseA, true),
+  );
+  await setCaseArchived(db, admin, ids.caseA, true);
+  try {
+    assert.ok((await caseRow(db, admin, ids.caseA)).archived_at);
+    await assert.rejects(caseRow(db, actor('planner', ids.plannerA), ids.caseA));
+    await assert.rejects(
+      createFollowLog(db, admin, ids.caseA, {
+        method: 'email',
+        followedAt: new Date().toISOString(),
+      }),
+    );
+  } finally {
+    await setCaseArchived(db, admin, ids.caseA, false);
+  }
+  assert.equal((await caseRow(db, admin, ids.caseA)).archived_at, null);
+});
+
+test('D1 dashboard/通知履歴: 集計・リスク根拠・送信履歴は担当と所属の範囲だけ', async () => {
+  const planner = actor('planner', ids.plannerA);
+  const summary = await dashboard(db, planner);
+  assert.equal(summary.caseCount, 1);
+  assert.ok(summary.followUps.every((r) => [ids.caseA, ids.caseA2].includes(r.caseId)));
+  assert.ok(summary.followUps.every((r) => Array.isArray(r.reasons)));
+  await assert.rejects(dashboard(db, actor('couple', ids.coupleA)));
+  for (const [id, caseId, userId] of [
+    ['round2-a', ids.caseA, ids.coupleA],
+    ['round2-b', ids.caseB, ids.coupleB],
+  ]) {
+    await db
+      .prepare(
+        "INSERT INTO notifications(id,case_id,recipient_user_id,channel,notification_type,title,body,created_at) VALUES (?,?,?,'email','info','通知','本文','2099-01-01')",
+      )
+      .bind(id, caseId, userId)
+      .run();
+  }
+  const notices = await staffNotificationHistory(db, planner);
+  assert.ok(notices.some((r) => r.id === 'round2-a'));
+  assert.ok(notices.every((r) => r.case_id !== ids.caseB));
+  await assert.rejects(staffNotificationHistory(db, actor('couple', ids.coupleA)));
+  await db.prepare("DELETE FROM notifications WHERE id IN ('round2-a','round2-b')").run();
+});
+
+test('D1 communication: 実行者を固定し範囲外の読み書きを拒否する', async () => {
+  const planner = actor('planner', ids.plannerA);
+  const id = await logCommunication(db, planner, ids.caseA, {
+    channel: 'in_app',
+    direction: 'outbound',
+    summary: '確認しました',
+  });
+  const rows = await listCommunications(db, planner, ids.caseA);
+  assert.equal(rows.find((r) => r.id === id).created_by, planner.id);
+  await assert.rejects(
+    logCommunication(db, actor('planner', ids.plannerB, ids.venueB), ids.caseA, {
+      channel: 'email',
+      direction: 'outbound',
+      summary: '他式場',
+    }),
+  );
+  await assert.rejects(listCommunications(db, actor('couple', ids.coupleA), ids.caseA));
+  await db.prepare('DELETE FROM communication_logs WHERE id=?').bind(id).run();
 });

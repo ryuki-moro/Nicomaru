@@ -1,16 +1,3 @@
-/** 開発専用の管理者ログイン。資格情報は専用ランチャーからサーバーにだけ渡す。 */
-export function getDevAdminConfig() {
-  if (process.env.NODE_ENV !== 'development' || process.env.DEV_ADMIN_LOGIN_ENABLED !== 'true') {
-    return null;
-  }
-
-  const email = process.env.DEV_ADMIN_EMAIL;
-  const password = process.env.DEV_ADMIN_PASSWORD;
-  const authUserId = process.env.DEV_ADMIN_AUTH_USER_ID;
-  if (!email || !password || !authUserId) return null;
-  return { email, password, authUserId };
-}
-
 export function isLoopbackHost(host: string): boolean {
   try {
     const parsed = new URL(`http://${host}`);
@@ -26,7 +13,7 @@ export function isLoopbackHost(host: string): boolean {
 }
 
 /** 同一オリジンのブラウザ操作だけを受け付ける。ネットワーク制限はランチャーのbindが担う。 */
-export function isDevAdminRequestAllowed(request: Request): boolean {
+export function isLocalDemoRequestAllowed(request: Request): boolean {
   const url = new URL(request.url);
   const host = request.headers.get('host');
   if (request.method !== 'POST' || !host || !isLoopbackHost(host) || !isLoopbackHost(url.host))

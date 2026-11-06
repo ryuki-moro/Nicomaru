@@ -1,9 +1,7 @@
 /**
- * リスク算出の D1 版 (6-8)。判定は Supabase 版と共通の純関数
  * src/lib/services/risk.ts (calculateRisk) をそのまま使う。
- * Supabase 版 riskStore.ts との差: D1 には follow_logs と
  * user_profiles.last_login_at が無いため、最終アクティビティは
- * 宿題提出 (task_submissions.submitted_at) の最新のみで近似する。
+ * 宿題提出・フォロー・連絡履歴の最新を使う。
  * 根拠 (reasons) は必ずスコアとセットで保存・返却する (既存仕様)。
  */
 import type { D1Database } from '@cloudflare/workers-types';
@@ -93,10 +91,17 @@ export async function collectRiskInputD1(
   const draftOnly = new Set(
     latestSubs.filter((s) => s.review_status === 'draft').map((s) => s.case_task_id),
   );
-  const lastSubmitted = latestSubs
-    .map((s) => s.submitted_at)
-    .sort()
-    .at(-1);
+  const activity = await db
+    .prepare(
+      `SELECT at AS latest FROM (
+    SELECT submitted_at AS at FROM task_submissions s JOIN case_tasks t ON t.id=s.case_task_id WHERE t.case_id=?
+    UNION ALL SELECT followed_at FROM follow_logs WHERE case_id=?
+    UNION ALL SELECT created_at FROM communication_logs WHERE case_id=?
+  ) ORDER BY julianday(at) DESC LIMIT 1`,
+    )
+    .bind(caseId, caseId, caseId)
+    .first<{ latest: string | null }>();
+  const lastSubmitted = activity?.latest;
   return {
     venueId: target.venue_id,
     input: {
@@ -143,7 +148,6 @@ export async function saveRiskSnapshotD1(
   return id;
 }
 
-/** 1案件のリスクを再計算して保存する。アーカイブ済みは Supabase 版と同じく対象外。 */
 export async function recalculateCaseRiskD1(db: D1Database, caseId: string): Promise<RiskResult> {
   const archived = await db
     .prepare('SELECT archived_at FROM wedding_cases WHERE id=?')

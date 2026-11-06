@@ -13,18 +13,18 @@
  * つまり「1回目の送信＝プレビュー取得」「2回目の送信＝適用」であり、
  * 画面に出した差分とDBへ適用される内容が必ず一致する。
  */
-import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { api, handleApiError } from '@/lib/api/client';
 import {
-  SENDABLE_CHANNELS,
   CONTACT_CHANNEL_LABEL,
   INPUT_LIMITS,
   PARTNER_ROLES,
   PARTNER_ROLE_LABEL,
+  SENDABLE_CHANNELS,
   type ContactChannel,
   type PartnerRole,
 } from '@/lib/constants';

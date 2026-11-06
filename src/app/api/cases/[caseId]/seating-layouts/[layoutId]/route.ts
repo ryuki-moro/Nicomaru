@@ -7,16 +7,14 @@
  */
 import { noContent, ok, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
-import { usingD1 } from '@/lib/d1/mode';
-import { ApiError } from '@/lib/errors';
 import { seatingLayoutOfferSchema, seatingLayoutSchema } from '@/lib/validation';
-
-type Context = { params: Promise<{ caseId: string; layoutId: string }> };
-
-const d1Only = () => {
-  if (!usingD1()) throw new ApiError('SERVICE_UNAVAILABLE', '席次はD1でのみ利用できます');
+type Context = {
+  params: Promise<{
+    caseId: string;
+    layoutId: string;
+  }>;
 };
-
+const d1Only = () => {};
 export const PUT = route(async (request: Request, context: Context) => {
   const user = await requireRole('planner', 'admin', 'system_admin');
   const { caseId, layoutId } = await context.params;
@@ -28,7 +26,6 @@ export const PUT = route(async (request: Request, context: Context) => {
   const id = await saveSeatingLayout(db, user, caseId, layoutId, input);
   return ok({ id, layouts: await loadSeatingLayouts(db, user, caseId) });
 });
-
 export const PATCH = route(async (request: Request, context: Context) => {
   const user = await requireRole('planner', 'admin', 'system_admin');
   const { layoutId } = await context.params;
@@ -39,7 +36,6 @@ export const PATCH = route(async (request: Request, context: Context) => {
   await setSeatingLayoutOffered(await localDB(), user, layoutId, input.offered);
   return noContent();
 });
-
 export const DELETE = route(async (_request: Request, context: Context) => {
   const user = await requireRole('planner', 'admin', 'system_admin');
   const { layoutId } = await context.params;

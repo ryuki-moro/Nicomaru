@@ -7,35 +7,24 @@
  */
 import { ok, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
-import { encryptPii } from '@/lib/crypto';
-import { usingD1 } from '@/lib/d1/mode';
-import { fromPostgresError } from '@/lib/errors';
 import { buildGuestFormUrl } from '@/lib/services/guests';
-import { generateInvitationToken, hashInvitationToken } from '@/lib/services/invitations';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
 import { appBaseUrl } from '../../../auth/shared';
-
 export const POST = route(
-  async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
+  async (
+    request: Request,
+    context: {
+      params: Promise<{
+        caseId: string;
+      }>;
+    },
+  ) => {
     const user = await requireRole('couple', 'planner', 'admin', 'system_admin');
     const { caseId } = await context.params;
-    if (usingD1()) {
+    {
       const { localDB } = await import('@/lib/d1/runtime');
       const { reissueGuestForm } = await import('@/lib/d1/guests');
       const token = await reissueGuestForm(await localDB(), user, caseId);
       return ok({ url: buildGuestFormUrl(appBaseUrl(request), token) }, 201);
     }
-    const supabase = await createSupabaseServerClient();
-
-    const token = generateInvitationToken();
-    const { error } = await supabase.rpc('reissue_guest_form', {
-      p_case_id: caseId,
-      p_token_hash: hashInvitationToken(token),
-      p_token_enc: encryptPii(token),
-    });
-    if (error) throw fromPostgresError(error);
-
-    return ok({ url: buildGuestFormUrl(appBaseUrl(request), token) }, 201);
   },
 );

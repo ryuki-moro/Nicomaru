@@ -1,14 +1,10 @@
 /**
- * ゲストの出欠回答と自由タグ（D1版）。Supabase版の RLS と関数
  * （migrations/20261030000100〜300、services/guests.ts）と同じ規則をSQLの条件で表す。
  *
  * - 参照: 案件に触れられる利用者（scope）。admin はアーカイブ済みも見られる
  * - 変更: 上に加えて、アーカイブ済みの案件は拒否する
  * - 回答の登録は未ログインのゲストが行うため、回答URLのトークンだけで案件を特定する
  */
-import { randomUUID } from 'node:crypto';
-import type { D1Database } from '@cloudflare/workers-types';
-import type { z } from 'zod';
 import type { AppUser } from '@/lib/auth/session';
 import { encryptPii } from '@/lib/crypto';
 import { notFound, unprocessable } from '@/lib/errors';
@@ -16,6 +12,9 @@ import { GUEST_TAG_MAX_PER_CASE, type GuestCustomTag } from '@/lib/guest-tags';
 import { groupGuestResponses, type GuestBook, type GuestRow } from '@/lib/services/guests';
 import { generateInvitationToken, hashInvitationToken } from '@/lib/services/invitations';
 import type { guestResponseSchema, guestReviewSchema } from '@/lib/validation';
+import type { D1Database } from '@cloudflare/workers-types';
+import { randomUUID } from 'node:crypto';
+import type { z } from 'zod';
 import { scope } from './cases';
 
 type Actor = Pick<AppUser, 'id'>;
@@ -252,7 +251,6 @@ export async function deleteGuestTag(db: D1Database, user: Actor, caseId: string
 }
 
 /**
- * ゲスト1人の確認・修正（#179）。Supabase版の review_case_guest() と同じ決まりで、送った項目だけを変える。
  * 確認済みにできるのは出席の方だけ。ご関係を回答と同じ値に戻したら「直していない」扱いにする。
  */
 export async function reviewGuest(

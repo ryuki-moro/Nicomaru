@@ -13,20 +13,14 @@
  * 落ちたワーカーが掴んだままのジョブを戻さないと、そのジョブは永久に processing で止まる。
  */
 import { ok, route } from '@/lib/api/route';
-import { runBatch } from '@/lib/api/internal';
-import { usingD1 } from '@/lib/d1/mode';
-import { createSupabaseAdminClient } from '@/lib/supabase/admin';
-
 export const runtime = 'nodejs';
-
 /** 7-3「locked_at が30分を超えた processing」「上限3回で failed」 */
 const STALE_MINUTES = 30;
 const MAX_ATTEMPTS = 3;
-
 // 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
 export const POST = route(
   async () => {
-    if (usingD1()) {
+    {
       const { localDB } = await import('@/lib/d1/runtime');
       const { runBatchD1 } = await import('@/lib/d1/batches');
       const { reclaimStalledAiJobs } = await import('@/lib/d1/ai');
@@ -37,26 +31,6 @@ export const POST = route(
       });
       return ok({ processed: outcome.targetCount, ...outcome.detail });
     }
-    const admin = createSupabaseAdminClient('cron.ai-job-reclaim');
-
-    const outcome = await runBatch(admin, 'ai_job_reclaim', async () => {
-      const { data, error } = await admin.rpc('reclaim_stalled_ai_jobs', {
-        p_stale_minutes: STALE_MINUTES,
-        p_max_attempts: MAX_ATTEMPTS,
-      });
-      if (error) throw new Error(error.message);
-
-      const row = (Array.isArray(data) ? data[0] : data) as {
-        requeued: number;
-        failed: number;
-      } | null;
-      const requeued = row?.requeued ?? 0;
-      const failed = row?.failed ?? 0;
-
-      return { targetCount: requeued + failed, detail: { requeued, failed } };
-    });
-
-    return ok({ processed: outcome.targetCount, ...outcome.detail });
   },
   { source: 'internal-cron' },
 );

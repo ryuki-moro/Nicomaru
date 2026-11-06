@@ -1,15 +1,12 @@
 /**
  * D03 準備シートのD1版（Wave2）。
  *
- * Supabase版 page.tsx と同じ見た目・印刷対象を持ち、データ取得と保存を
  * src/lib/d1/sheet.ts（meeting_sheets 0014＋D1 AI基盤）で行う。
  * フォロー記録・連絡履歴は D1 にテーブルが無いため空として表示する（別Waveで移行）。
  */
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
-import { PrintButton } from './PrintButton';
-import { SheetDraftPanel } from './SheetDraftPanel';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { adoptedOutput } from '@/lib/ai/assist';
 import { getAppUser } from '@/lib/auth/session';
@@ -18,6 +15,8 @@ import { localDB } from '@/lib/d1/runtime';
 import { recordSheet, requestSheetDraft, sheetData, sheetDraftState } from '@/lib/d1/sheet';
 import { formatDate, formatDateJp, formatDateTime, todayInJst } from '@/lib/format';
 import { daysBetween } from '@/lib/services/schedule';
+import { PrintButton } from './PrintButton';
+import { SheetDraftPanel } from './SheetDraftPanel';
 
 export const dynamic = 'force-dynamic';
 

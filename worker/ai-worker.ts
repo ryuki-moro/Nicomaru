@@ -8,8 +8,7 @@
  *   「受け渡しはプル型（ワーカーからのアウトバウンド接続のみ）とし、
  *     ローカルLLMサーバーを外部公開しない」
  *   「ポーリング間隔は30秒」
- *   「ワーカーには Service Role Key を配布せず、ジョブ取得と結果書き込みのみを許す
- *     security definer RPC を用意し、ワーカー専用DBロールに EXECUTE を付与する」
+ *   ワーカーは共有トークンでアプリのHTTPS APIへ接続する。
  *
  * 【なぜアプリ本体と別プロセスなのか】
  * 推論は数十秒かかることがあり、Vercel のサーバーレス実行時間に収まらない（2-2-1）。
@@ -18,13 +17,12 @@
  * ローカルLLMサーバーを外部公開せずに済む（7-1 のデータ保護とも整合する）。
  *
  * 起動:
- *   AI_WORKER_DATABASE_URL=postgres://ai_worker:<pw>@<host>:5432/postgres \
+ *   AI_WORKER_API_URL=https://nicomaru.nicomaru-app.workers.dev \
+ *   AI_WORKER_TOKEN=<token> \
  *   OLLAMA_ENDPOINT=http://localhost:11434 \
  *   npx tsx worker/ai-worker.ts
  */
 import { hostname } from 'node:os';
-
-import { Client } from 'pg';
 
 import { AI_JOB_TYPES, validateAiOutput, type AiJobType } from '../src/lib/ai/schemas';
 
@@ -57,7 +55,7 @@ interface ClaimedJob {
   attempts: number;
 }
 
-/** ジョブの受け渡し口。Supabase版はDB関数、D1版はアプリの /api/internal/ai-worker。 */
+/** ジョブの受け渡し口。アプリの /api/internal/ai-worker。 */
 interface Queue {
   ping(): Promise<void>;
   claim(): Promise<ClaimedJob | null>;
@@ -67,33 +65,6 @@ interface Queue {
 
 const workerId = `${hostname()}:${process.pid}`;
 let stopping = false;
-
-async function pgQueue(url: string): Promise<Queue> {
-  const client = new Client({ connectionString: url });
-  await client.connect();
-  return {
-    ping: async () => {
-      await client.query('select ai_worker_ping($1, $2)', [workerId, DEFAULT_MODEL]);
-    },
-    claim: async () =>
-      (
-        await client.query<ClaimedJob>('select * from claim_ai_job($1, $2)', [
-          workerId,
-          AI_JOB_TYPES as unknown as string[],
-        ])
-      ).rows[0] ?? null,
-    complete: async (id, output, error, model) => {
-      await client.query('select complete_ai_job($1, $2, $3::jsonb, $4, $5)', [
-        id,
-        workerId,
-        error ? null : JSON.stringify(output),
-        error,
-        model,
-      ]);
-    },
-    close: () => client.end(),
-  };
-}
 
 /**
  * D1版。DB接続情報を配らず、3操作しかできない共有トークンだけを持たせる（7-3）。
@@ -238,17 +209,13 @@ async function processJob(queue: Queue, job: ClaimedJob): Promise<void> {
 async function main(): Promise<void> {
   const apiUrl = process.env.AI_WORKER_API_URL;
   const token = process.env.AI_WORKER_TOKEN;
-  const url = process.env.AI_WORKER_DATABASE_URL;
   let queue: Queue;
   if (apiUrl && token) queue = httpQueue(apiUrl, token);
-  else if (url) queue = await pgQueue(url);
   else {
-    console.error(
-      'D1版は AI_WORKER_API_URL と AI_WORKER_TOKEN を、Supabase版は AI_WORKER_DATABASE_URL を設定してください（7-3）。',
-    );
+    console.error('AI_WORKER_API_URL と AI_WORKER_TOKEN を設定してください（7-3）。');
     process.exit(1);
   }
-  log('起動しました', { models: DEFAULT_MODEL, via: apiUrl && token ? 'api' : 'db' });
+  log('起動しました', { models: DEFAULT_MODEL, via: 'api' });
 
   const shutdown = () => {
     stopping = true;

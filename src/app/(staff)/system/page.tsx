@@ -11,26 +11,21 @@
  * 容量は内部バッチが採取した日次スナップショットを表示する。
  * 未取得・上限未設定・集計の期限切れは0%や正常として表示しない。
  */
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { getAppUser } from '@/lib/auth/session';
+import { formatDateTime } from '@/lib/format';
+import { NOTIFICATION_TYPE_LABEL, type NotificationType } from '@/lib/notify/templates';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-
-import { NotificationLogExportForm } from './NotificationLogExportForm';
 import {
   MonitoringSummary,
   UsageSummary,
   type SystemAlert,
   type UsageSnapshot,
 } from './MonitoringSummary';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { getAppUser } from '@/lib/auth/session';
-import { formatDateTime } from '@/lib/format';
-import { NOTIFICATION_TYPE_LABEL, type NotificationType } from '@/lib/notify/templates';
-import { usingD1 } from '@/lib/d1/mode';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
+import { NotificationLogExportForm } from './NotificationLogExportForm';
 export const dynamic = 'force-dynamic';
-
 /** 6-12 表6-12 の処理名。batch_runs.job_type と対応する。 */
 const JOB_LABEL: Record<string, string> = {
   risk_recalculate: 'リスク再計算',
@@ -44,7 +39,6 @@ const JOB_LABEL: Record<string, string> = {
   audit_log_purge: '監査ログの保持期限処理',
   monitoring: '障害条件の監視',
 };
-
 interface BatchRunRow {
   id: string;
   job_type: string;
@@ -54,7 +48,6 @@ interface BatchRunRow {
   http_status: number | null;
   error_message: string | null;
 }
-
 interface NotificationLogRow {
   id: string;
   provider: string;
@@ -64,21 +57,22 @@ interface NotificationLogRow {
   notifications: {
     notification_type: NotificationType;
     case_id: string | null;
-    venues: { name: string } | null;
-    wedding_cases: { case_code: string } | null;
+    venues: {
+      name: string;
+    } | null;
+    wedding_cases: {
+      case_code: string;
+    } | null;
   } | null;
 }
-
 // 動的なサーバーリクエストの時刻を、表示コンポーネントへの入力として固定する。
 function requestTime(): number {
   return Date.now();
 }
-
 export default async function SystemStatusPage() {
   const user = await getAppUser();
   if (!user || user.role !== 'system_admin') redirect('/error?code=403');
-
-  if (usingD1()) {
+  {
     const { localDB } = await import('@/lib/d1/runtime');
     const { systemSummaryD1 } = await import('@/lib/d1/admin');
     const summary = await systemSummaryD1(await localDB(), user);
@@ -98,66 +92,7 @@ export default async function SystemStatusPage() {
       />
     );
   }
-
-  const supabase = await createSupabaseServerClient();
-
-  const [venues, cases, users, batches, logs, usage, alerts] = await Promise.all([
-    supabase.from('venues').select('id', { count: 'exact', head: true }),
-    supabase.from('wedding_cases').select('id', { count: 'exact', head: true }),
-    supabase
-      .from('user_profiles')
-      .select('id', { count: 'exact', head: true })
-      .neq('status', 'deleted'),
-    supabase
-      .from('batch_runs')
-      .select('id, job_type, started_at, finished_at, target_count, http_status, error_message')
-      .order('started_at', { ascending: false })
-      .limit(20),
-    supabase
-      .from('notification_logs')
-      .select(
-        `id, provider, status, provider_message_id, created_at,
-         notifications ( notification_type, case_id,
-                         venues ( name ), wedding_cases ( case_code ) )`,
-      )
-      .order('created_at', { ascending: false })
-      .limit(50),
-    supabase
-      .from('usage_snapshots')
-      .select('*')
-      .order('measured_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from('system_alerts')
-      .select('alert_key, source, affected_count, last_detected_at, published_at, resolved_at')
-      .order('resolved_at', { ascending: true, nullsFirst: true })
-      .order('last_detected_at', { ascending: false })
-      .limit(50),
-  ]);
-
-  const batchRows = (batches.data ?? []) as unknown as BatchRunRow[];
-  const logRows = (logs.data ?? []) as unknown as NotificationLogRow[];
-  const checkedAt = requestTime();
-
-  return (
-    <SystemView
-      venueCount={venues.error ? null : venues.count}
-      caseCount={cases.error ? null : cases.count}
-      userCount={users.error ? null : users.count}
-      batchRows={batchRows}
-      batchesFailed={Boolean(batches.error)}
-      logRows={logRows}
-      logsFailed={Boolean(logs.error)}
-      usage={usage.data as UsageSnapshot | null}
-      usageFailed={Boolean(usage.error)}
-      alerts={(alerts.data ?? []) as SystemAlert[]}
-      alertsFailed={Boolean(alerts.error)}
-      checkedAt={checkedAt}
-    />
-  );
 }
-
 function SystemView(props: {
   venueCount: number | null;
   caseCount: number | null;
@@ -294,7 +229,6 @@ function SystemView(props: {
     </div>
   );
 }
-
 function Summary({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="card">

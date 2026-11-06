@@ -19,6 +19,7 @@ import {
   GUEST_SEAT_ROLE_LABEL,
   PARTNER_ROLE_LABEL,
 } from '@/lib/constants';
+import type { SeatingChart, SeatingLayout } from '@/lib/d1/seating';
 import {
   autoAssign,
   canSeat,
@@ -36,7 +37,6 @@ import {
 } from '@/lib/seating/assign';
 import type { SeatGuestInfo } from '@/lib/seating/guests';
 import { totalSeats } from '@/lib/seating/layout';
-import type { SeatingChart, SeatingLayout } from '@/lib/d1/seating';
 
 interface Props {
   caseId: string;

@@ -33,8 +33,7 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # RLS テストを含む。PGlite 上で本番と同じマイグレーションを流して
-      # 42P17・権限昇格・アーカイブ・停止利用者の退行を機械検出する（11章／12-2）
+      # 純ロジックとD1経路の退行を検証する。
       - name: Test
         run: npm run test
 
@@ -53,39 +52,6 @@ jobs:
 
       - name: Build
         run: npm run build
-
-  # PGlite は単一接続のため並行性を検証できない。
-  # 設計が明示する原子性（招待トークンの消費・レート制限・採番競合）は
-  # 実サーバーへ同時接続して確かめる（6-6-1／5-3／5-7／6-7）。
-  concurrency-db:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install
-        run: npm ci --no-audit
-
-      - name: Concurrency tests
-        run: npm run test:pg
-        env:
-          TEST_PG_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
 
   # 12-2 結合テスト。本番と同じD1経路をローカルD1（wrangler）で立て、
   # 4ロールの権限・案件登録〜招待〜初回登録・宿題の提出〜確認をChromiumで通しで操作する（tests/d1/*.browser.mjs）。

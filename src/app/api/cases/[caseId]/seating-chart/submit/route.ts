@@ -6,16 +6,19 @@
  */
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
-import { usingD1 } from '@/lib/d1/mode';
-import { ApiError } from '@/lib/errors';
 import { seatingChartSubmitSchema } from '@/lib/validation';
-
 export const POST = route(
-  async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
+  async (
+    request: Request,
+    context: {
+      params: Promise<{
+        caseId: string;
+      }>;
+    },
+  ) => {
     const user = await requireRole('couple');
     const { caseId } = await context.params;
     const input = await parseBody(request, seatingChartSubmitSchema);
-    if (!usingD1()) throw new ApiError('SERVICE_UNAVAILABLE', '席次はD1でのみ利用できます');
     const { localDB } = await import('@/lib/d1/runtime');
     const { submitSeatingChart } = await import('@/lib/d1/seating');
     const version = await submitSeatingChart(await localDB(), user, caseId, input.version);

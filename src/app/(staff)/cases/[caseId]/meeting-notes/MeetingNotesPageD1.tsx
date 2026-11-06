@@ -1,14 +1,12 @@
 /**
  * D05 打ち合わせ記録・宿題起票のD1版（Wave2）。
  *
- * Supabase版 page.tsx と同じ導線を持ち、保存とAI起票案の投入を
  * src/lib/d1/meeting.ts（meeting_notes 0015＋D1 AI基盤 task_extraction）で行う。
  * 起票案の確認・登録は TaskProposalPanel が既存の宿題追加API（D1対応済み）を使う。
  */
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
-import { TaskProposalPanel } from './TaskProposalPanel';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { getAppUser } from '@/lib/auth/session';
 import { INPUT_LIMITS, isStaff } from '@/lib/constants';
@@ -16,6 +14,7 @@ import { caseRow } from '@/lib/d1/cases';
 import { extractionState, listNotes, saveNote } from '@/lib/d1/meeting';
 import { localDB } from '@/lib/d1/runtime';
 import { formatDate, formatDateTime, todayInJst } from '@/lib/format';
+import { TaskProposalPanel } from './TaskProposalPanel';
 
 export const dynamic = 'force-dynamic';
 

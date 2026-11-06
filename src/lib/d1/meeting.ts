@@ -1,18 +1,17 @@
 /**
  * D05 打ち合わせ記録＋AI宿題起票案（9-5）のD1実装。
  *
- * Supabase版 page.tsx のサーバー処理を、D1（meeting_notes 0015）＋
  * D1 AI基盤（src/lib/d1/ai.ts の enqueueJob、job_type='task_extraction'）へ置き換えたもの。
  * 起票案の登録は既存の D1 宿題追加（src/lib/d1/tasks.ts の addTask／
  * POST /api/cases/{caseId}/tasks）を使う。AI専用の登録経路は作らない。
  * 権限は cases.ts の scope 述語と staff ロールで担保する（RLSの代替）。
  */
-import { randomUUID } from 'node:crypto';
-import type { D1Database } from '@cloudflare/workers-types';
 import { trimForAi } from '@/lib/ai/assist';
 import type { AppUser } from '@/lib/auth/session';
 import { INPUT_LIMITS } from '@/lib/constants';
 import { notFound } from '@/lib/errors';
+import type { D1Database } from '@cloudflare/workers-types';
+import { randomUUID } from 'node:crypto';
 import { aiAssistStatus, enqueueJob, latestJobForCase } from './ai';
 import { scope } from './cases';
 import { taskRole } from './tasks';

@@ -1,11 +1,7 @@
-import { usingD1 } from '@/lib/d1/mode';
-import type { Metadata, Viewport } from 'next';
-
 import { PerformanceReporter } from '@/components/PerformanceReporter';
 import { PwaRegistration } from '@/components/PwaRegistration';
-
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
-
 export const metadata: Metadata = {
   title: {
     default: 'にこまる | BridalHub',
@@ -17,19 +13,17 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'にこまる' },
   icons: { icon: '/icons/icon.svg', apple: '/icons/apple-touch-icon.png' },
 };
-
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   themeColor: '#D4537E',
 };
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
       <body>
         {children}
-        {!usingD1() && <PwaRegistration />}
+        {!true && <PwaRegistration />}
         <PerformanceReporter />
       </body>
     </html>

@@ -7,9 +7,9 @@
  */
 import { z } from 'zod';
 
+import { aiJobInputSchema } from '@/lib/ai/schemas';
 import {
   ALLOWED_FILE_TYPES,
-  SENDABLE_CHANNELS,
   FOLLOW_METHODS,
   GUEST_AGE_CATEGORIES,
   GUEST_ASSISTANCE_NEEDS,
@@ -23,12 +23,12 @@ import {
   PARTNER_ROLES,
   PASSWORD_MIN_LENGTH,
   REVIEW_DECISIONS,
+  SENDABLE_CHANNELS,
   SUBMISSION_FORMATS,
 } from '@/lib/constants';
 import { type ErrorDetail } from '@/lib/errors';
-import { GUEST_TAG_MAX_PER_CASE, GUEST_TAG_NAME_MAX } from '@/lib/guest-tags';
 import { todayInJst } from '@/lib/format';
-import { aiJobInputSchema } from '@/lib/ai/schemas';
+import { GUEST_TAG_MAX_PER_CASE, GUEST_TAG_NAME_MAX } from '@/lib/guest-tags';
 import { NOTIFICATION_TYPES } from '@/lib/notify/templates';
 import {
   HALL_SHAPES,
@@ -548,13 +548,6 @@ export const casePatchSchema = caseUpdateSchema.extend({
 });
 
 // ------------------------------------------------- 認証（追記。P03／/api/auth/**）
-/**
- * /api/auth/complete-invite の本文。
- * 対象行は呼び出し元JWTの auth.uid() から決まるため入力項目を持たない（6-3-1）。
- * 利用者IDを本文で受け取らないこと自体が「他人の行を active にできない」担保になる。
- */
-export const completeInviteSchema = z.object({});
-
 /** POST /api/notifications/send（機能7-1、Phase 2）。文面は付録D のテンプレートから組む。 */
 export const notificationSendSchema = z
   .object({

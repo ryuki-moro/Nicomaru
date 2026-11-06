@@ -10,18 +10,18 @@
  * 「メールで送信」「LINEで送信」も再発行を伴うため、押すたびに表示中のURLは失効し、
  * 新しく発行されたURLに置き換わる。取り違えを防ぐため、応答のURLで必ず表示を更新する。
  */
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import { ApiCallError, api } from '@/lib/api/client';
-import { formatDateTime } from '@/lib/format';
 import {
-  SENDABLE_CHANNELS,
   CONTACT_CHANNEL_LABEL,
   PARTNER_ROLE_LABEL,
+  SENDABLE_CHANNELS,
   type ContactChannel,
   type PartnerRole,
 } from '@/lib/constants';
+import { formatDateTime } from '@/lib/format';
 
 export interface IssuedInvitation {
   id: string;

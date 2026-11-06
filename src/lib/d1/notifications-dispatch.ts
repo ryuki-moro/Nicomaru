@@ -1,6 +1,5 @@
 /**
  * 通知ディスパッチ定期処理の D1 版 (6-12 / 6-9)。
- * Supabase 版 src/app/api/internal/notifications-dispatch/route.ts と同じ契約:
  * 期限当日・超過の未提出宿題について通知を作り (同日二重作成なし)、
  * queued/pending/failed を送る。失敗は notification_logs に残し翌日再試行する。
  * LINE 連携は終了済みのため、line 指定はメールへ倒す (services/notifications の resolveChannel と同じ)。

@@ -5,21 +5,15 @@
  * 回答URLは case_guest_forms に暗号化して保持しているので、ここで復号して再表示できる。
  * 案件の解決は挙式情報（/mypage/case）と同じく、参照できる案件から挙式日が近いものを主とする。
  */
-import Link from 'next/link';
-
 import { GuestResponseList } from '@/components/guests/GuestResponseList';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { requirePageUser } from '@/lib/auth/session';
 import { decryptPii } from '@/lib/crypto';
-import { usingD1 } from '@/lib/d1/mode';
 import { appBaseUrl } from '@/lib/notify/mailer';
-import { buildGuestFormUrl, loadGuestBook, type GuestBook } from '@/lib/services/guests';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
+import { buildGuestFormUrl, type GuestBook } from '@/lib/services/guests';
+import Link from 'next/link';
 import { GuestFormLink } from './GuestFormLink';
-
 export const metadata = { title: 'ゲストの出欠' };
-
 const LoadError = () => (
   <div role="alert" className="banner-error">
     <span>情報を読み込めませんでした。時間をおいて開き直してください。</span>
@@ -28,7 +22,6 @@ const LoadError = () => (
 const Waiting = () => (
   <EmptyState message="担当プランナーが準備を進めています。案件の情報が届くまでお待ちください。" />
 );
-
 async function D1CoupleGuests() {
   const user = await requirePageUser('couple');
   const { localDB } = await import('@/lib/d1/runtime');
@@ -51,7 +44,6 @@ async function D1CoupleGuests() {
   if (!caseId) return <Waiting />;
   return <GuestsView caseId={caseId} url={formUrl(tokenEnc)} book={book} />;
 }
-
 function formUrl(tokenEnc: string | null | undefined) {
   try {
     const token = decryptPii(tokenEnc);
@@ -61,37 +53,9 @@ function formUrl(tokenEnc: string | null | undefined) {
     return null;
   }
 }
-
 export default async function CoupleGuestsPage() {
-  if (usingD1()) return D1CoupleGuests();
-  const supabase = await createSupabaseServerClient();
-
-  const { data: weddingCase, error } = await supabase
-    .from('wedding_cases')
-    .select('id')
-    .order('wedding_date', { ascending: true })
-    .order('id', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) return <LoadError />;
-  if (!weddingCase) return <Waiting />;
-
-  const [formResult, book] = await Promise.all([
-    supabase
-      .from('case_guest_forms')
-      .select('token_enc')
-      .eq('case_id', weddingCase.id)
-      .is('revoked_at', null)
-      .maybeSingle(),
-    loadGuestBook(supabase, weddingCase.id),
-  ]);
-
-  return (
-    <GuestsView caseId={weddingCase.id} url={formUrl(formResult.data?.token_enc)} book={book} />
-  );
+  return D1CoupleGuests();
 }
-
 function GuestsView({
   caseId,
   url,

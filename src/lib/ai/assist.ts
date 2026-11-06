@@ -14,7 +14,6 @@
  * 7-1 が「LLMサーバー停止時は…他機能の利用に影響を与えない」と定めているため、
  * AI 側の不調が提出や確認の失敗になってはいけない。
  */
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { AI_OUTPUT_SCHEMAS, type AiJobType, type AiOutput } from '@/lib/ai/schemas';
 
@@ -50,23 +49,6 @@ export interface AiAssistStatus {
 }
 
 /**
- * ワーカーの死活（7-1「LLMサーバー停止時は該当機能を『利用不可』と表示し、
- * 手動運用にフォールバックする」）。
- *
- * 取得に失敗したときは「利用不可」を返す。
- * 判定できないことを「使える」と見せると、押しても返ってこないボタンを出すことになる。
- */
-export async function fetchAiAssistStatus(supabase: SupabaseClient): Promise<AiAssistStatus> {
-  const { data, error } = await supabase.rpc('ai_assist_status').maybeSingle();
-  if (error || !data) {
-    if (error) console.warn('[ai] ワーカーの死活を取得できませんでした', error);
-    return { available: false, lastSeenAt: null };
-  }
-  const row = data as { available: boolean; last_seen_at: string | null };
-  return { available: row.available === true, lastSeenAt: row.last_seen_at };
-}
-
-/**
  * 採用済みの出力を取り出す。
  *
  * プランナーが修正して採用した場合は reviewed_output が入っている（7-2 の 9-1）。
@@ -84,64 +66,6 @@ export function adoptedOutput<T extends AiJobType>(
   if (raw == null) return null;
   const parsed = AI_OUTPUT_SCHEMAS[jobType].safeParse(raw);
   return parsed.success ? (parsed.data as AiOutput<T>) : null;
-}
-
-/**
- * 宿題に紐づく最新のジョブを1件取る（D02 の分類・不備チェック表示）。
- *
- * 参照範囲は RLS（ai_jobs_select）が担保する。ここでの絞り込みは表示上の都合。
- * discarded は「見なかったことにした」結果なので拾わない。
- */
-export async function latestJobForTask(
-  supabase: SupabaseClient,
-  taskId: string,
-  jobType: AiJobType,
-): Promise<AiJobRow | null> {
-  const { data, error } = await supabase
-    .from('ai_jobs')
-    .select(AI_JOB_COLUMNS)
-    .eq('related_task_id', taskId)
-    .eq('job_type', jobType)
-    .neq('status', 'discarded')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) {
-    console.warn('[ai] ジョブを取得できませんでした', jobType, error);
-    return null;
-  }
-  return (data as AiJobRow | null) ?? null;
-}
-
-/**
- * 提出を契機とするジョブの投入（7-3）。
- *
- *   「提出・打ち合わせ記録登録を契機とするジョブは couple／planner の操作APIの
- *     サーバー側処理から内部呼び出しで投入し、クライアントから /api/ai/jobs を直接呼ばせない」
- *
- * couple は enqueue_ai_job() を呼べないため（job_type と case_id を自由に選べてしまう）、
- * 宿題から案件を引く enqueue_submission_ai_job() を使う。
- *
- * 投入に失敗しても例外は投げない（提出処理から呼ぶため）。
- * AI は補助であって提出の要件ではない（7-1）。
- * 失敗を呼び出し側で扱いたい場合のために、投入できたジョブIDを返す。
- */
-export async function enqueueSubmissionAiJob(
-  supabase: SupabaseClient,
-  taskId: string,
-  jobType: Extract<AiJobType, 'classification' | 'defect_check'>,
-  input: { ref?: { table: string; id: string }; text?: string; params?: Record<string, unknown> },
-): Promise<string | null> {
-  const { data, error } = await supabase.rpc('enqueue_submission_ai_job', {
-    p_case_task_id: taskId,
-    p_job_type: jobType,
-    p_input_ref: { params: {}, ...input },
-  });
-  if (error) {
-    console.warn('[ai] ジョブを投入できませんでした', jobType, error);
-    return null;
-  }
-  return (data as string | null) ?? null;
 }
 
 /**

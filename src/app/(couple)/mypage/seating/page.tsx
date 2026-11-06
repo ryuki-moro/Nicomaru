@@ -3,19 +3,14 @@
  *
  * プランナーから届いた配置パターンから1つ選び、確認済みの出席者を卓に割り当てて提出する。
  * 案件の解決はゲストの出欠（/mypage/guests）と同じく、参照できる案件から挙式日が近いものを主とする。
- * 席次は D1 でのみ提供する（Supabase版は一本化で廃止）。
  */
-import Link from 'next/link';
-
 import { SeatingChartEditor } from '@/components/seating/SeatingChartEditor';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { requirePageUser } from '@/lib/auth/session';
-import { usingD1 } from '@/lib/d1/mode';
 import { AUTO_GUEST_TAGS, customTagKey } from '@/lib/guest-tags';
 import { seatGuestsFromBook } from '@/lib/seating/guests';
-
+import Link from 'next/link';
 export const metadata = { title: '席次' };
-
 const LoadError = () => (
   <div role="alert" className="banner-error">
     <span>情報を読み込めませんでした。時間をおいて開き直してください。</span>
@@ -24,7 +19,6 @@ const LoadError = () => (
 const Waiting = () => (
   <EmptyState message="担当プランナーが準備を進めています。案件の情報が届くまでお待ちください。" />
 );
-
 async function D1CoupleSeating() {
   const user = await requirePageUser('couple');
   const { localDB } = await import('@/lib/d1/runtime');
@@ -86,13 +80,6 @@ async function D1CoupleSeating() {
     </div>
   );
 }
-
 export default async function CoupleSeatingPage() {
-  if (usingD1()) return D1CoupleSeating();
-  return (
-    <div className="flex flex-col gap-[14px]">
-      <h1 className="section-head">席次</h1>
-      <EmptyState message="席次は新しい環境への移行後にご利用いただけます。" />
-    </div>
-  );
+  return D1CoupleSeating();
 }

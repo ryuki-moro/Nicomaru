@@ -1,18 +1,16 @@
 /**
  * D03 準備シートのD1実装（機能4-5／9-2）。
  *
- * Supabase版 page.tsx のサーバー処理を、D1（meeting_sheets 0014）＋
  * D1 AI基盤（src/lib/d1/ai.ts）へ置き換えたもの。
  * 権限は cases.ts の scope 述語と staff ロールで担保する（RLSの代替）。
  * フォロー記録・連絡履歴は D1 にテーブルが無いため、シートでは空として扱う
- * （Supabase完全削除マップ §2 行10・行17。移行は別Wave）。
  */
-import { randomUUID } from 'node:crypto';
-import type { D1Database } from '@cloudflare/workers-types';
 import type { AppUser } from '@/lib/auth/session';
 import { INCOMPLETE_TASK_STATUSES, TASK_STATUS_LABEL, type TaskStatus } from '@/lib/constants';
 import { notFound } from '@/lib/errors';
 import { formatDate, todayInJst } from '@/lib/format';
+import type { D1Database } from '@cloudflare/workers-types';
+import { randomUUID } from 'node:crypto';
 import { aiAssistStatus, enqueueJob, latestJobForCase } from './ai';
 import { caseRow, scope } from './cases';
 import { taskRole } from './tasks';

@@ -6,18 +6,12 @@
  *     スナップショットされているため、task_templates は参照しない（6-6-2）。
  *   - 表示する入力項目は case_tasks.submission_format に従う（text／select／file／none）。
  *
- * 読み取りは Supabase クライアントから直接行い（6-5）、書き込みだけを
  * /api/tasks/{taskId}/submit に寄せる。どの宿題が見えるかは付録A の RLS が決める。
  */
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { requireRole } from '@/lib/auth/session';
-import { usingD1, localDB } from '@/lib/d1/runtime';
-import { taskRow, latestSubmission } from '@/lib/d1/tasks';
-
 import { SubmitForm } from '@/app/(couple)/mypage/tasks/[taskId]/SubmitForm';
 import { taskBackHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { TaskStatusBadge } from '@/components/ui/StatusBadge';
+import { requireRole } from '@/lib/auth/session';
 import {
   ALLOWED_FILE_TYPES,
   SUBMISSION_FORMAT_LABEL,
@@ -27,12 +21,13 @@ import {
   type TaskStatus,
 } from '@/lib/constants';
 import { isEncrypted, readPii } from '@/lib/crypto';
+import { localDB } from '@/lib/d1/runtime';
+import { latestSubmission, taskRow } from '@/lib/d1/tasks';
 import { formatDateJp } from '@/lib/format';
 import { type IsoDate } from '@/lib/services/schedule';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 export const metadata = { title: '宿題の詳細' };
-
 interface TaskRow {
   id: string;
   title: string;
@@ -43,7 +38,6 @@ interface TaskRow {
   due_date: IsoDate;
   status: TaskStatus;
 }
-
 interface SubmissionRow {
   id: string;
   text_value: string | null;
@@ -53,7 +47,6 @@ interface SubmissionRow {
   review_status: ReviewStatus;
   planner_feedback: string | null;
 }
-
 /**
  * task_submissions.text_value はアプリ側 AES-256-GCM の暗号化対象（5-3／13-1）。
  * 開発用シードなど平文のまま入っている値も表示できるよう readPii を使う。
@@ -66,12 +59,10 @@ function initialText(stored: string | null): string {
   const value = readPii(stored);
   return isEncrypted(value) ? '' : value;
 }
-
 function choicesOf(options: Record<string, unknown> | null): string[] {
   const raw = options?.choices;
   return Array.isArray(raw) ? raw.filter((c): c is string => typeof c === 'string') : [];
 }
-
 function allowedTypesOf(raw: unknown): AllowedFileType[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter(
@@ -79,74 +70,60 @@ function allowedTypesOf(raw: unknown): AllowedFileType[] {
       typeof v === 'string' && (ALLOWED_FILE_TYPES as readonly string[]).includes(v),
   );
 }
-
 export default async function TaskDetailPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ taskId: string }>;
-  searchParams: Promise<{ from?: string | string[] }>;
+  params: Promise<{
+    taskId: string;
+  }>;
+  searchParams: Promise<{
+    from?: string | string[];
+  }>;
 }) {
   const { taskId } = await params;
   const backHref = taskBackHref((await searchParams).from);
   const user = await requireRole('couple');
-  const supabase = usingD1() ? null : await createSupabaseServerClient();
-
-  const taskResult = usingD1()
-    ? {
-        data: await taskRow(await localDB(), user, taskId).catch((error: unknown) => {
-          if (error && typeof error === 'object' && 'status' in error && error.status === 404)
-            notFound();
-          throw error;
-        }),
-        error: null,
-      }
-    : await supabase!
-        .from('case_tasks')
-        .select(
-          'id, title, description, submission_format, allowed_file_types, options, due_date, status',
-        )
-        .eq('id', taskId)
-        .maybeSingle();
-
+  const taskResult = {
+    data: await taskRow(await localDB(), user, taskId).catch((error: unknown) => {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404)
+        notFound();
+      throw error;
+    }),
+    error: null,
+  };
   // 不存在・権限外はいずれも 404 として扱う（4-3 エラー表示規約）。
   // RLS で弾かれた場合も 0 行として返るため、存在の有無を推測させない。
   if (taskResult.error || !taskResult.data) notFound();
   const task = taskResult.data as TaskRow;
-
   // 最新提出。draft は本人にしか見えない（付録A task_submissions_hide_draft）。
-  const submissionResult = usingD1()
-    ? { data: await latestSubmission(await localDB(), user, taskId) }
-    : await supabase!
-        .from('task_submissions')
-        .select('id, text_value, selected_value, file_id, comment, review_status, planner_feedback')
-        .eq('case_task_id', taskId)
-        .eq('is_latest', true)
-        .maybeSingle();
+  const submissionResult = { data: await latestSubmission(await localDB(), user, taskId) };
   const latest = (submissionResult.data ?? null) as SubmissionRow | null;
-
   let attachedFileName: string | null = null;
   if (latest?.file_id) {
-    const fileResult = usingD1()
-      ? {
-          data: await (
-            await localDB()
-          )
-            .prepare('SELECT original_filename FROM storage_files WHERE id=? AND case_id=?')
-            .bind(latest.file_id, (taskResult.data as { case_id?: string }).case_id ?? '')
-            .first(),
-        }
-      : await supabase!
-          .from('storage_files')
-          .select('original_filename')
-          .eq('id', latest.file_id)
-          .maybeSingle();
+    const fileResult = {
+      data: await (
+        await localDB()
+      )
+        .prepare('SELECT original_filename FROM storage_files WHERE id=? AND case_id=?')
+        .bind(
+          latest.file_id,
+          (
+            taskResult.data as {
+              case_id?: string;
+            }
+          ).case_id ?? '',
+        )
+        .first(),
+    };
     attachedFileName =
-      (fileResult.data as { original_filename: string | null } | null)?.original_filename ?? null;
+      (
+        fileResult.data as {
+          original_filename: string | null;
+        } | null
+      )?.original_filename ?? null;
   }
-
   const format = task.submission_format;
-
   return (
     <div className="flex flex-col gap-3">
       <header>
