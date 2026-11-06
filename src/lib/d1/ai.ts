@@ -97,6 +97,22 @@ export async function latestJobForTask(
   return row ? view(row) : null;
 }
 
+/** 案件に紐づく最新ジョブ（D03シート下書き・D05起票案。いずれも related_task_id を持たない）。 */
+export async function latestJobForCase(
+  db: D1Database,
+  user: Actor,
+  caseId: string,
+  jobType: AiJobType,
+) {
+  const row = await db
+    .prepare(
+      `SELECT j.* FROM ai_jobs j WHERE j.case_id=? AND j.job_type=? AND j.related_task_id IS NULL AND j.status<>'discarded' AND ${staffCase} ORDER BY j.created_at DESC LIMIT 1`,
+    )
+    .bind(caseId, jobType, user.id, user.id)
+    .first<StoredJob>();
+  return row ? view(row) : null;
+}
+
 export async function jobList(db: D1Database, user: Actor, caseId?: string, jobType?: string) {
   const type = (AI_JOB_TYPES as readonly string[]).includes(jobType ?? '') ? jobType : null;
   const rows = await db

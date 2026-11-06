@@ -95,7 +95,8 @@ export async function middleware(request: NextRequest) {
       '/api/ai/jobs',
       '/api/internal/ai-worker',
     ];
-    const casePage = /^\/cases\/[^/]+(?:\/edit)?$/.test(path) && path !== '/cases/new';
+    const casePage =
+      /^\/cases\/[^/]+(?:\/edit|\/sheet|\/meeting-notes)?$/.test(path) && path !== '/cases/new';
     const caseApi =
       /^\/api\/cases\/[^/]+(?:\/(?:assign-tasks|invitations)(?:\/[^/]+\/send)?)?$/.test(path);
     const tasks =
