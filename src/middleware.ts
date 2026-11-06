@@ -90,10 +90,17 @@ export async function middleware(request: NextRequest) {
       '/api/auth/password-update',
       '/dev/mailbox',
       '/api/dev/mailbox',
+      // Wave1 で D1 化した定期処理と通知ログ出力 (認証は各ハンドラ側: 内部 secret / system_admin)
+      '/api/internal/rate-limit-cleanup',
+      '/api/internal/audit-log-purge',
+      '/api/internal/risk-recalculate',
+      '/api/system/notification-logs.csv',
     ];
     const casePage = /^\/cases\/[^/]+(?:\/edit)?$/.test(path) && path !== '/cases/new';
     const caseApi =
-      /^\/api\/cases\/[^/]+(?:\/(?:assign-tasks|invitations)(?:\/[^/]+\/send)?)?$/.test(path);
+      /^\/api\/cases\/[^/]+(?:\/(?:assign-tasks|invitations)(?:\/[^/]+\/send)?|\/risk\/recalculate)?$/.test(
+        path,
+      );
     const tasks =
       /^\/(?:mypage\/tasks\/[^/]+|submissions\/[^/]+|api\/tasks\/[^/]+\/submit|api\/submissions\/[^/]+\/review|api\/cases\/[^/]+\/tasks(?:\/[^/]+)?|api\/files\/[^/]+\/download)$/.test(
         path,
