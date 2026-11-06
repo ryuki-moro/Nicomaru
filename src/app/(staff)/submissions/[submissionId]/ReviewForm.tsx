@@ -12,6 +12,7 @@
  */
 'use client';
 import { DraftAssist } from '@/app/(staff)/submissions/[submissionId]/DraftAssist';
+import { TranslationPanel } from '@/app/(staff)/submissions/[submissionId]/TranslationPanel';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { ApiCallError, api, handleApiError } from '@/lib/api/client';
 import {
@@ -31,6 +32,8 @@ interface Props {
   taskTitle: string;
   aiAvailable: boolean;
   lastSeenAt: string | null;
+  /** 9-11 翻訳の初期値（提出の自由記述）。無い画面では空 */
+  sourceText?: string;
 }
 export function ReviewForm({
   submissionId,
@@ -39,6 +42,7 @@ export function ReviewForm({
   taskTitle,
   aiAvailable,
   lastSeenAt,
+  sourceText = '',
 }: Props) {
   const router = useRouter();
   const [decision, setDecision] = useState<ReviewDecision | null>(null);
@@ -104,6 +108,16 @@ export function ReviewForm({
         </div>
         <FieldError message={fieldErrors.decision} />
       </fieldset>
+
+      {/* 9-11 翻訳補助（拡張）。辞書フォールバックがあるため常時出す（配置はコメント欄の直上） */}
+      <TranslationPanel
+        caseId={caseId}
+        taskId={taskId}
+        sourceText={sourceText || comment}
+        aiAvailable={aiAvailable}
+        lastSeenAt={lastSeenAt}
+        onAdopt={setComment}
+      />
 
       <div className="mb-4">
         <label htmlFor="review-comment" className="field-label">

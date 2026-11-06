@@ -23,6 +23,9 @@ import {
 import { resolvePage } from '@/lib/pagination';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+
+import { TemplateDraftPanel } from './TemplateDraftPanel';
+
 interface TemplateRow {
   id: string;
   name: string;
@@ -132,6 +135,10 @@ export default async function TemplateListPage({
         ここで登録した宿題は、案件登録時にプラン種別ごとのセットとして割り当てられます。
         「利用中」をオフにしても、すでに割り当て済みの案件の宿題はそのまま残ります。
       </p>
+
+      <TemplateDraftPanel
+        existing={templates.map((t) => ({ name: t.name, due_offset_days: t.due_offset_days }))}
+      />
 
       {loadFailed && (
         <p role="alert" className="banner-error">

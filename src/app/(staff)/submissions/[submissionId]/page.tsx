@@ -274,6 +274,7 @@ export default async function SubmissionReviewPage({
             taskTitle={task.title}
             aiAvailable={aiStatus.available}
             lastSeenAt={aiStatus.lastSeenAt}
+            sourceText={textValue ?? ''}
           />
         </section>
       ) : (
