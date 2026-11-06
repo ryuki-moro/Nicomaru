@@ -163,9 +163,17 @@ describe('Cloudflare本番のD1（NICOMARU_DB=d1）', () => {
   });
 
   it('未移行の機能は503で遮断し、Supabaseへフォールバックしない', async () => {
-    const response = await middleware(new NextRequest('https://nicomaru.example.test/venues'));
+    // /venues は Wave2 で D1 化したため、未移行の例は /meetings (打ち合わせ) に差し替える
+    const response = await middleware(new NextRequest('https://nicomaru.example.test/meetings'));
     expect(response.status).toBe(503);
     expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it('Wave2で移行した管理系画面へ進める', async () => {
+    for (const path of ['/venues', '/templates', '/plan-types', '/system']) {
+      const response = await middleware(new NextRequest(`https://nicomaru.example.test${path}`));
+      expect(response.status).toBe(200);
+    }
   });
 
   it('APP_BASE_URL未設定では処理しない', async () => {

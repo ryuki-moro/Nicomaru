@@ -54,8 +54,7 @@ export async function middleware(request: NextRequest) {
     ) {
       return new NextResponse('ローカル検証専用です', { status: 403 });
     }
-    if (path === '/dashboard' || path === '/system')
-      return NextResponse.redirect(new URL('/cases', origin));
+    if (path === '/dashboard') return NextResponse.redirect(new URL('/cases', origin));
     // 受信箱はローカル検証専用。本番D1では外部送信するため存在しない扱いにする。
     if (!localD1() && !demoMailbox() && (path === '/dev/mailbox' || path === '/api/dev/mailbox'))
       return new NextResponse(null, { status: 404 });
@@ -99,6 +98,18 @@ export async function middleware(request: NextRequest) {
       '/api/internal/audit-log-purge',
       '/api/internal/risk-recalculate',
       '/api/system/notification-logs.csv',
+      // Wave2: 残り定期処理・system・管理系 CRUD (認証は各ハンドラ/画面側)
+      '/api/internal/notifications-dispatch',
+      '/api/internal/ai-job-reclaim',
+      '/api/internal/usage-rollup',
+      '/api/internal/monitoring',
+      '/api/internal/case-purge',
+      '/system',
+      '/templates',
+      '/plan-types',
+      '/venues',
+      '/venues/new',
+      '/api/venues',
     ];
     const casePage = /^\/cases\/[^/]+(?:\/edit)?$/.test(path) && path !== '/cases/new';
     const caseApi =
@@ -115,9 +126,13 @@ export async function middleware(request: NextRequest) {
         path,
       );
     const staffUser = /^\/(?:users|api\/admin\/users)\/[^/]+$/.test(path) && path !== '/users/new';
+    const adminPages =
+      /^\/(?:templates\/[^/]+|venues\/[^/]+|api\/venues\/[^/]+)$/.test(path) &&
+      path !== '/venues/new';
     if (
       !allowed.includes(path) &&
       !staffUser &&
+      !adminPages &&
       !casePage &&
       !caseApi &&
       !registration &&

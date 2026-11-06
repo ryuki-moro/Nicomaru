@@ -14,6 +14,7 @@
  */
 import { ok, route } from '@/lib/api/route';
 import { runBatch } from '@/lib/api/internal';
+import { usingD1 } from '@/lib/d1/mode';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -25,6 +26,17 @@ const MAX_ATTEMPTS = 3;
 // 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
 export const POST = route(
   async () => {
+    if (usingD1()) {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { runBatchD1 } = await import('@/lib/d1/batches');
+      const { reclaimStalledAiJobs } = await import('@/lib/d1/ai');
+      const db = await localDB();
+      const outcome = await runBatchD1(db, 'ai_job_reclaim', async () => {
+        const { requeued, failed } = await reclaimStalledAiJobs(db);
+        return { targetCount: requeued + failed, detail: { requeued, failed } };
+      });
+      return ok({ processed: outcome.targetCount, ...outcome.detail });
+    }
     const admin = createSupabaseAdminClient('cron.ai-job-reclaim');
 
     const outcome = await runBatch(admin, 'ai_job_reclaim', async () => {

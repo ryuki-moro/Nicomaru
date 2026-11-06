@@ -4,16 +4,22 @@ import { z } from 'zod';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
 import { fromPostgresError, notFound } from '@/lib/errors';
+import { usingD1 } from '@/lib/d1/mode';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { venueUpdateSchema } from '@/lib/validation';
 
 type RouteContext = { params: Promise<{ venueId: string }> };
 
 export const PATCH = route<[RouteContext]>(async (request, context) => {
-  await requireRole('system_admin');
+  const actor = await requireRole('system_admin');
   const { venueId } = await context.params;
   if (!z.string().uuid().safeParse(venueId).success) throw notFound('式場が見つかりません');
   const input = await parseBody(request, venueUpdateSchema);
+  if (usingD1()) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { updateVenueD1 } = await import('@/lib/d1/admin');
+    return ok(await updateVenueD1(await localDB(), actor, venueId, input));
+  }
 
   const patch: { name?: string; contact_email?: string | null; active?: boolean } = {};
   if (input.name !== undefined) patch.name = input.name;

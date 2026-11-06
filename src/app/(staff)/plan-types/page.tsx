@@ -21,6 +21,8 @@ import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { fromPostgresError } from '@/lib/errors';
 import { resolvePage } from '@/lib/pagination';
+import { ApiError } from '@/lib/errors';
+import { usingD1 } from '@/lib/d1/mode';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { planTypeSaveSchema, toErrorDetails } from '@/lib/validation';
 
@@ -98,6 +100,20 @@ async function savePlanType(planTypeId: string, values: unknown): Promise<SavePl
     };
   }
   const input = parsed.data;
+  if (usingD1()) {
+    try {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { savePlanTypeD1 } = await import('@/lib/d1/admin');
+      const saved = await savePlanTypeD1(await localDB(), user, planTypeId, input);
+      revalidatePath('/plan-types');
+      revalidatePath('/templates');
+      return { ok: true, id: saved.id };
+    } catch (e) {
+      if (e instanceof ApiError)
+        return { ok: false, code: e.code, message: e.message, details: e.details ?? [] };
+      throw e;
+    }
+  }
   const supabase = await createSupabaseServerClient();
 
   // plan_task_templates の RLS はプラン種別側の式場しか見ない（plan_type_venue）。
@@ -192,47 +208,95 @@ export default async function PlanTypesPage({
   const { edit, page: pageParam } = await searchParams;
   const page = resolvePage(pageParam);
 
-  await requirePageUser('admin');
+  const actor = await requirePageUser('admin');
 
-  const supabase = await createSupabaseServerClient();
+  const d1Mode = usingD1();
+  const supabase = d1Mode ? null : await createSupabaseServerClient();
 
   // 編集対象は一覧の結果から探さず id で直接引く。
   // ページングを入れた以上、2ページ目を開いた状態で1ページ目の行を編集する場合に
   // 一覧から探すと対象が見つからずフォームが黙って消えるため。
   const editingQuery =
-    edit && edit !== 'new'
+    edit && edit !== 'new' && supabase
       ? supabase.from('plan_types').select(PLAN_TYPE_COLUMNS).eq('id', edit).maybeSingle()
       : null;
 
   // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する（K01／M02 と同じ形）。
   const from = (page - 1) * LIST_PAGE_SIZE;
-  const [planTypesResult, templatesResult, assignmentsResult, editingResult] = await Promise.all([
-    supabase
-      .from('plan_types')
-      // count は新規登録時の表示順の既定値（末尾）に使う。ページ内の件数では代用できない
-      .select(PLAN_TYPE_COLUMNS, { count: 'exact' })
-      .order('active', { ascending: false })
-      .order('display_order')
-      .order('name')
-      .order('id')
-      .range(from, from + LIST_PAGE_SIZE),
-    supabase
-      .from('task_templates')
-      .select('id, name, due_offset_days, active')
-      .order('due_offset_days', { ascending: false })
-      .order('name')
-      .order('id'),
-    supabase
-      .from('plan_task_templates')
-      .select('plan_type_id, task_template_id, display_order, due_offset_days_override'),
-    editingQuery,
-  ]);
+  const [planTypesResult, templatesResult, assignmentsResult, editingResult] = supabase
+    ? await Promise.all([
+        supabase
+          .from('plan_types')
+          .select(PLAN_TYPE_COLUMNS, { count: 'exact' })
+          .order('active', { ascending: false })
+          .order('display_order')
+          .order('name')
+          .order('id')
+          .range(from, from + LIST_PAGE_SIZE),
+        supabase
+          .from('task_templates')
+          .select('id, name, due_offset_days, active')
+          .order('due_offset_days', { ascending: false })
+          .order('name')
+          .order('id'),
+        supabase
+          .from('plan_task_templates')
+          .select('plan_type_id, task_template_id, display_order, due_offset_days_override'),
+        editingQuery,
+      ])
+    : [{ data: null, error: null, count: null }, { data: null }, { data: null }, { data: null }];
 
-  const fetched: PlanTypeRow[] = planTypesResult.data ?? [];
-  const hasNext = fetched.length > LIST_PAGE_SIZE;
+  let fetched: PlanTypeRow[] = planTypesResult.data ?? [];
+  let templateRows: TemplateRow[] = templatesResult.data ?? [];
+  let assignments: AssignmentRow[] = assignmentsResult.data ?? [];
+  let editingRowD1: PlanTypeRow | null = null;
+  let d1HasNext: boolean | null = null;
+  let d1Total = 0;
+  if (d1Mode) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { listPlanTypesD1, listTemplateChoicesD1, getPlanTypeD1 } =
+      await import('@/lib/d1/admin');
+    const db = await localDB();
+    const d1 = await listPlanTypesD1(db, actor, page);
+    fetched = d1.rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      default_guest_count_min: r.default_guest_count_min,
+      default_guest_count_max: r.default_guest_count_max,
+      display_order: r.display_order,
+      active: r.active,
+    }));
+    d1HasNext = d1.hasNext;
+    d1Total = d1.rows.length;
+    templateRows = (await listTemplateChoicesD1(db, actor)).map((r) => ({
+      id: r.id,
+      name: r.name,
+      due_offset_days: r.due_offset_days,
+      active: r.active,
+    }));
+    const { results: assignRows } = await db
+      .prepare(
+        'SELECT plan_type_id, task_template_id, display_order, due_offset_days_override FROM plan_task_templates',
+      )
+      .all<AssignmentRow>();
+    assignments = assignRows;
+    if (edit && edit !== 'new') {
+      const found = await getPlanTypeD1(db, actor, edit);
+      if (found)
+        editingRowD1 = {
+          id: found.id,
+          name: found.name,
+          description: found.description,
+          default_guest_count_min: found.default_guest_count_min,
+          default_guest_count_max: found.default_guest_count_max,
+          display_order: found.display_order,
+          active: found.active,
+        };
+    }
+  }
+  const hasNext = d1HasNext ?? fetched.length > LIST_PAGE_SIZE;
   const planTypes = fetched.slice(0, LIST_PAGE_SIZE);
-  const templateRows: TemplateRow[] = templatesResult.data ?? [];
-  const assignments: AssignmentRow[] = assignmentsResult.data ?? [];
 
   const assignedCount = new Map<string, number>();
   for (const a of assignments) {
@@ -240,7 +304,7 @@ export default async function PlanTypesPage({
   }
 
   // 権限外・不存在の id は RLS により 0 行になるので、フォームを出さないことで自然に弾かれる
-  const editingRow = (editingResult?.data ?? null) as PlanTypeRow | null;
+  const editingRow = (editingRowD1 ?? editingResult?.data ?? null) as PlanTypeRow | null;
   const editing = edit === 'new' ? 'new' : (editingRow?.id ?? null);
 
   const templates: TemplateChoice[] = templateRows.map((t) => ({
@@ -260,7 +324,10 @@ export default async function PlanTypesPage({
     // 新規は既存の総数＝末尾を既定値にする。ページ内の件数だと2ページ目以降で先頭に割り込む
     displayOrder: editingRow
       ? String(editingRow.display_order)
-      : String(planTypesResult.count ?? planTypes.length),
+      : String(
+          (planTypesResult as { count?: number | null }).count ??
+            (d1Mode ? d1Total : planTypes.length),
+        ),
     active: editingRow?.active ?? true,
     assignments: editingRow
       ? assignments
@@ -294,7 +361,7 @@ export default async function PlanTypesPage({
         </div>
       </div>
 
-      {planTypesResult.error && (
+      {!d1Mode && planTypesResult.error && (
         <p role="alert" className="banner-error">
           プラン種別を読み込めませんでした。画面を更新してからもう一度お試しください。
         </p>

@@ -16,6 +16,8 @@ import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { getAppUser } from '@/lib/auth/session';
 import { type AllowedFileType, type Importance, type SubmissionFormat } from '@/lib/constants';
 import { fromPostgresError } from '@/lib/errors';
+import { ApiError } from '@/lib/errors';
+import { usingD1 } from '@/lib/d1/mode';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { taskTemplateSchema, toErrorDetails } from '@/lib/validation';
 
@@ -72,6 +74,21 @@ async function saveTemplate(templateId: string, values: unknown): Promise<SaveTe
   }
   const input = parsed.data;
 
+  if (usingD1()) {
+    try {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { saveTemplateD1 } = await import('@/lib/d1/admin');
+      const saved = await saveTemplateD1(await localDB(), user, templateId, input);
+      revalidatePath('/templates');
+      revalidatePath('/plan-types');
+      return { ok: true, id: saved.id };
+    } catch (e) {
+      if (e instanceof ApiError)
+        return { ok: false, code: e.code, message: e.message, details: e.details ?? [] };
+      throw e;
+    }
+  }
+
   const row = {
     name: input.name,
     description: input.description ?? null,
@@ -121,7 +138,24 @@ export default async function TemplateEditPage({
   const isNew = templateId === 'new';
   let record: TemplateRecord | null = null;
 
-  if (!isNew) {
+  if (!isNew && usingD1()) {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { getTemplateD1 } = await import('@/lib/d1/admin');
+    const found = await getTemplateD1(await localDB(), user, templateId);
+    if (!found) notFound();
+    record = {
+      id: found.id,
+      name: found.name,
+      description: found.description,
+      submission_format: found.submission_format as SubmissionFormat,
+      allowed_file_types: found.allowed_file_types as AllowedFileType[],
+      default_options: found.default_options as { choices?: string[] },
+      due_offset_days: found.due_offset_days,
+      importance: found.importance as Importance,
+      is_required: found.is_required,
+      active: found.active,
+    };
+  } else if (!isNew) {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase
       .from('task_templates')

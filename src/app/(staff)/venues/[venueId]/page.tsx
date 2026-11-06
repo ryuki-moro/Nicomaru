@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
 import { getAppUser } from '@/lib/auth/session';
+import { usingD1 } from '@/lib/d1/mode';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 import { VenueEditForm } from './VenueEditForm';
@@ -29,19 +30,38 @@ export default async function VenueEditPage({ params }: { params: Promise<{ venu
 
   let venue: VenueRow | null = null;
   let loadFailed = false;
-  try {
-    // 式場の読み取り・更新は Service Role を使わず、RLS にも認可を委ねる。
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase
-      .from('venues')
-      .select('id, name, code, contact_email, active')
-      .eq('id', venueId)
-      .maybeSingle();
-    if (error) loadFailed = true;
-    else venue = data as VenueRow | null;
-  } catch {
-    loadFailed = true;
-  }
+  if (usingD1()) {
+    try {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { getVenueD1 } = await import('@/lib/d1/admin');
+      const found = await getVenueD1(await localDB(), user, venueId);
+      venue = found
+        ? {
+            id: found.id,
+            name: found.name,
+            code: found.code,
+            contact_email: found.contact_email,
+            active: found.active,
+          }
+        : null;
+    } catch {
+      loadFailed = true;
+    }
+    if (!loadFailed && !venue) notFound();
+  } else
+    try {
+      // 式場の読み取り・更新は Service Role を使わず、RLS にも認可を委ねる。
+      const supabase = await createSupabaseServerClient();
+      const { data, error } = await supabase
+        .from('venues')
+        .select('id, name, code, contact_email, active')
+        .eq('id', venueId)
+        .maybeSingle();
+      if (error) loadFailed = true;
+      else venue = data as VenueRow | null;
+    } catch {
+      loadFailed = true;
+    }
 
   // 通信失敗と、本当に対象が存在しない場合を区別する。
   if (!loadFailed && !venue) notFound();
