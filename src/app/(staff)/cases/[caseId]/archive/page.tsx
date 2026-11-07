@@ -23,14 +23,6 @@ import { formatDate } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
-interface CaseRow {
-  id: string;
-  case_code: string;
-  wedding_date: string;
-  archived_at: string | null;
-  couple_profiles: { partner_role: PartnerRole; full_name: string }[];
-}
-
 async function archiveCase(formData: FormData) {
   'use server';
 

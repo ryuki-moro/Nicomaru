@@ -18,16 +18,6 @@
 import { requirePageUser } from '@/lib/auth/session';
 import { MeetingNotesPageD1 } from './MeetingNotesPageD1';
 export const dynamic = 'force-dynamic';
-interface NoteRow {
-  id: string;
-  meeting_date: string | null;
-  participants: string | null;
-  body: string;
-  created_at: string;
-  user_profiles: {
-    display_name: string;
-  } | null;
-}
 export default async function MeetingNotesPage({
   params,
 }: {

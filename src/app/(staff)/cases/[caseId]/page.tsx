@@ -42,13 +42,6 @@ import { InvitationSection } from './InvitationSection';
 import { RiskSection, type CaseRisk } from './RiskSection';
 import { TaskSection, type CaseTaskRow } from './TaskSection';
 export const dynamic = 'force-dynamic';
-const CASE_SELECT = `id, case_code, wedding_date, wedding_time, contact_channel, status, guest_count,
-   venue_room, plan_type_id, archived_at,
-   plan_types ( name ),
-   user_profiles ( display_name ),
-   couple_profiles ( ${COUPLE_PROFILE_COLUMNS} ),
-   case_tasks ( id, title, due_date, status, importance, display_order, submission_format ),
-   risk_score_snapshots ( score_value, score_level, reasons, calculated_at, is_current )`;
 interface CaseRow {
   id: string;
   case_code: string;
@@ -300,7 +293,6 @@ export default async function CaseDetailPage({
 
   const incomplete = tasks.filter((task) => INCOMPLETE_TASK_STATUSES.includes(task.status)).length;
   const done = tasks.length - incomplete;
-  const isAdmin = user.role === 'admin' || user.role === 'system_admin';
   const archived = row.archived_at !== null;
   // ゲストの出欠回答とタグ。回答の追加は新郎新婦が配るURLから行い、タグは新郎新婦が付けたものを確認・修正できる。
   const guestBook = await loadD1GuestBook(user, row.id);

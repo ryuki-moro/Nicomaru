@@ -37,7 +37,6 @@ interface ProfileRow {
   full_name: string | null;
 }
 export default async function MyPage() {
-  const d1 = true;
   const user = await requirePageUser('couple');
   let local: Awaited<ReturnType<(typeof import('@/lib/d1/cases'))['caseRow']>> | null = null;
   {
@@ -61,7 +60,6 @@ export default async function MyPage() {
       <EmptyState message="担当プランナーが準備を進めています。案件の情報が届くまでお待ちください。" />
     );
   }
-  const caseId = weddingCase.id as string;
   const weddingDate = weddingCase.wedding_date as IsoDate;
   // 「次にやること」と「これから提出する宿題」は同じ母集合から作る。
   // 6-8 の未提出判定（not_started／needs_fix。waived は対象外）に一本化することで、

@@ -29,13 +29,6 @@ import { requirePageUser } from '@/lib/auth/session';
 import { type FollowMethod, type TaskStatus } from '@/lib/constants';
 import { MeetingSheetPageD1 } from './SheetPageD1';
 export const dynamic = 'force-dynamic';
-interface TaskRow {
-  id: string;
-  title: string;
-  due_date: string;
-  status: TaskStatus;
-  display_order: number;
-}
 interface FollowRow {
   id: string;
   method: FollowMethod;

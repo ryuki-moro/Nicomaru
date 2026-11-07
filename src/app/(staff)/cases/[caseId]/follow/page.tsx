@@ -23,25 +23,6 @@ import { localDB } from '@/lib/d1/runtime';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { resolvePage } from '@/lib/pagination';
 
-interface CaseRow {
-  id: string;
-  case_code: string;
-  wedding_date: string;
-}
-
-interface CoupleProfileRow {
-  full_name: string | null;
-  is_primary_contact: boolean;
-}
-
-interface FollowLogRow {
-  id: string;
-  planner_id: string;
-  method: FollowMethod;
-  note: string | null;
-  followed_at: string;
-}
-
 export default async function FollowLogPage({
   params,
   searchParams,
