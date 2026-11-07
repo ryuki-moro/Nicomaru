@@ -1,19 +1,20 @@
-import { randomUUID } from 'node:crypto';
-import type { D1Database } from '@cloudflare/workers-types';
 import type { AppUser } from '@/lib/auth/session';
-import type { SubmissionFormat, TaskStatus, ReviewStatus, AllowedFileType } from '@/lib/constants';
+import type { AllowedFileType, ReviewStatus, SubmissionFormat, TaskStatus } from '@/lib/constants';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { encryptPii, readPii } from '@/lib/crypto';
 import { badRequest, conflict, forbidden, notFound, unprocessable } from '@/lib/errors';
+import { phaseNameFor } from '@/lib/services/schedule';
 import {
-  submitTaskSchema,
-  reviewSubmissionSchema,
   caseTaskCreateSchema,
   caseTaskUpdateSchema,
+  reviewSubmissionSchema,
+  submitTaskSchema,
 } from '@/lib/validation';
-import { phaseNameFor } from '@/lib/services/schedule';
-import { scope } from './cases';
+import type { D1Database } from '@cloudflare/workers-types';
+import { randomUUID } from 'node:crypto';
 import type { z } from 'zod';
+import { scope } from './cases';
+import { logCommunication } from './follow';
 
 type Actor = Pick<AppUser, 'id'>;
 export interface TaskRow {
@@ -246,6 +247,12 @@ export async function submitTask(
       .bind(task.case_id, user.id, body.draft ? 'task_draft' : 'task_submit', ...g.args),
   );
   await commit(db, user, task, true, statements, body.draft ? undefined : 'submitted');
+  if (!body.draft)
+    await logCommunication(db, user, task.case_id, {
+      channel: 'in_app',
+      direction: 'inbound',
+      summary: '宿題を提出しました',
+    }).catch(() => console.warn('[communication] 記録を保存できませんでした'));
   return { id: submissionId, reviewStatus: status };
 }
 export async function submissionRow(db: D1Database, user: Actor, id: string) {
@@ -326,6 +333,11 @@ export async function reviewSubmission(
     ],
     input.decision,
   );
+  await logCommunication(db, user, task.case_id, {
+    channel: 'in_app',
+    direction: 'outbound',
+    summary: input.decision === 'confirmed' ? '提出物を確認しました' : '提出物の修正を依頼しました',
+  }).catch(() => console.warn('[communication] 記録を保存できませんでした'));
   return { id, caseId: task.case_id, caseTaskId: task.id, reviewStatus: input.decision };
 }
 export async function pendingSubmissions(db: D1Database, user: Actor, offset: number) {

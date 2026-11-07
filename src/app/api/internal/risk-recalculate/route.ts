@@ -15,42 +15,37 @@
  * 1件の不整合で当日のリスク表示が丸ごと止まる方が運用上の損失が大きいため。
  */
 import { ok, route } from '@/lib/api/route';
-import { forEachActiveCase, runBatch } from '@/lib/api/internal';
-import { persistViaServiceRole, recalculateCaseRisk } from '@/lib/services/riskStore';
-import { createSupabaseAdminClient } from '@/lib/supabase/admin';
-
 export const runtime = 'nodejs';
-
 // 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
 export const POST = route(
   async () => {
-    // 表6-4「/api/cases/{caseId}/risk/recalculate（定期処理）｜使用する（内部バッチ）」
-    const admin = createSupabaseAdminClient('cron.risk-recalculate');
-
-    const failures: { caseId: string; message: string }[] = [];
-
-    const outcome = await runBatch(admin, 'risk_recalculate', async () => {
-      const processed = await forEachActiveCase(admin, async (caseId) => {
-        try {
-          await recalculateCaseRisk(admin, caseId, persistViaServiceRole(admin, caseId));
-        } catch (error) {
-          // 自動リトライはしない（6-12）。件数と理由だけ残して次の案件へ進む。
-          failures.push({
-            caseId,
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
+    {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { runBatchD1, forEachActiveCaseD1 } = await import('@/lib/d1/batches');
+      const { recalculateCaseRiskD1 } = await import('@/lib/d1/risk');
+      const db = await localDB();
+      const failuresD1: {
+        caseId: string;
+        message: string;
+      }[] = [];
+      const outcome = await runBatchD1(db, 'risk_recalculate', async () => {
+        const processed = await forEachActiveCaseD1(db, async (caseId) => {
+          try {
+            await recalculateCaseRiskD1(db, caseId);
+          } catch (error) {
+            failuresD1.push({
+              caseId,
+              message: error instanceof Error ? error.message : String(error),
+            });
+          }
+        });
+        return {
+          targetCount: processed,
+          detail: { failed: failuresD1.length, failures: failuresD1.slice(0, 20) },
+        };
       });
-      return {
-        targetCount: processed,
-        detail: { failed: failures.length, failures: failures.slice(0, 20) },
-      };
-    });
-
-    return ok({
-      processed: outcome.targetCount,
-      failed: failures.length,
-    });
+      return ok({ processed: outcome.targetCount, failed: failuresD1.length });
+    }
   },
   { source: 'internal-cron' },
 );

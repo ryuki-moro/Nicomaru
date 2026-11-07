@@ -2,7 +2,6 @@ import { hashPassword } from 'better-auth/crypto';
 
 import { DEMO_CASES, DEMO_PLANNER, DEMO_PLAN_TYPES } from './demo/scenario.ts';
 
-/** デモ版（npm run demo）の架空データ。宿題テンプレートは supabase/seed.sql と同じ内容。 */
 const VENUE_ID = '11111111-1111-4111-8111-111111111111';
 const PLANNER_ID = '41111111-1111-4111-8111-111111111111';
 const DEMO_COUPLE_KEY = 'demo-02';

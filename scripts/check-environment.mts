@@ -7,7 +7,7 @@ function report(key: string, status: 'ok' | 'missing' | 'invalid' | 'optional', 
 function value(key: string) {
   return process.env[key]?.trim() ?? '';
 }
-for (const key of ['NEXT_PUBLIC_SUPABASE_URL', 'APP_BASE_URL']) {
+for (const key of ['APP_BASE_URL']) {
   const raw = value(key);
   if (!raw) {
     report(key, 'missing');
@@ -28,11 +28,7 @@ for (const key of ['NEXT_PUBLIC_SUPABASE_URL', 'APP_BASE_URL']) {
     report(key, 'invalid');
   }
 }
-for (const key of [
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'INTERNAL_CRON_SECRET',
-]) {
+for (const key of ['BETTER_AUTH_SECRET', 'INTERNAL_CRON_SECRET']) {
   const raw = value(key);
   report(key, raw && !raw.includes('<') ? 'ok' : 'missing', '有無のみ。実際の接続・一致は別途確認');
 }

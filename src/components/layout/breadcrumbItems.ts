@@ -13,7 +13,7 @@ export interface Crumb {
 }
 
 /**
- * D1版の着地点。ダッシュボード・利用状況がないため、立場の主な仕事の画面から始める。
+ * D1版の着地点。立場の主な仕事の画面から始める。
  * planner は案件一覧、admin・system_admin は管理する職員の一覧（landingPathFor と共有）。
  */
 export function d1HomeCrumbFor(role: Role): Required<Crumb> | undefined {

@@ -11,28 +11,24 @@
  *
  * 読み取りは 6-5 の原則どおり Server Component から RLS 適用クライアントで直接 select する。
  */
-import Link from 'next/link';
-import { requireStaff } from '@/lib/auth/session';
-import { usingD1, localDB } from '@/lib/d1/runtime';
-import { pendingSubmissions, submissionRow, coupleNames as d1CoupleNames } from '@/lib/d1/tasks';
-
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ReviewStatusBadge } from '@/components/ui/StatusBadge';
+import { requireStaff } from '@/lib/auth/session';
 import {
-  COUPLE_PROFILE_COLUMNS,
   LIST_PAGE_SIZE,
   REVIEW_STATUS_LABEL,
   type ReviewStatus,
   type TaskStatus,
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
+import { localDB } from '@/lib/d1/runtime';
+import { coupleNames as d1CoupleNames, pendingSubmissions, submissionRow } from '@/lib/d1/tasks';
 import { fromPostgresError } from '@/lib/errors';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { resolvePage } from '@/lib/pagination';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isUuid } from '@/lib/uuid';
-
+import Link from 'next/link';
 interface SubmissionRow {
   id: string;
   submitted_at: string;
@@ -42,49 +38,28 @@ interface SubmissionRow {
     due_date: string;
     case_id: string;
     status: TaskStatus;
-    wedding_cases: { id: string; case_code: string; wedding_date: string };
+    wedding_cases: {
+      id: string;
+      case_code: string;
+      wedding_date: string;
+    };
   };
 }
-
 interface ReviewedRow {
   review_status: ReviewStatus;
-  case_tasks: { title: string; wedding_cases: { case_code: string } };
+  case_tasks: {
+    title: string;
+    wedding_cases: {
+      case_code: string;
+    };
+  };
 }
-
-/**
- * 確認結果の登録直後（D02 から ?reviewed=<提出ID> で戻ってきたとき）の知らせ。
- *
- * 文言は URL から受け取らず、ID から引いた宿題名・案件番号・確認結果で組み立てる
- * （/error と同じく、偽の案内文を差し込んだURLを配れないようにする）。
- * 見えない提出（RLS の範囲外）や、まだ確認待ちの提出では何も出さない。
- */
-async function reviewedNotice(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  submissionId: string | undefined,
-): Promise<string | null> {
-  if (!isUuid(submissionId)) return null;
-  const { data } = await supabase
-    .from('task_submissions')
-    .select('review_status, case_tasks!inner ( title, wedding_cases!inner ( case_code ) )')
-    .eq('id', submissionId)
-    .maybeSingle();
-  const row = data as unknown as ReviewedRow | null;
-  if (!row || (row.review_status !== 'confirmed' && row.review_status !== 'needs_fix')) {
-    return null;
-  }
-  return (
-    `『${row.case_tasks.title}』（${row.case_tasks.wedding_cases.case_code}）の確認結果を` +
-    `「${REVIEW_STATUS_LABEL[row.review_status]}」で登録しました。`
-  );
-}
-
 interface CoupleProfileRow {
   case_id: string;
   partner_role: string;
   full_name: string | null;
   is_primary_contact: boolean;
 }
-
 async function reviewedD1Notice(
   user: Awaited<ReturnType<typeof requireStaff>>,
   submissionId: string | undefined,
@@ -103,60 +78,34 @@ async function reviewedD1Notice(
     throw error;
   }
 }
-
 export default async function SubmissionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string | string[]; reviewed?: string }>;
+  searchParams: Promise<{
+    page?: string | string[];
+    reviewed?: string;
+  }>;
 }) {
   const { page, reviewed } = await searchParams;
   // 4-3 一覧画面共通: 既定の表示件数は50件、以降はページングとする
   const currentPage = resolvePage(page);
   const offset = (currentPage - 1) * LIST_PAGE_SIZE;
-
   const user = await requireStaff();
-  const supabase = usingD1() ? null : await createSupabaseServerClient();
-  const notice = supabase
-    ? await reviewedNotice(supabase, reviewed)
-    : await reviewedD1Notice(user, reviewed);
-
-  const { data, error, count } = usingD1()
-    ? await pendingSubmissions(await localDB(), user, offset)
-    : await supabase!
-        .from('task_submissions')
-        .select(
-          'id, submitted_at,' +
-            ' case_tasks!inner ( id, title, due_date, case_id, status,' +
-            ' wedding_cases!inner ( id, case_code, wedding_date ) )',
-          { count: 'exact' },
-        )
-        .eq('review_status', 'submitted')
-        .eq('is_latest', true)
-        // 「対応不要」にした宿題は確認対象から外す（表6-9／6-8）。
-        // 埋め込みが !inner なので、この条件は親行（task_submissions）ごと絞り込む。
-        .neq('case_tasks.status', 'waived')
-        // 待たせている提出から順に確認する。同着は id をタイブレークにする（4-3 一覧画面共通）
-        .order('submitted_at', { ascending: true })
-        .order('id', { ascending: true })
-        .range(offset, offset + LIST_PAGE_SIZE - 1);
+  const notice = await reviewedD1Notice(user, reviewed);
+  const { data, error, count } = await pendingSubmissions(await localDB(), user, offset);
   if (error) throw fromPostgresError(error);
-
   const rows = (data ?? []) as unknown as SubmissionRow[];
   const total = count ?? rows.length;
   const hasNext = offset + rows.length < total;
   const caseIds = [...new Set(rows.map((row) => row.case_tasks.case_id))];
-
   // couple_profiles は memo を列レベル権限で剥奪しているため select * が 42501 になる（付録A）
   const coupleNames = new Map<string, string>();
   if (caseIds.length > 0) {
-    const { data: profiles, error: profileError } = usingD1()
-      ? { data: await d1CoupleNames(await localDB(), user, caseIds), error: null }
-      : await supabase!
-          .from('couple_profiles')
-          .select(COUPLE_PROFILE_COLUMNS)
-          .in('case_id', caseIds);
+    const { data: profiles, error: profileError } = {
+      data: await d1CoupleNames(await localDB(), user, caseIds),
+      error: null,
+    };
     if (profileError) throw fromPostgresError(profileError);
-
     for (const profile of (profiles ?? []) as unknown as CoupleProfileRow[]) {
       const name = readPii(profile.full_name);
       if (!name) continue;
@@ -172,7 +121,6 @@ export default async function SubmissionsPage({
       );
     }
   }
-
   return (
     <div>
       <Breadcrumbs className="mb-3" items={[DASHBOARD_CRUMB, { label: '提出物確認' }]} />

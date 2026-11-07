@@ -7,12 +7,6 @@ const eslint = new ESLint({ cwd: fileURLToPath(new URL('../../', import.meta.url
 describe('lint security and legacy Next rule compatibility', () => {
   it.each([
     [
-      'src/__lint_probe.ts',
-      'export const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;',
-      'no-restricted-syntax',
-      2,
-    ],
-    [
       'src/pages/_document.tsx',
       "import Document, { Head } from 'next/document'; export default class MyDocument extends Document { render() { return <html><Head /><Head /></html>; } }",
       '@next/next/no-duplicate-head',
@@ -41,18 +35,6 @@ describe('lint security and legacy Next rule compatibility', () => {
     expect(result.messages.some((message) => message.fatal)).toBe(false);
     expect(result.messages).toEqual(
       expect.arrayContaining([expect.objectContaining({ ruleId, severity })]),
-    );
-  });
-
-  it('allows the existing Service Role Key boundary module', async () => {
-    const [result] = await eslint.lintText(
-      'export const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;',
-      {
-        filePath: 'src/lib/supabase/admin.ts',
-      },
-    );
-    expect(result.messages.filter((message) => message.ruleId === 'no-restricted-syntax')).toEqual(
-      [],
     );
   });
 });

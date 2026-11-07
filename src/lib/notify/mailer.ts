@@ -24,7 +24,6 @@
  * その応答でしか返らない平文の招待URLを失っていた（6-3-6）。
  * 未構成・HTTPエラー・例外の3経路の扱いを1箇所に保つため、送信口を sendMail に統合する。
  */
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { INVITE_LINK_TTL_HOURS, PASSWORD_MIN_LENGTH } from '@/lib/constants';
 
@@ -110,61 +109,6 @@ export async function sendMail(message: MailMessage): Promise<SendResult> {
 export type IssueLinkResult =
   | { ok: true; authUserId: string; actionLink: string }
   | { ok: false; reason: 'already_registered' | 'provider_error'; detail?: string };
-
-/**
- * Auth Admin API の generateLink で初回パスワード設定リンクを発行する（6-3-1）。
- *
- * - 新規登録（U02）は type='invite'。Auth ユーザーが同時に作成され、その id を返す。
- * - 再送（U03）は既に Auth ユーザーが存在し invite が拒否されうるため type='recovery' を先に試す。
- *   どちらも着地画面は P03 のステップ2 で、有効期限は Supabase 側の設定（72時間）に従う。
- *
- * @param admin createSupabaseAdminClient('admin.users') で作ったクライアント（6-3-5 表6-4）
- */
-export async function issuePasswordSetupLink(
-  admin: SupabaseClient,
-  params: { email: string; isResend?: boolean },
-): Promise<IssueLinkResult> {
-  // P03 のステップ2 が「初回設定」の見出し・案内文へ切り替えるための目印（6-3-1）
-  const redirectTo = `${appBaseUrl()}/password?mode=invite`;
-  const order: ('invite' | 'recovery')[] = params.isResend
-    ? ['recovery', 'invite']
-    : ['invite', 'recovery'];
-
-  let lastDetail: string | undefined;
-
-  for (const type of order) {
-    // GenerateLinkParams は type ごとの直和型なので、変数のままでは代入できない
-    const { data, error } =
-      type === 'invite'
-        ? await admin.auth.admin.generateLink({
-            type: 'invite',
-            email: params.email,
-            options: { redirectTo },
-          })
-        : await admin.auth.admin.generateLink({
-            type: 'recovery',
-            email: params.email,
-            options: { redirectTo },
-          });
-
-    if (!error && data?.user && data.properties) {
-      return { ok: true, authUserId: data.user.id, actionLink: data.properties.action_link };
-    }
-
-    lastDetail = error?.message;
-    // invite は「既に登録済み」で失敗する。新規登録の入口ではそのまま 409 にしたい
-    if (
-      type === 'invite' &&
-      !params.isResend &&
-      /already|registered|exists/i.test(lastDetail ?? '')
-    ) {
-      return { ok: false, reason: 'already_registered', detail: lastDetail };
-    }
-  }
-
-  console.error('[mail] 初回パスワード設定リンクを発行できませんでした', lastDetail);
-  return { ok: false, reason: 'provider_error', detail: lastDetail };
-}
 
 /** 初回パスワード設定リンクの本文（U02／U03）。圧迫感を与えない案内文にする（要件 8）。 */
 export function sendPasswordSetupMail(params: PasswordSetupMailParams): Promise<SendResult> {

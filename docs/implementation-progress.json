@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-05T03:00:00.000Z",
+  "updatedAt": "2026-11-07T03:00:00.000Z",
   "repository": "ryuki-moro/Nicomaru",
   "mainCommit": "b5a72de2df0d8baa3ebe8ddaee53b9ee11ace462",
   "implementationCommit": "90eeae0ac9c70b26b41037ed0c7f18ceeb6b32cc",
@@ -939,7 +939,7 @@
       ],
       "evidence": [
         "src/app/api/cases/route.ts",
-        "supabase/migrations/20260828000800_case_functions.sql"
+        "src/lib/d1/onboarding.ts"
       ],
       "note": "案件・2人のプロフィール・宿題・タイムラインを作成。",
       "next": "",
@@ -1213,7 +1213,7 @@
       ],
       "evidence": [
         "src/app/api/dashboard/follow-up-today/route.ts",
-        "src/lib/services/riskStore.ts"
+        "src/lib/d1/risk.ts"
       ],
       "note": "保存済みスコアと根拠を利用し表示時の全件再計算を回避。",
       "next": "",
@@ -1374,7 +1374,7 @@
       ],
       "evidence": [
         "src/app/api/cases/[caseId]/assign-tasks/route.ts",
-        "supabase/migrations/20260828000800_case_functions.sql"
+        "src/lib/d1/onboarding.ts"
       ],
       "note": "テンプレートのスナップショットとタイムラインを同時生成。",
       "next": "",
@@ -1418,7 +1418,7 @@
       "screens": [],
       "evidence": [
         "src/lib/services/risk.ts",
-        "src/lib/services/riskStore.ts",
+        "src/lib/d1/risk.ts",
         "tests/unit/risk.test.ts"
       ],
       "note": "LLMを使用しない。期限超過等の5条件とスコア/根拠を保存。定期起動はPR41/OPS-06。",
@@ -1467,8 +1467,8 @@
         "M04"
       ],
       "evidence": [
-        "supabase/migrations/20260828000500_rls_policies.sql",
-        "tests/db/risk.test.ts"
+        "src/lib/d1/cases.ts",
+        "tests/d1/core-features.test.mjs"
       ],
       "note": "coupleへのスコア参照をRLSで制限。次にやることを表示。",
       "next": "",
@@ -1490,7 +1490,7 @@
       "evidence": [
         "src/lib/services/notifications.ts",
         "src/lib/notify/send.ts",
-        "supabase/migrations/20260828001300_notification_functions.sql"
+        "src/lib/d1/notifications.ts"
       ],
       "note": "原子的LINE上限、未連携/上限時メール切替。実送信はOPS-03/07。",
       "next": "",
@@ -1615,7 +1615,7 @@
         "src/app/(staff)/venues/[venueId]/page.tsx",
         "src/app/(staff)/venues/[venueId]/VenueEditForm.tsx",
         "src/app/api/venues/[venueId]/route.ts",
-        "tests/e2e/venue-edit.spec.ts",
+        "tests/d1/admin-ops.test.mjs",
         "docs/動作確認_式場編集.md",
         "docs/検証/自走完了_20261009.md"
       ],
@@ -1696,7 +1696,7 @@
       ],
       "evidence": [
         "src/app/(staff)/submissions/[submissionId]/ClassificationPanel.tsx",
-        "supabase/migrations/20260828001800_ai_assist.sql"
+        "src/lib/d1/ai.ts"
       ],
       "note": "提出から自動投入、reviewed_outputに修正採用を保存。品質/稼働は別タスク。",
       "next": "",
@@ -1810,7 +1810,7 @@
       "evidence": [
         "worker/ai-worker.ts",
         "src/lib/ai/schemas.ts",
-        "supabase/migrations/20260828001600_ai_job_queue.sql"
+        "src/lib/d1/ai.ts"
       ],
       "note": "プル型、入出力検証、確認・採用、心拍、最小権限。運用自動復帰はOPS-15。",
       "next": "",
@@ -1834,7 +1834,7 @@
       "evidence": [
         "src/lib/ai/schemas.ts",
         "src/lib/validation.ts",
-        "supabase/migrations/20260828000300_phase2_tables.sql"
+        "cloudflare/migrations/0010_ai.sql"
       ],
       "note": "専用FAQ API、venue_knowledge/pgvector、根拠・無回答・引継ぎUIはない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
       "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
@@ -1858,7 +1858,7 @@
       "evidence": [
         "src/lib/ai/schemas.ts",
         "src/lib/validation.ts",
-        "supabase/migrations/20260828000300_phase2_tables.sql"
+        "cloudflare/migrations/0010_ai.sql"
       ],
       "note": "schema/DB job_typeはある。調整案の生成・確認・適用UIはない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
       "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
@@ -1882,7 +1882,7 @@
       "evidence": [
         "src/lib/ai/schemas.ts",
         "src/lib/validation.ts",
-        "supabase/migrations/20260828000300_phase2_tables.sql"
+        "cloudflare/migrations/0010_ai.sql"
       ],
       "note": "schema/DB job_typeはある。専用入力・承認表示・業務導線はない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
       "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
@@ -1906,7 +1906,7 @@
       "evidence": [
         "src/lib/ai/schemas.ts",
         "src/lib/validation.ts",
-        "supabase/migrations/20260828000300_phase2_tables.sql"
+        "cloudflare/migrations/0010_ai.sql"
       ],
       "note": "schema/DB job_typeはある。案の編集・確定登録UIはない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
       "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
@@ -1930,7 +1930,7 @@
       "evidence": [
         "src/lib/ai/schemas.ts",
         "src/lib/validation.ts",
-        "supabase/migrations/20260828000300_phase2_tables.sql"
+        "cloudflare/migrations/0010_ai.sql"
       ],
       "note": "schema/DB job_typeはある。翻訳依頼・確認・送信前の業務導線はない。 今回の学校成果物は対象外。校内模擬評価の開始で着手条件を満たした扱いにしない。",
       "next": "実式場での実証を別途計画し、採用範囲を合意した場合に入力・プロンプト・UI・テストを完成する。",
@@ -1950,8 +1950,9 @@
       "design": "基本設計5章/12章",
       "screens": [],
       "evidence": [
-        "supabase/migrations/20260828000200_core_tables.sql",
-        "supabase/seed.sql"
+        "cloudflare/migrations/0002_cases.sql",
+        "cloudflare/migrations/0004_tasks.sql",
+        "scripts/d1-fixtures.mjs"
       ],
       "note": "public33テーブル、30本のmigration、RLS59件、アプリ関数55件を隔離DBで照合。PR79でmainへ統合。共有DB反映はOPS-01で別管理。",
       "next": "",
@@ -1971,9 +1972,8 @@
       "design": "基本設計6-3/付録A",
       "screens": [],
       "evidence": [
-        "supabase/migrations/20260828000400_functions.sql",
-        "supabase/migrations/20260828000500_rls_policies.sql",
-        "tests/db/rls.test.ts"
+        "src/lib/d1/cases.ts",
+        "tests/d1/cases.test.mjs"
       ],
       "note": "再帰回避、停止利用者、他式場/他案件アクセスの制限。",
       "next": "",
@@ -1994,8 +1994,9 @@
       "screens": [],
       "evidence": [
         "src/app/api/auth/initial-register/route.ts",
-        "supabase/migrations/20260828000700_auth_functions.sql",
-        "tests/db/concurrency.test.ts"
+        "src/lib/d1/onboarding.ts",
+        "tests/d1/onboarding.test.mjs",
+        "tests/d1/tasks.test.mjs"
       ],
       "note": "原子的消費と失敗時の招待復元。",
       "next": "",
@@ -2016,7 +2017,8 @@
       "screens": [],
       "evidence": [
         "src/app/api/auth/shared.ts",
-        "supabase/migrations/20260828002000_otp_failure_lockout.sql"
+        "src/lib/d1/auth.ts",
+        "src/lib/d1/auth-limits.ts"
       ],
       "note": "失敗5回ロックを追加済み。Issue15はclosed。",
       "next": "",
@@ -2036,8 +2038,8 @@
       "design": "基本設計6-7",
       "screens": [],
       "evidence": [
-        "supabase/migrations/20260828002100_submission_transactions.sql",
-        "tests/db/rls-submission.test.ts"
+        "src/lib/d1/tasks.ts",
+        "tests/d1/tasks.test.mjs"
       ],
       "note": "submit_task_atomic/review_submission。Storage実体削除はDB取引外。Issue16はclosed。",
       "next": "",
@@ -2100,7 +2102,7 @@
       "screens": [],
       "evidence": [
         "src/app/api/files/[fileId]/download/route.ts",
-        "supabase/migrations/20260828000500_rls_policies.sql"
+        "src/lib/d1/cases.ts"
       ],
       "note": "visibility/RLS後に署名URL発行。",
       "next": "",
@@ -2161,16 +2163,14 @@
       "title": "Service Roleの用途制限・DB最小権限",
       "category": "基盤",
       "phase": "1/3",
-      "status": "main",
+      "status": "recorded",
       "design": "基本設計6-3-5/7-3",
       "screens": [],
       "evidence": [
-        "eslint.config.mjs",
-        "src/lib/supabase/admin.ts",
-        "supabase/migrations/20260828002200_service_role_grants.sql"
+        "eslint.config.mjs"
       ],
-      "note": "用途名で制限、ai_workerにはRPCのみ。",
-      "next": "",
+      "note": "Supabaseのservice_role前提の用途制限・最小権限は、Cloudflare移行（better-auth/D1）で概念自体が廃止された。旧管理クライアントとservice_role grantsはSupabase完全削除で消滅し、現行に相当機能はない。本タスクは実施記録として保持する。",
+      "next": "廃止のため残作業なし。権限分離が必要になった場合はD1/Workersの構成で新規に設計する。",
       "issues": [],
       "prs": [],
       "dependsOn": [],
@@ -2183,16 +2183,15 @@
       "title": "LINE署名・nonce・重複配信排除",
       "category": "基盤",
       "phase": "2",
-      "status": "main",
+      "status": "recorded",
       "design": "基本設計6-10",
       "screens": [],
       "evidence": [
         "src/app/api/line/webhook/route.ts",
-        "supabase/migrations/20260828001500_line_link.sql",
         "tests/unit/middleware.test.ts"
       ],
-      "note": "LINE連携の終了により廃止。/api/line/* は410を返し、DB定義と過去データだけを残す。",
-      "next": "",
+      "note": "LINE連携は終了し廃止。現行の/api/line/*は410を返し、コードだけを残す。LINE連携用DB定義はSupabase完全削除で消滅した。本タスクは実施記録として保持する。",
+      "next": "廃止のため残作業なし。LINE連携を再開する場合はCloudflare側で新規に設計する。",
       "issues": [],
       "prs": [],
       "dependsOn": [],
@@ -2211,7 +2210,7 @@
       "evidence": [
         "src/lib/notify/templates.ts",
         "src/lib/notify/send.ts",
-        "tests/db/notifications.test.ts"
+        "tests/d1/cases.test.mjs"
       ],
       "note": "LINE上限/メール代替/圧迫感を抑えた固定文面。",
       "next": "",
@@ -2295,7 +2294,7 @@
       "evidence": [
         "src/lib/ai/schemas.ts",
         "src/lib/ai/assist.ts",
-        "supabase/migrations/20260828001700_ai_prompts_seed.sql",
+        "cloudflare/migrations/0010_ai.sql",
         "worker/ai-worker.ts"
       ],
       "note": "Zodで検証、用途別モデル/プロンプトをDB管理。",
@@ -2338,8 +2337,7 @@
       "design": "基本設計7-4/13-1",
       "screens": [],
       "evidence": [
-        "supabase/migrations/20260828001900_ai_job_retention.sql",
-        "tests/db/ai-jobs.test.ts"
+        "src/lib/d1/case-purge.ts"
       ],
       "note": "案件削除バッチに相乗りする。",
       "next": "",
@@ -2386,7 +2384,7 @@
         "src/app/(staff)/venues/[venueId]/page.tsx",
         "src/app/(staff)/venues/[venueId]/VenueEditForm.tsx",
         "src/app/api/venues/[venueId]/route.ts",
-        "tests/e2e/venue-edit.spec.ts",
+        "tests/d1/admin-ops.test.mjs",
         "docs/動作確認_式場編集.md",
         "docs/検証/自走完了_20261009.md"
       ],
@@ -2419,7 +2417,8 @@
         "package.json",
         "public/sw.js",
         "src/components/PwaRegistration.tsx",
-        "tests/e2e/pwa-performance.spec.ts",
+        "tests/unit/pwa.test.ts",
+        "tests/unit/performance.test.ts",
         "docs/検証/自走完了_20261009.md"
       ],
       "note": "ホーム画面用のアイコン・SW登録・機微情報非保持を実装。Chrome PC/小画面のPWA検証とオフライン非保持を確認。 PR79でmainへ反映し統合CIを確認。",
@@ -2446,9 +2445,9 @@
       "evidence": [
         "src/app/(staff)/system/page.tsx",
         "src/lib/api/internal.ts",
-        "src/lib/monitoring/service.ts",
-        "supabase/migrations/20261009000100_usage_snapshots.sql",
-        "tests/db/monitoring.test.ts",
+        "src/lib/d1/monitoring.ts",
+        "cloudflare/migrations/0020_usage.sql",
+        "tests/d1/admin-ops.test.mjs",
         "docs/検証/自走完了_20261009.md"
       ],
       "note": "日次のDB/全Storage容量・利用件数を保存しS03へ表示。未設定・未取得・古い集計を正常値と扱わない。 PR79でmainへ反映し統合CIを確認。",
@@ -2475,7 +2474,8 @@
       "evidence": [
         ".github/workflows/keepalive.yml",
         "src/app/(staff)/system/page.tsx",
-        "supabase/migrations/20261009000200_system_monitoring.sql",
+        "cloudflare/migrations/0020_usage.sql",
+        "src/lib/d1/monitoring.ts",
         "docs/検証/自走完了_20261009.md"
       ],
       "note": "6種の監視、1時間の再通知抑制、回復記録、S03共有通知、Keepalive連続2失敗を実装。外部宛先への実送信は行わない。 PR79でmainへ反映し統合CIを確認。",
@@ -2504,7 +2504,6 @@
       "evidence": [
         "src/lib/api/route.ts",
         "src/lib/observability/performance.ts",
-        "tests/e2e/performance-load.spec.ts",
         "docs/検証/自走完了_20261009.md"
       ],
       "note": "API所要時間/成否と画面Web Vitalsを静的ルート名で記録。300案件30同時の負荷試験をCIローカル専用で追加。 PR79でmainへ反映し統合CIを確認。",
@@ -2533,8 +2532,8 @@
         "src/lib/api/origin.ts",
         "src/lib/api/internal.ts",
         "src/app/api/line/webhook/route.ts",
-        "tests/unit/api-origin.test.ts",
-        "tests/e2e/api-origin.spec.ts",
+        "tests/unit/performance.test.ts",
+        "tests/d1/browser.mjs",
         "docs/実装計画_API送信元検証.md",
         "docs/検証/自走完了_20261009.md"
       ],
@@ -2561,11 +2560,10 @@
       "design": "基本設計9-1/10章",
       "screens": [],
       "evidence": [
-        "supabase/migrations/20260828000400_functions.sql",
+        "src/lib/d1/staff.ts",
         "src/app/api/admin/users/[userId]/route.ts",
         "src/app/(staff)/templates/[templateId]/page.tsx",
-        "tests/db/audit.test.ts",
-        "tests/unit/password-auth.test.ts",
+        "tests/d1/staff.test.mjs",
         "src/lib/services/audit-deadline.ts",
         "docs/検証/自走完了_20261009.md"
       ],
@@ -2593,8 +2591,7 @@
       "evidence": [
         "src/app/api/internal/case-purge/route.ts",
         "src/app/api/internal/rate-limit-cleanup/route.ts",
-        "supabase/migrations/20261009000400_audit_retention.sql",
-        "tests/unit/audit-retention-route.test.ts",
+        "src/app/api/internal/audit-log-purge/route.ts",
         "docs/検証/自走完了_20261009.md"
       ],
       "note": "UTCで2暦年を過ぎた監査だけを専用RPCで整理。境界・権限・実行記録を検証。共有データの削除実行なし。 PR79でmainへ反映し統合CIを確認。",
@@ -2677,9 +2674,9 @@
       "screens": [],
       "evidence": [
         "src/app/api/internal/case-purge/route.ts",
-        "src/lib/batches/case-purge.ts",
+        "src/lib/d1/case-purge.ts",
         "src/lib/api/internal.ts",
-        "tests/unit/case-purge.test.ts",
+        "tests/d1/admin-ops.test.mjs",
         "tests/unit/internal-batch.test.ts",
         "docs/実装計画_削除バッチと依存更新.md",
         "docs/検証/自走完了_20261009.md"
@@ -2823,7 +2820,8 @@
       "screens": [],
       "evidence": [
         "src/lib/services/notification-log-export.ts",
-        "tests/e2e/notification-log-export.spec.ts",
+        "tests/d1/core-features.test.mjs",
+        "tests/unit/notification-log-period.test.ts",
         "docs/検証/自走完了_20261009.md"
       ],
       "note": "1,000件制限・同時刻・マイクロ秒・上限/超過/途中失敗。 PR79でmainへ反映し統合CIを確認。",
@@ -2852,7 +2850,7 @@
       "design": "Issue#49",
       "screens": [],
       "evidence": [
-        "tests/e2e/helpers/flows.ts",
+        "tests/d1/onboarding.browser.mjs",
         "docs/検証/自走完了_20261009.md"
       ],
       "note": "6桁入力後の自動送信による遷移を待つ。CI44 E2E成功。 PR79でmainへ反映し統合CIを確認。",
@@ -2883,9 +2881,7 @@
         "P01"
       ],
       "evidence": [
-        "supabase/config.toml",
-        "supabase/templates/magic_link.html",
-        "tests/unit/auth-email-config.test.ts",
+        "src/lib/d1/auth.ts",
         "docs/環境の使い分け.md"
       ],
       "note": "Supabase Authのotp_expiryを3600→600秒、メール本文を「1時間」→「10分」に修正し、画面のOTP.ttlSeconds（10分）と一致させた。設定・文面と定数の一致をunitで検査。",
@@ -2904,15 +2900,14 @@
       "title": "本番で動く定期処理の登録関数",
       "category": "リリース",
       "phase": "2",
-      "status": "main",
+      "status": "todo",
       "design": "6-12 / Issue14",
       "screens": [],
       "evidence": [
-        "supabase/migrations/20260828001400_scheduled_jobs.sql",
         "docs/検証/自走完了_20261009.md"
       ],
-      "note": "PR41にregister_scheduled_jobs()と2テストあり、CI全成功。現在のブランチ/mainには含まれない。 PR79でmainへ反映し統合CIを確認。",
-      "next": "",
+      "note": "pg_cron前提のregister_scheduled_jobs()はPR41にあったが、現在のブランチ/mainには含まれない。Cloudflare移行後もWorkers Cron等への移植は未実施で、本機能は現行に未移植。",
+      "next": "定期処理が必要になった時点で、Workers Cron Triggers等で新規に設計・実装する。現時点では移植予定なし。",
       "issues": [
         14
       ],
@@ -2934,7 +2929,7 @@
       "design": "基本設計8章/12章 / Issue14",
       "screens": [],
       "evidence": [
-        "supabase/seed.sql",
+        "scripts/d1-fixtures.mjs",
         "docs/DB更新手順_20261009.md"
       ],
       "note": "CIローカルでは全migration適用。共有Supabaseは新2テーブルがPGRST205で未反映。",
@@ -2983,7 +2978,8 @@
       "evidence": [
         "src/lib/notify/mailer.ts",
         "docs/メンバー向けデモと運用手順.md",
-        "tests/e2e/core-flow.spec.ts"
+        "tests/d1/onboarding.browser.mjs",
+        "tests/d1/tasks.browser.mjs"
       ],
       "note": "学校デモはMailpitを標準とし、外部メール実送信を必須にしない。CIにOTP/招待の実通信試験あり。",
       "next": "利用するデモPCでMailpitのコード/リンクをメンバーが確認する。",
@@ -3007,8 +3003,7 @@
       "design": "基本設計8章/12章 / Issue14",
       "screens": [],
       "evidence": [
-        "supabase/templates/magic_link.html",
-        "supabase/config.toml",
+        "src/lib/d1/auth.ts",
         "docs/メンバー向けデモと運用手順.md"
       ],
       "note": "ローカルAuthのToken/127.0.0.1戻り先とCIの認証導線を用意。",
@@ -3060,8 +3055,6 @@
       "design": "基本設計8章/12章 / Issue14",
       "screens": [],
       "evidence": [
-        "supabase/migrations/20260828001400_scheduled_jobs.sql",
-        "supabase/migrations/20261009000600_register_observability_jobs.sql",
         "docs/メンバー向けデモと運用手順.md"
       ],
       "note": "8定期処理の登録関数と内部認証を統合。SQL適用で自動登録/実削除は行わない。",
@@ -3166,7 +3159,7 @@
       "design": "基本設計8章/12章 / Issue14",
       "screens": [],
       "evidence": [
-        "supabase/config.toml"
+        "src/lib/d1/files.ts"
       ],
       "note": "9/8記録でcase-files/Public off。実環境のRLS/署名URLは今回未再確認。",
       "next": "匿名ファイルでupload/download/権限外拒否を確認。",
@@ -3243,7 +3236,7 @@
       "design": "基本設計8章/12章 / Issue14",
       "screens": [],
       "evidence": [
-        "scripts/bootstrap-system-admin.mts"
+        "scripts/d1-bootstrap-admin.mjs"
       ],
       "note": "PR31マージ済み。9/8の本番コメントにsystem_admin1名作成済み。",
       "next": "選んだデモ環境の初回設定/ログイン/S03到達を確認。",
@@ -3267,9 +3260,9 @@
       "design": "基本設計8章/12章 / Issue22",
       "screens": [],
       "evidence": [
-        "supabase/migrations/20260828001600_ai_job_queue.sql",
+        "src/lib/d1/ai.ts",
         "worker/ai-worker.ts",
-        "tests/e2e/helpers/ai-worker.ts",
+        "tests/d1/ai.test.mjs",
         "docs/メンバー向けデモと運用手順.md"
       ],
       "note": "専用ai_workerの直接テーブル操作拒否・claim/completeを試験するCI模擬ワーカーを用意。Service Roleを配布しない。",
@@ -3377,7 +3370,7 @@
       "evidence": [
         "TASKS.md",
         "worker/ai-worker.ts",
-        "tests/e2e/ai-workflow.spec.ts",
+        "tests/d1/ai.test.mjs",
         "docs/検証/自走完了_20261009.md"
       ],
       "note": "UI依頼→専用worker RPCの模擬出力→人の採用→コメント欄反映をE2Eへ追加。実LLM品質評価とは別。 最終CIで実行記録あり。docs/検証/自走完了_20261009.mdを参照。",
@@ -3451,7 +3444,8 @@
       "design": "基本設計8章/12章 / Issue20",
       "screens": [],
       "evidence": [
-        "supabase/migrations/20260828000200_core_tables.sql"
+        "cloudflare/migrations/0002_cases.sql",
+        "cloudflare/migrations/0004_tasks.sql"
       ],
       "note": "復元手順/所要時間/DBとファイル照合の実施記録なし。 本番運用は現在予定なし。学校の月別成果物には含めない。",
       "next": "実データ運用・常時稼働を別途計画した場合に要否を判断。模擬データを空環境へ復元、RLS/主要フローを検証し日時・担当・時間を記録。",
@@ -3548,7 +3542,8 @@
       "design": "基本設計8章/12章 / Issue14",
       "screens": [],
       "evidence": [
-        "tests/e2e/core-flow.spec.ts",
+        "tests/d1/onboarding.browser.mjs",
+        "tests/d1/tasks.browser.mjs",
         "docs/メンバー向けデモと運用手順.md",
         "docs/検証/自走完了_20261009.md"
       ],
@@ -3606,7 +3601,7 @@
       "screens": [],
       "evidence": [
         ".github/workflows/ci.yml",
-        "tests/db/rls.test.ts",
+        "tests/d1/cases.test.mjs",
         "tests/unit/risk.test.ts"
       ],
       "note": "仕組みはmain。PR48のCIでは466成功+実PG用12skip、専用ジョブで実PG12成功。",
@@ -3627,7 +3622,8 @@
       "design": "基本設計11章/12-2",
       "screens": [],
       "evidence": [
-        "tests/db/concurrency.test.ts",
+        "tests/d1/onboarding.test.mjs",
+        "tests/d1/tasks.test.mjs",
         ".github/workflows/ci.yml"
       ],
       "note": "原子的招待消費・rate limit・採番・最新提出等を別接続で検証。最新CI12件成功。",
@@ -3648,9 +3644,10 @@
       "design": "基本設計11章/12-2",
       "screens": [],
       "evidence": [
-        "tests/e2e/core-flow.spec.ts",
-        "tests/e2e/permissions.spec.ts",
-        "tests/e2e/ai-availability.spec.ts"
+        "tests/d1/onboarding.browser.mjs",
+        "tests/d1/tasks.browser.mjs",
+        "tests/d1/browser.mjs",
+        "tests/d1/ai.test.mjs"
       ],
       "note": "PR39でmain反映。Desktop Chrome/モバイルWebKit、既存24件。PR48でCSV20件追加し計44成功。",
       "next": "Issue19を現状へ更新。最後の負例実施記録はQA-04。",
@@ -3672,7 +3669,6 @@
       "design": "基本設計11章/12-2",
       "screens": [],
       "evidence": [
-        "tests/e2e/README.md",
         "docs/検証/自走完了_20261009.md"
       ],
       "note": "隔離プロキシでSW応答をno-storeからpublicへ変えると既存E2Eが該当assertで失敗、通常サーバーに戻して12件成功。",
@@ -3719,7 +3715,6 @@
       "evidence": [
         "tests/unit/risk.test.ts",
         "src/lib/services/cases.ts",
-        "tests/e2e/performance-load.spec.ts",
         "docs/検証/自走完了_20261009.md",
         "docs/検証/performance-37878283145.json"
       ],
@@ -3747,7 +3742,6 @@
       "design": "基本設計11章/12-2",
       "screens": [],
       "evidence": [
-        "playwright.config.ts",
         "docs/screenshots/",
         "docs/テスト/テスト仕様書_校内デモ.xlsx"
       ],
@@ -3773,8 +3767,7 @@
       "evidence": [
         "src/components/ui/ErrorSummary.tsx",
         "src/app/globals.css",
-        "tests/unit/accessibility-colors.test.ts",
-        "tests/e2e/accessibility.spec.ts"
+        "tests/unit/accessibility-colors.test.ts"
       ],
       "note": "文字4.5:1・境界3:1、キーボード順/フォーカス/項目エラー/小画面を自動検証。実スクリーンリーダーは別確認。",
       "next": "人の読み上げ/実機の操作感を試験票へ記入。",
@@ -3853,7 +3846,8 @@
       "design": "要件10章",
       "screens": [],
       "evidence": [
-        "tests/e2e/core-flow.spec.ts",
+        "tests/d1/onboarding.browser.mjs",
+        "tests/d1/tasks.browser.mjs",
         "docs/テスト/テスト仕様書_校内デモ.xlsx",
         "docs/テスト/README.md"
       ],
@@ -3944,7 +3938,7 @@
       "screens": [],
       "evidence": [
         "src/lib/ai/schemas.ts",
-        "supabase/migrations/20260828001800_ai_assist.sql",
+        "src/lib/d1/ai.ts",
         "docs/テスト/テスト仕様書_校内デモ.xlsx",
         "docs/テスト/README.md"
       ],
@@ -4830,9 +4824,7 @@
         "src/middleware.ts",
         "src/app/api/auth/otp-request/route.ts",
         "tests/unit/auth-next.test.ts",
-        "tests/e2e/login-return.spec.ts",
         "docs/環境の使い分け.md",
-        "tests/e2e/login-return-ui.spec.ts",
         "docs/詳細設計/APIと更新境界.md",
         "docs/検証/ログイン後の復帰_20261023.md"
       ],
@@ -4854,23 +4846,17 @@
       "title": "メールのログインリンクを別ブラウザでも使えるようにする",
       "category": "改善",
       "phase": "改善",
-      "status": "main",
+      "status": "recorded",
       "design": "基本設計6-3-1/4-3 P01/9章（改訂差分）",
       "screens": [
         "P01"
       ],
       "evidence": [
-        "src/app/(public)/login/link/LoginLinkForm.tsx",
-        "src/lib/auth/login-link.ts",
-        "supabase/templates/magic_link.html",
-        "tests/unit/login-link.test.ts",
-        "tests/e2e/login-link-ui.spec.ts",
-        "tests/e2e/login-link.spec.ts",
         "docs/検証/メールリンクの別ブラウザ対応_20261023.md",
         "docs/詳細設計/APIと更新境界.md"
       ],
-      "note": "フラグメント着地・明示ボタンによる既存OTP検証・ログイン中の切替案内・失敗後の再送と旧リンクの再入力を統合。単体990件、模擬認証UI各10件成功。実OTP消費・実アカウント切替・Mailpitは未確認。共有テンプレートは未変更。",
-      "next": "ローカルSupabase・Mailpitで実認証2件を実施し、実機Safari/Gmail内ブラウザーを確認する。基本設計DOCXを改訂してレビューし、コードとテンプレートを同じ版で反映する。共有設定変更はユーザー確認後。",
+      "note": "マジックリンク方式はユーザー決定で廃止し、メールOTP（コード入力）に一本化した。旧/login/link着地画面・解析関数・メールテンプレートはCloudflare移行で削除済み。本タスクは実施記録として保持する。",
+      "next": "廃止のため残作業なし。リンク方式を再開する場合はOTPとは別設計で新規に検討する。",
       "issues": [
         105
       ],
@@ -4895,14 +4881,13 @@
         "M05"
       ],
       "evidence": [
-        "supabase/migrations/20261023000100_notification_link_path.sql",
+        "cloudflare/migrations/0005_notifications.sql",
+        "src/lib/d1/notifications.ts",
         "src/lib/services/notifications.ts",
         "src/app/api/notifications/send/route.ts",
         "src/app/(couple)/mypage/notifications/page.tsx",
-        "tests/db/notifications.test.ts",
-        "tests/unit/notification-send-route.test.ts",
+        "tests/d1/cases.test.mjs",
         "tests/unit/notification-page.test.ts",
-        "tests/e2e/notification-link-ui.spec.ts",
         "docs/検証/通知から宿題へのリンク_20261023.md"
       ],
       "note": "NULL可のlink_pathと旧6引数互換RPC、同一案件のtaskId確認、通知送信時の絶対URL付与、M05の詳細リンクと旧行の戻り先を統合。単体1017件とビルド版模擬ブラウザー各12件成功。差戻し・期限頻度変更は含めず、共有DB・実配信・実認証は未確認。",
@@ -4925,18 +4910,14 @@
       "title": "成功ログイン時刻を記録してリスク集計の無反応判定へ反映する",
       "category": "改善",
       "phase": "改善",
-      "status": "main",
+      "status": "todo",
       "design": "基本設計5-3/6-8（改訂差分）",
       "screens": [],
       "evidence": [
-        "supabase/migrations/20261015000100_record_last_login.sql",
-        "src/lib/services/riskStore.ts",
-        "tests/db/last-login.test.ts",
-        "tests/unit/risk-store-login.test.ts",
         "docs/検証/成功ログイン時刻とリスク集計_20261023.md"
       ],
-      "note": "Authのlast_sign_in_atをactive本人へ同期し、初回プロフィール作成と招待有効化を扱う。停止解除・直接日時更新では活動を進めない。リスク入力の活動日をJSTへ統一。全単体1033件成功。認証UIと閾値は未変更、実Auth・共有DB・保存済みsnapshotの再計算は未実施。",
-      "next": "検証環境のmigration履歴とAuthトリガー作成権限を確認し、実Authの全入口・refresh・停止中の非更新を試験する。既存のリスク再計算で保存済みsnapshotへの反映を確認し、設計DOCXを改訂してレビューする。",
+      "note": "Supabase Authのlast_sign_in_at同期とリスク集計への反映は、現行D1実装に未移植。現行user_profilesにlast_login_atはなく、src/lib/d1/risk.tsの活動収集は提出・フォロー・連絡のみで、ログイン時刻は扱わない。",
+      "next": "必要になった時点で、better-authのログイン記録をD1へ残す方式で新規に実装する。現時点では移植予定なし。",
       "issues": [
         121
       ],
@@ -4960,13 +4941,11 @@
         "K03"
       ],
       "evidence": [
-        "src/lib/services/invitation-recipient.ts",
+        "src/lib/d1/onboarding.ts",
         "src/app/api/cases/[caseId]/invitations/route.ts",
         "src/app/api/cases/[caseId]/invitations/[invitationId]/send/route.ts",
-        "supabase/migrations/20261023000200_invitation_recipient_guard.sql",
-        "tests/unit/invitation-recipient.test.ts",
-        "tests/unit/invitation-api-combination.test.ts",
-        "tests/db/invitation-recipient-rls.test.ts",
+        "tests/d1/onboarding.test.mjs",
+        "tests/d1/delivery.test.mjs",
         "docs/検証/2人目へのメール招待_20261023.md"
       ],
       "note": "未登録相手のメールを二重入力・暗号化保存し、発行・再送へ引き継ぐ。別パートナーのプロフィール・有効招待との重複をRLS照会とDBロックで拒否。同じ宛先で失敗後の再試行が可能。実送信・共有DB・実PostgreSQL並行接続は未実施。 全単体/PGlite1069件、型・lint・整形・進捗・本番ビルド成功。",
@@ -4987,7 +4966,7 @@
       "title": "Step8 招待状態の先読み",
       "category": "改善",
       "phase": "改善",
-      "status": "main",
+      "status": "todo",
       "design": "基本設計P02/6-6-1/表6-4（改訂差分）",
       "screens": [
         "P02"
@@ -4995,12 +4974,10 @@
       "evidence": [
         "src/app/(public)/register/[token]/page.tsx",
         "src/lib/services/invitations.ts",
-        "src/lib/supabase/admin.ts",
-        "tests/unit/invitation-landing.test.ts",
         "docs/検証/招待状態の先読み_20261023.md"
       ],
-      "note": "表示専用のハッシュ照会で未使用・登録済み・無効・障害を案内。使用済みのactiveな本人だけRLSの案件・相手区分一致で復帰する。未使用は共用端末や紐付け前でもフォームを維持。全単体1091件、ビルド版のPC・スマートフォン幅で模擬DB14照会を確認。実Auth・共有環境は未確認。",
-      "next": "検証環境で使用済み本人・共用端末・LINE紐付け前と表示後の失効を実Auth/RLSで確認する。設計DOCXに表6-4等の改訂を反映し、レビューする。",
+      "note": "招待状態の先読み（照会による未使用・登録済み・無効の案内と、使用済み本人の復帰）は現行に未移植。現行の登録ページはトークンの形式確認とログイン中案内のみで、招待状態の照会は行わない。",
+      "next": "必要になった時点で、D1の招待状態を照会する方式で新規に実装する。現時点では移植予定なし。",
       "issues": [],
       "prs": [
         140

@@ -127,7 +127,7 @@ save(
     '## 共通契約',
     '',
     '- ブラウザ更新API: 同一Originを本文解析より先に確認する。認証後もRLSで式場/案件の可視性を制限する。',
-    '- 内部定期API: Originの代わりに共有secretを検証する。Service Role用途は src/lib/supabase/admin.ts の明示許可表に限定。',
+    '- 内部定期API: Originの代わりに共有secretを検証する。D1で所属・担当範囲を検証する。',
     '- LINE webhook: 生の本文に対する署名を検証し、イベントIDをDBで重複排除する。',
     '- 正常: JSONまたは204。異常: { error: { code, message, details: [{ field, reason }] } }。401は未認証、403は停止/権限/Origin拒否、404は対象不可視/不存在、409は競合、429は制限、503は一時的な接続失敗。',
     '- Server Componentsは読み取りをRLSクライアントで直接実施。Server Actionsも認証/役割を確認し、ユーザー権限のRPC/RLSを使用する。',

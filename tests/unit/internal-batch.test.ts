@@ -1,34 +1,42 @@
-import { createClient } from '@supabase/supabase-js';
+import type { D1Database } from '@cloudflare/workers-types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { BatchFailure, runBatch } from '@/lib/api/internal';
+import { BatchFailure, runBatchD1 as runBatch } from '@/lib/d1/batches';
 
 const PRIVATE_ERROR = 'private@example.test / private-file.pdf';
 type Fault = 'database' | 'transport' | 'missing-id';
 
 function fixture(startFault?: Fault, finishFault?: Fault) {
   const writes: { method: string; body: Record<string, unknown>; url: URL }[] = [];
-  const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
-    const request = new Request(input, init);
-    const url = new URL(request.url);
-    expect(url.origin).toBe('https://batch-fixture.example.test');
-    expect(url.pathname).toBe('/rest/v1/batch_runs');
-    writes.push({
-      method: request.method,
-      body: (await request.json()) as Record<string, unknown>,
-      url,
-    });
-    const fault = request.method === 'POST' ? startFault : finishFault;
-    if (fault === 'transport') throw new TypeError(PRIVATE_ERROR);
-    if (fault === 'database')
-      return Response.json({ message: PRIVATE_ERROR, code: 'TEST' }, { status: 400 });
-    return Response.json(fault === 'missing-id' ? {} : { id: 'run-id' });
-  });
-  const admin = createClient('https://batch-fixture.example.test', 'fixture-only-key', {
-    auth: { autoRefreshToken: false, persistSession: false },
-    db: { retry: false },
-    global: { fetch },
-  });
+  const admin = {
+    prepare: (sql: string) => ({
+      bind: (...args: unknown[]) => ({
+        first: async () => {
+          const start = sql.startsWith('INSERT');
+          const id = String(start ? args[0] : args[5]);
+          const url = new URL('https://batch-fixture.example.test');
+          url.searchParams.set('id', `eq.${id}`);
+          url.searchParams.set('select', 'id');
+          writes.push({
+            method: start ? 'POST' : 'PATCH',
+            url,
+            body: start
+              ? { job_type: args[1], started_at: args[2] }
+              : {
+                  finished_at: args[0],
+                  target_count: args[1],
+                  http_status: args[2],
+                  detail: JSON.parse(String(args[3])),
+                  error_message: args[4],
+                },
+          });
+          const fault = start ? startFault : finishFault;
+          if (fault === 'database' || fault === 'transport') throw new Error(PRIVATE_ERROR);
+          return fault === 'missing-id' ? null : { id };
+        },
+      }),
+    }),
+  } as unknown as D1Database;
   return { admin, writes };
 }
 
@@ -61,7 +69,9 @@ describe('runBatchの実行記録', () => {
       detail: outcome.detail,
       finished_at: expect.any(String),
     });
-    expect(f.writes[1].url.searchParams.get('id')).toBe('eq.run-id');
+    expect(f.writes[1].url.searchParams.get('id')).toBe(
+      `eq.${f.writes[0].url.searchParams.get('id')?.slice(3)}`,
+    );
     expect(f.writes[1].url.searchParams.get('select')).toBe('id');
   });
 

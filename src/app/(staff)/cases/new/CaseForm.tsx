@@ -9,23 +9,23 @@
  * の順で呼ぶ。案件登録が成功した時点で招待URLの平文は二度と得られなくなるため（6-3-6）、
  * 宿題の一括割当が失敗しても登録完了モーダルは必ず開き、割当だけ後から再実行できる旨を伝える。
  */
-import { useState } from 'react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
-import { InvitationResultModal, type IssuedInvitation } from './InvitationResultModal';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { ApiCallError, api } from '@/lib/api/client';
 import {
-  SENDABLE_CHANNELS,
   CONTACT_CHANNEL_LABEL,
   INPUT_LIMITS,
   PARTNER_ROLES,
   PARTNER_ROLE_LABEL,
+  SENDABLE_CHANNELS,
   type ContactChannel,
   type PartnerRole,
 } from '@/lib/constants';
 import { formatDate } from '@/lib/format';
 import { dueDateFrom } from '@/lib/services/schedule';
+import { InvitationResultModal, type IssuedInvitation } from './InvitationResultModal';
 
 export interface PlanOption {
   id: string;
@@ -50,6 +50,17 @@ interface Props {
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const CASE_FIELD_ORDER = [
+  'weddingDate',
+  'weddingTime',
+  'groomName',
+  'brideName',
+  'primaryContact',
+  'contactEmail',
+  'contactChannel',
+  'guestCount',
+  'planTypeId',
+] as const;
 
 export function CaseForm({ plans, today }: Props) {
   const [form, setForm] = useState({
@@ -69,6 +80,23 @@ export function CaseForm({ plans, today }: Props) {
   const [result, setResult] = useState<
     (CreateCaseResponse & { assigned: number; assignError: string | null }) | null
   >(null);
+
+  useEffect(() => {
+    const firstInvalid = CASE_FIELD_ORDER.find((field) => fieldErrors[field]);
+    if (!firstInvalid) return;
+    const input = document.getElementById(firstInvalid);
+    input?.focus({ preventScroll: true });
+    input?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [fieldErrors]);
+
+  const fieldA11y = (field: string, helpId?: string) => {
+    const invalid = Boolean(fieldErrors[field]);
+    return {
+      'aria-invalid': invalid || undefined,
+      'aria-describedby':
+        [helpId, invalid ? `${field}-error` : undefined].filter(Boolean).join(' ') || undefined,
+    };
+  };
 
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -154,9 +182,10 @@ export function CaseForm({ plans, today }: Props) {
               min={today}
               value={form.weddingDate}
               onChange={(e) => update('weddingDate', e.target.value)}
+              {...fieldA11y('weddingDate')}
               required
             />
-            <FieldError message={fieldErrors.weddingDate} />
+            <FieldError id="weddingDate-error" message={fieldErrors.weddingDate} />
           </div>
 
           <div>
@@ -169,8 +198,9 @@ export function CaseForm({ plans, today }: Props) {
               className="field"
               value={form.weddingTime}
               onChange={(e) => update('weddingTime', e.target.value)}
+              {...fieldA11y('weddingTime')}
             />
-            <FieldError message={fieldErrors.weddingTime} />
+            <FieldError id="weddingTime-error" message={fieldErrors.weddingTime} />
           </div>
 
           <div>
@@ -183,9 +213,10 @@ export function CaseForm({ plans, today }: Props) {
               maxLength={INPUT_LIMITS.shortText}
               value={form.groomName}
               onChange={(e) => update('groomName', e.target.value)}
+              {...fieldA11y('groomName')}
               required
             />
-            <FieldError message={fieldErrors.groomName} />
+            <FieldError id="groomName-error" message={fieldErrors.groomName} />
           </div>
 
           <div>
@@ -198,9 +229,10 @@ export function CaseForm({ plans, today }: Props) {
               maxLength={INPUT_LIMITS.shortText}
               value={form.brideName}
               onChange={(e) => update('brideName', e.target.value)}
+              {...fieldA11y('brideName')}
               required
             />
-            <FieldError message={fieldErrors.brideName} />
+            <FieldError id="brideName-error" message={fieldErrors.brideName} />
           </div>
 
           <div>
@@ -212,6 +244,7 @@ export function CaseForm({ plans, today }: Props) {
               className="field"
               value={form.primaryContact}
               onChange={(e) => update('primaryContact', e.target.value as PartnerRole)}
+              {...fieldA11y('primaryContact')}
             >
               {PARTNER_ROLES.map((role) => (
                 <option key={role} value={role}>
@@ -222,7 +255,7 @@ export function CaseForm({ plans, today }: Props) {
             <p className="mt-1 text-caption text-text-muted">
               下の連絡先メールは、こちらで選んだ方の連絡先として登録します。
             </p>
-            <FieldError message={fieldErrors.primaryContact} />
+            <FieldError id="primaryContact-error" message={fieldErrors.primaryContact} />
           </div>
 
           <div>
@@ -235,9 +268,10 @@ export function CaseForm({ plans, today }: Props) {
               className="field"
               value={form.contactEmail}
               onChange={(e) => update('contactEmail', e.target.value)}
+              {...fieldA11y('contactEmail')}
               required
             />
-            <FieldError message={fieldErrors.contactEmail} />
+            <FieldError id="contactEmail-error" message={fieldErrors.contactEmail} />
           </div>
 
           <div>
@@ -249,6 +283,7 @@ export function CaseForm({ plans, today }: Props) {
               className="field"
               value={form.contactChannel}
               onChange={(e) => update('contactChannel', e.target.value as ContactChannel)}
+              {...fieldA11y('contactChannel')}
             >
               {SENDABLE_CHANNELS.map((channel) => (
                 <option key={channel} value={channel}>
@@ -256,7 +291,7 @@ export function CaseForm({ plans, today }: Props) {
                 </option>
               ))}
             </select>
-            <FieldError message={fieldErrors.contactChannel} />
+            <FieldError id="contactChannel-error" message={fieldErrors.contactChannel} />
           </div>
 
           <div>
@@ -272,12 +307,12 @@ export function CaseForm({ plans, today }: Props) {
               className="field"
               value={form.guestCount}
               onChange={(e) => update('guestCount', e.target.value)}
-              aria-describedby="guest-count-help"
+              {...fieldA11y('guestCount', 'guest-count-help')}
             />
             <p id="guest-count-help" className="mt-1 text-caption text-text-muted">
               人数が未定の場合は空欄にしてください。
             </p>
-            <FieldError message={fieldErrors.guestCount} />
+            <FieldError id="guestCount-error" message={fieldErrors.guestCount} />
           </div>
 
           <div>
@@ -289,6 +324,7 @@ export function CaseForm({ plans, today }: Props) {
               className="field"
               value={form.planTypeId}
               onChange={(e) => update('planTypeId', e.target.value)}
+              {...fieldA11y('planTypeId')}
               required
             >
               <option value="">選択してください</option>
@@ -298,7 +334,7 @@ export function CaseForm({ plans, today }: Props) {
                 </option>
               ))}
             </select>
-            <FieldError message={fieldErrors.planTypeId} />
+            <FieldError id="planTypeId-error" message={fieldErrors.planTypeId} />
           </div>
         </div>
 

@@ -16,10 +16,17 @@
 
 import { useState } from 'react';
 
-import { AiHeading, AiJobState, AiUnavailable } from '@/components/ai/AiNotice';
+import {
+  AiHeading,
+  AiJobState,
+  AiOutcomeTombstone,
+  AiTimeoutNotice,
+  AiUnavailable,
+} from '@/components/ai/AiNotice';
 import { useAiJob, type AiJobView } from '@/components/ai/useAiJob';
 import { FieldError } from '@/components/ui/ErrorSummary';
 import { adoptedOutput } from '@/lib/ai/assist';
+import { defectSummaryText } from '@/lib/ai/aiMessages';
 import type { DefectFinding } from '@/lib/ai/defectCheck';
 import { DEFECT_TYPE_LABEL } from '@/lib/ai/schemas';
 import { ApiCallError, api } from '@/lib/api/client';
@@ -114,6 +121,11 @@ export function DefectPanel({
         AIによる一次チェック（要確認）
       </AiHeading>
 
+      {/* 件数サマリーを一覧より先に出す（全部で何件あるかを先に把握できるように） */}
+      <p className="mb-3 text-label font-medium text-text-primary" role="status">
+        {defectSummaryText(ruleFindings.length, showLlm ? llmFindings.length : 0, showLlm)}
+      </p>
+
       {/* ---- ①ルールベース。LLM の状態に関係なく必ず出る（7-2） ---- */}
       <div>
         <p className="text-caption text-text-muted">必須項目・重複・形式の確認</p>
@@ -149,14 +161,13 @@ export function DefectPanel({
               status={job.status}
               errorMessage={job.error_message}
               fallback="表記ゆれ・敬称は目視でご確認ください。"
+              onRetry={job.status === 'failed' && aiAvailable ? requestCheck : undefined}
             />
           </div>
         )}
 
         {timedOut && (job?.status === 'queued' || job?.status === 'processing') && (
-          <p className="mt-1 text-caption text-text-muted">
-            時間がかかっています。画面を開き直すと最新の状態が表示されます。
-          </p>
+          <AiTimeoutNotice />
         )}
 
         {showLlm &&
@@ -193,15 +204,15 @@ export function DefectPanel({
             <>
               <button
                 type="button"
-                className="btn-secondary sm:w-40"
+                className="btn-primary sm:w-48"
                 disabled={pending}
                 onClick={() => review('confirmed')}
               >
-                確認した
+                このチェックを採用する
               </button>
               <button
                 type="button"
-                className="btn-secondary sm:w-32"
+                className="btn-ghost sm:w-32"
                 disabled={pending}
                 onClick={() => review('discarded')}
               >
@@ -210,6 +221,8 @@ export function DefectPanel({
             </>
           )}
         </div>
+
+        {job?.status === 'confirmed' && <AiOutcomeTombstone status="confirmed" />}
       </div>
     </section>
   );

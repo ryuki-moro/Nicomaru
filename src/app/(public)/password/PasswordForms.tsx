@@ -1,20 +1,21 @@
 'use client';
-
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { api, ApiCallError } from '@/lib/api/client';
 import { PASSWORD_MIN_LENGTH } from '@/lib/constants';
-import { publicD1 } from '@/lib/d1/mode';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { passwordUpdateSchema, toErrorDetails } from '@/lib/validation';
-
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 type Mode = 'reset' | 'invite';
 /** 'checking' = リンク由来のセッションを確立できるか判定中 */
 type Step = 'checking' | 'request' | 'update';
-
-const COPY: Record<Mode, { title: string; lead: string; submit: string }> = {
+const COPY: Record<
+  Mode,
+  {
+    title: string;
+    lead: string;
+    submit: string;
+  }
+> = {
   reset: {
     title: 'パスワードの再設定',
     lead: '新しいパスワードを設定してください。',
@@ -26,7 +27,6 @@ const COPY: Record<Mode, { title: string; lead: string; submit: string }> = {
     submit: 'パスワードを設定してログインへ',
   },
 };
-
 /**
  * P03 の2ステップ（4-3 P03）。
  *
@@ -35,29 +35,24 @@ const COPY: Record<Mode, { title: string; lead: string; submit: string }> = {
  * URL に付くので、それをセッションへ交換できたときだけ新パスワード入力を表示する。
  *
  * パスワード要件は 6-3-1／13-1 のとおり12文字以上。
- * 漏えいパスワードのチェックは Supabase Auth の設定（Leaked Password Protection）に委ね、
  * アプリ側では拒否理由を利用者向けの文言に変換するだけにする。
  * リストをアプリ側に持つと更新が追随できず、判定が形骸化するため。
  */
 export function PasswordForms({ mode }: { mode: Mode }) {
   const router = useRouter();
-
   const [step, setStep] = useState<Step>('checking');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
-
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [token, setToken] = useState<string | null>(null);
-
   // メール内リンクからの着地処理。初回マウント時に1度だけ行う。
   useEffect(() => {
     let cancelled = false;
-
-    if (publicD1()) {
+    {
       // D1はリンクのフラグメントにトークンを載せる。検証は送信時にサーバーで行う。
       const linkToken = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('token');
       if (linkToken)
@@ -71,55 +66,7 @@ export function PasswordForms({ mode }: { mode: Mode }) {
         cancelled = true;
       };
     }
-
-    void (async () => {
-      const supabase = createSupabaseBrowserClient();
-      const url = new URL(window.location.href);
-      const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
-      const authCode = url.searchParams.get('code');
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-      const linkError =
-        url.searchParams.get('error_description') ?? hashParams.get('error_description');
-
-      if (authCode || accessToken || linkError) {
-        // トークンを含むURLを履歴に残さない
-        window.history.replaceState(null, '', `${url.pathname}?mode=${mode}`);
-      }
-
-      if (!linkError) {
-        if (authCode) await supabase.auth.exchangeCodeForSession(authCode);
-        else if (accessToken && refreshToken) {
-          await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-        }
-      }
-
-      const { data } = await supabase.auth.getSession();
-      if (cancelled) return;
-
-      if (data.session) {
-        setStep('update');
-        return;
-      }
-
-      setStep('request');
-      if (linkError || authCode || accessToken) {
-        setError(
-          mode === 'invite'
-            ? 'この設定リンクは有効期限が切れています。管理者に再送をご依頼ください'
-            : 'この再設定リンクは有効期限が切れています。お手数ですが再度お手続きください',
-        );
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [mode]);
-
   const requestReset = async () => {
     setPending(true);
     setError(null);
@@ -142,11 +89,9 @@ export function PasswordForms({ mode }: { mode: Mode }) {
       setPending(false);
     }
   };
-
   const updatePassword = async () => {
     setError(null);
     setFieldErrors({});
-
     // 12文字以上・一致の検証はサーバーと同じスキーマで行う（6-5-1 の details[] と同じ形に写像）
     const parsed = passwordUpdateSchema.safeParse({ password, passwordConfirm });
     if (!parsed.success) {
@@ -155,7 +100,6 @@ export function PasswordForms({ mode }: { mode: Mode }) {
       setError('入力内容をご確認ください');
       return;
     }
-
     setPending(true);
     if (token) {
       try {
@@ -173,36 +117,13 @@ export function PasswordForms({ mode }: { mode: Mode }) {
       router.refresh();
       return;
     }
-    const supabase = createSupabaseBrowserClient();
-    try {
-      await api.post('/api/auth/password-update', parsed.data);
-      if (mode === 'invite') {
-        // 初回設定の完了を user_profiles.status へ反映する（6-3-1）。
-        // これを行わないと current_app_user() が0行を返し続け、恒久的にログインできない。
-        await api.post('/api/auth/complete-invite');
-      }
-    } catch (cause) {
-      setPending(false);
-      setError(
-        cause instanceof ApiCallError
-          ? cause.message
-          : 'パスワード設定を完了できませんでした。時間をおいてお試しください',
-      );
-      return;
-    }
-
-    // 4-3 P03「更新後 P01 へ」。設定直後のセッションは破棄し、新しいパスワードで入り直してもらう。
-    await supabase.auth.signOut();
-    router.replace('/login?reset=done');
-    router.refresh();
+    setPending(false);
+    setError('リンクが無効です。再設定リンクを再発行してください');
   };
-
   const copy = COPY[mode];
-
   if (step === 'checking') {
     return <p className="card text-center text-label text-text-muted">確認しています…</p>;
   }
-
   return (
     <div className="flex flex-col gap-4">
       <div>

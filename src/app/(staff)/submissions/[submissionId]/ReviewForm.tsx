@@ -4,18 +4,15 @@
  *   確認ステータス: ラジオ（確認済／不備あり）必須
  *   コメント      : 不備あり時必須・1000字上限
  *
- * AI補助のうち 9-3（コメント下書き）はこのフォームの中に置く（DraftAssist）。
+ * AI補助のうち 9-3（コメント下書き）はこのフォームの中、コメント欄の直下に置く（DraftAssist）。
+ * 読み元・書き先であるコメント欄のすぐそばに置き、往復スクロールを無くすため。
  * 下書きは「コメント欄に入れる」までで、送信も確定もしない（7-1）。
  * 9-4（不備一次チェック）は確認結果の入力とは独立した参考情報なので、別セクションに置く。
  * 添付ファイルの署名付きURL取得も同じ画面の対話操作なので本ファイルにまとめている。
  */
 'use client';
-
-import { publicD1 } from '@/lib/d1/mode';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-
 import { DraftAssist } from '@/app/(staff)/submissions/[submissionId]/DraftAssist';
+import { TranslationPanel } from '@/app/(staff)/submissions/[submissionId]/TranslationPanel';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { ApiCallError, api, handleApiError } from '@/lib/api/client';
 import {
@@ -24,7 +21,8 @@ import {
   REVIEW_STATUS_LABEL,
   type ReviewDecision,
 } from '@/lib/constants';
-
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 interface Props {
   submissionId: string;
   /** 9-3 の下書き依頼に使う */
@@ -34,8 +32,9 @@ interface Props {
   taskTitle: string;
   aiAvailable: boolean;
   lastSeenAt: string | null;
+  /** 9-11 翻訳の初期値（提出の自由記述）。無い画面では空 */
+  sourceText?: string;
 }
-
 export function ReviewForm({
   submissionId,
   caseId,
@@ -43,6 +42,7 @@ export function ReviewForm({
   taskTitle,
   aiAvailable,
   lastSeenAt,
+  sourceText = '',
 }: Props) {
   const router = useRouter();
   const [decision, setDecision] = useState<ReviewDecision | null>(null);
@@ -50,12 +50,10 @@ export function ReviewForm({
   const [pending, setPending] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSummaryError(null);
     setFieldErrors({});
-
     // 送信前の入力チェック（4-3 エラー表示規約。サーバー側でも同じ規則を再検証する）
     if (!decision) {
       setFieldErrors({ decision: '確認結果を選択してください' });
@@ -65,7 +63,6 @@ export function ReviewForm({
       setFieldErrors({ comment: '不備の内容を入力してください' });
       return;
     }
-
     setPending(true);
     try {
       await api.post(`/api/submissions/${submissionId}/review`, {
@@ -87,7 +84,6 @@ export function ReviewForm({
       setPending(false);
     }
   }
-
   return (
     <form onSubmit={handleSubmit} noValidate>
       <ErrorSummary message={summaryError} />
@@ -113,18 +109,15 @@ export function ReviewForm({
         <FieldError message={fieldErrors.decision} />
       </fieldset>
 
-      {!publicD1() && (
-        <DraftAssist
-          caseId={caseId}
-          taskId={taskId}
-          taskTitle={taskTitle}
-          decision={decision}
-          memo={comment}
-          aiAvailable={aiAvailable}
-          lastSeenAt={lastSeenAt}
-          onAdopt={setComment}
-        />
-      )}
+      {/* 9-11 翻訳補助（拡張）。辞書フォールバックがあるため常時出す（配置はコメント欄の直上） */}
+      <TranslationPanel
+        caseId={caseId}
+        taskId={taskId}
+        sourceText={sourceText || comment}
+        aiAvailable={aiAvailable}
+        lastSeenAt={lastSeenAt}
+        onAdopt={setComment}
+      />
 
       <div className="mb-4">
         <label htmlFor="review-comment" className="field-label">
@@ -146,6 +139,17 @@ export function ReviewForm({
         <FieldError message={fieldErrors.comment} />
       </div>
 
+      <DraftAssist
+        caseId={caseId}
+        taskId={taskId}
+        taskTitle={taskTitle}
+        decision={decision}
+        memo={comment}
+        aiAvailable={aiAvailable}
+        lastSeenAt={lastSeenAt}
+        onAdopt={setComment}
+      />
+
       <div className="flex flex-col gap-2 sm:flex-row-reverse">
         <button type="submit" className="btn-primary sm:w-40" disabled={pending}>
           {pending ? '送信中…' : '確定する'}
@@ -162,7 +166,6 @@ export function ReviewForm({
     </form>
   );
 }
-
 /**
  * 提出ファイルのダウンロード（6-5 表6-6 /api/files/{fileId}/download）。
  * 署名付きURLは TTL 60秒・都度発行のため、ページに URL を焼き込まずクリック時に取得する。
@@ -170,12 +173,13 @@ export function ReviewForm({
 export function SubmissionFileLink({ fileId, fileName }: { fileId: string; fileName: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   async function handleClick() {
     setError(null);
     setPending(true);
     try {
-      const { url } = await api.get<{ url: string }>(`/api/files/${fileId}/download`);
+      const { url } = await api.get<{
+        url: string;
+      }>(`/api/files/${fileId}/download`);
       // await のあとの window.open はポップアップブロックに掛かることがあるため、
       // アンカーの programmatic click で開く。
       const anchor = document.createElement('a');
@@ -195,7 +199,6 @@ export function SubmissionFileLink({ fileId, fileName }: { fileId: string; fileN
       setPending(false);
     }
   }
-
   return (
     <div>
       <button type="button" className="btn-ghost" onClick={handleClick} disabled={pending}>

@@ -14,55 +14,22 @@
  * ここは staff 専用で、job_type にも 'faq_answer' を許さない。
  */
 import { ok, parseBody, route } from '@/lib/api/route';
-import { AI_JOB_COLUMNS } from '@/lib/ai/assist';
 import { requireStaff } from '@/lib/auth/session';
-import { AI_JOB_TYPES } from '@/lib/ai/schemas';
-import { LIST_PAGE_SIZE } from '@/lib/constants';
-import { fromPostgresError } from '@/lib/errors';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { aiJobCreateSchema } from '@/lib/validation';
-
+import { enqueueJob, jobList } from '@/lib/d1/ai';
+import { localDB } from '@/lib/d1/runtime';
+import { aiJobCreateSchemaD1 } from '@/lib/validation';
 export const runtime = 'nodejs';
-
 export const POST = route(async (request: Request) => {
-  await requireStaff();
-  const input = await parseBody(request, aiJobCreateSchema);
-  const supabase = await createSupabaseServerClient();
-
-  const { data, error } = await supabase.rpc('enqueue_ai_job', {
-    p_case_id: input.caseId,
-    p_job_type: input.jobType,
-    // 7-4「LLMへの入力は最小限の項目に限定する」。本文ではなく参照を渡すのが基本
-    p_input_ref: input.input,
-    p_related_task_id: input.relatedTaskId ?? null,
-  });
-  if (error) throw fromPostgresError(error);
-
-  return ok({ id: data as string, status: 'queued' }, 201);
+  const user = await requireStaff();
+  const input = await parseBody(request, aiJobCreateSchemaD1);
+  return ok({ id: await enqueueJob(await localDB(), user, input), status: 'queued' }, 201);
 });
-
 export const GET = route(async (request: Request) => {
-  await requireStaff();
-
+  const user = await requireStaff();
   const url = new URL(request.url);
   const caseId = url.searchParams.get('caseId');
   const jobType = url.searchParams.get('jobType');
-
-  const supabase = await createSupabaseServerClient();
-  let query = supabase
-    .from('ai_jobs')
-    .select(AI_JOB_COLUMNS)
-    .order('created_at', { ascending: false })
-    .limit(LIST_PAGE_SIZE);
-
-  // 範囲は RLS（ai_jobs_select）が担保する。ここでの絞り込みは表示上の都合。
-  if (caseId) query = query.eq('case_id', caseId);
-  if (jobType && (AI_JOB_TYPES as readonly string[]).includes(jobType)) {
-    query = query.eq('job_type', jobType);
-  }
-
-  const { data, error } = await query;
-  if (error) throw fromPostgresError(error);
-
-  return ok({ items: data ?? [] });
+  return ok({
+    items: await jobList(await localDB(), user, caseId ?? undefined, jobType ?? undefined),
+  });
 });

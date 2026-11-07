@@ -5,19 +5,13 @@
  *
  * 対象はパスワードを持つ planner／admin／system_admin のみ。
  * couple はパスワードを設定しないため、そもそも対象外である（13-1）。
- * 送信経路は Resend を Supabase Auth の Custom SMTP に設定した1本に統一する（6-3-1）。
  */
 import { noContent, parseBody, route } from '@/lib/api/route';
-import { clientIp, localD1, usingD1 } from '@/lib/d1/mode';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { clientIp, localD1 } from '@/lib/d1/mode';
 import { passwordResetRequestSchema } from '@/lib/validation';
-import { recordPasswordResetRequest } from '@/lib/services/audit';
-
-import { appBaseUrl, enforceAuthRateLimit } from '../shared';
-
 export const POST = route(async (request) => {
   const body = await parseBody(request, passwordResetRequestSchema);
-  if (usingD1()) {
+  {
     const { localDB } = await import('@/lib/d1/runtime');
     const db = await localDB();
     await (
@@ -34,22 +28,4 @@ export const POST = route(async (request) => {
     }
     return noContent();
   }
-  await enforceAuthRateLimit(request, 'password_reset', body.email);
-
-  const supabase = await createSupabaseServerClient();
-
-  // 着地先は P03 のステップ2。mode=reset で見出し・案内文を再設定用に切り替える（4-3 P03）。
-  const { error } = await supabase.auth.resetPasswordForEmail(body.email, {
-    redirectTo: `${appBaseUrl(request)}/password?mode=reset`,
-  });
-
-  // 未登録メールでも 204 を返す。
-  // 「登録されていません」と返すとアカウントの存否が判別でき、総当たりの下調べに使われるため（9章）。
-  if (error) {
-    console.error('[auth] password-reset failed', { code: error.code, status: error.status });
-  }
-
-  await recordPasswordResetRequest();
-
-  return noContent();
 });

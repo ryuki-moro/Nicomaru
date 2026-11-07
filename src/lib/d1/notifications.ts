@@ -1,15 +1,15 @@
-import type { D1Database } from '@cloudflare/workers-types';
 import type { AppUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
-import { scope } from './cases';
-import { captureOnly } from './mode';
-import { sendEmail } from '@/lib/notify/send';
-import { notificationUrl } from '@/lib/services/notifications';
 import { encryptPii, readPii } from '@/lib/crypto';
 import { badRequest, notFound } from '@/lib/errors';
+import { sendEmail } from '@/lib/notify/send';
 import { checkNotificationText, renderNotification } from '@/lib/notify/templates';
-import type { z } from 'zod';
+import { notificationUrl } from '@/lib/services/notifications';
 import type { notificationSendSchema } from '@/lib/validation';
+import type { D1Database } from '@cloudflare/workers-types';
+import type { z } from 'zod';
+import { scope } from './cases';
+import { captureOnly } from './mode';
 
 export async function createNotification(
   db: D1Database,
@@ -114,6 +114,16 @@ export async function createNotification(
     )
     .bind(sent.delivered ? 'sent' : 'failed', sentAt, id)
     .run();
+  // 送信ログ (0013)。ログ欠落で通知送信自体を失敗扱いにはしない。
+  try {
+    await recordNotificationLog(db, {
+      notificationId: id,
+      provider: 'email',
+      status: sent.delivered ? 'success' : 'failure',
+    });
+  } catch {
+    console.warn('[d1-notifications] 送信ログを保存できませんでした', id);
+  }
   return {
     notificationId: id,
     channel: input.channel,
@@ -136,6 +146,153 @@ export async function listNotifications(db: D1Database, user: AppUser, offset: n
   return result.results;
 }
 
+// ---- 0013: 送信ログ・設定・上限カウンタ (6-9) ----
+
+export interface NotificationLogExportRowD1 {
+  id: string;
+  provider: 'line' | 'email';
+  status: 'success' | 'failure';
+  provider_message_id: string | null;
+  created_at: string;
+  notifications: {
+    notification_type: string;
+    venues: { name: string } | null;
+    wedding_cases: { case_code: string } | null;
+  } | null;
+}
+
+export async function recordNotificationLog(
+  db: D1Database,
+  input: {
+    notificationId: string;
+    provider: 'line' | 'email';
+    status: 'success' | 'failure';
+    providerMessageId?: string | null;
+    response?: unknown;
+    attemptNo?: number;
+  },
+): Promise<string> {
+  const id = crypto.randomUUID();
+  await db
+    .prepare(
+      'INSERT INTO notification_logs(id,notification_id,provider,provider_message_id,response_json,status,attempt_no,created_at) VALUES (?,?,?,?,?,?,?,?)',
+    )
+    .bind(
+      id,
+      input.notificationId,
+      input.provider,
+      input.providerMessageId ?? null,
+      input.response === undefined ? null : JSON.stringify(input.response),
+      input.status,
+      input.attemptNo ?? 1,
+      new Date().toISOString(),
+    )
+    .run();
+  return id;
+}
+
+export async function loadNotificationLogsForExportD1(
+  db: D1Database,
+  period: { from?: string; toExclusive?: string } = {},
+): Promise<NotificationLogExportRowD1[]> {
+  const MAX = 10_001;
+  const where: string[] = [];
+  const binds: unknown[] = [];
+  if (period.from) {
+    where.push('l.created_at>=?');
+    binds.push(period.from);
+  }
+  if (period.toExclusive) {
+    where.push('l.created_at<?');
+    binds.push(period.toExclusive);
+  }
+  const { results } = await db
+    .prepare(
+      `SELECT l.id,l.provider,l.status,l.provider_message_id,l.created_at,
+        n.notification_type AS n_type, v.name AS venue_name, c.case_code AS case_code
+       FROM notification_logs l
+       LEFT JOIN notifications n ON n.id=l.notification_id
+       LEFT JOIN wedding_cases c ON c.id=n.case_id
+       LEFT JOIN venues v ON v.id=c.venue_id
+       ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+       ORDER BY l.created_at DESC,l.id DESC LIMIT ?`,
+    )
+    .bind(...binds, MAX)
+    .all<{
+      id: string;
+      provider: 'line' | 'email';
+      status: 'success' | 'failure';
+      provider_message_id: string | null;
+      created_at: string;
+      n_type: string | null;
+      venue_name: string | null;
+      case_code: string | null;
+    }>();
+  return results.map((r) => ({
+    id: r.id,
+    provider: r.provider,
+    status: r.status,
+    provider_message_id: r.provider_message_id,
+    created_at: r.created_at,
+    notifications: r.n_type
+      ? {
+          notification_type: r.n_type,
+          venues: r.venue_name ? { name: r.venue_name } : null,
+          wedding_cases: r.case_code ? { case_code: r.case_code } : null,
+        }
+      : null,
+  }));
+}
+
+export interface NotificationSettingsD1 {
+  linePerCasePerWeek: number;
+  linePerVenuePerMonth: number;
+  dueReminderDaysBefore: number;
+}
+
+/** 式場別があればそれを、無ければシステム既定 (venue_id NULL) を返す。 */
+export async function getNotificationSettingsD1(
+  db: D1Database,
+  venueId: string,
+): Promise<NotificationSettingsD1> {
+  const row = await db
+    .prepare(
+      `SELECT line_per_case_per_week,line_per_venue_per_month,due_reminder_days_before
+       FROM notification_settings WHERE venue_id=? OR venue_id IS NULL
+       ORDER BY (venue_id IS NULL) ASC LIMIT 1`,
+    )
+    .bind(venueId)
+    .first<{
+      line_per_case_per_week: number;
+      line_per_venue_per_month: number;
+      due_reminder_days_before: number;
+    }>();
+  return {
+    linePerCasePerWeek: row?.line_per_case_per_week ?? 1,
+    linePerVenuePerMonth: row?.line_per_venue_per_month ?? 180,
+    dueReminderDaysBefore: row?.due_reminder_days_before ?? 7,
+  };
+}
+
+/** 送信成功をカウンタへ原子的に加算する (UNIQUE + upsert)。 */
+export async function incrementNotificationQuotaD1(
+  db: D1Database,
+  scopeKind: 'case_week' | 'venue_month',
+  scopeId: string,
+  windowStart: string,
+): Promise<number> {
+  const row = await db
+    .prepare(
+      `INSERT INTO notification_quota_counters(id,scope,scope_id,window_start,sent_count)
+       VALUES (?,?,?,?,1)
+       ON CONFLICT(scope,scope_id,window_start) DO UPDATE SET sent_count=sent_count+1,updated_at=CURRENT_TIMESTAMP
+       RETURNING sent_count`,
+    )
+    .bind(crypto.randomUUID(), scopeKind, scopeId, windowStart)
+    .first<{ sent_count: number }>();
+  return row?.sent_count ?? 0;
+}
+
 export async function markNotificationsRead(db: D1Database, user: AppUser, ids: string[]) {
   if (!ids.length) return;
   await db.batch(
@@ -148,5 +305,45 @@ export async function markNotificationsRead(db: D1Database, user: AppUser, ids: 
         )
         .bind(new Date().toISOString(), id, user.id, user.id),
     ),
+  );
+}
+
+/** スタッフの所属・担当範囲にある案件の送信履歴。 */
+export async function staffNotificationHistory(
+  db: D1Database,
+  user: AppUser,
+  offset = 0,
+  limit = 50,
+) {
+  if (user.role === 'couple') throw (await import('@/lib/errors')).forbidden();
+  const { results } = await db
+    .prepare(
+      `SELECT n.*,c.case_code FROM notifications n JOIN wedding_cases c ON c.id=n.case_id WHERE ${scope} ORDER BY n.created_at DESC,n.id DESC LIMIT ? OFFSET ?`,
+    )
+    .bind(user.id, limit + 1, offset)
+    .all<{
+      id: string;
+      case_id: string;
+      channel: string;
+      notification_type: import('@/lib/notify/templates').NotificationType;
+      title: string;
+      status: string;
+      sent_at: string | null;
+      created_at: string;
+      case_code: string;
+    }>();
+  return Promise.all(
+    results.map(async (row) => ({
+      ...row,
+      wedding_cases: { case_code: row.case_code },
+      notification_logs: (
+        await db
+          .prepare(
+            'SELECT provider,status,attempt_no FROM notification_logs WHERE notification_id=? ORDER BY created_at,id',
+          )
+          .bind(row.id)
+          .all<{ provider: string; status: string; attempt_no: number }>()
+      ).results,
+    })),
   );
 }

@@ -26,9 +26,6 @@ performance-results/
 performance-report/
 .vitest/
 
-# Supabase ローカル
-supabase/.branches/
-supabase/.temp/
 
 # TypeScript incremental build info
 tsconfig.tsbuildinfo
