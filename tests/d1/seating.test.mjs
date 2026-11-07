@@ -41,7 +41,10 @@ const person = (fullName, extra = {}) => ({
   assistanceNote: '',
   ...extra,
 });
-const response = (guests, { attending = true, guestSide = 'bride', relationship = 'friend' } = {}) => ({
+const response = (
+  guests,
+  { attending = true, guestSide = 'bride', relationship = 'friend' } = {},
+) => ({
   attending,
   guestSide,
   relationship,
@@ -107,11 +110,19 @@ after(async () => platform?.dispose());
 test('配置パターンは担当スタッフだけが作れ、卓のIDは保存し直しても変わらない（#180）', async () => {
   // 新郎新婦と、担当でないプランナー（案件自体が見えない）は作れない
   await assert.rejects(
-    saveSeatingLayout(db, coupleA, ids.caseA, null, { name: '配置1', hallShape: 'wide', tables: [table('1卓')] }),
+    saveSeatingLayout(db, coupleA, ids.caseA, null, {
+      name: '配置1',
+      hallShape: 'wide',
+      tables: [table('1卓')],
+    }),
     (e) => e.code === 'FORBIDDEN',
   );
   await assert.rejects(
-    saveSeatingLayout(db, plannerA2, ids.caseA, null, { name: '配置1', hallShape: 'wide', tables: [table('1卓')] }),
+    saveSeatingLayout(db, plannerA2, ids.caseA, null, {
+      name: '配置1',
+      hallShape: 'wide',
+      tables: [table('1卓')],
+    }),
     (e) => e.code === 'NOT_FOUND',
   );
   // この案件にない自由タグを「座れる人」に使えない
@@ -142,7 +153,10 @@ test('配置パターンは担当スタッフだけが作れ、卓のIDは保存
     name: '円卓ちらし型',
     hallShape: 'wide',
     tables: [
-      { ...table('新婦友人1卓', { x: 0.7, allowedTags: ['side:bride', 'relationship:friend'] }), id: tableBride },
+      {
+        ...table('新婦友人1卓', { x: 0.7, allowedTags: ['side:bride', 'relationship:friend'] }),
+        id: tableBride,
+      },
       { ...table('自由卓', { x: 0.3, y: 0.7 }), id: tableAny },
     ],
   });
@@ -230,7 +244,10 @@ test('席次は新郎新婦だけが保存でき、版・適格・条件・定�
 
 test('提出は全員の席が決まってから。提出後は変更できず、プランナーへ通知が届く（#181）', async () => {
   // groom1 が未配置のままでは提出できない（現在の版は 1）
-  await assert.rejects(submitSeatingChart(db, coupleA, ids.caseA, 1), (e) => e.code === 'UNPROCESSABLE');
+  await assert.rejects(
+    submitSeatingChart(db, coupleA, ids.caseA, 1),
+    (e) => e.code === 'UNPROCESSABLE',
+  );
   const v2 = await saveSeatingChart(db, coupleA, ids.caseA, {
     layoutId,
     version: 1,
@@ -252,7 +269,9 @@ test('提出は全員の席が決まってから。提出後は変更できず�
     (e) => e.code === 'UNPROCESSABLE',
   );
   const notices = await db
-    .prepare(`SELECT * FROM notifications WHERE recipient_user_id=? AND title='席次が提出されました'`)
+    .prepare(
+      `SELECT * FROM notifications WHERE recipient_user_id=? AND title='席次が提出されました'`,
+    )
     .bind(ids.plannerA)
     .all();
   assert.equal(notices.results.length, 1);
