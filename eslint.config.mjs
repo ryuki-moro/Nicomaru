@@ -9,6 +9,7 @@ const config = [
       '.next/**',
       '.next-dev-admin/**',
       '.next-d1/**',
+      '.next-demo/**',
       '.wrangler/**',
       '.open-next/**',
       'spikes/**',

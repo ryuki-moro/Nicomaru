@@ -11,8 +11,13 @@ const nextConfig: NextConfig = {
       './node_modules/@better-auth/utils/dist/**/*.mjs',
     ],
   },
-  // 通常の開発サーバーと同時に確認できるよう生成物を分ける。
-  distDir: process.env.NICOMARU_DB === 'd1-local' ? '.next-d1' : '.next',
+  // 通常の開発サーバー・dev:d1・demo を同時に確認できるよう生成物を分ける。
+  distDir:
+    process.env.NICOMARU_DB !== 'd1-local'
+      ? '.next'
+      : process.env.NICOMARU_DEMO_LOGIN === 'true'
+        ? '.next-demo'
+        : '.next-d1',
   // middlewareの転送先127.0.0.1をNext.jsがlocalhostへ書き換えないようにする。
   // ログインCookieと更新APIの同一Origin検証を、設定したURLで一致させる。
   skipMiddlewareUrlNormalize: true,

@@ -438,6 +438,7 @@ export default async function CaseDetailPage({
           rescheduleJob={aiExt.rescheduleJob}
           templateFallback={aiExt.templateFallback}
           templateJob={aiExt.templateJob}
+          canRegisterTemplate={user.role === 'admin'}
         />
       )}
 

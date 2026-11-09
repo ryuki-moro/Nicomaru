@@ -30,6 +30,8 @@ interface Props {
   rescheduleJob: AiJobView | null;
   templateFallback: TemplateDraftOutput;
   templateJob: AiJobView | null;
+  /** テンプレート管理画面は admin だけが開ける（それ以外は 403 になるためリンクを出さない） */
+  canRegisterTemplate: boolean;
 }
 
 function useExtJob(initial: AiJobView | null, caseId: string, jobType: string) {
@@ -224,7 +226,13 @@ export function CaseAiPanels(props: Props) {
 
       {/* 9-10 テンプレート案 */}
       <section className="card">
-        <AiHeading note="この案件のプランに不足している宿題テンプレートの案です。登録はテンプレート管理画面から行ってください。">
+        <AiHeading
+          note={`この案件のプランに不足している宿題テンプレートの案です。${
+            props.canRegisterTemplate
+              ? '登録はテンプレート管理画面から行ってください。'
+              : '登録は式場管理者がテンプレート管理画面で行います。'
+          }`}
+        >
           AIによるテンプレート案（要確認）
         </AiHeading>
         {!props.aiAvailable && (
@@ -262,9 +270,13 @@ export function CaseAiPanels(props: Props) {
                     <td>{t.description}</td>
                     <td>挙式{t.due_offset_days}日前</td>
                     <td>
-                      <a className="btn-ghost" href="/templates/new">
-                        テンプレート登録へ
-                      </a>
+                      {props.canRegisterTemplate ? (
+                        <a className="btn-ghost" href="/templates/new">
+                          テンプレート登録へ
+                        </a>
+                      ) : (
+                        <span className="text-caption text-text-muted">管理者に依頼</span>
+                      )}
                     </td>
                   </tr>
                 ))}
