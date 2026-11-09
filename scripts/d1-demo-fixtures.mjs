@@ -140,11 +140,16 @@ export async function seedDemoFixtures(db, encode, password) {
     );
   };
 
-  run('INSERT INTO venues(id,name,code) VALUES (?,?,?)', VENUE_ID, 'サンプル式場', 'BRIDAL01');
+  run(
+    'INSERT INTO venues(id,name,code,created_at,updated_at) VALUES (?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)',
+    VENUE_ID,
+    'サンプル式場',
+    'BRIDAL01',
+  );
   addUser(PLANNER_ID, DEMO_PLANNER.displayName, DEMO_PLANNER.email, 'planner');
   for (const [name, id] of Object.entries(DEMO_PLAN_TYPES))
     run(
-      'INSERT INTO plan_types(id,venue_id,name,templates_json) VALUES (?,?,?,?)',
+      'INSERT INTO plan_types(id,venue_id,name,templates_json,updated_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP)',
       id,
       VENUE_ID,
       name,

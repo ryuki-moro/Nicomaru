@@ -117,7 +117,10 @@ export async function createVenueD1(
   const id = crypto.randomUUID();
   try {
     await db
-      .prepare('INSERT INTO venues(id,name,code,contact_email,active) VALUES (?,?,?,?,?)')
+      // created_at/updated_at の既定値は固定値（0021）なので日時は明示する
+      .prepare(
+        'INSERT INTO venues(id,name,code,contact_email,active,created_at,updated_at) VALUES (?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)',
+      )
       .bind(id, input.name, input.code, input.contactEmail ?? null, input.active ? 1 : 0)
       .run();
   } catch (e) {
@@ -463,7 +466,7 @@ export async function savePlanTypeD1(
     savedId = crypto.randomUUID();
     await db
       .prepare(
-        'INSERT INTO plan_types(id,venue_id,name,description,default_guest_count_min,default_guest_count_max,display_order,active,templates_json) VALUES (?,?,?,?,?,?,?,?,?)',
+        'INSERT INTO plan_types(id,venue_id,name,description,default_guest_count_min,default_guest_count_max,display_order,active,templates_json,updated_at) VALUES (?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)',
       )
       .bind(
         savedId,
