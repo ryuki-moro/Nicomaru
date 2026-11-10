@@ -1,7 +1,7 @@
-import type { D1Database } from '@cloudflare/workers-types';
 import { decryptPii, encryptPii } from '@/lib/crypto';
 import { forbidden } from '@/lib/errors';
 import { sendMail, type SendResult } from '@/lib/notify/mailer';
+import type { D1Database } from '@cloudflare/workers-types';
 import { demoMailbox, isLocalD1Origin, localD1 } from './mode';
 
 export interface LocalMail {

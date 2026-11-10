@@ -11,6 +11,7 @@ const routes = new Map([
   ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
   ['/data.mjs', ['data.mjs', 'text/javascript; charset=utf-8']],
   ['/model.mjs', ['model.mjs', 'text/javascript; charset=utf-8']],
+  ['/ai.mjs', ['ai.mjs', 'text/javascript; charset=utf-8']],
 ]);
 
 const securityHeaders = {

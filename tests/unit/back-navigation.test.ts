@@ -5,8 +5,8 @@ import {
   taskBackHref,
   taskDetailHref,
 } from '@/app/(couple)/mypage/tasks/taskLinks';
-import { homeCrumbFor } from '@/components/layout/breadcrumbItems';
 import { isCoupleNavActive } from '@/components/couple/coupleNavActive';
+import { homeCrumbFor } from '@/components/layout/breadcrumbItems';
 
 const TASK_ID = '00000000-0000-4000-8000-000000000001';
 
@@ -61,8 +61,8 @@ describe('新郎新婦の下部ナビの現在地', () => {
 
 describe('プランナー側のパンくずの起点', () => {
   it('ロールの着地点から始める', () => {
-    expect(homeCrumbFor('planner')).toEqual({ label: 'ダッシュボード', href: '/dashboard' });
-    expect(homeCrumbFor('admin')).toEqual({ label: 'ダッシュボード', href: '/dashboard' });
-    expect(homeCrumbFor('system_admin')).toEqual({ label: '利用状況', href: '/system' });
+    expect(homeCrumbFor('planner')).toEqual({ label: '案件一覧', href: '/cases' });
+    expect(homeCrumbFor('admin')).toEqual({ label: 'プランナー管理', href: '/users' });
+    expect(homeCrumbFor('system_admin')).toEqual({ label: '職員管理', href: '/users' });
   });
 });

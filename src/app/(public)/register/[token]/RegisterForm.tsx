@@ -3,10 +3,10 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { OtpInput } from '@/app/(public)/login/LoginForm';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { api, ApiCallError } from '@/lib/api/client';
 import { INPUT_LIMITS, OTP } from '@/lib/constants';
-import { OtpInput } from '@/app/(public)/login/LoginForm';
 
 /** /api/auth/initial-register の応答（6-6-1）。 */
 type RegisterResponse =

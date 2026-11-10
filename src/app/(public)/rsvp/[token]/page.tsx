@@ -1,42 +1,43 @@
-import type { Metadata } from 'next';
-
 import { PARTNER_ROLE_LABEL, type PartnerRole } from '@/lib/constants';
 import { isEncrypted, readPii } from '@/lib/crypto';
-import { usingD1 } from '@/lib/d1/mode';
 import { formatDateJp } from '@/lib/format';
 import { GUEST_FORM_TOKEN_PATTERN } from '@/lib/services/guests';
 import { hashInvitationToken } from '@/lib/services/invitations';
-import { createSupabaseAdminClient } from '@/lib/supabase/admin';
-
+import type { Metadata } from 'next';
 import { GuestResponseForm } from './GuestResponseForm';
-
 export const metadata: Metadata = { title: 'ご出欠のご回答', referrer: 'no-referrer' };
 export const dynamic = 'force-dynamic';
-
 interface PeekRow {
   wedding_date: string;
   groom_name_enc: string | null;
   bride_name_enc: string | null;
 }
-
 /**
  * ゲストの出欠回答画面（未ログイン）。
  * 新郎新婦が配った共通URLから開く。表示するのは挙式日と新郎新婦の氏名だけで、
  * 回答の登録と最終的なURLの照合は POST /api/rsvp/{token} が行う。
  */
-export default async function GuestRsvpPage({ params }: { params: Promise<{ token: string }> }) {
+export default async function GuestRsvpPage({
+  params,
+}: {
+  params: Promise<{
+    token: string;
+  }>;
+}) {
   const { token } = await params;
-  if (usingD1()) return <Unavailable />;
   if (!GUEST_FORM_TOKEN_PATTERN.test(token)) return <InvalidForm />;
-
-  const admin = createSupabaseAdminClient('guest.rsvp');
-  const { data, error } = await admin.rpc('peek_guest_form', {
-    p_token_hash: hashInvitationToken(token),
-  });
-  if (error) return <Unavailable />;
-  const form = (data as PeekRow[] | null)?.[0];
+  let form: PeekRow | null | undefined;
+  {
+    try {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { peekGuestForm } = await import('@/lib/d1/guests');
+      form = await peekGuestForm(await localDB(), hashInvitationToken(token));
+    } catch (error) {
+      console.error('[rsvp] D1の読み込みに失敗しました', error);
+      return <Unavailable />;
+    }
+  }
   if (!form) return <InvalidForm />;
-
   // 氏名は暗号化列（13-1）。復号できない値はゲストに見せず、区分名だけにする
   const name = (stored: string | null) => {
     const value = readPii(stored);
@@ -46,7 +47,6 @@ export default async function GuestRsvpPage({ params }: { params: Promise<{ toke
     groom: name(form.groom_name_enc),
     bride: name(form.bride_name_enc),
   };
-
   return (
     <div className="flex flex-col gap-4">
       <div className="card-hero">
@@ -76,7 +76,6 @@ export default async function GuestRsvpPage({ params }: { params: Promise<{ toke
     </div>
   );
 }
-
 function InvalidForm() {
   return (
     <div className="space-y-4">
@@ -87,7 +86,6 @@ function InvalidForm() {
     </div>
   );
 }
-
 function Unavailable() {
   return (
     <div role="alert" className="banner-error">

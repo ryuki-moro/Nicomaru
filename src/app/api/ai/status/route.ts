@@ -12,19 +12,13 @@
  * 判定そのものは DB 関数 ai_assist_status() が持つ（10分の閾値を画面ごとに書かない）。
  */
 import { ok, route } from '@/lib/api/route';
-import { fetchAiAssistStatus } from '@/lib/ai/assist';
 import { requireAppUser } from '@/lib/auth/session';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
+import { aiAssistStatus } from '@/lib/d1/ai';
+import { localDB } from '@/lib/d1/runtime';
 export const runtime = 'nodejs';
-
 export const GET = route(async () => {
   // couple も 9-7（Phase 3拡張）で使うため staff に限定しない。
   // 返すのは可否と最終心拍だけで、案件データは含まない。
   await requireAppUser();
-
-  const supabase = await createSupabaseServerClient();
-  const status = await fetchAiAssistStatus(supabase);
-
-  return ok({ available: status.available, lastSeenAt: status.lastSeenAt });
+  return ok(await aiAssistStatus(await localDB()));
 });

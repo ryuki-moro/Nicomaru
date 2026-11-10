@@ -20,16 +20,11 @@
  * 連絡履歴は参考情報であって確認結果そのものではないため、
  * その失敗で確定済みのレビューを巻き戻さない。
  */
-import { usingD1 } from '@/lib/d1/mode';
-import { requireStaff } from '@/lib/auth/session';
 import { ok, parseBody, route } from '@/lib/api/route';
-import { REVIEW_STATUS_LABEL } from '@/lib/constants';
-import { fromPostgresError, notFound } from '@/lib/errors';
-import { logCommunication } from '@/lib/services/communication';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { reviewSubmissionSchema } from '@/lib/validation';
+import { requireStaff } from '@/lib/auth/session';
+import { notFound } from '@/lib/errors';
 import { isUuid } from '@/lib/uuid';
-
+import { reviewSubmissionSchema } from '@/lib/validation';
 /** review_submission() の戻り。 */
 interface ReviewResult {
   submission_id: string;
@@ -37,51 +32,23 @@ interface ReviewResult {
   case_task_id: string;
   task_title: string;
 }
-
 export const POST = route(
-  async (request: Request, context: { params: Promise<{ submissionId: string }> }) => {
+  async (
+    request: Request,
+    context: {
+      params: Promise<{
+        submissionId: string;
+      }>;
+    },
+  ) => {
     const { submissionId } = await context.params;
     const user = await requireStaff();
     if (!isUuid(submissionId)) throw notFound();
-
     const input = await parseBody(request, reviewSubmissionSchema);
-    if (usingD1()) {
+    {
       const { localDB } = await import('@/lib/d1/runtime');
       const { reviewSubmission } = await import('@/lib/d1/tasks');
       return ok(await reviewSubmission(await localDB(), user, submissionId, input));
     }
-    const supabase = await createSupabaseServerClient();
-
-    // 状態チェック（draft・確認済み・対応不要）も関数の中で行う。
-    // チェックと更新を別トランザクションにすると、その間に状態が変わりうる。
-    const { data, error } = await supabase.rpc('review_submission', {
-      p_submission_id: submissionId,
-      p_decision: input.decision,
-      p_comment: input.comment ?? null,
-    });
-    if (error) throw fromPostgresError(error);
-
-    // 0 行 = RLS の範囲外。存在有無を漏らさないため 404 に寄せる（6-5-1）
-    const rows = (data ?? []) as ReviewResult[];
-    if (rows.length === 0) throw notFound();
-    const result = rows[0];
-
-    await logCommunication(supabase, {
-      caseId: result.case_id,
-      // 通知先はマイページ内（LINE／メール送信は notifications 側の担当。7-1／7-2）
-      channel: 'in_app',
-      direction: 'outbound',
-      source: 'review',
-      summary:
-        `宿題「${result.task_title}」を${REVIEW_STATUS_LABEL[input.decision]}にしました` +
-        (input.decision === 'needs_fix' && input.comment ? `：${input.comment}` : ''),
-    });
-
-    return ok({
-      id: result.submission_id,
-      caseId: result.case_id,
-      caseTaskId: result.case_task_id,
-      reviewStatus: input.decision,
-    });
   },
 );

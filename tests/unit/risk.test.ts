@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest';
 
 import { calculateRisk, type RiskRule, type RiskTask } from '@/lib/services/risk';
 
-/** seed（supabase/seed.sql）と同じ実値のルールセット。 */
 const RULES: RiskRule[] = [
   {
     id: 'r-important',

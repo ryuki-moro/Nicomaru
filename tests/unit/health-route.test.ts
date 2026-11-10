@@ -1,75 +1,37 @@
-import { createClient } from '@supabase/supabase-js';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-const mocks = vi.hoisted(() => ({ server: vi.fn(), fetch: vi.fn<typeof fetch>() }));
-vi.mock('@/lib/supabase/server', () => ({ createSupabaseServerClient: mocks.server }));
 import { GET } from '@/app/api/health/route';
-
-function reply(status: number, body: unknown) {
-  mocks.fetch.mockResolvedValue(
-    new Response(JSON.stringify(body), {
-      status,
-      headers: { 'content-type': 'application/json' },
-    }),
-  );
-}
-
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+const mocks = vi.hoisted(() => ({ db: vi.fn(), prepare: vi.fn(), first: vi.fn() }));
+vi.mock('@/lib/d1/runtime', () => ({ localDB: mocks.db }));
 beforeEach(() => {
   vi.resetAllMocks();
-  mocks.server.mockResolvedValue(
-    createClient('http://127.0.0.1:54321', 'fixture-anon-key', {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { fetch: mocks.fetch },
-    }),
-  );
+  mocks.db.mockResolvedValue({ prepare: mocks.prepare });
+  mocks.prepare.mockReturnValue({ first: mocks.first });
+  mocks.first.mockResolvedValue({ ok: 1 });
 });
-
-describe('DB接続の死活確認', () => {
-  it('データも件数も取得せず、DBからの正常応答を確認する', async () => {
-    reply(200, []);
-    const response = await GET();
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true });
-    const [input, options] = mocks.fetch.mock.calls[0];
-    const url = new URL(String(input));
-    expect(options?.method).toBe('GET');
-    expect(url.searchParams.get('limit')).toBe('0');
-    expect(url.searchParams.get('select')).toBe('id');
-    expect(new Headers(options?.headers).get('prefer') ?? '').not.toContain('count=');
+describe('D1接続の死活確認', () => {
+  it('業務データを取得せずSELECT 1だけを実行する', async () => {
+    const r = await GET();
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ ok: true });
+    expect(mocks.prepare).toHaveBeenCalledExactlyOnceWith('SELECT 1 AS ok');
   });
-
-  it.each([401, 403])(
-    'SQLSTATE 42501 / HTTP %iはDBが応答した証拠として正常とする',
-    async (status) => {
-      reply(status, { code: '42501', message: 'permission denied for table venues' });
-      const response = await GET();
-      expect(response.status).toBe(200);
-      expect(await response.json()).toEqual({ ok: true });
+  it.each([null, {}, { ok: 0 }])('応答が不完全なら503 (%j)', async (row) => {
+    mocks.first.mockResolvedValue(row);
+    const r = await GET();
+    expect(r.status).toBe(503);
+    expect(await r.json()).toEqual({ ok: false });
+  });
+  it.each(['DB unavailable', 'permission denied', 'schema failure', 'private network detail'])(
+    'DB障害の詳細を返さない (%s)',
+    async (message) => {
+      mocks.first.mockRejectedValue(new Error(message));
+      const r = await GET();
+      expect(r.status).toBe(503);
+      expect(await r.json()).toEqual({ ok: false });
     },
   );
-
-  it.each([
-    [401, 'PGRST301'],
-    [401, undefined],
-    [404, 'PGRST205'],
-    [500, '42P01'],
-    [503, '08006'],
-  ])('認証/スキーマ/DB接続の失敗を権限拒否と混同しない (%i %s)', async (status, code) => {
-    reply(Number(status), { code, message: 'private internal detail' });
-    const response = await GET();
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ ok: false });
-  });
-
-  it('通信失敗でも内部情報を返さない', async () => {
-    mocks.fetch.mockRejectedValue(new TypeError('private network detail'));
-    const response = await GET();
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ ok: false });
-  });
-
-  it('クライアント設定の不足を成功にしない', async () => {
-    mocks.server.mockRejectedValue(new Error('missing secret configuration'));
+  it('接続設定不足を成功扱いしない', async () => {
+    mocks.db.mockRejectedValue(new Error('missing secret'));
     expect((await GET()).status).toBe(503);
   });
 });

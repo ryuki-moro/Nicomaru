@@ -24,23 +24,25 @@
  * 消すと audit_logs から辿れなくなる）。個人が特定できる列だけを落とす。
  */
 import { ok, route } from '@/lib/api/route';
-import { runBatch } from '@/lib/api/internal';
-import { purgeCases } from '@/lib/batches/case-purge';
-import { createSupabaseAdminClient } from '@/lib/supabase/admin';
-
 export const runtime = 'nodejs';
-
 // 内部呼び出しはOriginではなく、共通wrapperで共有シークレットを検証する。
 export const POST = route(
   async () => {
-    const admin = createSupabaseAdminClient('cron.case-purge');
-    const outcome = await runBatch(admin, 'case_purge', () => purgeCases(admin));
-    return ok({
-      purged: outcome.targetCount,
-      filesRemoved: outcome.detail?.filesRemoved,
-      aiPayloadsCleared: outcome.detail?.aiPayloadsCleared,
-      aiRowsDeleted: outcome.detail?.aiRowsDeleted,
-    });
+    {
+      const { localDB, localFiles } = await import('@/lib/d1/runtime');
+      const { runBatchD1 } = await import('@/lib/d1/batches');
+      const { purgeCasesD1 } = await import('@/lib/d1/case-purge');
+      const db = await localDB();
+      // R2 binding が無い環境では実体削除だけを省き、メタと個人情報の削除は進める。
+      const files = await localFiles().catch(() => null);
+      const outcome = await runBatchD1(db, 'case_purge', () => purgeCasesD1(db, files));
+      return ok({
+        purged: outcome.targetCount,
+        filesRemoved: outcome.detail?.filesRemoved,
+        aiPayloadsCleared: outcome.detail?.aiPayloadsCleared,
+        aiRowsDeleted: outcome.detail?.aiRowsDeleted,
+      });
+    }
   },
   { source: 'internal-cron' },
 );

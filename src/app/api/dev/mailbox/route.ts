@@ -1,6 +1,6 @@
 import { ok, route } from '@/lib/api/route';
-import { localDB } from '@/lib/d1/runtime';
 import { readMailbox, requireMailbox } from '@/lib/d1/mailbox';
+import { localDB } from '@/lib/d1/runtime';
 
 export const GET = route(async (request: Request) => {
   await requireMailbox(request.headers);

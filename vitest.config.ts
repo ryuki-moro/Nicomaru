@@ -1,6 +1,6 @@
-import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [react()],
@@ -10,7 +10,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
-    // PGlite は1インスタンスあたり数十MBのWASMを確保するため、DBテストは直列で回す
+    // 環境変数を扱うユニットテストはファイルごとに隔離して直列で実行する
     fileParallelism: false,
     testTimeout: 60_000,
     hookTimeout: 60_000,

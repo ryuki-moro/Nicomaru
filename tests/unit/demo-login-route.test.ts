@@ -46,7 +46,7 @@ describe('POST /api/auth/demo-login', () => {
   it.each([
     ['NICOMARU_DEMO_LOGIN', 'false'],
     ['NICOMARU_DB', 'd1'],
-    ['NICOMARU_DB', 'supabase'],
+    ['NICOMARU_DB', 'unsupported'],
   ])('%s=%s では存在しない扱いにする', async (key, value) => {
     vi.stubEnv(key, value);
     expect((await POST(request('planner'))).status).toBe(404);

@@ -18,10 +18,11 @@ import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { requireStaff } from '@/lib/auth/session';
 import { CONTACT_CHANNEL_LABEL, LIST_PAGE_SIZE } from '@/lib/constants';
+import { staffNotificationHistory } from '@/lib/d1/notifications';
+import { localDB } from '@/lib/d1/runtime';
 import { formatDateTime } from '@/lib/format';
 import { NOTIFICATION_TYPE_LABEL, type NotificationType } from '@/lib/notify/templates';
 import { resolvePage } from '@/lib/pagination';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,24 +59,13 @@ interface Props {
 }
 
 export default async function NotificationHistoryPage({ searchParams }: Props) {
-  await requireStaff();
+  const user = await requireStaff();
   const params = await searchParams;
   const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
 
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('notifications')
-    .select(
-      `id, case_id, channel, notification_type, title, status, sent_at, created_at,
-       wedding_cases ( case_code ),
-       notification_logs ( provider, status, attempt_no )`,
-    )
-    .order('created_at', { ascending: false })
-    .order('id', { ascending: false })
-    .range(offset, offset + LIST_PAGE_SIZE);
-
-  const rows = (data ?? []) as unknown as NotificationRow[];
+  const rows = await staffNotificationHistory(await localDB(), user, offset, LIST_PAGE_SIZE);
+  const error = false;
   const hasNext = rows.length > LIST_PAGE_SIZE;
   const visible = rows.slice(0, LIST_PAGE_SIZE);
 

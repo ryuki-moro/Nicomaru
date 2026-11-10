@@ -1,8 +1,8 @@
-import type { D1Database, R2Bucket } from '@cloudflare/workers-types';
 import { ApiError } from '@/lib/errors';
+import type { D1Database, R2Bucket } from '@cloudflare/workers-types';
 
 import { isLocalD1Origin } from './mode';
-export { usingD1, localD1 } from './mode';
+export { localD1, usingD1 } from './mode';
 
 interface Bindings {
   DB: D1Database;

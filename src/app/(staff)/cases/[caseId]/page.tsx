@@ -10,17 +10,12 @@
  * リスクスコアは Phase 2 のため表示しない。
  * couple 向けの K02 は (couple) 側の画面として別に用意する（本画面は (staff) レイアウト配下）。
  */
-import { usingD1 } from '@/lib/d1/mode';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-
-import { InvitationSection } from './InvitationSection';
-import { RiskSection, type CaseRisk } from './RiskSection';
+import { CaseAiPanels } from './CaseAiPanels';
 import { GuestResponseList } from '@/components/guests/GuestResponseList';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
+import { SeatingChartReview } from '@/components/seating/SeatingChartReview';
+import { SeatingLayoutEditor } from '@/components/seating/SeatingLayoutEditor';
 import type { RiskReasonView } from '@/components/ui/RiskBadge';
-import { TaskSection, type CaseTaskRow } from './TaskSection';
-import { adoptedOutput, AI_JOB_COLUMNS, type AiJobRow } from '@/lib/ai/assist';
 import { requirePageUser } from '@/lib/auth/session';
 import {
   CASE_STATUS_LABEL,
@@ -38,19 +33,15 @@ import {
 } from '@/lib/constants';
 import { readPii } from '@/lib/crypto';
 import { formatDate } from '@/lib/format';
-import { loadGuestBook } from '@/lib/services/guests';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
+import { AUTO_GUEST_TAGS, customTagKey } from '@/lib/guest-tags';
+import { seatGuestsFromBook } from '@/lib/seating/guests';
+import { needsFrom } from '@/lib/seating/layout';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { InvitationSection } from './InvitationSection';
+import { RiskSection, type CaseRisk } from './RiskSection';
+import { TaskSection, type CaseTaskRow } from './TaskSection';
 export const dynamic = 'force-dynamic';
-
-const CASE_SELECT = `id, case_code, wedding_date, wedding_time, contact_channel, status, guest_count,
-   venue_room, plan_type_id, archived_at,
-   plan_types ( name ),
-   user_profiles ( display_name ),
-   couple_profiles ( ${COUPLE_PROFILE_COLUMNS} ),
-   case_tasks ( id, title, due_date, status, importance, display_order, submission_format ),
-   risk_score_snapshots ( score_value, score_level, reasons, calculated_at, is_current )`;
-
 interface CaseRow {
   id: string;
   case_code: string;
@@ -62,8 +53,12 @@ interface CaseRow {
   venue_room: string | null;
   plan_type_id: string | null;
   archived_at: string | null;
-  plan_types: { name: string } | null;
-  user_profiles: { display_name: string } | null;
+  plan_types: {
+    name: string;
+  } | null;
+  user_profiles: {
+    display_name: string;
+  } | null;
   couple_profiles: {
     partner_role: PartnerRole;
     full_name: string;
@@ -88,33 +83,71 @@ interface CaseRow {
     is_current: boolean;
   }[];
 }
-
-export default async function CaseDetailPage({ params }: { params: Promise<{ caseId: string }> }) {
+/** 席次（#180〜#182、D1版）。補助表示なので、読めなくても案件詳細は出す（null はエラー表示）。 */
+async function loadD1Seating(
+  user: {
+    id: string;
+  },
+  caseId: string,
+) {
+  try {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { loadSeatingChart, loadSeatingLayouts } = await import('@/lib/d1/seating');
+    const db = await localDB();
+    const [layouts, chart] = await Promise.all([
+      loadSeatingLayouts(db, user, caseId),
+      loadSeatingChart(db, user, caseId),
+    ]);
+    return { layouts, chart };
+  } catch (error) {
+    console.error('[case] D1の席次を読み込めませんでした', error);
+    return null;
+  }
+}
+/** 補助表示なので、読めなくても案件詳細は出す（null はエラー表示）。 */
+async function loadD1GuestBook(
+  user: {
+    id: string;
+  },
+  caseId: string,
+) {
+  try {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { loadGuestBook: load } = await import('@/lib/d1/guests');
+    return await load(await localDB(), user, caseId);
+  } catch (error) {
+    console.error('[case] D1のゲスト回答を読み込めませんでした', error);
+    return null;
+  }
+}
+export default async function CaseDetailPage({
+  params,
+}: {
+  params: Promise<{
+    caseId: string;
+  }>;
+}) {
   const user = await requirePageUser('planner', 'admin', 'system_admin');
-
   const { caseId } = await params;
-  const d1 = usingD1();
+  const d1 = true;
   let row: CaseRow;
-  if (d1) {
+  {
     const { localDB } = await import('@/lib/d1/runtime');
     const { caseRow } = await import('@/lib/d1/cases');
     try {
       row = await caseRow(await localDB(), user, caseId);
     } catch (error) {
-      if ((error as { code?: string }).code === 'NOT_FOUND') redirect('/error?code=404');
+      if (
+        (
+          error as {
+            code?: string;
+          }
+        ).code === 'NOT_FOUND'
+      )
+        redirect('/error?code=404');
       throw error;
     }
-  } else {
-    const supabase = await createSupabaseServerClient();
-    const { data } = await supabase
-      .from('wedding_cases')
-      .select(CASE_SELECT)
-      .eq('id', caseId)
-      .maybeSingle();
-    if (!data) redirect('/error?code=404');
-    row = data as unknown as CaseRow;
   }
-
   // 6-8: 現在値を読むだけ。表示のたびに再計算はしない。
   const snapshot = row.risk_score_snapshots?.find((r) => r.is_current) ?? null;
   const currentRisk: CaseRisk | null = snapshot
@@ -125,7 +158,6 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
         calculatedAt: snapshot.calculated_at,
       }
     : null;
-
   const partners = row.couple_profiles
     .map((profile) => ({
       partnerRole: profile.partner_role,
@@ -136,31 +168,9 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
       isPrimaryContact: profile.is_primary_contact,
     }))
     .sort((a, b) => a.partnerRole.localeCompare(b.partnerRole));
-
   // 9-1 の分類（7-2「画面: D02, K02」）。
   // 一覧の補助表示なので、取得に失敗しても案件詳細は出す。
   const classifications = new Map<string, string[]>();
-  if (!d1) {
-    const supabase = await createSupabaseServerClient();
-    const { data: aiJobs, error: aiError } = await supabase
-      .from('ai_jobs')
-      .select(AI_JOB_COLUMNS)
-      .eq('case_id', caseId)
-      .eq('job_type', 'classification')
-      .in('status', ['done', 'confirmed'])
-      .order('created_at', { ascending: true });
-    if (aiError) {
-      console.warn('[case] 分類を取得できませんでした', aiError);
-    } else {
-      // created_at 昇順で回して上書きするので、宿題ごとに最新のジョブが残る
-      for (const job of (aiJobs ?? []) as unknown as AiJobRow[]) {
-        if (!job.related_task_id) continue;
-        const labels = adoptedOutput('classification', job)?.labels;
-        if (labels && labels.length > 0) classifications.set(job.related_task_id, [...labels]);
-      }
-    }
-  }
-
   const tasks: CaseTaskRow[] = [...row.case_tasks]
     // 一覧の既定並び順は ORDER BY due_date, display_order, id（4-3）
     .sort(
@@ -179,17 +189,137 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
       aiLabels: classifications.get(task.id) ?? [],
     }));
 
+  // AI拡張（Issue #118、9-8〜9-10）: サーバー側でルール結果を先に作り、最新ジョブがあれば併せて渡す。
+  // 集約は ai-ext ヘルパー（D1）で行い、純関数でフォールバックも作る（投入は画面のボタンから汎用APIへ）。
+  let aiExt: {
+    aiAvailable: boolean;
+    lastSeenAt: string | null;
+    handoverFallback: import('@/lib/ai/handover').HandoverSummaryOutput;
+    handoverJob: import('@/components/ai/useAiJob').AiJobView | null;
+    rescheduleFallback: import('@/lib/ai/reschedule').ReschedulePlanOutput;
+    rescheduleShifts: import('@/lib/ai/reschedule').RescheduleShift[];
+    rescheduleJob: import('@/components/ai/useAiJob').AiJobView | null;
+    templateFallback: import('@/lib/ai/template-draft').TemplateDraftOutput;
+    templateJob: import('@/components/ai/useAiJob').AiJobView | null;
+  } | null = null;
+  if (!row.archived_at) {
+    try {
+      const { todayInJst } = await import('@/lib/format');
+      const today = todayInJst();
+      const { aggregateHandover, buildHandoverFallback } = await import('@/lib/ai/handover');
+      const { buildReschedulePlan } = await import('@/lib/ai/reschedule');
+      const { buildTemplateDraft } = await import('@/lib/ai/template-draft');
+      const extTasks = row.case_tasks as unknown as {
+        id: string;
+        title: string;
+        status: string;
+        due_date: string;
+        due_offset_days: number | null;
+      }[];
+      const aggregate = aggregateHandover(extTasks, today);
+      const reschedule = buildReschedulePlan({
+        weddingDate: row.wedding_date,
+        today,
+        tasks: extTasks,
+      });
+      const templateFallback = buildTemplateDraft({
+        existing: extTasks.map((t) => ({
+          name: t.title,
+          due_offset_days: t.due_offset_days ?? 0,
+        })),
+        planName: row.plan_types?.name ?? null,
+      });
+      let aiAvailable = false;
+      let lastSeenAt: string | null = null;
+      let handoverJob: import('@/components/ai/useAiJob').AiJobView | null = null;
+      let rescheduleJob: import('@/components/ai/useAiJob').AiJobView | null = null;
+      let templateJob: import('@/components/ai/useAiJob').AiJobView | null = null;
+      if (d1) {
+        const { localDB } = await import('@/lib/d1/runtime');
+        const db = await localDB();
+        const { aiAssistStatus } = await import('@/lib/d1/ai');
+        const { latestExtJob } = await import('@/lib/d1/ai-ext');
+        const status = await aiAssistStatus(db).catch(() => ({
+          available: false,
+          lastSeenAt: null,
+        }));
+        aiAvailable = status.available;
+        lastSeenAt = status.lastSeenAt;
+        const toView = (
+          j: Awaited<ReturnType<typeof latestExtJob>>,
+        ): import('@/components/ai/useAiJob').AiJobView | null =>
+          j
+            ? {
+                id: j.id,
+                status: j.status,
+                output: j.output,
+                reviewed_output: j.reviewed_output,
+                error_message: j.error_message,
+              }
+            : null;
+        [handoverJob, rescheduleJob, templateJob] = await Promise.all([
+          latestExtJob(db, user, row.id, 'handover_summary')
+            .then(toView)
+            .catch(() => null),
+          latestExtJob(db, user, row.id, 'reschedule_plan')
+            .then(toView)
+            .catch(() => null),
+          latestExtJob(db, user, row.id, 'template_draft')
+            .then(toView)
+            .catch(() => null),
+        ]);
+      }
+      aiExt = {
+        aiAvailable,
+        lastSeenAt,
+        handoverFallback: buildHandoverFallback({
+          caseCode: row.case_code,
+          weddingDate: row.wedding_date,
+          today,
+          aggregate,
+        }),
+        handoverJob,
+        rescheduleFallback: reschedule.output,
+        rescheduleShifts: reschedule.shifts,
+        rescheduleJob,
+        templateFallback,
+        templateJob,
+      };
+    } catch (error) {
+      console.warn('[case] AI拡張パネルの準備に失敗しました', error);
+      aiExt = null;
+    }
+  }
+
   const incomplete = tasks.filter((task) => INCOMPLETE_TASK_STATUSES.includes(task.status)).length;
   const done = tasks.length - incomplete;
-  const isAdmin = user.role === 'admin' || user.role === 'system_admin';
   const archived = row.archived_at !== null;
-
   // ゲストの出欠回答とタグ。回答の追加は新郎新婦が配るURLから行い、タグは新郎新婦が付けたものを確認・修正できる。
-  // D1 ローカル検証の対象外
-  const guestBook = d1
-    ? undefined
-    : await loadGuestBook(await createSupabaseServerClient(), row.id);
-
+  const guestBook = await loadD1GuestBook(user, row.id);
+  // 席次（#180 配置パターン / #182 承認・差し戻し）。D1版でのみ提供する。
+  // 席次のルールに渡す出席人数と「座れる人」の候補は、読み込んだ回答から数える
+  const seating = await loadD1Seating(user, row.id);
+  const seatingNeeds = needsFrom(
+    (guestBook?.responses ?? []).map((r) => ({
+      attending: r.attending,
+      guestSide: r.guestSide,
+      relationship: r.relationship,
+      people: r.people.length,
+    })),
+  );
+  const attendingPeople = (guestBook?.responses ?? [])
+    .filter((r) => r.attending)
+    .reduce((sum, r) => sum + r.people.length, 0);
+  const seatingTagOptions = [
+    ...AUTO_GUEST_TAGS.filter(
+      (tag) => tag.key.startsWith('side:') || tag.key.startsWith('relationship:'),
+    ).map(({ key, label }) => ({ key, label })),
+    ...(guestBook?.tags ?? []).map((tag) => ({ key: customTagKey(tag.id), label: tag.name })),
+  ];
+  const seatingInfo = guestBook ? seatGuestsFromBook(guestBook).info : {};
+  const seatingLayout = seating?.chart.layoutId
+    ? (seating.layouts.find((l) => l.id === seating.chart.layoutId) ?? null)
+    : null;
   return (
     <div className="space-y-5">
       <Breadcrumbs
@@ -210,37 +340,12 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
             </Link>
           )}
           {/* 4-3 K02 のボタン「打ち合わせ前準備シート（D03、Phase 2）」 */}
-          {!archived && !d1 && (
-            <Link href={`/cases/${row.id}/sheet`} className="btn-secondary w-auto px-5 text-center">
-              打ち合わせ前準備シート
-            </Link>
-          )}
-          {!archived && !d1 && (
-            <Link
-              href={`/cases/${row.id}/follow`}
-              className="btn-secondary w-auto px-5 text-center"
-            >
-              フォロー記録
-            </Link>
-          )}
+          {false}
+          {false}
           {/* 4-3 D05 打ち合わせ記録・宿題起票（Phase 3）。
-              D04 フォロー記録が「連絡したこと」、こちらが「決まったこと」 */}
-          {!archived && !d1 && (
-            <Link
-              href={`/cases/${row.id}/meeting-notes`}
-              className="btn-secondary w-auto px-5 text-center"
-            >
-              打ち合わせ記録
-            </Link>
-          )}
-          {isAdmin && !archived && !d1 && (
-            <Link
-              href={`/cases/${row.id}/archive`}
-              className="btn-secondary w-auto px-5 text-center"
-            >
-              アーカイブ
-            </Link>
-          )}
+        D04 フォロー記録が「連絡したこと」、こちらが「決まったこと」 */}
+          {false}
+          {false}
         </div>
       </div>
 
@@ -251,7 +356,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
       )}
 
       {/* 4-3 K02: リスクは planner／admin のみ。couple 向けの案件詳細では表示しない（6-3） */}
-      {!d1 && <RiskSection caseId={row.id} risk={currentRisk} />}
+      <RiskSection caseId={row.id} risk={currentRisk} />
 
       <section className="card space-y-2">
         <h2 className="section-head">基本情報</h2>
@@ -321,6 +426,22 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
         />
       }
 
+      {aiExt && (
+        <CaseAiPanels
+          caseId={row.id}
+          aiAvailable={aiExt.aiAvailable}
+          lastSeenAt={aiExt.lastSeenAt}
+          handoverFallback={aiExt.handoverFallback}
+          handoverJob={aiExt.handoverJob}
+          rescheduleFallback={aiExt.rescheduleFallback}
+          rescheduleShifts={aiExt.rescheduleShifts}
+          rescheduleJob={aiExt.rescheduleJob}
+          templateFallback={aiExt.templateFallback}
+          templateJob={aiExt.templateJob}
+          canRegisterTemplate={user.role === 'admin'}
+        />
+      )}
+
       {guestBook !== undefined && (
         <section className="space-y-3">
           <h2 className="section-head">ゲストの出欠</h2>
@@ -331,6 +452,39 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ cas
           ) : (
             <GuestResponseList caseId={row.id} book={guestBook} editable={!archived} />
           )}
+        </section>
+      )}
+
+      {seating !== undefined && (
+        <section className="space-y-3">
+          <h2 className="section-head">卓の配置パターン</h2>
+          {seating === null ? (
+            <div role="alert" className="banner-error">
+              <span>卓の配置パターンを読み込めませんでした。</span>
+            </div>
+          ) : (
+            <SeatingLayoutEditor
+              caseId={row.id}
+              layouts={seating.layouts}
+              needs={seatingNeeds}
+              attendingPeople={attendingPeople}
+              tagOptions={seatingTagOptions}
+              editable={!archived}
+            />
+          )}
+        </section>
+      )}
+
+      {seating && (
+        <section className="space-y-3">
+          <h2 className="section-head">席次の確認</h2>
+          <SeatingChartReview
+            caseId={row.id}
+            chart={seating.chart}
+            layout={seatingLayout}
+            info={seatingInfo}
+            editable={!archived}
+          />
         </section>
       )}
     </div>

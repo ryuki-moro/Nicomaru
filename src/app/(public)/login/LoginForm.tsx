@@ -1,16 +1,11 @@
 'use client';
-
-import { publicD1, publicDemoLogin, publicLocalD1 } from '@/lib/d1/mode';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { startTransition, useCallback, useEffect, useRef, useState } from 'react';
-
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { api, ApiCallError } from '@/lib/api/client';
-import { hasLoginLinkFragment, LOGIN_LINK_PATH } from '@/lib/auth/login-link';
 import { OTP } from '@/lib/constants';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-
+import { publicDemoLogin, publicLocalD1 } from '@/lib/d1/mode';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 /**
  * ワンタイムコード入力（design_guide 5.4）。
  * 6マス横並び、各 36×44px・角丸8px。既定は border-mid 1px、入力中は primary 2px。
@@ -33,16 +28,13 @@ export function OtpInput({
   describedBy?: string;
 }) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);
-
   const focusAt = (index: number) => {
     refs.current[Math.min(Math.max(index, 0), OTP.length - 1)]?.focus();
   };
-
   const commit = (next: string) => {
     onChange(next);
     if (next.length === OTP.length) onComplete?.(next);
   };
-
   return (
     <div className="flex justify-between gap-2" role="group" aria-label="ワンタイムコード">
       {Array.from({ length: OTP.length }, (_, index) => (
@@ -103,19 +95,16 @@ export function OtpInput({
     </div>
   );
 }
-
 type Mode = 'otp' | 'password';
-
 /**
  * P01 ログインフォーム（表4-11）。
  *
  * 1画面で2方式を切り替える:
- *   - 「ログインリンクを送信」= couple 向けのワンタイム認証（マジックリンク＋6桁コード。6-3-1）
+ *   - 「確認コードを送信」= couple 向けのワンタイム認証（6桁コード。6-3-1）
  *   - 「パスワードでログイン」= planner／admin／system_admin 向け
  *
  * 送信要求はレート制限のため /api/auth/otp-request を経由する（4-3 P01）。
  * パスワード認証も /api/auth/password-login を経由する（Origin 検証と失敗の監査記録のため）。
- * 連続失敗はアプリ側の回数制限（RATE_LIMITS.password_login）と Supabase Auth の既定の制限で抑える。
  */
 export function LoginForm({
   next,
@@ -124,11 +113,9 @@ export function LoginForm({
 }: {
   next: string | null;
   initialMode?: Mode;
-  /** メールのリンクの着地（/login/link）で読み取ったアドレス。再送するときに入れ直させない */
   initialEmail?: string;
 }) {
   const router = useRouter();
-
   const [mode, setMode] = useState<Mode>(initialMode);
   const [codeSent, setCodeSent] = useState(false);
   // 送信後はメール欄を固定する。ただし旧形式のリンクで着地に失敗したときは
@@ -137,13 +124,11 @@ export function LoginForm({
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
-
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [resendIn, setResendIn] = useState(0);
-
   const goToLanding = useCallback(
     (fallback: string) => {
       router.replace(next ?? fallback);
@@ -151,7 +136,6 @@ export function LoginForm({
     },
     [next, router],
   );
-
   const handleFailure = (cause: unknown, fallbackMessage: string) => {
     if (cause instanceof ApiCallError) {
       setError(cause.message);
@@ -160,7 +144,6 @@ export function LoginForm({
     }
     setError(fallbackMessage);
   };
-
   // 再送信の待ち時間（6-3-1 方針(3)／5-3 resendIntervalSeconds）
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -170,86 +153,6 @@ export function LoginForm({
     );
     return () => window.clearInterval(timer);
   }, [resendIn]);
-
-  /**
-   * メール本文のログインリンクを踏んで戻ってきた場合の着地処理。
-   *
-   * 現行のメールのリンクは専用の着地画面（/login/link#e=…&c=…）へ行く。
-   * Supabase が戻り先を Site URL に置き換えた場合（ホスト名の不一致）は、
-   * フラグメントを持ったままここへ着くので、着地画面へ送り直す。
-   *
-   * 以下は移行期間に届いている旧形式のメール（?code=、PKCE）の着地処理。
-   * 認証要求元（このブラウザ）と着地先が同じブラウザならセッションを確立できる。
-   * LINE内ブラウザ→既定ブラウザのように別ブラウザへ渡ると PKCE の検証値が引き継がれず失敗するため、
-   * その場合は同一画面で完結する「メールアドレス＋6桁コード」の入力へ誘導する（6-3-1 方針(1)）。
-   */
-  useEffect(() => {
-    if (publicD1()) return;
-    const url = new URL(window.location.href);
-    if (hasLoginLinkFragment(url.hash)) {
-      window.location.replace(
-        `${LOGIN_LINK_PATH}${next ? `?next=${encodeURIComponent(next)}` : ''}${url.hash}`,
-      );
-      return;
-    }
-    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
-    const authCode = url.searchParams.get('code');
-    const accessToken = hashParams.get('access_token');
-    const refreshToken = hashParams.get('refresh_token');
-    const linkError =
-      url.searchParams.get('error_description') ?? hashParams.get('error_description');
-
-    if (!authCode && !accessToken && !linkError) return;
-
-    // トークンを含むURLを履歴に残さない
-    window.history.replaceState(
-      null,
-      '',
-      url.pathname + (next ? `?next=${encodeURIComponent(next)}` : ''),
-    );
-
-    // 失敗時はメール欄も入力できる状態でコード入力を出す（メール欄が空のまま固定される行き止まりにしない）
-    if (linkError || (!authCode && !refreshToken)) {
-      startTransition(() => {
-        setError(
-          'ログインリンクが無効か、有効期限が切れています。メールアドレスとメールに記載の6桁のコードをご入力ください',
-        );
-        setCodeSent(true);
-        setEmailEditable(true);
-      });
-      return;
-    }
-
-    let cancelled = false;
-    startTransition(() => setPending(true));
-    void (async () => {
-      const supabase = createSupabaseBrowserClient();
-      const result = authCode
-        ? await supabase.auth.exchangeCodeForSession(authCode)
-        : await supabase.auth.setSession({
-            access_token: accessToken ?? '',
-            refresh_token: refreshToken ?? '',
-          });
-      if (cancelled) return;
-      setPending(false);
-      if (result.error) {
-        setError(
-          'このブラウザではログインリンクを確認できませんでした。メールアドレスとメールに記載の6桁のコードをご入力ください',
-        );
-        setCodeSent(true);
-        setEmailEditable(true);
-        return;
-      }
-      goToLanding('/');
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-    // 着地処理は初回マウント時に1度だけ行う
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const requestOtp = async () => {
     setPending(true);
     setError(null);
@@ -264,10 +167,7 @@ export function LoginForm({
       setNotice(
         publicLocalD1()
           ? `${email} 宛の6桁の確認コードをローカル受信箱に保存しました（外部送信なし）。`
-          : publicD1()
-            ? `${email} 宛に6桁の確認コードをお送りしました（有効期限は${Math.round(OTP.ttlSeconds / 60)}分）。`
-            : `${email} 宛にログインリンクと6桁のコードをお送りしました。` +
-              `どちらでもログインできます（有効期限は${Math.round(OTP.ttlSeconds / 60)}分）。`,
+          : `${email} 宛に6桁の確認コードをお送りしました（有効期限は${Math.round(OTP.ttlSeconds / 60)}分）。`,
       );
     } catch (cause) {
       handleFailure(cause, 'メールを送信できませんでした。時間をおいてお試しください');
@@ -275,13 +175,14 @@ export function LoginForm({
       setPending(false);
     }
   };
-
   const verifyOtp = async (submitted: string) => {
     setPending(true);
     setError(null);
     setFieldErrors({});
     try {
-      const result = await api.post<{ redirectTo: string }>('/api/auth/otp-verify', {
+      const result = await api.post<{
+        redirectTo: string;
+      }>('/api/auth/otp-verify', {
         email,
         code: submitted,
       });
@@ -291,13 +192,14 @@ export function LoginForm({
       setPending(false);
     }
   };
-
   const signInWithPassword = async () => {
     setPending(true);
     setError(null);
     setFieldErrors({});
     try {
-      const result = await api.post<{ redirectTo: string }>('/api/auth/password-login', {
+      const result = await api.post<{
+        redirectTo: string;
+      }>('/api/auth/password-login', {
         email,
         password,
       });
@@ -307,13 +209,14 @@ export function LoginForm({
       setPending(false);
     }
   };
-
   // npm run demo: 入力を確かめず、方式に応じた役割でログインする
   const signInDemo = async () => {
     setPending(true);
     setError(null);
     try {
-      const result = await api.post<{ redirectTo: string }>('/api/auth/demo-login', {
+      const result = await api.post<{
+        redirectTo: string;
+      }>('/api/auth/demo-login', {
         role: mode === 'password' ? 'planner' : 'couple',
       });
       goToLanding(result.redirectTo);
@@ -322,7 +225,6 @@ export function LoginForm({
       setPending(false);
     }
   };
-
   const switchMode = (nextMode: Mode) => {
     setMode(nextMode);
     setCodeSent(false);
@@ -333,7 +235,6 @@ export function LoginForm({
     setNotice(null);
     setFieldErrors({});
   };
-
   return (
     <div className="card flex flex-col gap-4">
       <ErrorSummary message={error} />
@@ -421,9 +322,7 @@ export function LoginForm({
             ? 'パスワードでログイン'
             : codeSent
               ? '認証してログイン'
-              : publicD1()
-                ? '確認コードを送信'
-                : 'ログインリンクを送信'}
+              : '確認コードを送信'}
         </button>
       </form>
 

@@ -1,6 +1,6 @@
-import type { z } from 'zod';
 import { ApiError, badRequest } from '@/lib/errors';
 import { toErrorDetails } from '@/lib/validation';
+import type { z } from 'zod';
 
 /** 認証本文は最大16KiB。Content-Lengthが無い/偽装された場合も実バイト数で止める。 */
 export async function parsePasswordBody<S extends z.ZodType>(

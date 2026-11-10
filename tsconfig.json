@@ -27,10 +27,10 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    ".next-dev-admin/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
-    ".next-d1/types/**/*.ts"
+    ".next-d1/types/**/*.ts",
+    ".next-demo/types/**/*.ts"
   ],
   "exclude": ["node_modules", "Nicomaru", "Nicomaru-1", "spikes"]
 }

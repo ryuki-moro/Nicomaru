@@ -1,6 +1,6 @@
 /** d1: Cloudflare Workers上の本番。d1-local: ループバック限定のローカル検証（外部送信なし）。 */
-export const usingD1 = () =>
-  process.env.NICOMARU_DB === 'd1' || process.env.NICOMARU_DB === 'd1-local';
+// Cloudflare一本化により常時D1。
+export const usingD1 = () => true;
 export const localD1 = () => process.env.NICOMARU_DB === 'd1-local';
 /** ローカルD1の待受先。3104 は npm run dev:d1、3105 は npm run demo。 */
 export const isLocalD1Origin = (origin: string | undefined) =>
@@ -11,11 +11,9 @@ export const demoMailbox = () =>
 /** 外部送信せず受信箱へ保存する（ローカル検証とデモ受信箱）。 */
 export const captureOnly = () => localD1() || demoMailbox();
 // クライアントではNEXT_PUBLIC_の値がビルド時に埋め込まれる。
-export const publicD1 = () =>
-  process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1' ||
-  process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1-local';
+// Cloudflare一本化により常時D1。
+export const publicD1 = () => true;
 export const publicLocalD1 = () => process.env.NEXT_PUBLIC_NICOMARU_DB === 'd1-local';
-/** npm run demo のログイン素通り。ローカルD1でだけ有効（本番D1・Supabaseでは常に無効）。 */
 export const demoLogin = () => localD1() && process.env.NICOMARU_DEMO_LOGIN === 'true';
 export const publicDemoLogin = () =>
   publicLocalD1() && process.env.NEXT_PUBLIC_NICOMARU_DEMO_LOGIN === 'true';

@@ -82,7 +82,6 @@ const child = spawn(
       APP_BASE_URL: origin,
       NICOMARU_D1_DIR: dir,
       BETTER_AUTH_SECRET: secret,
-      DEV_ADMIN_LOGIN_ENABLED: 'false',
       ...(demoLogin && {
         NICOMARU_DEMO_LOGIN: 'true',
         NEXT_PUBLIC_NICOMARU_DEMO_LOGIN: 'true',

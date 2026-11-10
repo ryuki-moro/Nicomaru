@@ -8,18 +8,13 @@
  *   - 並びは ORDER BY due_date, display_order, id。
  *   - 行タップで M03 へ。
  *
- * 読み取りのみなので Supabase クライアントから直接 select する（6-5）。
  * 「自分の案件だけ」の絞り込みは付録A の RLS が担保するため、ここでは case_id を指定しない。
  */
-import Link from 'next/link';
-import { requireRole } from '@/lib/auth/session';
-import { usingD1, localDB } from '@/lib/d1/runtime';
-import { taskList, taskRow } from '@/lib/d1/tasks';
-
 import { TaskFilterTabs } from '@/app/(couple)/mypage/tasks/TaskFilterTabs';
 import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TaskStatusBadge } from '@/components/ui/StatusBadge';
+import { requireRole } from '@/lib/auth/session';
 import {
   LIST_PAGE_SIZE,
   TASK_FILTER_TABS,
@@ -28,18 +23,17 @@ import {
   type SubmissionFormat,
   type TaskStatus,
 } from '@/lib/constants';
+import { localDB } from '@/lib/d1/runtime';
+import { taskList, taskRow } from '@/lib/d1/tasks';
 import { formatDateJp, todayInJst } from '@/lib/format';
-import { daysBetween, type IsoDate } from '@/lib/services/schedule';
 import { resolvePage } from '@/lib/pagination';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { daysBetween, type IsoDate } from '@/lib/services/schedule';
 import { relativeTaskDeadline, TASK_ANSWER_METHOD_LABEL } from '@/lib/task-display';
 import { isUuid } from '@/lib/uuid';
-
+import Link from 'next/link';
 export const metadata = { title: '宿題・提出物' };
-
 /** 期限が近い行だけ日付を warning-text にする（design_guide 5.7）。 */
 const DUE_SOON_DAYS = 7;
-
 interface TaskRow {
   id: string;
   title: string;
@@ -47,35 +41,10 @@ interface TaskRow {
   status: TaskStatus;
   submission_format: SubmissionFormat;
 }
-
 /** ?tab= を TASK_FILTER_TABS のキーへ解決する。未知の値は既定タブへ寄せる。 */
 function resolveTab(raw: string | undefined) {
   return TASK_FILTER_TABS.find((tab) => tab.key === raw) ?? TASK_FILTER_TABS[0];
 }
-
-/**
- * 提出の直後（M03 から ?submitted=<宿題ID> で戻ってきたとき）の知らせ。
- *
- * 文言は URL から受け取らず、ID から引いた宿題名で組み立てる。
- * 見えない宿題（RLS の範囲外）や、提出済みでない宿題では何も出さない。
- */
-async function submittedNotice(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  taskId: string | undefined,
-): Promise<string | null> {
-  if (!isUuid(taskId)) return null;
-  const { data } = await supabase
-    .from('case_tasks')
-    .select('title, status, submission_format')
-    .eq('id', taskId)
-    .maybeSingle();
-  const task = data as Pick<TaskRow, 'title' | 'status' | 'submission_format'> | null;
-  if (!task || task.status !== 'submitted') return null;
-  return task.submission_format === 'none'
-    ? `『${task.title}』の確認をプランナーに伝えました。`
-    : `『${task.title}』を提出しました。プランナーの確認をお待ちください。`;
-}
-
 function pageHref(tabKey: string, page: number): string {
   const query = new URLSearchParams();
   if (tabKey !== 'all') query.set('tab', tabKey);
@@ -83,7 +52,6 @@ function pageHref(tabKey: string, page: number): string {
   const search = query.toString();
   return search ? `/mypage/tasks?${search}` : '/mypage/tasks';
 }
-
 async function submittedD1Notice(taskId: string | undefined): Promise<string | null> {
   if (!isUuid(taskId)) return null;
   const user = await requireRole('couple');
@@ -99,47 +67,34 @@ async function submittedD1Notice(taskId: string | undefined): Promise<string | n
     throw error;
   }
 }
-
 export default async function TaskListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; page?: string | string[]; submitted?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    page?: string | string[];
+    submitted?: string;
+  }>;
 }) {
   const query = await searchParams;
   const tab = resolveTab(query.tab);
   const page = resolvePage(query.page);
-  const supabase = usingD1() ? null : await createSupabaseServerClient();
-  const notice = supabase
-    ? await submittedNotice(supabase, query.submitted)
-    : await submittedD1Notice(query.submitted);
-
+  const notice = await submittedD1Notice(query.submitted);
   // 「すべて」は waived を除外する。除外リストの補集合を .in() に渡すことで、
   // PostgREST の not.in 記法（値のクォート規則が独特）に依存せず値域を constants 側へ寄せる。
   const statuses: readonly TaskStatus[] =
     tab.statuses ?? TASK_STATUSES.filter((s) => !TASK_STATUSES_EXCLUDED_FROM_ALL.includes(s));
-
   // 既定の表示件数は50件、以降はページング（4-3 一覧画面共通）。
   // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する。
   const from = (page - 1) * LIST_PAGE_SIZE;
-  const { data, error } = usingD1()
-    ? {
-        data: await taskList(await localDB(), await requireRole('couple'), statuses, from),
-        error: null,
-      }
-    : await supabase!
-        .from('case_tasks')
-        .select('id, title, due_date, status, submission_format')
-        .in('status', [...statuses])
-        .order('due_date', { ascending: true })
-        .order('display_order', { ascending: true })
-        .order('id', { ascending: true })
-        .range(from, from + LIST_PAGE_SIZE);
-
+  const { data, error } = {
+    data: await taskList(await localDB(), await requireRole('couple'), statuses, from),
+    error: null,
+  };
   const fetched = (data ?? []) as TaskRow[];
   const hasNext = fetched.length > LIST_PAGE_SIZE;
   const tasks = fetched.slice(0, LIST_PAGE_SIZE);
   const today = todayInJst();
-
   return (
     <div>
       <h1 className="section-head mb-3">宿題・提出物</h1>
@@ -219,7 +174,6 @@ export default async function TaskListPage({
     </div>
   );
 }
-
 /** Tabler Icons の chevron-right（design_guide 6 のアイコンセット）。 */
 function ChevronRight() {
   return (

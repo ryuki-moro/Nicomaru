@@ -14,18 +14,11 @@
  */
 import Link from 'next/link';
 
-import { RiskBadge, type RiskReasonView } from '@/components/ui/RiskBadge';
+import { RiskBadge } from '@/components/ui/RiskBadge';
 import { requireStaff } from '@/lib/auth/session';
-import {
-  COUPLE_PROFILE_COLUMNS,
-  RISK_LEVEL_RANK,
-  UNSUBMITTED_TASK_STATUSES,
-  type RiskLevel,
-} from '@/lib/constants';
-import { readPii } from '@/lib/crypto';
-import { fromPostgresError } from '@/lib/errors';
+import { dashboard } from '@/lib/d1/dashboard';
+import { localDB } from '@/lib/d1/runtime';
 import { formatDate } from '@/lib/format';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 interface CaseIdRow {
   id: string;
@@ -33,105 +26,13 @@ interface CaseIdRow {
 
 export default async function PlannerDashboardPage() {
   const user = await requireStaff();
-  const supabase = await createSupabaseServerClient();
-
-  // アーカイブ済みは件数から除く（K01 の既定表示範囲＝進行中に合わせる）。
-  // planner は RLS でも自担当に絞られるが、admin は式場内全件が見えるため
-  // 「担当案件数」の意味を保つよう planner のときだけ明示的に担当条件を足す。
-  const baseCaseQuery = supabase.from('wedding_cases').select('id').neq('status', 'archived');
-  const { data: caseData, error: caseError } = await (user.role === 'planner'
-    ? baseCaseQuery.eq('primary_planner_id', user.id)
-    : baseCaseQuery);
-  if (caseError) throw fromPostgresError(caseError);
-
-  const caseIds = ((caseData ?? []) as CaseIdRow[]).map((row) => row.id);
-
-  // ---------------------------------------------------- リスク可視化（機能4-2／6-2）
-  // 現在値（is_current）だけを読む。再計算は明示再計算か定期処理が行う（6-8）。
-  interface SnapshotRow {
-    case_id: string;
-    score_value: number;
-    score_level: RiskLevel;
-    reasons: RiskReasonView[] | null;
-  }
-  let unsubmittedCount = 0;
-  let snapshots: SnapshotRow[] = [];
-  if (caseIds.length > 0) {
-    // 同じ案件IDだけに依存する独立した読み取りを並列にする。各クエリのRLSは維持する。
-    const [tasks, risks] = await Promise.all([
-      supabase
-        .from('case_tasks')
-        .select('id', { count: 'exact', head: true })
-        .in('case_id', caseIds)
-        .in('status', [...UNSUBMITTED_TASK_STATUSES]),
-      supabase
-        .from('risk_score_snapshots')
-        .select('case_id, score_value, score_level, reasons')
-        .in('case_id', caseIds)
-        .eq('is_current', true),
-    ]);
-    if (tasks.error) throw fromPostgresError(tasks.error);
-    if (risks.error) throw fromPostgresError(risks.error);
-    unsubmittedCount = tasks.count ?? 0;
-    snapshots = (risks.data ?? []) as unknown as SnapshotRow[];
-  }
-  const highRiskCount = snapshots.filter((s) => s.score_level === 'high').length;
-
-  // 案件番号・挙式日とカップル名を後から当てる。
-  // couple_profiles は memo を列権限で剥奪しているため、埋め込みではなく列を明示して引く（付録A）。
-  const attention = snapshots.filter((s) => s.score_level !== 'low');
-  const attentionIds = attention.map((s) => s.case_id);
-
-  const caseMeta = new Map<string, { caseCode: string; weddingDate: string | null }>();
-  const nameByCase = new Map<string, string[]>();
-  if (attentionIds.length > 0) {
-    const [meta, profiles] = await Promise.all([
-      supabase.from('wedding_cases').select('id, case_code, wedding_date').in('id', attentionIds),
-      supabase.from('couple_profiles').select(COUPLE_PROFILE_COLUMNS).in('case_id', attentionIds),
-    ]);
-    if (meta.error) throw fromPostgresError(meta.error);
-    if (profiles.error) throw fromPostgresError(profiles.error);
-
-    for (const row of (meta.data ?? []) as unknown as {
-      id: string;
-      case_code: string;
-      wedding_date: string | null;
-    }[]) {
-      caseMeta.set(row.id, {
-        caseCode: row.case_code,
-        weddingDate: row.wedding_date ? row.wedding_date.slice(0, 10) : null,
-      });
-    }
-    for (const p of (profiles.data ?? []) as unknown as {
-      case_id: string;
-      full_name: string;
-      is_primary_contact: boolean;
-    }[]) {
-      const list = nameByCase.get(p.case_id) ?? [];
-      // 主連絡先を先頭に（K01 の表示順と揃える）
-      if (p.is_primary_contact) list.unshift(readPii(p.full_name));
-      else list.push(readPii(p.full_name));
-      nameByCase.set(p.case_id, list);
-    }
-  }
-
-  const followUps = attention
-    .map((s) => ({
-      caseId: s.case_id,
-      caseCode: caseMeta.get(s.case_id)?.caseCode ?? '',
-      weddingDate: caseMeta.get(s.case_id)?.weddingDate ?? null,
-      coupleName: (nameByCase.get(s.case_id) ?? []).filter(Boolean).join('・'),
-      scoreLevel: s.score_level,
-      reasons: s.reasons ?? [],
-    }))
-    // リスクの高い順 → 挙式日が近い順。同着は case_id で決定的にする（4-3 一覧画面共通）。
-    .sort(
-      (a, b) =>
-        RISK_LEVEL_RANK[b.scoreLevel] - RISK_LEVEL_RANK[a.scoreLevel] ||
-        (a.weddingDate ?? '9999-12-31').localeCompare(b.weddingDate ?? '9999-12-31') ||
-        a.caseId.localeCompare(b.caseId),
-    )
-    .slice(0, 10);
+  const {
+    caseCount,
+    unsubmittedCount,
+    highRiskCount,
+    followUps: allFollowUps,
+  } = await dashboard(await localDB(), user);
+  const followUps = allFollowUps.slice(0, 10);
 
   const caseCountLabel = user.role === 'planner' ? '担当案件数' : '式場の案件数';
 
@@ -141,7 +42,7 @@ export default async function PlannerDashboardPage() {
       <p className="mt-1 text-caption text-text-muted">{user.displayName} さんの担当状況です。</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <SummaryCard label={caseCountLabel} value={caseIds.length} unit="件" />
+        <SummaryCard label={caseCountLabel} value={caseCount} unit="件" />
         <SummaryCard
           label="未提出の宿題"
           value={unsubmittedCount}

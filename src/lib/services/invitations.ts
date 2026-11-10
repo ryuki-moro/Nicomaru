@@ -63,7 +63,6 @@ export function invitationState(row: InvitationRow, now: Date = new Date()): Inv
  * トークンの原子的な消費（6-6-1）。
  *
  * 実体は security definer 関数 consume_invitation(token_hash, purpose)
- * （supabase/migrations/20260828000700_auth_functions.sql）。SQL の正本はそちらに1本だけ置く。
  * 単一の UPDATE ... WHERE ... RETURNING で「検証」と「消費」を同時に行うため、
  * 同一URLへの同時2リクエストでも1つしか通らない。0行なら 422 を返す。
  *

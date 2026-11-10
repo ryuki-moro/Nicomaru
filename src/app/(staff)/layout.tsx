@@ -19,7 +19,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       <main className="mx-auto w-full max-w-6xl px-4 py-6">
         {localD1() && (
           <p className="banner-info">
-            ローカル検証：案件の登録・更新・招待、宿題の提出・確認が利用できます。外部への送信は行いません。
+            ローカル検証：データはローカルのD1に保存し、外部への送信は行いません。
           </p>
         )}
         {children}

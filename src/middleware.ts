@@ -1,5 +1,4 @@
 /**
- * Supabase セッションの更新と、未ログインアクセスの遮断。
  *
  * 正本: 基本設計書 Version 1.2 4-2「画面遷移の概要」
  *   - 未ログイン状態でアクセスできるのは P01／P02／P03／P04 のみ。
@@ -7,20 +6,14 @@
  * 認可（どのデータに触れられるか）は RLS が最終防衛線であり、
  * ここでの遮断は導線を正すためのものにすぎない（6-5）。
  */
-import { demoMailbox, isLocalD1Origin, localD1, usingD1 } from '@/lib/d1/mode';
+import { demoMailbox, isLocalD1Origin, localD1 } from '@/lib/d1/mode';
 import { NextResponse, type NextRequest } from 'next/server';
-
-import { createServerClient } from '@supabase/ssr';
-
-import { buildNext } from '@/lib/auth/next';
-
 /**
  * 未ログインでもアクセスできるパス（4-2）。
  *
  * /api/internal/** と /api/health は**利用者のセッションを持たない**経路。
  * 前者は pg_cron から pg_net 経由で叩かれ、共有シークレット（INTERNAL_CRON_SECRET）で
  * 認証する（6-5-2「ユーザー向けJWT検証とは別経路に分離する」）。
- * 後者は Supabase Free の一時停止対策として GitHub Actions から叩く（6-12）。
  * ここでログイン画面へ流すと、定期処理も死活監視も 307 を受け取って全滅する。
  * 実際の認証は各ハンドラの requireInternalCall() が行う。
  *
@@ -36,7 +29,6 @@ const PUBLIC_PREFIXES = [
   '/api/internal',
   '/api/health',
 ];
-
 export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith('/api/line/')) {
     return NextResponse.json(
@@ -44,7 +36,7 @@ export async function middleware(request: NextRequest) {
       { status: 410 },
     );
   }
-  if (usingD1()) {
+  {
     const path = request.nextUrl.pathname;
     const origin = process.env.APP_BASE_URL;
     if (!origin) return new NextResponse('APP_BASE_URLが未設定です', { status: 500 });
@@ -54,8 +46,6 @@ export async function middleware(request: NextRequest) {
     ) {
       return new NextResponse('ローカル検証専用です', { status: 403 });
     }
-    if (path === '/dashboard' || path === '/system')
-      return NextResponse.redirect(new URL('/cases', origin));
     // 受信箱はローカル検証専用。本番D1では外部送信するため存在しない扱いにする。
     if (!localD1() && !demoMailbox() && (path === '/dev/mailbox' || path === '/api/dev/mailbox'))
       return new NextResponse(null, { status: 404 });
@@ -64,11 +54,17 @@ export async function middleware(request: NextRequest) {
       '/login',
       '/error',
       '/cases',
+      '/dashboard',
+      '/notifications',
+      '/api/dashboard/follow-up-today',
+      '/mypage/account',
       '/mypage',
       '/mypage/tasks',
       '/mypage/timeline',
       '/mypage/case',
       '/mypage/notifications',
+      '/mypage/guests',
+      '/mypage/seating',
       '/api/notifications',
       '/api/notifications/send',
       '/submissions',
@@ -90,23 +86,61 @@ export async function middleware(request: NextRequest) {
       '/api/auth/password-update',
       '/dev/mailbox',
       '/api/dev/mailbox',
+      '/api/ai/status',
+      '/api/ai/jobs',
+      '/api/internal/ai-worker',
+      // Wave1 で D1 化した定期処理と通知ログ出力 (認証は各ハンドラ側: 内部 secret / system_admin)
+      '/api/internal/rate-limit-cleanup',
+      '/api/internal/audit-log-purge',
+      '/api/internal/risk-recalculate',
+      '/api/system/notification-logs.csv',
+      // Wave2: 残り定期処理・system・管理系 CRUD (認証は各ハンドラ/画面側)
+      '/api/internal/notifications-dispatch',
+      '/api/internal/ai-job-reclaim',
+      '/api/internal/usage-rollup',
+      '/api/internal/monitoring',
+      '/api/internal/case-purge',
+      '/system',
+      '/templates',
+      '/plan-types',
+      '/venues',
+      '/venues/new',
+      '/api/venues',
     ];
-    const casePage = /^\/cases\/[^/]+(?:\/edit)?$/.test(path) && path !== '/cases/new';
+    const casePage =
+      /^\/cases\/[^/]+(?:\/edit|\/sheet|\/meeting-notes|\/archive|\/follow)?$/.test(path) &&
+      path !== '/cases/new';
     const caseApi =
-      /^\/api\/cases\/[^/]+(?:\/(?:assign-tasks|invitations)(?:\/[^/]+\/send)?)?$/.test(path);
+      /^\/api\/cases\/[^/]+(?:\/(?:archive|follow-logs|assign-tasks|invitations)(?:\/[^/]+\/send)?|\/risk\/recalculate)?$/.test(
+        path,
+      );
     const tasks =
-      /^\/(?:mypage\/tasks\/[^/]+|submissions\/[^/]+|api\/tasks\/[^/]+\/submit|api\/submissions\/[^/]+\/review|api\/cases\/[^/]+\/tasks(?:\/[^/]+)?|api\/files\/[^/]+\/download)$/.test(
+      /^\/(?:mypage\/tasks\/[^/]+|submissions\/[^/]+|api\/tasks\/[^/]+\/submit|api\/submissions\/[^/]+\/(?:review|defect-check)|api\/ai\/jobs\/[^/]+|api\/cases\/[^/]+\/tasks(?:\/[^/]+)?|api\/files\/[^/]+\/download)$/.test(
         path,
       );
     const registration = /^\/register\/[^/]+$/.test(path);
+    const guests =
+      /^\/(?:rsvp\/[^/]+|api\/rsvp\/[^/]+|api\/cases\/[^/]+\/(?:guest-form|guest-tags(?:\/[^/]+)?|guests\/[^/]+(?:\/tags)?))$/.test(
+        path,
+      );
     const staffUser = /^\/(?:users|api\/admin\/users)\/[^/]+$/.test(path) && path !== '/users/new';
+    const seating =
+      /^\/api\/cases\/[^/]+\/(?:seating-layouts(?:\/[^/]+)?|seating-chart(?:\/(?:submit|review))?)$/.test(
+        path,
+      );
+    const adminPages =
+      /^\/(?:templates\/[^/]+|venues\/[^/]+|api\/venues\/[^/]+)$/.test(path) &&
+      path !== '/venues/new';
     if (
       !allowed.includes(path) &&
       !staffUser &&
+      !adminPages &&
       !casePage &&
       !caseApi &&
       !registration &&
+      !guests &&
       !tasks &&
+      !seating &&
       !path.startsWith('/_next/')
     ) {
       return NextResponse.json(
@@ -122,66 +156,7 @@ export async function middleware(request: NextRequest) {
     }
     return NextResponse.next({ request });
   }
-  let response = NextResponse.next({ request });
-
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return response;
-
-  const supabase = createServerClient(url, anonKey, {
-    cookies: {
-      getAll: () => request.cookies.getAll(),
-      setAll: (cookiesToSet) => {
-        for (const { name, value } of cookiesToSet) {
-          request.cookies.set(name, value);
-        }
-        response = NextResponse.next({ request });
-        for (const { name, value, options } of cookiesToSet) {
-          response.cookies.set(name, value, options);
-        }
-      },
-    },
-  });
-
-  // getUser() を呼ぶことでトークンのリフレッシュと Cookie の更新が行われる
-  const { data } = await supabase.auth.getUser();
-
-  const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
-
-  // API はログイン画面へ流さない。
-  // 302／307 を返すとクライアントはそれを追ってログイン画面のHTMLを受け取り、
-  // JSON として読めずに「通信に失敗しました」になる。何が起きたか画面に出ない。
-  // 6-5-1 は未認証を 401 UNAUTHENTICATED の JSON で返すと定めており、
-  // /api 配下は全ハンドラが requireAppUser 系または内部呼び出し認証を通しているので、
-  // ここで遮断しなくても未認証のまま処理が進むことはない。
-  const isApi = path === '/api' || path.startsWith('/api/');
-
-  if (!data.user && !isPublic && !isApi) {
-    let baseUrl: URL;
-    try {
-      // Next.js が 127.0.0.1 を localhost へ正規化しても、公開URLと
-      // Cookie／更新APIのOriginが一致するよう、配備側の設定を優先する。
-      // Host・転送ヘッダーは信頼せず、不正な設定から別のURLへ逃がさない。
-      baseUrl = new URL(process.env.APP_BASE_URL ?? request.url);
-      if (!['http:', 'https:'].includes(baseUrl.protocol) || baseUrl.username || baseUrl.password) {
-        throw new Error('Invalid app origin');
-      }
-    } catch {
-      return new NextResponse('ログイン先の設定に問題があります。管理者にお問い合わせください。', {
-        status: 500,
-      });
-    }
-    const loginUrl = new URL('/login', baseUrl.origin);
-    // 戻り先はパスと、一覧の絞り込みに要る許可キーだけ。トークン類のクエリは引き継がない
-    const next = buildNext(path, request.nextUrl.searchParams);
-    if (next) loginUrl.searchParams.set('next', next);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return response;
 }
-
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw[.]js$|.*\.(?:svg|png|jpg|webp)$).*)',

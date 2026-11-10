@@ -9,45 +9,29 @@
  * この行自体は revoked_at が付いて失効する。応答の id は新しく発行された行を指す。
  * 成功時に sent_at を記録する。
  */
-import { usingD1 } from '@/lib/d1/mode';
 import { ok, parseBody, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
-import {
-  COUPLE_PROFILE_COLUMNS,
-  INVITATION_PURPOSES,
-  type ContactChannel,
-  type InvitationPurpose,
-  type PartnerRole,
-} from '@/lib/constants';
-import { readPii } from '@/lib/crypto';
-import { saveInvitationRecipient } from '@/lib/services/invitation-recipient';
-import { fromPostgresError, notFound } from '@/lib/errors';
-import { sendInvitation } from '@/lib/notify/send';
-import {
-  buildInvitationUrl,
-  generateInvitationToken,
-  hashInvitationToken,
-  invitationExpiresAt,
-  invitationMaxUses,
-} from '@/lib/services/invitations';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { type PartnerRole } from '@/lib/constants';
 import { invitationSendSchema } from '@/lib/validation';
-
 interface PartnerRow {
   partner_role: PartnerRole;
   full_name: string;
   email: string | null;
   email_hash: string | null;
 }
-
 export const POST = route(
   async (
     request: Request,
-    context: { params: Promise<{ caseId: string; invitationId: string }> },
+    context: {
+      params: Promise<{
+        caseId: string;
+        invitationId: string;
+      }>;
+    },
   ) => {
     const actor = await requireRole('planner', 'admin', 'system_admin');
     const { caseId, invitationId } = await context.params;
-    if (usingD1()) {
+    {
       const input = await parseBody(request, invitationSendSchema.strict());
       const { localDB } = await import('@/lib/d1/runtime');
       return ok(
@@ -64,117 +48,5 @@ export const POST = route(
         ),
       );
     }
-    const input = await parseBody(request, invitationSendSchema);
-    const supabase = await createSupabaseServerClient();
-
-    // 対象の招待から「誰宛か」だけを取り出す。トークン本体は保存していない（6-3-6）
-    const { data: invitationData, error: invitationError } = await supabase
-      .from('case_invitations')
-      .select('id, case_id, target_partner_role, purpose')
-      .eq('id', invitationId)
-      .eq('case_id', caseId)
-      .maybeSingle();
-    if (invitationError) throw fromPostgresError(invitationError);
-    if (!invitationData) throw notFound('招待が見つかりません');
-    const invitation = invitationData as {
-      target_partner_role: PartnerRole;
-      purpose: string;
-    };
-
-    const { data: caseData, error: caseError } = await supabase
-      .from('wedding_cases')
-      .select(`id, case_code, couple_profiles ( ${COUPLE_PROFILE_COLUMNS} )`)
-      .eq('id', caseId)
-      .maybeSingle();
-    if (caseError) throw fromPostgresError(caseError);
-    if (!caseData) throw notFound('案件が見つかりません');
-    const target = caseData as unknown as {
-      case_code: string;
-      couple_profiles: PartnerRow[];
-    };
-
-    const partner = target.couple_profiles.find(
-      (p) => p.partner_role === invitation.target_partner_role,
-    );
-    if (!partner) throw notFound('対象の新郎新婦プロフィールが見つかりません');
-
-    if (input.recipientEmail) {
-      const saved = await saveInvitationRecipient(
-        supabase,
-        caseId,
-        partner.partner_role,
-        partner,
-        target.couple_profiles,
-        input.recipientEmail,
-      );
-      partner.email = saved.email;
-      partner.email_hash = saved.email_hash;
-    }
-
-    const channel: ContactChannel = input.channel;
-    const token = generateInvitationToken();
-    // 有効期限・使用回数上限は purpose ごとに異なる（6-3-6／13-1）。
-    // 元の招待の purpose を引き継ぎ、initial_registration の値を他用途へ流用しない。
-    const purpose: InvitationPurpose = INVITATION_PURPOSES.includes(
-      invitation.purpose as InvitationPurpose,
-    )
-      ? (invitation.purpose as InvitationPurpose)
-      : 'initial_registration';
-    const expiresAt = invitationExpiresAt(purpose);
-
-    const { data, error } = await supabase.rpc('reissue_case_invitation', {
-      p_case_id: caseId,
-      p_target_partner_role: invitation.target_partner_role,
-      p_purpose: purpose,
-      p_token_hash: hashInvitationToken(token),
-      p_channel: channel,
-      p_expires_at: expiresAt.toISOString(),
-      p_max_uses: invitationMaxUses(purpose),
-      p_recipient_email_enc: partner.email,
-      p_recipient_email_hash: partner.email_hash,
-    });
-    if (error) throw fromPostgresError(error);
-
-    const issued = data as { id: string; expires_at: string };
-    const baseUrl = process.env.APP_BASE_URL ?? new URL(request.url).origin;
-    const url = buildInvitationUrl(baseUrl, token);
-
-    // 宛名・宛先は暗号化列（13-1）。復号できない値で 500 になると再発行済みの
-    // 平文URLを失うため readPii で畳む（6-3-6）
-    const result = await sendInvitation(
-      channel,
-      {
-        email: readPii(partner.email) || null,
-      },
-      {
-        caseCode: target.case_code,
-        recipientName: readPii(partner.full_name),
-        invitationUrl: url,
-        expiresAt: issued.expires_at,
-      },
-    );
-
-    let sentAt: string | null = null;
-    if (result.delivered) {
-      const { data: markedAt, error: markError } = await supabase.rpc('mark_invitation_sent', {
-        p_invitation_id: issued.id,
-        p_channel: channel,
-      });
-      if (markError) throw fromPostgresError(markError);
-      sentAt = markedAt as string | null;
-    }
-
-    // 送信が未構成でスキップされた場合でも再発行は成立している。
-    // ここで平文URLを返さないと発行した招待に誰も到達できなくなるため、応答に含める（6-3-6）。
-    return ok({
-      id: issued.id,
-      targetPartnerRole: invitation.target_partner_role,
-      channel,
-      expiresAt: issued.expires_at,
-      url,
-      sentAt,
-      delivered: result.delivered,
-      skippedReason: result.skippedReason ?? null,
-    });
   },
 );

@@ -2,7 +2,6 @@ import { hashPassword } from 'better-auth/crypto';
 
 import { DEMO_CASES, DEMO_PLANNER, DEMO_PLAN_TYPES } from './demo/scenario.ts';
 
-/** デモ版（npm run demo）の架空データ。宿題テンプレートは supabase/seed.sql と同じ内容。 */
 const VENUE_ID = '11111111-1111-4111-8111-111111111111';
 const PLANNER_ID = '41111111-1111-4111-8111-111111111111';
 const DEMO_COUPLE_KEY = 'demo-02';
@@ -141,11 +140,16 @@ export async function seedDemoFixtures(db, encode, password) {
     );
   };
 
-  run('INSERT INTO venues(id,name,code) VALUES (?,?,?)', VENUE_ID, 'サンプル式場', 'BRIDAL01');
+  run(
+    'INSERT INTO venues(id,name,code,created_at,updated_at) VALUES (?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)',
+    VENUE_ID,
+    'サンプル式場',
+    'BRIDAL01',
+  );
   addUser(PLANNER_ID, DEMO_PLANNER.displayName, DEMO_PLANNER.email, 'planner');
   for (const [name, id] of Object.entries(DEMO_PLAN_TYPES))
     run(
-      'INSERT INTO plan_types(id,venue_id,name,templates_json) VALUES (?,?,?,?)',
+      'INSERT INTO plan_types(id,venue_id,name,templates_json,updated_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP)',
       id,
       VENUE_ID,
       name,

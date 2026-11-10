@@ -4,7 +4,6 @@
  * 正本: 基本設計書 Version 1.2 4-3 表4-18。
  *   割当テンプレートは複数選択とし、行ごとに表示順とプラン固有の逆算日数上書きを設定できる。
  *
- * 保存は page.tsx の Server Action（Supabase クライアント経由・RLS適用）で行い、
  * plan_task_templates は差分更新する。ここは入力と表示だけを持つ。
  */
 'use client';

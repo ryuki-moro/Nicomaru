@@ -1,3 +1,4 @@
+import type { listCases } from '@/lib/d1/cases';
 /**
  * K01 案件一覧画面（planner／admin）
  *
@@ -8,31 +9,20 @@
  *   - 既定50件、同着は id を最終タイブレークに用いる
  *   - アーカイブ済み案件の行には「復元する」（機能2-6、admin のみ）
  *
- * 読み取りは 6-5 の原則どおり Server Component から Supabase 直アクセス（RLS適用）で行い、
  * Route Handler は経由しない。
  */
-import { usingD1 } from '@/lib/d1/mode';
-import Link from 'next/link';
-import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
-
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { RiskBadge, RiskNotCalculated } from '@/components/ui/RiskBadge';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
 import { CASE_STATUS_LABEL, LIST_PAGE_SIZE } from '@/lib/constants';
-import { RiskBadge, RiskNotCalculated } from '@/components/ui/RiskBadge';
 import { formatDate } from '@/lib/format';
-import {
-  loadCaseList,
-  setCaseArchived,
-  SEARCH_SCAN_LIMIT,
-  type CaseListItem,
-} from '@/lib/services/cases';
 import { resolvePage } from '@/lib/pagination';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
+import { SEARCH_SCAN_LIMIT, type CaseListItem } from '@/lib/services/cases';
+import { revalidatePath } from 'next/cache';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
 export const dynamic = 'force-dynamic';
-
 /**
  * アーカイブ解除（機能2-6）。
  * PATCH /api/cases/{caseId}（archived:false）と同じ RPC を呼ぶ。
@@ -41,31 +31,23 @@ export const dynamic = 'force-dynamic';
  */
 async function restoreCase(formData: FormData) {
   'use server';
-
   const caseId = String(formData.get('caseId') ?? '');
   if (!caseId) return;
-
   const actor = await getAppUser();
   if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin'))
     redirect('/error?code=403');
-
   try {
-    if (usingD1()) {
+    {
       const { localDB } = await import('@/lib/d1/runtime');
       const { patchCase } = await import('@/lib/d1/cases');
       await patchCase(await localDB(), actor, caseId, { archived: false });
-    } else {
-      const supabase = await createSupabaseServerClient();
-      await setCaseArchived(supabase, caseId, false);
     }
   } catch {
     redirect('/cases?scope=archived&error=restore');
   }
-
   revalidatePath('/cases');
   redirect('/cases');
 }
-
 interface Props {
   searchParams: Promise<{
     q?: string;
@@ -75,10 +57,8 @@ interface Props {
     sort?: string;
   }>;
 }
-
 export default async function CaseListPage({ searchParams }: Props) {
   const user = await requirePageUser('planner', 'admin', 'system_admin');
-
   const params = await searchParams;
   const canSeeArchived = user.role === 'admin' || user.role === 'system_admin';
   // 案件登録（K03）は planner／admin のみ。ボタンと空状態の案内をこの判定でそろえる
@@ -89,7 +69,6 @@ export default async function CaseListPage({ searchParams }: Props) {
   const keyword = (params.q ?? '').trim();
   const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
-
   // 取得・復号・並べ替え・キーワード絞り込みはサービス層に置く。
   // 画面と GET /api/cases に同じ処理が二重にあり、挙動が食い違っていた（#18）。
   let visible: CaseListItem[] = [];
@@ -97,13 +76,10 @@ export default async function CaseListPage({ searchParams }: Props) {
   let truncated = false;
   let loadError = false;
   try {
-    const load = usingD1()
-      ? async (options: Parameters<typeof loadCaseList>[1]) => {
-          const { localDB } = await import('@/lib/d1/runtime');
-          return (await import('@/lib/d1/cases')).listCases(await localDB(), user, options);
-        }
-      : async (options: Parameters<typeof loadCaseList>[1]) =>
-          loadCaseList(await createSupabaseServerClient(), options);
+    const load = async (options: Parameters<typeof listCases>[2]) => {
+      const { localDB } = await import('@/lib/d1/runtime');
+      return (await import('@/lib/d1/cases')).listCases(await localDB(), user, options);
+    };
     const result = await load({
       scope,
       sort,
@@ -117,7 +93,6 @@ export default async function CaseListPage({ searchParams }: Props) {
   } catch {
     loadError = true;
   }
-
   const linkTo = (next: { scope?: string; page?: number; sort?: string }) => {
     const search = new URLSearchParams();
     if (keyword) search.set('q', keyword);
@@ -130,7 +105,11 @@ export default async function CaseListPage({ searchParams }: Props) {
     const qs = search.toString();
     return qs ? `/cases?${qs}` : '/cases';
   };
-
+  const clearKeywordSearch = new URLSearchParams();
+  if (scope === 'archived') clearKeywordSearch.set('scope', scope);
+  if (sort === 'risk') clearKeywordSearch.set('sort', sort);
+  const clearKeywordQuery = clearKeywordSearch.toString();
+  const clearKeywordHref = clearKeywordQuery ? `/cases?${clearKeywordQuery}` : '/cases';
   return (
     <div className="space-y-4">
       <Breadcrumbs items={[DASHBOARD_CRUMB, { label: '案件一覧' }]} />
@@ -156,7 +135,14 @@ export default async function CaseListPage({ searchParams }: Props) {
           <label htmlFor="q" className="field-label">
             検索キーワード（案件番号・カップル名）
           </label>
-          <input id="q" name="q" defaultValue={keyword} className="field" maxLength={100} />
+          <input
+            key={keyword}
+            id="q"
+            name="q"
+            defaultValue={keyword}
+            className="field"
+            maxLength={100}
+          />
         </div>
 
         {canSeeArchived && (
@@ -184,6 +170,11 @@ export default async function CaseListPage({ searchParams }: Props) {
         <button type="submit" className="btn-secondary w-auto px-6">
           絞り込む
         </button>
+        {keyword && (
+          <Link href={clearKeywordHref} className="btn-ghost">
+            検索を解除
+          </Link>
+        )}
       </form>
 
       {loadError && (
@@ -193,17 +184,24 @@ export default async function CaseListPage({ searchParams }: Props) {
       )}
 
       {!loadError && visible.length === 0 && (
-        <EmptyState
-          message={
-            keyword
-              ? '条件に合う案件は見つかりませんでした。キーワードを変えてお試しください。'
-              : scope === 'archived'
-                ? 'アーカイブ済みの案件はありません。'
-                : canCreate
-                  ? 'まだ案件がありません。上の「新規案件登録」から登録できます。'
-                  : 'まだ案件がありません。案件は各式場のプランナーまたは式場管理者が登録します。'
-          }
-        />
+        <div className="space-y-2">
+          <EmptyState
+            message={
+              keyword
+                ? '条件に合う案件は見つかりませんでした。キーワードを変えてお試しください。'
+                : scope === 'archived'
+                  ? 'アーカイブ済みの案件はありません。'
+                  : canCreate
+                    ? 'まだ案件がありません。上の「新規案件登録」から登録できます。'
+                    : 'まだ案件がありません。案件は各式場のプランナーまたは式場管理者が登録します。'
+            }
+          />
+          {keyword && (
+            <Link href={clearKeywordHref} className="btn-ghost inline-block">
+              検索を解除して一覧に戻る
+            </Link>
+          )}
+        </div>
       )}
 
       {visible.length > 0 && (
@@ -244,7 +242,7 @@ export default async function CaseListPage({ searchParams }: Props) {
                   </td>
                   <td>
                     {/* 6-8: 現在値を読むだけ。ここでは再計算しない。
-                        未算出を空欄にすると「リスクが低い」と読まれるため明示する */}
+                    未算出を空欄にすると「リスクが低い」と読まれるため明示する */}
                     {row.risk ? (
                       <RiskBadge level={row.risk.score_level} reasons={row.risk.reasons ?? []} />
                     ) : (
