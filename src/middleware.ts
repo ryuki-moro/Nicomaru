@@ -51,6 +51,7 @@ export async function middleware(request: NextRequest) {
       return new NextResponse(null, { status: 404 });
     const allowed = [
       '/',
+      '/api/health',
       '/login',
       '/error',
       '/cases',
