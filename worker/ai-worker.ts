@@ -27,7 +27,7 @@ import { hostname } from 'node:os';
 import { AI_JOB_TYPES, validateAiOutput, type AiJobType } from '../src/lib/ai/schemas';
 
 /** 7-3「ポーリング間隔は30秒」。 */
-const POLL_INTERVAL_MS = 30_000;
+const POLL_INTERVAL_MS = Number(process.env.AI_WORKER_POLL_MS) || 30_000;
 /** ジョブが無いときに待つ時間。空振りでログを埋めないよう間隔は同じにする。 */
 const IDLE_INTERVAL_MS = POLL_INTERVAL_MS;
 
@@ -125,6 +125,7 @@ async function callOllama(model: string, prompt: string, input: string): Promise
       prompt: `${prompt}\n\n---\n${input}`,
       format: 'json',
       stream: false,
+      ...(process.env.OLLAMA_KEEP_ALIVE ? { keep_alive: process.env.OLLAMA_KEEP_ALIVE } : {}),
       options: { temperature: 0.2 },
     }),
   });

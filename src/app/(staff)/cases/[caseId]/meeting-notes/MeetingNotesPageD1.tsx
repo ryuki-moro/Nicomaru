@@ -133,7 +133,9 @@ export async function MeetingNotesPageD1({
         </section>
       )}
 
+      {/* 保存のたびに新しいジョブが届く。key で作り直し、新しいジョブの完了を待ち受ける */}
       <TaskProposalPanel
+        key={latestJob?.id ?? 'none'}
         caseId={caseId}
         initialJob={latestJob}
         aiAvailable={aiStatus.available}

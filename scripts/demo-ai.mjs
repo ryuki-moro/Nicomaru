@@ -1,0 +1,51 @@
+// npm run demo:ai — npm run demo（3105）へAIワーカーをつなぐ。Ollama は同じPCで起動しておく。
+// トークンは demo と同じ秘密値から導くので、手で設定する値は無い（モデルは OLLAMA_MODEL で変更可）。
+import { spawn } from 'node:child_process';
+import { hkdfSync } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+
+let secret;
+try {
+  secret = await readFile('.wrangler/demo/auth-secret', 'utf8');
+} catch {
+  console.error('先に別のターミナルで npm run demo を起動してください。');
+  process.exit(1);
+}
+const endpoint = process.env.OLLAMA_ENDPOINT ?? 'http://localhost:11434';
+const model = process.env.OLLAMA_MODEL ?? 'gemma3:12b';
+try {
+  const { models } = await (await fetch(`${endpoint}/api/tags`)).json();
+  if (!models.some((m) => m.name === model || m.name === `${model}:latest`)) {
+    console.error(
+      `Ollama に ${model} がありません。ollama pull ${model} を実行するか、OLLAMA_MODEL で入っているモデルを指定してください。`,
+    );
+    console.error(`入っているモデル: ${models.map((m) => m.name).join(', ') || 'なし'}`);
+    process.exit(1);
+  }
+} catch {
+  console.error(`Ollama（${endpoint}）につながりません。Ollama を起動してください。`);
+  process.exit(1);
+}
+// デモ中にモデルが外れて最初の依頼だけ遅くならないよう、先に読み込んで保持させる
+const keepAlive = process.env.OLLAMA_KEEP_ALIVE ?? '60m';
+console.log(`${model} を読み込んでいます…`);
+const loaded = await fetch(`${endpoint}/api/generate`, {
+  method: 'POST',
+  body: JSON.stringify({ model, keep_alive: keepAlive }),
+}).catch(() => null);
+if (!loaded?.ok) console.warn('モデルの事前読み込みに失敗しました（最初の依頼が遅くなります）。');
+const child = spawn(process.execPath, ['--import', 'tsx', 'worker/ai-worker.ts'], {
+  stdio: 'inherit',
+  env: {
+    ...process.env,
+    AI_WORKER_API_URL: 'http://127.0.0.1:3105',
+    AI_WORKER_TOKEN: Buffer.from(
+      hkdfSync('sha256', Buffer.from(secret, 'hex'), '', 'nicomaru-local-ai-worker', 32),
+    ).toString('base64url'),
+    OLLAMA_MODEL: model,
+    OLLAMA_KEEP_ALIVE: keepAlive,
+    AI_WORKER_POLL_MS: process.env.AI_WORKER_POLL_MS ?? '2000',
+  },
+});
+child.on('exit', (code) => process.exit(code ?? 1));
+process.on('SIGINT', () => child.kill('SIGINT'));

@@ -15,7 +15,23 @@ const TEMPLATES = [
     ['csv'],
     60,
     'critical',
-    {},
+    {
+      csvSchema: {
+        columns: [
+          { name: '氏名', required: true },
+          { name: 'ふりがな', required: true },
+          { name: '関係', required: true },
+          {
+            name: '郵便番号',
+            required: true,
+            pattern: '^\\d{3}-?\\d{4}$',
+            patternHint: '郵便番号は「123-4567」の形でご記入ください',
+          },
+          { name: '住所', required: true },
+        ],
+        uniqueBy: ['氏名'],
+      },
+    },
   ],
   [
     '102',
