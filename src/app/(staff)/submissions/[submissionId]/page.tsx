@@ -157,6 +157,13 @@ export default async function SubmissionReviewPage({
       .catch(() => null);
     if (checked) ruleFindings = checked.findings;
   }
+  const classificationPanel = (
+    <ClassificationPanel
+      initialJob={classificationJob}
+      aiAvailable={aiStatus.available}
+      lastSeenAt={aiStatus.lastSeenAt}
+    />
+  );
 
   return (
     <div>
@@ -247,11 +254,12 @@ export default async function SubmissionReviewPage({
         )}
       </section>
 
-      <ClassificationPanel
-        initialJob={classificationJob}
-        aiAvailable={aiStatus.available}
-        lastSeenAt={aiStatus.lastSeenAt}
-      />
+      {/*
+        AIが使えないあいだは、結果の無い分類欄を出さない。確認結果の入力（ReviewForm）の中の
+        1行の案内にまとめ、入力欄が提出内容のすぐ下に来るようにする。
+        すでに付いている分類結果は消さず、確認結果の入力のあとに出す。
+      */}
+      {aiStatus.available && classificationPanel}
 
       <DefectPanel
         submissionId={submission.id}
@@ -305,6 +313,8 @@ export default async function SubmissionReviewPage({
           </div>
         </section>
       )}
+
+      {!aiStatus.available && classificationJob && classificationPanel}
     </div>
   );
 }
