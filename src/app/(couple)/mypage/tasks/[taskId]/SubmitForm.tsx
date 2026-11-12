@@ -280,7 +280,21 @@ export function SubmitForm({
               className="peer sr-only"
               disabled={busy}
               aria-labelledby="answer-file-label answer-file-button"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              onChange={(event) => {
+                const chosen = event.target.files?.[0] ?? null;
+                setFile(chosen);
+                // 選び直した時点で、ファイルについての指摘と上部のサマリを消す。
+                // 残したままだと「選んだのにまだ直っていない」ように見える。
+                if (chosen && (fieldErrors.file || fieldErrors.fileId)) {
+                  setFieldErrors((current) => {
+                    const rest = { ...current };
+                    delete rest.file;
+                    delete rest.fileId;
+                    return rest;
+                  });
+                  setError(null);
+                }
+              }}
               aria-invalid={fieldErrors.file || fieldErrors.fileId ? true : undefined}
             />
             <label
