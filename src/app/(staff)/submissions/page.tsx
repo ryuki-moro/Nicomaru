@@ -25,7 +25,7 @@ import { readPii } from '@/lib/crypto';
 import { localDB } from '@/lib/d1/runtime';
 import { coupleNames as d1CoupleNames, pendingSubmissions, submissionRow } from '@/lib/d1/tasks';
 import { fromPostgresError } from '@/lib/errors';
-import { formatDate, formatDateTime } from '@/lib/format';
+import { formatDate, formatDateTime, todayInJst } from '@/lib/format';
 import { resolvePage } from '@/lib/pagination';
 import { isUuid } from '@/lib/uuid';
 import Link from 'next/link';
@@ -97,6 +97,7 @@ export default async function SubmissionsPage({
   const rows = (data ?? []) as unknown as SubmissionRow[];
   const total = count ?? rows.length;
   const hasNext = offset + rows.length < total;
+  const today = todayInJst();
   const caseIds = [...new Set(rows.map((row) => row.case_tasks.case_id))];
   // couple_profiles は memo を列レベル権限で剥奪しているため select * が 42501 になる（付録A）
   const coupleNames = new Map<string, string>();
@@ -127,7 +128,8 @@ export default async function SubmissionsPage({
 
       <h1 className="section-head">提出物確認</h1>
       <p className="mt-1 text-caption text-text-muted">
-        新郎新婦から届いた提出物のうち、確認待ちのものを表示しています（全 {total} 件）。
+        新郎新婦から届いた提出物のうち、確認待ちのものを期限の近い順に表示しています（全 {total}{' '}
+        件）。宿題名を押すと確認画面が開きます。
       </p>
 
       {notice && (
@@ -142,34 +144,67 @@ export default async function SubmissionsPage({
         </div>
       ) : (
         <div className="table-wrap mt-4">
-          <table className="table">
+          {/*
+            スマートフォンでは横スクロールなしで宿題・期限・状態が見えるよう、案件番号・カップル・
+            提出日時の列を畳み、案件番号とカップル名は宿題名の下に出す。
+            押す場所は宿題名の1か所にして、行き先（提出物確認）と表示をそろえる。
+          */}
+          <table className="table min-w-0 sm:min-w-[640px]">
             <thead>
               <tr>
-                <th scope="col">案件番号</th>
-                <th scope="col">カップル</th>
                 <th scope="col">宿題</th>
+                <th scope="col" className="hidden sm:table-cell">
+                  案件番号
+                </th>
+                <th scope="col" className="hidden sm:table-cell">
+                  カップル
+                </th>
                 <th scope="col">期限</th>
-                <th scope="col">提出日時</th>
+                <th scope="col" className="hidden sm:table-cell">
+                  提出日時
+                </th>
                 <th scope="col">状態</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <Link href={`/submissions/${row.id}`} className="btn-ghost">
-                      {row.case_tasks.wedding_cases.case_code}
-                    </Link>
-                  </td>
-                  <td>{coupleNames.get(row.case_tasks.case_id) ?? '—'}</td>
-                  <td>{row.case_tasks.title}</td>
-                  <td className="whitespace-nowrap">{formatDate(row.case_tasks.due_date)}</td>
-                  <td className="whitespace-nowrap">{formatDateTime(row.submitted_at)}</td>
-                  <td>
-                    <ReviewStatusBadge status="submitted" />
-                  </td>
-                </tr>
-              ))}
+              {rows.map((row) => {
+                const caseCode = row.case_tasks.wedding_cases.case_code;
+                const couple = coupleNames.get(row.case_tasks.case_id) ?? '—';
+                // 期限日の当日はまだ期限内。翌日から期限切れとして示す。
+                const overdue = row.case_tasks.due_date < today;
+                return (
+                  <tr key={row.id}>
+                    <td>
+                      <Link
+                        href={`/submissions/${row.id}`}
+                        className="inline-flex min-h-[44px] items-center font-bold text-link underline"
+                      >
+                        {row.case_tasks.title}
+                      </Link>
+                      <span className="block text-caption text-text-muted sm:hidden">
+                        {caseCode}・{couple}
+                      </span>
+                    </td>
+                    <td className="hidden whitespace-nowrap sm:table-cell">{caseCode}</td>
+                    <td className="hidden sm:table-cell">{couple}</td>
+                    <td>
+                      <span className="block whitespace-nowrap">
+                        {formatDate(row.case_tasks.due_date)}
+                      </span>
+                      {/* 色だけに頼らず文字でも期限切れを示す */}
+                      {overdue && (
+                        <span className="badge-danger mt-1 whitespace-nowrap">期限切れ</span>
+                      )}
+                    </td>
+                    <td className="hidden whitespace-nowrap sm:table-cell">
+                      {formatDateTime(row.submitted_at)}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      <ReviewStatusBadge status="submitted" />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
