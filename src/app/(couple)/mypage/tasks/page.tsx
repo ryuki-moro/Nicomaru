@@ -24,11 +24,11 @@ import {
   type TaskStatus,
 } from '@/lib/constants';
 import { localDB } from '@/lib/d1/runtime';
-import { taskList, taskRow } from '@/lib/d1/tasks';
+import { taskList, taskRow, taskStatusCounts } from '@/lib/d1/tasks';
 import { formatDateJp, todayInJst } from '@/lib/format';
 import { resolvePage } from '@/lib/pagination';
 import { daysBetween, type IsoDate } from '@/lib/services/schedule';
-import { relativeTaskDeadline, TASK_ANSWER_METHOD_LABEL } from '@/lib/task-display';
+import { relativeTaskDeadline, TASK_ANSWER_METHOD_LABEL, taskTabCount } from '@/lib/task-display';
 import { isUuid } from '@/lib/uuid';
 import Link from 'next/link';
 export const metadata = { title: '宿題・提出物' };
@@ -87,10 +87,18 @@ export default async function TaskListPage({
   // 既定の表示件数は50件、以降はページング（4-3 一覧画面共通）。
   // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する。
   const from = (page - 1) * LIST_PAGE_SIZE;
+  const user = await requireRole('couple');
   const { data, error } = {
-    data: await taskList(await localDB(), await requireRole('couple'), statuses, from),
+    data: await taskList(await localDB(), user, statuses, from),
     error: null,
   };
+  const statusCounts = await taskStatusCounts(await localDB(), user);
+  const tabCounts = Object.fromEntries(
+    TASK_FILTER_TABS.map((t) => [
+      t.key,
+      taskTabCount(t.statuses, statusCounts, TASK_STATUSES_EXCLUDED_FROM_ALL),
+    ]),
+  );
   const fetched = (data ?? []) as TaskRow[];
   const hasNext = fetched.length > LIST_PAGE_SIZE;
   const tasks = fetched.slice(0, LIST_PAGE_SIZE);
@@ -103,7 +111,7 @@ export default async function TaskListPage({
           <span>{notice}</span>
         </div>
       )}
-      <TaskFilterTabs current={tab.key} />
+      <TaskFilterTabs current={tab.key} counts={tabCounts} />
 
       {error ? (
         <div role="alert" className="banner-error">
@@ -119,10 +127,9 @@ export default async function TaskListPage({
         <ul className="flex flex-col gap-[10px]">
           {tasks.map((task) => {
             const relativeDeadline = relativeTaskDeadline(task.due_date, today, task.status);
+            const daysLeft = daysBetween(task.due_date, today);
             const dueSoon =
-              task.status !== 'confirmed' &&
-              task.status !== 'waived' &&
-              daysBetween(task.due_date, today) <= DUE_SOON_DAYS;
+              task.status !== 'confirmed' && task.status !== 'waived' && daysLeft <= DUE_SOON_DAYS;
             return (
               <li key={task.id}>
                 <Link href={taskDetailHref(task.id)} className="card flex items-center gap-3">
@@ -133,15 +140,19 @@ export default async function TaskListPage({
                     <span className="block text-label text-text-secondary">
                       回答方法：{TASK_ANSWER_METHOD_LABEL[task.submission_format]}
                     </span>
-                    {/* 相対期限が次の行に回ったとき全角「（」の左の空きで字下げに見えないよう、
-                        かっこを半角幅（halt）で組む。同じ行に並ぶときの空きは gap で取る */}
+                    {/* 期限と残り日数は途中で改行させず1かたまりで出す（行によって折り返しが変わると
+                        間延びして見える）。かっこは半角幅（halt）で組んで幅を抑える。
+                        期限が近いことは色だけに頼らず、太字と文字つきのラベルでも示す */}
                     <span
-                      className={`flex flex-wrap gap-x-1 text-label ${dueSoon ? 'text-warning-text' : 'text-text-muted'}`}
+                      className={`mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-label ${dueSoon ? 'font-bold text-warning-text' : 'text-text-muted'}`}
                     >
-                      <span>{formatDateJp(task.due_date)}まで</span>
-                      {relativeDeadline && (
-                        <span className="inline-block [font-feature-settings:'halt']">
-                          （{relativeDeadline}）
+                      <span className="whitespace-nowrap [font-feature-settings:'halt']">
+                        {formatDateJp(task.due_date)}まで
+                        {relativeDeadline && <>（{relativeDeadline}）</>}
+                      </span>
+                      {dueSoon && daysLeft >= 0 && (
+                        <span className="badge-warning whitespace-nowrap font-normal">
+                          期限が近い
                         </span>
                       )}
                     </span>
