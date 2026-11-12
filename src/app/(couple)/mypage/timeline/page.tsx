@@ -17,7 +17,7 @@ import { formatDateJp } from '@/lib/format';
 import { resolvePage } from '@/lib/pagination';
 import { phaseNameFor, type IsoDate } from '@/lib/services/schedule';
 import Link from 'next/link';
-export const metadata = { title: '準備タイムライン' };
+export const metadata = { title: '準備の流れ' };
 interface TimelineRow {
   id: string;
   title: string;
@@ -95,7 +95,7 @@ export default async function TimelinePage({
   const groups = groupByPhase(fetched.slice(0, LIST_PAGE_SIZE));
   return (
     <div>
-      <h1 className="section-head mb-3">準備タイムライン</h1>
+      <h1 className="section-head mb-3">準備の流れ</h1>
 
       {groups.length === 0 ? (
         <EmptyState
