@@ -60,7 +60,7 @@ try {
   const existing = await platform.env.DB.prepare('SELECT count(*) AS n FROM venues').first();
   if (!existing.n) {
     const fixture = demo
-      ? await seedDemoFixtures(platform.env.DB, encryptPii, demoPassword)
+      ? await seedDemoFixtures(platform.env.DB, encryptPii, demoPassword, platform.env.FILES)
       : await seedAppFixtures(platform.env.DB, encryptPii);
     await writeFile(`${dir}/credentials.json`, JSON.stringify(fixture, null, 2), { flag: 'wx' });
   }
