@@ -42,6 +42,15 @@ import { InvitationSection } from './InvitationSection';
 import { RiskSection, type CaseRisk } from './RiskSection';
 import { TaskSection, type CaseTaskRow } from './TaskSection';
 export const dynamic = 'force-dynamic';
+/** ページ内の目次。id は下の各セクションに付けたものと対応させる。 */
+const SECTION_LINKS = [
+  { id: 'basic', label: '基本情報' },
+  { id: 'risk', label: 'リスク' },
+  { id: 'tasks', label: '宿題' },
+  { id: 'invitation', label: '招待状況' },
+  { id: 'guests', label: 'ゲストの出欠' },
+  { id: 'seating', label: '席次' },
+] as const;
 interface CaseRow {
   id: string;
   case_code: string;
@@ -333,21 +342,44 @@ export default async function CaseDetailPage({
             .filter(Boolean)
             .join('・') || '案件詳細'}
         </h1>
-        <div className="flex flex-wrap gap-2">
-          {!archived && (
-            <Link href={`/cases/${row.id}/edit`} className="btn-secondary w-auto px-5 text-center">
-              編集
+      </div>
+
+      {/*
+        この案件で行う操作。打ち合わせの前後にいちばん使う2つ（準備シート・打ち合わせ記録）を
+        主操作として大きく出し、そのほかは控えめな枠付きボタンにする。
+        アーカイブは取り消しに管理者の操作が要るので、admin 系にだけ、いちばん端に離して置く（4-3 K02／K05）。
+        アーカイブ済みの案件はどの画面も開けない（D1 側が archived_at IS NULL で絞る）ので、導線ごと出さない。
+      */}
+      {!archived && (
+        <nav aria-label="この案件の操作" className="flex flex-wrap items-center gap-2">
+          {/* 4-3 K02 のボタン「打ち合わせ前準備シート（D03、Phase 2）」 */}
+          <Link href={`/cases/${row.id}/sheet`} className="btn-primary w-auto px-5 text-center">
+            準備シートを開く
+          </Link>
+          {/* 4-3 D05 打ち合わせ記録・宿題起票（Phase 3）。
+              D04 フォロー記録が「連絡したこと」、こちらが「決まったこと」 */}
+          <Link
+            href={`/cases/${row.id}/meeting-notes`}
+            className="btn-secondary w-auto px-5 text-center"
+          >
+            打ち合わせ記録
+          </Link>
+          <Link href={`/cases/${row.id}/follow`} className="btn-ghost">
+            フォロー記録
+          </Link>
+          <Link href={`/cases/${row.id}/edit`} className="btn-ghost">
+            編集
+          </Link>
+          {(user.role === 'admin' || user.role === 'system_admin') && (
+            <Link
+              href={`/cases/${row.id}/archive`}
+              className="btn-ghost border-transparent bg-transparent text-text-muted sm:ml-auto"
+            >
+              アーカイブ
             </Link>
           )}
-          {/* 4-3 K02 のボタン「打ち合わせ前準備シート（D03、Phase 2）」 */}
-          {false}
-          {false}
-          {/* 4-3 D05 打ち合わせ記録・宿題起票（Phase 3）。
-        D04 フォロー記録が「連絡したこと」、こちらが「決まったこと」 */}
-          {false}
-          {false}
-        </div>
-      </div>
+        </nav>
+      )}
 
       {archived && (
         <div className="banner-info">
@@ -355,76 +387,110 @@ export default async function CaseDetailPage({
         </div>
       )}
 
-      {/* 4-3 K02: リスクは planner／admin のみ。couple 向けの案件詳細では表示しない（6-3） */}
-      <RiskSection caseId={row.id} risk={currentRisk} />
+      {/*
+        単カラムで長い画面なので、目的の情報へ飛べるページ内の目次を置く。
+        スクロールしても上に残し、いまどの案件のどこを見ているかを見失わないようにする。
+        押しやすいよう各項目の高さは44pxを確保し、狭い幅では横に流す（折り返して画面を埋めない）。
+      */}
+      <nav
+        aria-label="このページの目次"
+        className="no-print sticky top-0 z-10 -mx-4 border-b border-border-light bg-bg px-4"
+      >
+        <ul className="flex gap-1 overflow-x-auto">
+          {SECTION_LINKS.map((link) => (
+            <li key={link.id} className="shrink-0">
+              <a
+                href={`#${link.id}`}
+                className="flex min-h-[44px] items-center px-3 text-label text-text-secondary underline-offset-4 hover:text-text-primary hover:underline"
+              >
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
-      <section className="card space-y-2">
-        <h2 className="section-head">基本情報</h2>
-        <dl className="grid grid-cols-1 gap-2 text-label sm:grid-cols-2">
-          <div>
-            <dt className="text-caption text-text-muted">案件番号</dt>
-            <dd>{row.case_code}</dd>
-          </div>
-          <div>
-            <dt className="text-caption text-text-muted">状態</dt>
-            <dd>{CASE_STATUS_LABEL[row.status]}</dd>
-          </div>
-          <div>
-            <dt className="text-caption text-text-muted">挙式日</dt>
-            <dd>
-              {formatDate(row.wedding_date)}
-              {row.wedding_time ? ` ${row.wedding_time.slice(0, 5)}` : ''}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-caption text-text-muted">プラン種別</dt>
-            <dd>{row.plan_types?.name ?? '未設定'}</dd>
-          </div>
-          {partners.map((partner) => (
-            <div key={partner.partnerRole}>
-              <dt className="text-caption text-text-muted">
-                {PARTNER_ROLE_LABEL[partner.partnerRole]}
-                {partner.isPrimaryContact ? '（主連絡先）' : ''}
-              </dt>
+      {/* 基本情報を先に、リスクはその横（PC）／直後（スマートフォン）に置く。
+          「誰のどの案件か」を確かめてからリスクと宿題を読む順にする */}
+      <div className="grid gap-5 lg:grid-cols-3">
+        <section id="basic" className="card scroll-mt-14 space-y-2 lg:col-span-2">
+          <h2 className="section-head">基本情報</h2>
+          <dl className="grid grid-cols-1 gap-2 text-label sm:grid-cols-2">
+            <div>
+              <dt className="text-caption text-text-muted">案件番号</dt>
+              <dd>{row.case_code}</dd>
+            </div>
+            <div>
+              <dt className="text-caption text-text-muted">状態</dt>
+              <dd>{CASE_STATUS_LABEL[row.status]}</dd>
+            </div>
+            <div>
+              <dt className="text-caption text-text-muted">挙式日</dt>
               <dd>
-                {partner.fullName || '（未登録）'}
-                {partner.email ? <span className="text-text-muted">　{partner.email}</span> : null}
+                {formatDate(row.wedding_date)}
+                {row.wedding_time ? ` ${row.wedding_time.slice(0, 5)}` : ''}
               </dd>
             </div>
-          ))}
-          <div>
-            <dt className="text-caption text-text-muted">人数</dt>
-            <dd>{row.guest_count ?? 0}名</dd>
-          </div>
-          <div>
-            <dt className="text-caption text-text-muted">連絡起点</dt>
-            <dd>{CONTACT_CHANNEL_LABEL[row.contact_channel]}</dd>
-          </div>
-          <div>
-            <dt className="text-caption text-text-muted">担当プランナー</dt>
-            <dd>{row.user_profiles?.display_name ?? '未設定'}</dd>
-          </div>
-          <div>
-            <dt className="text-caption text-text-muted">宿題進捗</dt>
-            <dd>
-              {tasks.length === 0
-                ? '未割当'
-                : `${done} / ${tasks.length} 件（${Math.round((done / tasks.length) * 100)}%）`}
-            </dd>
-          </div>
-        </dl>
-      </section>
+            <div>
+              <dt className="text-caption text-text-muted">プラン種別</dt>
+              <dd>{row.plan_types?.name ?? '未設定'}</dd>
+            </div>
+            {partners.map((partner) => (
+              <div key={partner.partnerRole}>
+                <dt className="text-caption text-text-muted">
+                  {PARTNER_ROLE_LABEL[partner.partnerRole]}
+                  {partner.isPrimaryContact ? '（主連絡先）' : ''}
+                </dt>
+                <dd>
+                  {partner.fullName || '（未登録）'}
+                  {partner.email ? (
+                    <span className="text-text-muted">　{partner.email}</span>
+                  ) : null}
+                </dd>
+              </div>
+            ))}
+            <div>
+              <dt className="text-caption text-text-muted">人数</dt>
+              <dd>{row.guest_count ?? 0}名</dd>
+            </div>
+            <div>
+              <dt className="text-caption text-text-muted">連絡起点</dt>
+              <dd>{CONTACT_CHANNEL_LABEL[row.contact_channel]}</dd>
+            </div>
+            <div>
+              <dt className="text-caption text-text-muted">担当プランナー</dt>
+              <dd>{row.user_profiles?.display_name ?? '未設定'}</dd>
+            </div>
+            <div>
+              <dt className="text-caption text-text-muted">宿題進捗</dt>
+              <dd>
+                {tasks.length === 0
+                  ? '未割当'
+                  : `${done} / ${tasks.length} 件（${Math.round((done / tasks.length) * 100)}%）`}
+              </dd>
+            </div>
+          </dl>
+        </section>
 
-      <InvitationSection caseId={row.id} readOnly={archived} />
+        {/* 4-3 K02: リスクは planner／admin のみ。couple 向けの案件詳細では表示しない（6-3） */}
+        <div id="risk" className="scroll-mt-14">
+          <RiskSection caseId={row.id} risk={currentRisk} />
+        </div>
+      </div>
 
-      {
+      {/* 宿題は毎日見るので、招待状況より先に置く */}
+      <div id="tasks" className="scroll-mt-14">
         <TaskSection
           caseId={row.id}
           tasks={tasks}
           hasPlanType={row.plan_type_id !== null}
           readOnly={archived}
         />
-      }
+      </div>
+
+      <div id="invitation" className="scroll-mt-14">
+        <InvitationSection caseId={row.id} readOnly={archived} />
+      </div>
 
       {aiExt && (
         <CaseAiPanels
@@ -443,7 +509,7 @@ export default async function CaseDetailPage({
       )}
 
       {guestBook !== undefined && (
-        <section className="space-y-3">
+        <section id="guests" className="scroll-mt-14 space-y-3">
           <h2 className="section-head">ゲストの出欠</h2>
           {guestBook === null ? (
             <div role="alert" className="banner-error">
@@ -456,7 +522,7 @@ export default async function CaseDetailPage({
       )}
 
       {seating !== undefined && (
-        <section className="space-y-3">
+        <section id="seating" className="scroll-mt-14 space-y-3">
           <h2 className="section-head">卓の配置パターン</h2>
           {seating === null ? (
             <div role="alert" className="banner-error">
