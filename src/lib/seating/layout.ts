@@ -37,6 +37,11 @@ export const LAYOUTS_PER_CASE_MAX = 20;
 export const LAYOUT_NAME_MAX = 30;
 export const TABLE_NAME_MAX = 20;
 export const TABLE_TAGS_MAX = 30;
+/** 卓の大きさ（会場図での表示倍率）。1 が標準 */
+export const TABLE_SCALE_MIN = 0.5;
+export const TABLE_SCALE_MAX = 2;
+export const TABLE_SCALE_STEP = 0.1;
+export const TABLE_SCALE_DEFAULT = 1;
 
 export interface SeatingTable {
   /** 保存済みの卓の ID。新しい卓は undefined */
@@ -44,6 +49,8 @@ export interface SeatingTable {
   name: string;
   capacity: number;
   shape: TableShape;
+  /** 会場図での大きさの倍率（TABLE_SCALE_MIN〜TABLE_SCALE_MAX、1 が標準） */
+  scale: number;
   /** 会場図の中の位置（左上 0、右下 1 の割合） */
   x: number;
   y: number;
@@ -71,6 +78,7 @@ export function gridTables(
       name: `${i + 1}卓`,
       capacity,
       shape,
+      scale: TABLE_SCALE_DEFAULT,
       x: round3(p.x),
       y: round3(p.y),
       allowedTags: [],

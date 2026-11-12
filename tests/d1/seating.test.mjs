@@ -157,10 +157,15 @@ test('配置パターンは担当スタッフだけが作れ、卓のIDは保存
         ...table('新婦友人1卓', { x: 0.7, allowedTags: ['side:bride', 'relationship:friend'] }),
         id: tableBride,
       },
-      { ...table('自由卓', { x: 0.3, y: 0.7 }), id: tableAny },
+      { ...table('自由卓', { x: 0.3, y: 0.7, scale: 1.4 }), id: tableAny },
     ],
   });
   const again = await loadSeatingLayouts(db, plannerA, ids.caseA);
+  // 大きさを送らなかった卓は標準、送った卓はその倍率で保存される
+  assert.deepEqual(
+    again[0].tables.map((t) => t.scale),
+    [1, 1.4],
+  );
   assert.deepEqual(
     again[0].tables.map((t) => t.id),
     [tableBride, tableAny],
