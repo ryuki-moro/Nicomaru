@@ -211,7 +211,11 @@ export function previewPlanChange(
 }
 
 // --------------------------------------------------------------- 表示用の集計
-/** M01「次にやること」（最大3件。ORDER BY due_date, display_order, id）。 */
+/**
+ * M01「次にやること」（最大3件）。
+ * 差し戻し（needs_fix）はプランナーが返事を待っているので、期限より先に並べる。
+ * そのあとは due_date, display_order, id の順。
+ */
 export function nextActions<
   T extends { status: TaskStatus; dueDate: IsoDate; displayOrder: number; id: string },
 >(tasks: readonly T[], limit = 3): T[] {
@@ -219,6 +223,7 @@ export function nextActions<
     .filter((t) => INCOMPLETE_TASK_STATUSES.includes(t.status))
     .sort(
       (a, b) =>
+        Number(b.status === 'needs_fix') - Number(a.status === 'needs_fix') ||
         a.dueDate.localeCompare(b.dueDate) ||
         a.displayOrder - b.displayOrder ||
         a.id.localeCompare(b.id),
