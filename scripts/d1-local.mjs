@@ -32,6 +32,10 @@ const demoPassword = Buffer.from(
 process.env.PII_HMAC_KEY = Buffer.from(
   hkdfSync('sha256', Buffer.from(secret, 'hex'), '', 'nicomaru-local-hmac', 32),
 ).toString('base64');
+// AIワーカー（npm run demo:ai）と同じ値を秘密値から導く。外部へは出ない
+process.env.AI_WORKER_TOKEN = Buffer.from(
+  hkdfSync('sha256', Buffer.from(secret, 'hex'), '', 'nicomaru-local-ai-worker', 32),
+).toString('base64url');
 execFileSync(
   process.execPath,
   [
@@ -56,7 +60,7 @@ try {
   const existing = await platform.env.DB.prepare('SELECT count(*) AS n FROM venues').first();
   if (!existing.n) {
     const fixture = demo
-      ? await seedDemoFixtures(platform.env.DB, encryptPii, demoPassword)
+      ? await seedDemoFixtures(platform.env.DB, encryptPii, demoPassword, platform.env.FILES)
       : await seedAppFixtures(platform.env.DB, encryptPii);
     await writeFile(`${dir}/credentials.json`, JSON.stringify(fixture, null, 2), { flag: 'wx' });
   }

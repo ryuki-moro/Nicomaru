@@ -20,6 +20,7 @@ import {
 } from '@/app/(staff)/submissions/[submissionId]/ReviewForm';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { ReviewStatusBadge, TaskStatusBadge } from '@/components/ui/StatusBadge';
+import { adoptedOutput } from '@/lib/ai/assist';
 import type { DefectFinding } from '@/lib/ai/defectCheck';
 import { csvSchemaOf } from '@/lib/ai/submissionCheck';
 import { requireStaff } from '@/lib/auth/session';
@@ -157,6 +158,15 @@ export default async function SubmissionReviewPage({
       .catch(() => null);
     if (checked) ruleFindings = checked.findings;
   }
+  // 差し戻し文の下書き（9-3）の材料。ルールの指摘と、確認待ち・採用済みのAIの指摘を行番号つきで渡す
+  const aiDefects =
+    defectJob?.status === 'done' || defectJob?.status === 'confirmed'
+      ? (adoptedOutput('defect_check', defectJob)?.findings ?? [])
+      : [];
+  const defectNotes = [...(ruleFindings ?? []), ...aiDefects].map(
+    (f) =>
+      `${f.row === 0 ? 'ファイル全体' : `${f.row}行目`}${f.column ? `「${f.column}」` : ''}: ${f.detail}`,
+  );
 
   return (
     <div>
@@ -275,6 +285,7 @@ export default async function SubmissionReviewPage({
             aiAvailable={aiStatus.available}
             lastSeenAt={aiStatus.lastSeenAt}
             sourceText={textValue ?? ''}
+            defectNotes={defectNotes}
           />
         </section>
       ) : (

@@ -1,4 +1,6 @@
 import { hashPassword } from 'better-auth/crypto';
+import { readFile } from 'node:fs/promises';
+import { basename } from 'node:path';
 
 import { DEMO_CASES, DEMO_PLANNER, DEMO_PLAN_TYPES } from './demo/scenario.ts';
 
@@ -15,7 +17,23 @@ const TEMPLATES = [
     ['csv'],
     60,
     'critical',
-    {},
+    {
+      csvSchema: {
+        columns: [
+          { name: '氏名', required: true },
+          { name: 'ふりがな', required: true },
+          { name: '関係', required: true },
+          {
+            name: '郵便番号',
+            required: true,
+            pattern: '^\\d{3}-?\\d{4}$',
+            patternHint: '郵便番号は「123-4567」の形でご記入ください',
+          },
+          { name: '住所', required: true },
+        ],
+        uniqueBy: ['氏名'],
+      },
+    },
   ],
   [
     '102',
@@ -107,8 +125,17 @@ const shift = (date, days) =>
   new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 const uuid = (prefix, n) => `${prefix}-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
-export async function seedDemoFixtures(db, encode, password) {
+export async function seedDemoFixtures(db, encode, password, files) {
   const hash = await hashPassword(password);
+  // 提出済みの添付（scenario の file）。アプリの保存（src/lib/d1/files.ts）と同じく object_path は id
+  const attachments = new Map(
+    await Promise.all(
+      DEMO_CASES.flatMap((c) => c.submissions)
+        .filter((s) => s.file)
+        .map(async (s) => [s.file, await readFile(s.file)]),
+    ),
+  );
+  const uploads = [];
   const now = Date.now();
   const today = jstToday();
   const counters = new Map();
@@ -220,14 +247,32 @@ export async function seedDemoFixtures(db, encode, password) {
       );
       if (!submission || !coupleUser) return;
       const reviewed = submission.result !== 'submitted';
+      let fileId = null;
+      if (submission.file) {
+        const bytes = attachments.get(submission.file);
+        fileId = uuid('91111111', caseIndex * 100 + taskIndex + 1);
+        run(
+          'INSERT INTO storage_files(id,case_id,task_id,uploaded_by,object_path,original_filename,mime_type,file_size_bytes) VALUES (?,?,?,?,?,?,?,?)',
+          fileId,
+          caseId,
+          taskId,
+          coupleUser,
+          fileId,
+          basename(submission.file),
+          'text/csv',
+          bytes.byteLength,
+        );
+        uploads.push(files.put(fileId, bytes));
+      }
       run(
-        'INSERT INTO task_submissions(id,case_task_id,submitted_by,submission_type,text_value,selected_value,review_status,planner_feedback,reviewed_by,reviewed_at,submitted_at,is_latest) VALUES (?,?,?,?,?,?,?,?,?,?,?,1)',
+        'INSERT INTO task_submissions(id,case_task_id,submitted_by,submission_type,text_value,selected_value,file_id,review_status,planner_feedback,reviewed_by,reviewed_at,submitted_at,is_latest) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)',
         uuid('81111111', caseIndex * 100 + taskIndex + 1),
         taskId,
         coupleUser,
         t.submissionFormat,
         encode(submission.text ?? null),
         submission.selected ?? null,
+        fileId,
         submission.result,
         encode(submission.feedback ?? null),
         reviewed ? PLANNER_ID : null,
@@ -238,6 +283,8 @@ export async function seedDemoFixtures(db, encode, password) {
   });
   for (const [year, value] of counters)
     run('INSERT INTO case_counters(venue_id,year,value) VALUES (?,?,?)', VENUE_ID, year, value);
+  // 添付の保存を先に確かめてから D1 を確定する（R2 だけ失敗して D1 が残ると、再実行で投入が飛ばされる）
+  await Promise.all(uploads);
   await db.batch(statements);
   return { planner: DEMO_PLANNER.email, couple: coupleEmail };
 }

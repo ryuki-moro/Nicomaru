@@ -24,10 +24,28 @@
  */
 import { hostname } from 'node:os';
 
-import { AI_JOB_TYPES, validateAiOutput, type AiJobType } from '../src/lib/ai/schemas';
+import { z } from 'zod';
+
+import {
+  AI_JOB_TYPES,
+  AI_OUTPUT_SCHEMAS,
+  validateAiOutput,
+  type AiJobType,
+} from '../src/lib/ai/schemas';
+
+/** 出力スキーマを Ollama の structured outputs に渡す形（文法制約で enum・必須項目を守らせる） */
+function outputFormat(jobType: AiJobType): Record<string, unknown> {
+  const schema: Record<string, unknown> = z.toJSONSchema(AI_OUTPUT_SCHEMAS[jobType], {
+    io: 'output',
+  });
+  delete schema.$schema;
+  return schema;
+}
+/** スキーマ不一致のとき、滞留回収（30分）を待たずにその場で生成し直す回数 */
+const VALIDATION_TRIES = 3;
 
 /** 7-3「ポーリング間隔は30秒」。 */
-const POLL_INTERVAL_MS = 30_000;
+const POLL_INTERVAL_MS = Number(process.env.AI_WORKER_POLL_MS) || 30_000;
 /** ジョブが無いときに待つ時間。空振りでログを埋めないよう間隔は同じにする。 */
 const IDLE_INTERVAL_MS = POLL_INTERVAL_MS;
 
@@ -107,10 +125,15 @@ function log(message: string, extra?: unknown) {
 /**
  * Ollama を呼ぶ（7-6 生成エンジン）。
  *
- * format: 'json' を付けるのは、出力を zod で検証する前提だから（7-6 出力検証）。
+ * format に出力スキーマを渡すのは、出力を zod で検証する前提だから（7-6 出力検証）。
  * 自由文で返させると検証がほぼ必ず落ち、リトライを空振りさせる。
  */
-async function callOllama(model: string, prompt: string, input: string): Promise<unknown> {
+async function callOllama(
+  model: string,
+  prompt: string,
+  input: string,
+  format: Record<string, unknown>,
+): Promise<unknown> {
   const endpoint = process.env.OLLAMA_ENDPOINT ?? 'http://localhost:11434';
   const apiKey = process.env.OLLAMA_API_KEY;
 
@@ -123,8 +146,9 @@ async function callOllama(model: string, prompt: string, input: string): Promise
     body: JSON.stringify({
       model,
       prompt: `${prompt}\n\n---\n${input}`,
-      format: 'json',
+      format,
       stream: false,
+      ...(process.env.OLLAMA_KEEP_ALIVE ? { keep_alive: process.env.OLLAMA_KEEP_ALIVE } : {}),
       options: { temperature: 0.2 },
     }),
   });
@@ -175,10 +199,15 @@ async function processJob(queue: Queue, job: ClaimedJob): Promise<void> {
   }
 
   try {
-    const raw = await callOllama(model, job.prompt_text, buildInput(job));
-
     // 7-6「ワーカーはLLM出力をJSONスキーマで検証してから ai_jobs.output に保存する」
-    const validated = validateAiOutput(job.job_type, raw);
+    const format = outputFormat(job.job_type);
+    let validated = validateAiOutput(job.job_type, null);
+    for (let attempt = 1; attempt <= VALIDATION_TRIES; attempt++) {
+      const raw = await callOllama(model, job.prompt_text, buildInput(job), format);
+      validated = validateAiOutput(job.job_type, raw);
+      if (validated.ok) break;
+      log('出力がスキーマに合いませんでした', { id: job.id, attempt, error: validated.error });
+    }
     if (!validated.ok) {
       // 検証失敗はリトライの対象（上限を超えたら滞留回収が failed にする）。
       // ここで failed を書かずに processing のまま抜けると、

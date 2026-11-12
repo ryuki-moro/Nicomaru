@@ -14,7 +14,8 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   AiHeading,
@@ -62,8 +63,19 @@ export function DefectPanel({
   aiAvailable,
   lastSeenAt,
 }: Props) {
+  const router = useRouter();
   const { job, setJob, track, timedOut } = useAiJob(initialJob);
   const [pending, setPending] = useState(false);
+  // AIの指摘が出たら描画し直し、差し戻し文の下書き（ReviewForm）の材料に加える。
+  // ジョブごとに一度だけ（描画時点で完了済みのジョブは材料に入っているので対象外）
+  const jobId = job?.id;
+  const status = job?.status;
+  const refreshedFor = useRef(initialJob?.status === 'done' ? initialJob.id : null);
+  useEffect(() => {
+    if (status !== 'done' || !jobId || refreshedFor.current === jobId) return;
+    refreshedFor.current = jobId;
+    router.refresh();
+  }, [jobId, status, router]);
   const [error, setError] = useState<string | null>(null);
 
   // 検査対象外の宿題では、この欄自体を出さない（テキスト提出に不備チェックは要らない）。
@@ -101,6 +113,8 @@ export function DefectPanel({
     try {
       await api.patch(`/api/ai/jobs/${job.id}`, { decision });
       setJob({ ...job, status: decision });
+      // 破棄した指摘を下書きの材料から外す
+      router.refresh();
     } catch (cause) {
       setError(
         cause instanceof ApiCallError
