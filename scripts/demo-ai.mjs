@@ -1,4 +1,4 @@
-// npm run demo:ai — npm run demo（3105）へAIワーカーをつなぐ。Ollama は同じPCで起動しておく。
+// npm run demo:ai — npm run demo（3105）へAIワーカーをつなぐ。Ollama の場所は OLLAMA_ENDPOINT（既定は同じPC）。
 // トークンは demo と同じ秘密値から導くので、手で設定する値は無い（モデルは OLLAMA_MODEL で変更可）。
 import { spawn } from 'node:child_process';
 import { hkdfSync } from 'node:crypto';
@@ -13,8 +13,12 @@ try {
 }
 const endpoint = process.env.OLLAMA_ENDPOINT ?? 'http://localhost:11434';
 const model = process.env.OLLAMA_MODEL ?? 'gemma3:12b';
+// 別のPCのOllamaを鍵付きで公開している場合（ワーカー本体と同じ OLLAMA_API_KEY を使う）
+const headers = process.env.OLLAMA_API_KEY
+  ? { authorization: `Bearer ${process.env.OLLAMA_API_KEY}` }
+  : {};
 try {
-  const { models } = await (await fetch(`${endpoint}/api/tags`)).json();
+  const { models } = await (await fetch(`${endpoint}/api/tags`, { headers })).json();
   if (!models.some((m) => m.name === model || m.name === `${model}:latest`)) {
     console.error(
       `Ollama に ${model} がありません。ollama pull ${model} を実行するか、OLLAMA_MODEL で入っているモデルを指定してください。`,
@@ -23,7 +27,9 @@ try {
     process.exit(1);
   }
 } catch {
-  console.error(`Ollama（${endpoint}）につながりません。Ollama を起動してください。`);
+  console.error(
+    `Ollama（${endpoint}）につながりません。起動・URL・OLLAMA_API_KEY を確認してください。`,
+  );
   process.exit(1);
 }
 // デモ中にモデルが外れて最初の依頼だけ遅くならないよう、先に読み込んで保持させる
@@ -31,6 +37,7 @@ const keepAlive = process.env.OLLAMA_KEEP_ALIVE ?? '60m';
 console.log(`${model} を読み込んでいます…`);
 const loaded = await fetch(`${endpoint}/api/generate`, {
   method: 'POST',
+  headers,
   body: JSON.stringify({ model, keep_alive: keepAlive }),
 }).catch(() => null);
 if (!loaded?.ok) console.warn('モデルの事前読み込みに失敗しました（最初の依頼が遅くなります）。');
