@@ -32,13 +32,22 @@ try {
   );
   process.exit(1);
 }
-// デモ中にモデルが外れて最初の依頼だけ遅くならないよう、先に読み込んで保持させる
+// デモ中にモデルが外れて最初の依頼だけ遅くならないよう、先に読み込んで保持させる。
+// プロンプト無しの読み込みは文脈長などの設定が本番の依頼と異なり読み込み直しになりうるため、
+// 本番と同じ形の短い生成を1回流す
 const keepAlive = process.env.OLLAMA_KEEP_ALIVE ?? '60m';
 console.log(`${model} を読み込んでいます…`);
 const loaded = await fetch(`${endpoint}/api/generate`, {
   method: 'POST',
-  headers,
-  body: JSON.stringify({ model, keep_alive: keepAlive }),
+  headers: { 'content-type': 'application/json', ...headers },
+  body: JSON.stringify({
+    model,
+    prompt: '{"ok": true} とだけ返してください。',
+    format: 'json',
+    stream: false,
+    options: { temperature: 0.2 },
+    keep_alive: keepAlive,
+  }),
 }).catch(() => null);
 if (!loaded?.ok) console.warn('モデルの事前読み込みに失敗しました（最初の依頼が遅くなります）。');
 const child = spawn(process.execPath, ['--import', 'tsx', 'worker/ai-worker.ts'], {
