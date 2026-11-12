@@ -6,10 +6,14 @@
 // Cookie はホスト名ごとに保持されるので、同じブラウザでも互いのログインを上書きしない。
 // 中継はこのPCのループバックだけで待ち受け、アプリ側（本番の画面・API）には手を入れない。
 import { execFileSync, spawn } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createServer, request as httpRequest } from 'node:http';
 import { connect } from 'node:net';
 import { createInterface } from 'node:readline';
+
+import { parseScript } from './demo-script.mjs';
 
 const APP = 'http://127.0.0.1:3105';
 const APP_HOST = '127.0.0.1:3105';
@@ -19,9 +23,19 @@ const ROLE_HOST = {
   [`p.demo.localhost:${PORT}`]: 'planner',
   [`c.demo.localhost:${PORT}`]: 'couple',
 };
-const HOST_OF = { planner: `p.demo.localhost:${PORT}`, couple: `c.demo.localhost:${PORT}` };
 
-const state = { phase: 'starting', ai: 'starting', coupleUrl: '/mypage', scenes: null };
+const DOCS = 'docs/発表/AIデモ';
+const PID_FILE = '.wrangler/demo-all.pid';
+const OPEN = process.argv.includes('--open');
+const workerArgs = process.argv.slice(2).filter((arg) => arg !== '--open');
+const state = {
+  phase: 'starting',
+  ai: 'starting',
+  coupleUrl: '/mypage',
+  scenes: null,
+  // 予備・説明用の画像（画面/ の 01_… など）
+  slides: (await readdir(`${DOCS}/画面`).catch(() => [])).filter((f) => f.endsWith('.png')),
+};
 let app;
 let worker;
 
@@ -91,8 +105,10 @@ async function warmUp() {
   const caseId = scenes.meeting.split('/')[2];
   const visit = async (cookie, path) =>
     fetch(`${APP}${path}`, { headers: { cookie }, redirect: 'manual' }).catch(() => undefined);
-  const planner = cookieHeader(await demoSignIn('planner'));
-  const couple = cookieHeader(await demoSignIn('couple'));
+  sessions.planner = await demoSignIn('planner');
+  sessions.couple = await demoSignIn('couple');
+  const planner = cookieHeader(sessions.planner);
+  const couple = cookieHeader(sessions.couple);
   for (const path of [
     scenes.meeting,
     scenes.guests,
@@ -122,7 +138,7 @@ async function bootApp() {
 }
 
 function startWorker() {
-  const child = spawn(process.execPath, ['scripts/demo-ai.mjs', ...process.argv.slice(2)], {
+  const child = spawn(process.execPath, ['scripts/demo-ai.mjs', ...workerArgs], {
     stdio: ['ignore', 'pipe', 'pipe'],
     detached: process.platform !== 'win32',
   });
@@ -156,6 +172,11 @@ function forwardHeaders(req) {
   return headers;
 }
 
+/**
+ * 役割ごとに1つのログインを使い回す（ログインは1分10回までに制限されているため、開くたびにログインしない）。
+ * やり直しではデータごと消えるので、warmUp で取り直す。
+ */
+const sessions = { planner: [], couple: [] };
 const loginQueue = { planner: Promise.resolve(), couple: Promise.resolve() };
 
 /** /__demo/login?next=/path — ログイン済みならそのまま、未ログインならデモのアカウントでログインして開く */
@@ -165,11 +186,22 @@ async function handleLogin(req, res, role, url) {
   if (!next.startsWith('/') || next.startsWith('//') || next.includes('\\'))
     return send(res, 400, 'next が不正です');
   const run = loginQueue[role].then(async () => {
-    const current = await fetch(`${APP}${next}`, {
-      headers: { cookie: req.headers.cookie ?? '' },
-      redirect: 'manual',
-    }).catch(() => undefined);
-    const setCookies = current?.status === 200 ? [] : await demoSignIn(role);
+    const valid = async (cookie) =>
+      (
+        await fetch(`${APP}${next}`, { headers: { cookie }, redirect: 'manual' }).catch(
+          () => undefined,
+        )
+      )?.status === 200;
+    let setCookies = [];
+    if (!(await valid(req.headers.cookie ?? ''))) {
+      if (!(await valid(cookieHeader(sessions[role])))) {
+        sessions[role] = await demoSignIn(role);
+        // ログインしても開けない画面で、/login との往復を繰り返さない
+        if (!(await valid(cookieHeader(sessions[role]))))
+          throw new Error(`この画面（${next}）はデモのアカウントで開けません`);
+      }
+      setCookies = sessions[role];
+    }
     res.writeHead(302, { location: next, 'set-cookie': setCookies, 'cache-control': 'no-store' });
     res.end();
   });
@@ -194,6 +226,20 @@ function proxy(req, res, role) {
     { method: req.method, headers: forwardHeaders(req) },
     (response) => {
       const headers = { ...response.headers };
+      // ログインが切れて /login へ戻された画面は、ログインし直して同じ画面を開く（セッションは1時間で切れる）
+      if (
+        req.method === 'GET' &&
+        req.headers['sec-fetch-mode'] === 'navigate' &&
+        headers.location &&
+        new URL(headers.location, APP).pathname === '/login'
+      ) {
+        response.resume();
+        res.writeHead(302, {
+          location: `/__demo/login?next=${encodeURIComponent(req.url)}`,
+          'cache-control': 'no-store',
+        });
+        return res.end();
+      }
       if (headers.location?.startsWith(APP))
         headers.location = `http://${req.headers.host}${headers.location.slice(APP.length)}`;
       // 埋め込みは左右並べの画面からだけ許す（ほかのサイトに埋め込まれて操作させられないように）
@@ -225,8 +271,28 @@ function send(res, status, body, type = 'text/plain; charset=utf-8') {
 }
 
 async function handleHome(req, res, url) {
-  if (url.pathname === '/' && req.method === 'GET')
-    return send(res, 200, page(), 'text/html; charset=utf-8');
+  const html = (file) =>
+    readFile(file, 'utf8').then((body) => send(res, 200, body, 'text/html; charset=utf-8'));
+  if (req.method === 'GET' && url.pathname === '/') return html('scripts/demo-presenter.html');
+  if (req.method === 'GET' && url.pathname === '/audience')
+    return html('scripts/demo-audience.html');
+  if (req.method === 'GET' && url.pathname === '/__demo/script')
+    return send(
+      res,
+      200,
+      JSON.stringify(parseScript(await readFile(`${DOCS}/発表台本.md`, 'utf8'))),
+      'application/json',
+    );
+  if (req.method === 'GET' && url.pathname.startsWith('/__demo/slide/')) {
+    let name = '';
+    try {
+      name = decodeURIComponent(url.pathname.slice('/__demo/slide/'.length));
+    } catch {}
+    // 一覧にある名前だけ返す（パスをたどらせない）
+    if (!state.slides.includes(name)) return send(res, 404, 'not found');
+    res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store' });
+    return res.end(await readFile(`${DOCS}/画面/${name}`));
+  }
   if (url.pathname === '/__demo/state' && req.method === 'GET')
     return send(res, 200, JSON.stringify(state), 'application/json');
   if (url.pathname === '/__demo/reset' && req.method === 'POST') {
@@ -241,7 +307,12 @@ const server = createServer((req, res) => {
   const host = req.headers.host ?? '';
   const url = new URL(req.url ?? '/', 'http://x');
   // 想定したホスト名以外は受けない（DNS rebinding 対策）
-  if (host === HOME) return void handleHome(req, res, url);
+  if (host === HOME)
+    return void handleHome(req, res, url).catch((error) => {
+      console.error('[demo] 画面の処理に失敗:', error.message);
+      if (!res.headersSent) send(res, 500, 'error');
+      else res.end();
+    });
   const role = ROLE_HOST[host];
   if (!role) return send(res, 404, 'not found');
   if (url.pathname === '/__demo/login') return void handleLogin(req, res, role, url);
@@ -263,97 +334,6 @@ server.on('upgrade', (req, socket, head) => {
   upstream.on('error', () => socket.destroy());
   socket.on('error', () => upstream.destroy());
 });
-
-function page() {
-  const login = (role, next) =>
-    `http://${HOST_OF[role]}/__demo/login?next=${encodeURIComponent(next)}`;
-  const scenes = state.scenes ?? {};
-  const tabs = [
-    ['meeting', '① 打ち合わせ記録'],
-    ['guests', '② ゲストリスト'],
-    ['bgm', '③ BGMリクエスト'],
-  ];
-  return `<!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><title>AIデモ（左右並べ）</title>
-<style>
-  :root { color-scheme: light; --bg:#f4f1ec; --bar:#2b2622; --ink:#fff; --accent:#c8956d; }
-  * { box-sizing: border-box; }
-  body { margin:0; height:100vh; display:flex; flex-direction:column; background:var(--bg);
-         font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", sans-serif; }
-  header { display:flex; gap:8px; align-items:center; padding:8px 12px; background:var(--bar); color:var(--ink); }
-  header button { font:inherit; font-size:14px; padding:6px 12px; border-radius:6px; border:1px solid #6b625b;
-                  background:transparent; color:var(--ink); cursor:pointer; }
-  header button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#1d1915; font-weight:700; }
-  header .spacer { flex:1; }
-  #status { font-size:13px; opacity:.85; }
-  main { flex:1; display:flex; gap:16px; padding:12px; min-height:0; }
-  #left { flex:1; position:relative; border-radius:8px; overflow:hidden; background:#fff; box-shadow:0 1px 4px #0002; }
-  #left iframe { position:absolute; inset:0; width:100%; height:100%; border:0; visibility:hidden; }
-  #left iframe.active { visibility:visible; }
-  #right { width:430px; display:flex; flex-direction:column; align-items:center; gap:6px; padding:0 12px; }
-  #right .label { font-size:13px; color:#5c534c; }
-  #phone { width:390px; flex:1; border:10px solid #1d1915; border-radius:28px; overflow:hidden; background:#fff; }
-  #phone iframe { width:100%; height:100%; border:0; }
-</style></head><body>
-<header>
-  ${tabs.map(([key, label], i) => `<button data-scene="${key}" aria-pressed="${i === 0}">${label}</button>`).join('')}
-  <span class="spacer"></span>
-  <span id="status"></span>
-  <button id="refresh" title="新郎新婦の画面を開き直します">新郎新婦の画面を更新</button>
-  <button id="reset" title="データを初期状態に戻します（AIワーカーはそのまま）">最初からやり直す</button>
-</header>
-<main>
-  <div id="left">
-    ${tabs.map(([key], i) => `<iframe title="プランナー ${key}" data-scene="${key}" data-src="${login('planner', scenes[key] ?? '/')}" class="${i === 0 ? 'active' : ''}"></iframe>`).join('')}
-  </div>
-  <div id="right"><span class="label">新郎新婦のスマホ</span>
-    <div id="phone"><iframe id="couple" title="新郎新婦"></iframe></div>
-  </div>
-</main>
-<script>
-  const frames = [...document.querySelectorAll('#left iframe')];
-  const couple = document.getElementById('couple');
-  const status = document.getElementById('status');
-  const coupleLogin = (next) => ${JSON.stringify(`http://${HOST_OF.couple}/__demo/login?next=`)} + encodeURIComponent(next);
-  // 同じ人の3画面を順に開く（同時に開くとログインが重なるため）
-  function loadAll() {
-    frames.reduce((p, f) => p.then(() => new Promise((done) => { f.onload = done; f.src = f.dataset.src; })), Promise.resolve())
-      .then(() => { couple.src = coupleLogin('/mypage'); });
-  }
-  document.querySelectorAll('header [data-scene]').forEach((b) => b.onclick = () => {
-    document.querySelectorAll('header [data-scene]').forEach((x) => x.setAttribute('aria-pressed', x === b));
-    frames.forEach((f) => f.classList.toggle('active', f.dataset.scene === b.dataset.scene));
-  });
-  async function refreshCouple() {
-    const s = await fetch('/__demo/state').then((r) => r.json());
-    couple.src = coupleLogin(s.coupleUrl);
-    dirty = false;
-  }
-  document.getElementById('refresh').onclick = refreshCouple;
-  // 左を操作したあと右へ目を移したら（マウスが右に入ったら）、右を自動で開き直す
-  let dirty = false;
-  setInterval(() => { if (frames.includes(document.activeElement)) dirty = true; }, 300);
-  document.getElementById('right').addEventListener('pointerenter', () => { if (dirty) refreshCouple(); });
-  document.getElementById('reset').onclick = async () => {
-    if (!confirm('データを初期状態に戻します。よろしいですか？')) return;
-    await fetch('/__demo/reset', { method: 'POST' });
-    status.textContent = 'やり直し中…';
-    let phase = 'resetting';
-    while (phase === 'resetting') {
-      await new Promise((r) => setTimeout(r, 1000));
-      phase = await fetch('/__demo/state').then((r) => r.json()).then((s) => s.phase).catch(() => 'resetting');
-    }
-    if (phase === 'ready') location.reload();
-    else alert('やり直しに失敗しました。demo:all のターミナルを確認し、起動し直してください。');
-  };
-  setInterval(async () => {
-    const s = await fetch('/__demo/state').then((r) => r.json()).catch(() => null);
-    if (!s) { status.textContent = 'demo:all が止まっています'; return; }
-    status.textContent = s.phase === 'failed' ? 'やり直しに失敗（ターミナルを確認）' : s.phase !== 'ready' ? 'やり直し中…' : s.ai === 'ready' ? 'AI：接続中' : 'AI：未接続（手入力で続けられます）';
-  }, 2000);
-  loadAll();
-</script></body></html>`;
-}
 
 // --- 全体の流れ ---
 
@@ -377,10 +357,34 @@ function reset() {
 function shutdown() {
   killTree(app);
   killTree(worker);
-  process.exit(0);
+  rm(PID_FILE, { force: true }).finally(() => process.exit(0));
+}
+
+/** 発表者の画面を、ふだんのブラウザと分けた Edge のアプリ表示で開く（ブックマークや拡張・ログインを映さない） */
+function openPresenter() {
+  const url = `http://${HOME}/`;
+  if (process.platform !== 'win32') return log(`ブラウザで ${url} を開いてください`);
+  const profile = join(process.env.LOCALAPPDATA ?? tmpdir(), 'nicomaru-demo-edge');
+  spawn(
+    'cmd',
+    [
+      '/c',
+      'start',
+      '',
+      'msedge',
+      `--app=${url}`,
+      `--user-data-dir=${profile}`,
+      '--start-maximized',
+      '--no-first-run',
+      '--no-default-browser-check',
+    ],
+    { stdio: 'ignore', detached: true },
+  ).unref();
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+// ウィンドウを閉じたとき（Windows は SIGHUP が届く）も子プロセスを残さない
+process.on('SIGHUP', shutdown);
 
 await new Promise((resolve, reject) => {
   server.once('error', (error) =>
@@ -401,6 +405,9 @@ createServer(server.listeners('request')[0])
   .on('error', () => undefined)
   .listen(PORT, '::1');
 
+// AIデモを終わる.bat がこのプロセスごと止めるための目印
+await mkdir('.wrangler', { recursive: true });
+await writeFile(PID_FILE, String(process.pid));
 try {
   log('データを初期化してアプリを起動しています…');
   app = startApp();
@@ -423,11 +430,13 @@ try {
 console.log(`
 ==================================================
  ${state.ai === 'ready' ? '準備完了' : '準備完了（ただしAIはつながっていません。上の [AI] の行を確認）'}
- Chrome か Edge で開く: http://${HOME}/
- ・上のボタンで場面を切り替え、右に新郎新婦のスマホ画面が出ます
- ・やり直し: 画面の「最初からやり直す」か、ここで r と Enter
- ・終了: Ctrl+C
+ 発表者の画面（Chrome か Edge）: http://${HOME}/
+ ・「投影を開始」で投影用のウィンドウが開く。プロジェクター側へ移してダブルクリックで全画面
+ ・投影にはデモの部分だけが映り、右の台本と上のボタンは映らない
+ ・やり直し: 画面の「やり直す」か、ここで r と Enter
+ ・終了: Ctrl+C（または AIデモを終わる.bat）
 ==================================================`);
+if (OPEN) openPresenter();
 createInterface({ input: process.stdin }).on('line', (line) => {
   if (line.trim() === 'r') reset();
   if (line.trim() === 'q') shutdown();
