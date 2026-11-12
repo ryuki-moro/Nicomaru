@@ -7,10 +7,17 @@
  * ログイン中に「ログイン画面へ戻る」だけを出すと、/login が着地点へ送り返すので
  * 押しても前に進めず、出口がなくなっていた（docs/ui-review/p2 高-3）。
  *
+ * ログイン中は、役割に合ったヘッダーとナビも出す（staff はヘッダー内の StaffNav、couple は下部の CoupleNav）。
+ * /error と not-found はどのレイアウト（(staff)／(couple)）にも属さないので、ここで同じ外枠を組む。
+ * 出口がボタン1つだけにならず、ログアウトやほかの画面へもそのまま移れる。
+ * 未ログインのときはこれまでどおり、外枠なしで中央に出す。
+ *
  * page.tsx から default 以外を export できない（Next.js の型検証）ため、ページではなく部品として置く。
  */
 import Link from 'next/link';
 
+import { CoupleNav } from '@/components/couple/CoupleNav';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { landingLabelFor, landingPathFor, resolveAppUser } from '@/lib/auth/session';
 
 export interface ErrorMessage {
@@ -25,26 +32,37 @@ export async function ErrorScreen({ message }: { message: ErrorMessage }) {
   const resolved = await resolveAppUser();
   const user = resolved.state === 'active' ? resolved.user : null;
 
-  return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-bg">
-      <div className="screen flex flex-col gap-4">
-        <div className="card flex flex-col gap-2 text-center">
-          <h1 className="text-title font-bold text-text-primary">{message.heading}</h1>
-          {/* 要件: 責められていると感じさせず、次の操作が分かる文言にする */}
-          <p className="text-label text-text-secondary">
-            {user ? message.signedIn : message.signedOut}
-          </p>
-        </div>
-        {user ? (
-          <Link href={landingPathFor(user.role)} className="btn-primary text-center">
-            {landingLabelFor(user.role)}へ戻る
-          </Link>
-        ) : (
-          <Link href="/login" className="btn-primary text-center">
-            ログイン画面へ戻る
-          </Link>
-        )}
+  const body = (
+    <div className="screen flex flex-col gap-4">
+      <div className="card flex flex-col gap-2 text-center">
+        <h1 className="text-title font-bold text-text-primary">{message.heading}</h1>
+        {/* 要件: 責められていると感じさせず、次の操作が分かる文言にする */}
+        <p className="text-label text-text-secondary">
+          {user ? message.signedIn : message.signedOut}
+        </p>
       </div>
+      {user ? (
+        <Link href={landingPathFor(user.role)} className="btn-primary text-center">
+          {landingLabelFor(user.role)}へ戻る
+        </Link>
+      ) : (
+        <Link href="/login" className="btn-primary text-center">
+          ログイン画面へ戻る
+        </Link>
+      )}
+    </div>
+  );
+
+  if (!user) {
+    return <div className="flex min-h-dvh flex-col items-center justify-center bg-bg">{body}</div>;
+  }
+
+  const couple = user.role === 'couple';
+  return (
+    <div className={`flex min-h-dvh flex-col bg-bg ${couple ? 'pb-20' : ''}`}>
+      <AppHeader role={user.role} displayName={user.displayName} minimal={couple} />
+      <main className="flex flex-1 flex-col items-center justify-center py-8">{body}</main>
+      {couple && <CoupleNav />}
     </div>
   );
 }
