@@ -184,6 +184,8 @@ export async function seedDemoFixtures(db, encode, password, files) {
     );
 
   let coupleEmail;
+  // npm run demo:all が直接開く場面（打ち合わせ記録・ゲストリスト・BGMリクエストの確認）
+  const scenes = {};
   DEMO_CASES.forEach((demo, caseIndex) => {
     const caseId = uuid('51111111', caseIndex + 1);
     const weddingDate = shift(today, demo.daysUntilWedding);
@@ -200,6 +202,7 @@ export async function seedDemoFixtures(db, encode, password, files) {
       weddingDate,
       demo.guestCount,
     );
+    if (demo.key === DEMO_COUPLE_KEY) scenes.meeting = `/cases/${caseId}/meeting-notes?memo=demo`;
     let coupleUser;
     for (const role of ['groom', 'bride']) {
       const partner = demo[role];
@@ -246,6 +249,8 @@ export async function seedDemoFixtures(db, encode, password, files) {
         submission?.result === 'confirmed' ? new Date(now).toISOString() : null,
       );
       if (!submission || !coupleUser) return;
+      const submissionId = uuid('81111111', caseIndex * 100 + taskIndex + 1);
+      if (demo.key === DEMO_COUPLE_KEY) scenes[t.title] = `/submissions/${submissionId}`;
       const reviewed = submission.result !== 'submitted';
       let fileId = null;
       if (submission.file) {
@@ -266,7 +271,7 @@ export async function seedDemoFixtures(db, encode, password, files) {
       }
       run(
         'INSERT INTO task_submissions(id,case_task_id,submitted_by,submission_type,text_value,selected_value,file_id,review_status,planner_feedback,reviewed_by,reviewed_at,submitted_at,is_latest) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)',
-        uuid('81111111', caseIndex * 100 + taskIndex + 1),
+        submissionId,
         taskId,
         coupleUser,
         t.submissionFormat,
@@ -286,5 +291,13 @@ export async function seedDemoFixtures(db, encode, password, files) {
   // 添付の保存を先に確かめてから D1 を確定する（R2 だけ失敗して D1 が残ると、再実行で投入が飛ばされる）
   await Promise.all(uploads);
   await db.batch(statements);
-  return { planner: DEMO_PLANNER.email, couple: coupleEmail };
+  return {
+    planner: DEMO_PLANNER.email,
+    couple: coupleEmail,
+    scenes: {
+      meeting: scenes.meeting,
+      guests: scenes['ゲストリスト提出'],
+      bgm: scenes['BGMリクエスト'],
+    },
+  };
 }
