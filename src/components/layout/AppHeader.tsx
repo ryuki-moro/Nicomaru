@@ -43,11 +43,20 @@ export function AppHeader({ role, displayName, minimal = false }: Props) {
             : 'mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3'
         }
       >
-        <Link href="/" prefetch={false} className="text-logo font-bold text-text-primary">
+        {/* スマートフォン幅で「にこまる」やログアウトが2行に割れないよう、ロゴとボタンは折り返さず、
+            縮むのは利用者名だけにする（長い名前は省略し、全体は title で読める） */}
+        <Link
+          href="/"
+          prefetch={false}
+          className="shrink-0 whitespace-nowrap text-logo font-bold text-text-primary"
+        >
           にこまる
         </Link>
-        <div className="flex items-center gap-3">
-          <span className="text-caption text-text-muted">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className="min-w-0 truncate text-caption text-text-muted"
+            title={`${ROLE_LABEL[role]} / ${displayName}`}
+          >
             {ROLE_LABEL[role]} / {displayName}
           </span>
           {role === 'system_admin' && demoMailbox() && (
