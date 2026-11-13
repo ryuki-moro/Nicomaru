@@ -12,6 +12,7 @@
 import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { InstallGuide } from '@/components/InstallGuide';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { TaskStatusBadge } from '@/components/ui/StatusBadge';
 import { requirePageUser } from '@/lib/auth/session';
 import {
   PARTNER_ROLES,
@@ -132,7 +133,13 @@ export default async function MyPage() {
                     prefetch={false}
                     className="flex items-center gap-3 rounded-card bg-field-filled-bg px-4 py-[13px]"
                   >
-                    <span className="flex-1">
+                    <span className="min-w-0 flex-1">
+                      {/* 差し戻しはいちばん急ぐので、色だけに頼らず文字つきのバッジで示す */}
+                      {task.status === 'needs_fix' && (
+                        <span className="mb-1 block">
+                          <TaskStatusBadge status={task.status} />
+                        </span>
+                      )}
                       <span className="block text-label text-text-muted">
                         {formatDateJp(task.due_date)}まで
                         {relativeDeadline && (

@@ -300,6 +300,18 @@ describe('nextActions（M01「次にやること」）', () => {
     expect(nextActions(tasks, 10).map((t) => t.id)).toEqual(['b', 'f', 'a', 'z', 'e']);
   });
 
+  it('差し戻し（needs_fix）は期限が後でも先頭に並ぶ', () => {
+    const late = { id: 'y', status: 'needs_fix' as const, dueDate: '2026-09-30', displayOrder: 9 };
+    expect(nextActions([...tasks, late], 10).map((t) => t.id)).toEqual([
+      'b',
+      'y',
+      'f',
+      'a',
+      'z',
+      'e',
+    ]);
+  });
+
   it('既定で最大3件', () => {
     expect(nextActions(tasks)).toHaveLength(3);
   });
