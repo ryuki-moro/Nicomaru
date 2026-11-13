@@ -303,6 +303,7 @@ export default async function CaseDetailPage({
   const incomplete = tasks.filter((task) => INCOMPLETE_TASK_STATUSES.includes(task.status)).length;
   const done = tasks.length - incomplete;
   const archived = row.archived_at !== null;
+  const isAdmin = user.role === 'admin' || user.role === 'system_admin';
   // ゲストの出欠回答とタグ。回答の追加は新郎新婦が配るURLから行い、タグは新郎新婦が付けたものを確認・修正できる。
   const guestBook = await loadD1GuestBook(user, row.id);
   // 席次（#180 配置パターン / #182 承認・差し戻し）。D1版でのみ提供する。
@@ -370,7 +371,7 @@ export default async function CaseDetailPage({
           <Link href={`/cases/${row.id}/edit`} className="btn-ghost">
             編集
           </Link>
-          {(user.role === 'admin' || user.role === 'system_admin') && (
+          {isAdmin && (
             <Link
               href={`/cases/${row.id}/archive`}
               className="btn-ghost border-transparent bg-transparent text-text-muted sm:ml-auto"
