@@ -66,7 +66,9 @@ const config: Config = {
         screen: '28px',
       },
       maxWidth: {
-        phone: '360px',
+        // 既定は 360px。新郎新婦側の入力系の画面だけ、PC幅で --screen-width を 560px に広げる
+        // （(couple)/layout.tsx。ヘッダー・本文・下部ナビが同じ変数を見るので幅がそろう。Issue #207）
+        phone: 'var(--screen-width, 360px)',
       },
     },
   },

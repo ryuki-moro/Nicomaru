@@ -151,7 +151,8 @@ export default async function TaskDetailPage({
     />
   );
   return (
-    <div className="flex flex-col gap-3">
+    // data-wide-form: 入力する画面なので、PC幅では本文を 560px に広げる（(couple)/layout.tsx）
+    <div data-wide-form className="flex flex-col gap-3">
       <header>
         <h1 className="text-title font-bold text-text-primary">{task.title}</h1>
         <div className="mt-2 flex items-center gap-2">
