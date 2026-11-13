@@ -1,9 +1,8 @@
 'use client';
-import { useRouter } from 'next/navigation';
+import { navigateAfterSessionChange } from '@/lib/auth/navigate';
 import { useState } from 'react';
 /** 機能1-5 ログアウト。全画面ヘッダーから呼べるようにする（4-3）。 */
 export function LogoutButton() {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
   return (
     <button
@@ -23,8 +22,8 @@ export function LogoutButton() {
             return;
           }
         }
-        router.replace('/login');
-        router.refresh();
+        // 古いセッションで描画した画面のキャッシュを残さないよう、ページ全体で遷移する（src/lib/auth/navigate.ts）
+        navigateAfterSessionChange('/login');
       }}
     >
       ログアウト

@@ -1,11 +1,11 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { OtpInput } from '@/app/(public)/login/LoginForm';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { api, ApiCallError } from '@/lib/api/client';
+import { navigateAfterSessionChange } from '@/lib/auth/navigate';
 import { INPUT_LIMITS, OTP } from '@/lib/constants';
 
 /** /api/auth/initial-register の応答（6-6-1）。 */
@@ -26,8 +26,6 @@ type OtpPurpose = 'verify' | 'session';
  *   パスワードは設定せず、登録完了と同時にワンタイム認証でセッションを確立する（6-3-1）。
  */
 export function RegisterForm({ token }: { token: string }) {
-  const router = useRouter();
-
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -89,8 +87,7 @@ export function RegisterForm({ token }: { token: string }) {
       await sendCode('session');
       return false;
     }
-    router.replace(result.redirectTo);
-    router.refresh();
+    navigateAfterSessionChange(result.redirectTo);
     return true;
   };
 
@@ -123,8 +120,7 @@ export function RegisterForm({ token }: { token: string }) {
         await submitRegistration();
         return;
       }
-      router.replace(result.redirectTo);
-      router.refresh();
+      navigateAfterSessionChange(result.redirectTo);
     } catch (cause) {
       handleFailure(cause, '確認できませんでした。時間をおいて再度お試しください');
     } finally {
