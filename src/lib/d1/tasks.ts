@@ -4,6 +4,7 @@ import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { encryptPii, readPii } from '@/lib/crypto';
 import { badRequest, conflict, forbidden, notFound, unprocessable } from '@/lib/errors';
 import { phaseNameFor } from '@/lib/services/schedule';
+import { MISSING_ANSWER_REASON } from '@/lib/task-display';
 import {
   caseTaskCreateSchema,
   caseTaskUpdateSchema,
@@ -170,6 +171,7 @@ export async function submitTask(
   const file = task.submission_format === 'file' ? (body.fileId ?? null) : null;
   if (
     !body.draft &&
+    task.submission_format !== 'none' &&
     ((task.submission_format === 'text' && !text) ||
       (task.submission_format === 'select' && !selected) ||
       (task.submission_format === 'file' && !file))
@@ -182,7 +184,7 @@ export async function submitTask(
             : task.submission_format === 'select'
               ? 'selectedValue'
               : 'fileId',
-        reason: '回答を入力してください',
+        reason: MISSING_ANSWER_REASON[task.submission_format],
       },
     ]);
   if (
