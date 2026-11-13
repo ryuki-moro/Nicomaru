@@ -16,19 +16,23 @@
  * こちらは「打ち合わせで決まったこと」の記録。宿題の元になるのは後者。
  */
 import { requirePageUser } from '@/lib/auth/session';
+import { demoLogin } from '@/lib/d1/mode';
 import { MeetingNotesPageD1 } from './MeetingNotesPageD1';
 export const dynamic = 'force-dynamic';
 export default async function MeetingNotesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{
     caseId: string;
   }>;
+  searchParams: Promise<{ memo?: string }>;
 }) {
   // couple には打ち合わせ記録そのものを見せない（付録A meeting_notes_all は staff 限定）
   const pageUser = await requirePageUser('planner', 'admin', 'system_admin');
   const { caseId } = await params;
-  {
-    return <MeetingNotesPageD1 caseId={caseId} user={pageUser} />;
-  }
+  // npm run demo だけ: ?memo=demo で、発表用の打ち合わせメモを入力済みにして開く
+  const memo =
+    demoLogin() && (await searchParams).memo === 'demo' ? process.env.DEMO_MEETING_MEMO : undefined;
+  return <MeetingNotesPageD1 caseId={caseId} user={pageUser} initialMemo={memo} />;
 }

@@ -13,9 +13,15 @@ const dir = demo ? '.wrangler/demo' : '.wrangler/app-local';
 const port = demo ? '3105' : '3104';
 const origin = `http://127.0.0.1:${port}`;
 process.env.WRANGLER_SEND_METRICS = 'false';
-if (demo && process.argv.includes('--reset')) await rm(dir, { recursive: true, force: true });
-await mkdir(dir, { recursive: true });
 const secretFile = `${dir}/auth-secret`;
+if (demo && process.argv.includes('--reset')) {
+  // 秘密値は残す。AIワーカーのトークンが変わらず、やり直してもワーカーを起動し直さずに済む
+  const kept = await readFile(secretFile, 'utf8').catch(() => null);
+  await rm(dir, { recursive: true, force: true, maxRetries: 10 });
+  await mkdir(dir, { recursive: true });
+  if (kept) await writeFile(secretFile, kept);
+}
+await mkdir(dir, { recursive: true });
 let secret;
 try {
   secret = await readFile(secretFile, 'utf8');
@@ -32,6 +38,10 @@ const demoPassword = Buffer.from(
 process.env.PII_HMAC_KEY = Buffer.from(
   hkdfSync('sha256', Buffer.from(secret, 'hex'), '', 'nicomaru-local-hmac', 32),
 ).toString('base64');
+// AIワーカー（npm run demo:ai）と同じ値を秘密値から導く。外部へは出ない
+process.env.AI_WORKER_TOKEN = Buffer.from(
+  hkdfSync('sha256', Buffer.from(secret, 'hex'), '', 'nicomaru-local-ai-worker', 32),
+).toString('base64url');
 execFileSync(
   process.execPath,
   [
@@ -56,7 +66,7 @@ try {
   const existing = await platform.env.DB.prepare('SELECT count(*) AS n FROM venues').first();
   if (!existing.n) {
     const fixture = demo
-      ? await seedDemoFixtures(platform.env.DB, encryptPii, demoPassword)
+      ? await seedDemoFixtures(platform.env.DB, encryptPii, demoPassword, platform.env.FILES)
       : await seedAppFixtures(platform.env.DB, encryptPii);
     await writeFile(`${dir}/credentials.json`, JSON.stringify(fixture, null, 2), { flag: 'wx' });
   }
@@ -88,6 +98,10 @@ const child = spawn(
         DEMO_PLANNER_EMAIL: demoLogin.planner,
         DEMO_COUPLE_EMAIL: demoLogin.couple,
         DEMO_LOGIN_PASSWORD: demoPassword,
+        // 打ち合わせ記録を ?memo=demo で開くと、メモ欄にこの文面が入った状態になる
+        DEMO_MEETING_MEMO: await readFile('docs/発表/AIデモ/打ち合わせメモ.txt', 'utf8').catch(
+          () => '',
+        ),
       }),
     },
   },

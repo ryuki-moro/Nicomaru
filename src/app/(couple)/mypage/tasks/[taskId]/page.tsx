@@ -140,8 +140,9 @@ export default async function TaskDetailPage({
         <p className="card whitespace-pre-wrap text-body text-text-secondary">{task.description}</p>
       )}
 
-      {/* 不備あり時のプランナーコメント。責める調子にならないよう情報バナーで示す（4-3 M01 の方針） */}
-      {task.status === 'needs_fix' && latest?.planner_feedback && (
+      {/* 不備あり・確認済み時のプランナーコメント。責める調子にならないよう情報バナーで示す（4-3 M01 の方針）。
+          確認済みでも任意コメントを書けるため、届かないまま消えないよう同じ形で見せる */}
+      {(task.status === 'needs_fix' || task.status === 'confirmed') && latest?.planner_feedback && (
         <div className="banner-info">
           <span>
             <span className="block font-bold">プランナーからのご連絡</span>
