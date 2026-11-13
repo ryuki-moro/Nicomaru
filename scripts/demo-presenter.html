@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>にこまる AIデモ</title>
+    <!-- npm run demo:all が http://demo.localhost:3106/ で配る発表用の画面。
+         画面を複製して投影しても、この1枚だけで導入〜締めまで進められるようにする（スライドも同じ画面に出す）。 -->
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f1ec;
+        --bar: #2b2622;
+        --ink: #fff;
+        --accent: #c8956d;
+        --muted: #5c534c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg);
+        font-family: system-ui, 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+      }
+      header {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        padding: 6px 10px;
+        background: var(--bar);
+        color: var(--ink);
+        flex-wrap: wrap;
+      }
+      header button {
+        font: inherit;
+        font-size: 13px;
+        padding: 5px 10px;
+        border-radius: 6px;
+        border: 1px solid #6b625b;
+        background: transparent;
+        color: var(--ink);
+        cursor: pointer;
+      }
+      header button[aria-current='step'] {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #1d1915;
+        font-weight: 700;
+      }
+      header button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      #caption {
+        flex: 1;
+        min-width: 200px;
+        text-align: center;
+        font-size: 15px;
+        font-weight: 700;
+      }
+      #status {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+      #body {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+      }
+      main {
+        flex: 1;
+        position: relative;
+        /* Element Capture の対象は、独立した重なり順を持つ必要がある */
+        isolation: isolate;
+        min-height: 0;
+        background: var(--bg);
+      }
+      aside {
+        width: 360px;
+        overflow-y: auto;
+        background: #fffdf9;
+        border-left: 1px solid #e2dbd2;
+        padding: 12px 16px;
+        font-size: 15px;
+        line-height: 1.7;
+      }
+      aside h2 {
+        margin: 0 0 6px;
+        font-size: 16px;
+      }
+      aside .op {
+        background: #f4ede4;
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 14px;
+      }
+      aside .cue {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 10px 0 2px;
+      }
+      aside blockquote {
+        margin: 0 0 4px;
+        padding-left: 10px;
+        border-left: 3px solid var(--accent);
+      }
+      aside .next {
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      #timer {
+        font-variant-numeric: tabular-nums;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      #live {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        gap: 16px;
+        padding: 12px;
+      }
+      #left {
+        flex: 1;
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 1px 4px #0002;
+      }
+      #left iframe {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        visibility: hidden;
+      }
+      #left iframe.active {
+        visibility: visible;
+      }
+      #right {
+        width: 430px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 0 12px;
+      }
+      #right .label {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      #phone {
+        width: 390px;
+        flex: 1;
+        border: 10px solid #1d1915;
+        border-radius: 28px;
+        overflow: hidden;
+        background: #fff;
+      }
+      #phone iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+      /* 画面共有は中身が変わったときしか映像を送らないので、投影中は1秒ごとにここを1色だけ変える */
+      #tick {
+        position: absolute;
+        left: 4px;
+        top: 4px;
+        width: 2px;
+        height: 2px;
+        background: #f4f1ec;
+        z-index: 1;
+      }
+      #slide {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+        padding: 16px;
+      }
+      #slide.shown {
+        display: flex;
+      }
+      #slide img {
+        max-width: 100%;
+        max-height: 100%;
+        box-shadow: 0 2px 12px #0003;
+        border-radius: 6px;
+      }
+      #slide .title {
+        font-size: clamp(28px, 4vw, 56px);
+        font-weight: 800;
+        color: #2b2622;
+        text-align: center;
+        line-height: 1.5;
+      }
+      #slide .title small {
+        display: block;
+        font-size: 0.45em;
+        font-weight: 500;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <button id="prev" title="前へ（←）">◀</button>
+      <span id="steps"></span>
+      <button id="next" title="次へ（→）">▶</button>
+      <span id="caption"></span>
+      <button id="backup" title="AIが遅い・止まったときに、この場面の画像を出します">
+        予備の画像
+      </button>
+      <button id="refresh" title="新郎新婦の画面を開き直します">右を更新</button>
+      <button id="reset" title="データを初期状態に戻します（AIワーカーはそのまま）">
+        やり直す
+      </button>
+      <button id="cast" title="投影用のウィンドウを開き、デモの部分だけを映します">
+        投影を開始
+      </button>
+      <span id="timer" title="クリックで0に戻す">0:00</span>
+      <span id="status"></span>
+    </header>
+    <div id="body">
+      <main id="stage">
+        <div id="live">
+          <div id="left"></div>
+          <div id="right">
+            <span class="label">新郎新婦のスマホ</span>
+            <div id="phone"><iframe id="couple" title="新郎新婦"></iframe></div>
+          </div>
+        </div>
+        <div id="slide"></div>
+        <div id="tick"></div>
+      </main>
+      <!-- 台本は手元だけ。投影には main（デモの部分）だけを切り取って映す -->
+      <aside id="script" aria-label="台本"></aside>
+    </div>
+    <script>
+      // 発表台本.md の流れ。slide は docs/発表/AIデモ/画面/ の番号、live は左に出す場面。
+      const STEPS = [
+        {
+          label: '導入',
+          section: '導入',
+          caption: 'プランナーの「読む・書く・訳す」をAIが下ごしらえ',
+          slide: '01',
+        },
+        {
+          label: '第1幕',
+          section: '第1幕',
+          caption: '第1幕　打ち合わせメモ → AIが宿題の案',
+          live: 'meeting',
+          backup: ['02'],
+        },
+        {
+          label: '届いた宿題',
+          section: '第1幕',
+          caption: '新郎新婦のスマホに宿題が届く',
+          slide: '03',
+        },
+        {
+          label: '第2幕',
+          section: '第2幕',
+          caption: '第2幕　ゲストリスト → AIの不備チェック → 差し戻し文',
+          live: 'guests',
+          backup: ['04', '05'],
+        },
+        {
+          label: '届いた連絡',
+          section: '第2幕',
+          caption: '新郎新婦に差し戻しの連絡が届く',
+          slide: '06',
+        },
+        {
+          label: '第3幕',
+          section: '第3幕',
+          caption: '第3幕　英語のBGMリクエスト → AIが翻訳',
+          live: 'bgm',
+          backup: ['07b'],
+        },
+        { label: '届いた返事', section: '第3幕', caption: '新郎様に英語の返事が届く', slide: '08' },
+        { label: '締め', section: '締め', caption: 'AIが下ごしらえして、人が決める', title: true },
+      ];
+      const port = location.port;
+      const loginUrl = (role, next) =>
+        `http://${role === 'planner' ? 'p' : 'c'}.demo.localhost:${port}/__demo/login?next=${encodeURIComponent(next)}`;
+      const $ = (id) => document.getElementById(id);
+      let slides = [];
+      let script = {};
+      let current = 0;
+      let backupIndex = -1;
+      let dirty = false;
+
+      function render() {
+        const step = STEPS[current];
+        document
+          .querySelectorAll('#steps button')
+          .forEach((b, i) => b.setAttribute('aria-current', i === current ? 'step' : 'false'));
+        $('caption').textContent = step.caption;
+        $('prev').disabled = current === 0;
+        $('next').disabled = current === STEPS.length - 1;
+        $('backup').disabled = !step.backup;
+        document
+          .querySelectorAll('#left iframe')
+          .forEach((f) => f.classList.toggle('active', f.dataset.scene === step.live));
+        const slide = $('slide');
+        const image = step.slide ?? (backupIndex >= 0 ? step.backup?.[backupIndex] : undefined);
+        slide.replaceChildren();
+        if (step.title) {
+          slide.innerHTML =
+            '<div class="title">AIが下ごしらえして、人が決める。<small>AIは自宅のPCで動き、ゲストの個人情報は外部のAIサービスへ出ません</small></div>';
+        } else if (image) {
+          const file = slides.find((name) => name.startsWith(`${image}_`));
+          const img = document.createElement('img');
+          img.alt = file ?? image;
+          img.src = `/__demo/slide/${encodeURIComponent(file ?? '')}`;
+          slide.append(img);
+        }
+        slide.classList.toggle('shown', Boolean(step.title || image));
+        renderScript(step);
+      }
+      /** 発表台本.md の該当の節（手元だけに出す） */
+      function renderScript(step) {
+        const aside = $('script');
+        aside.replaceChildren();
+        const add = (tag, className, text) => {
+          const el = document.createElement(tag);
+          if (className) el.className = className;
+          el.textContent = text;
+          aside.append(el);
+        };
+        const section = script[step.section];
+        if (!section) return add('p', 'cue', '発表台本.md にこの場面の節がありません');
+        add('h2', '', section.title);
+        if (section.op) add('div', 'op', `操作：${section.op}`);
+        for (const item of section.items)
+          add(
+            item.type === 'say' ? 'blockquote' : 'p',
+            item.type === 'say' ? '' : 'cue',
+            item.text,
+          );
+        const next = STEPS[current + 1];
+        if (next) add('p', 'next', `次（→）：${next.label}　${next.caption}`);
+      }
+      function go(index) {
+        current = Math.max(0, Math.min(STEPS.length - 1, index));
+        backupIndex = -1;
+        render();
+        // 届いた様子の画像のあとに戻ってきたとき、右が古いままにならないように
+        if (STEPS[current].live && dirty) refreshCouple();
+      }
+      async function refreshCouple() {
+        const s = await fetch('/__demo/state').then((r) => r.json());
+        $('couple').src = loginUrl('couple', s.coupleUrl);
+        dirty = false;
+      }
+
+      async function start() {
+        const s = await fetch('/__demo/state').then((r) => r.json());
+        slides = s.slides ?? [];
+        script = await fetch('/__demo/script')
+          .then((r) => r.json())
+          .catch(() => ({}));
+        $('steps').replaceChildren(
+          ...STEPS.map((step, i) => {
+            const b = document.createElement('button');
+            b.textContent = step.label;
+            b.onclick = () => go(i);
+            return b;
+          }),
+        );
+        const left = $('left');
+        for (const scene of ['meeting', 'guests', 'bgm']) {
+          const f = document.createElement('iframe');
+          f.title = `プランナー ${scene}`;
+          f.dataset.scene = scene;
+          left.append(f);
+        }
+        render();
+        // 同じ人の3画面を順に開く（同時に開くとログインが重なるため）
+        for (const f of left.querySelectorAll('iframe'))
+          await new Promise((done) => {
+            f.onload = done;
+            f.src = loginUrl('planner', s.scenes[f.dataset.scene]);
+          });
+        $('couple').src = loginUrl('couple', '/mypage');
+      }
+
+      // 経過時間（3分の目安）。最初に「次へ」を押したときから数える
+      let startedAt = null;
+      setInterval(() => {
+        const sec = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
+        $('timer').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+        $('timer').style.color = sec >= 180 ? '#ff9b8a' : '';
+      }, 500);
+      $('timer').onclick = () => (startedAt = null);
+      const goNext = () => {
+        startedAt ??= Date.now();
+        go(current + 1);
+      };
+
+      // 投影: このタブを画面共有し、デモの部分（main）だけに切り取って投影用ウィンドウへ渡す。
+      // 切り取れないブラウザでは台本まで映ってしまうので、投影しない。
+      let audience = null;
+      $('cast').onclick = async () => {
+        if (window.demoStream) return audience?.focus();
+        audience = window.open('/audience', 'nicomaru-audience', 'popup,width=1280,height=720');
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: { cursor: 'always', frameRate: 30 },
+            audio: false,
+            preferCurrentTab: true,
+            selfBrowserSurface: 'include',
+          });
+          const [track] = stream.getVideoTracks();
+          // 新しい Chrome・Edge は要素だけを映す（Element Capture）。無ければ範囲の切り取り（Region Capture）
+          if (window.RestrictionTarget && track.restrictTo)
+            await track.restrictTo(await RestrictionTarget.fromElement($('stage')));
+          else if (window.CropTarget && track.cropTo)
+            await track.cropTo(await CropTarget.fromElement($('stage')));
+          else {
+            track.stop();
+            audience?.close();
+            return alert(
+              'このブラウザでは台本を隠して投影できません。Chrome か Edge を使ってください。',
+            );
+          }
+          window.demoStream = stream;
+          const tick = setInterval(() => {
+            $('tick').style.background = $('tick').style.background ? '' : '#f4f1ed';
+          }, 1000);
+          audience?.postMessage('stream', location.origin);
+          $('cast').textContent = '投影中';
+          track.onended = () => {
+            clearInterval(tick);
+            window.demoStream = null;
+            $('cast').textContent = '投影を開始';
+          };
+        } catch {
+          stream?.getTracks().forEach((t) => t.stop());
+          audience?.close();
+        }
+      };
+
+      $('prev').onclick = () => go(current - 1);
+      $('next').onclick = goNext;
+      // 発表用リモコンの PageUp/PageDown も同じ（左右の画面をクリックした直後は、その画面が受け取る）
+      addEventListener('keydown', (e) => {
+        if (['ArrowRight', 'PageDown'].includes(e.key)) goNext();
+        if (['ArrowLeft', 'PageUp'].includes(e.key)) go(current - 1);
+      });
+      $('backup').onclick = () => {
+        const list = STEPS[current].backup ?? [];
+        backupIndex = backupIndex + 1 < list.length ? backupIndex + 1 : -1;
+        render();
+      };
+      $('refresh').onclick = refreshCouple;
+      // 左を操作したあとマウスが右に入ったら、右を開き直す
+      setInterval(() => {
+        if ([...document.querySelectorAll('#left iframe')].includes(document.activeElement))
+          dirty = true;
+      }, 300);
+      $('right').addEventListener('pointerenter', () => dirty && refreshCouple());
+      $('reset').onclick = async () => {
+        if (!confirm('データを初期状態に戻します。よろしいですか？')) return;
+        await fetch('/__demo/reset', { method: 'POST' });
+        $('status').textContent = 'やり直し中…';
+        let phase = 'resetting';
+        while (phase === 'resetting') {
+          await new Promise((r) => setTimeout(r, 1000));
+          phase = await fetch('/__demo/state')
+            .then((r) => r.json())
+            .then((s) => s.phase)
+            .catch(() => 'resetting');
+        }
+        if (phase === 'ready') location.reload();
+        else alert('やり直しに失敗しました。demo:all のウィンドウを確認し、起動し直してください。');
+      };
+      setInterval(async () => {
+        const s = await fetch('/__demo/state')
+          .then((r) => r.json())
+          .catch(() => null);
+        $('status').textContent = !s
+          ? 'demo:all が止まっています'
+          : s.phase === 'failed'
+            ? 'やり直しに失敗'
+            : s.phase !== 'ready'
+              ? 'やり直し中…'
+              : s.ai === 'ready'
+                ? 'AI 接続中'
+                : 'AI 未接続';
+      }, 2000);
+      start();
+    </script>
+  </body>
+</html>

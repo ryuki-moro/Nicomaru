@@ -198,6 +198,7 @@ async function processJob(queue: Queue, job: ClaimedJob): Promise<void> {
     return;
   }
 
+  const startedAt = Date.now();
   try {
     // 7-6「ワーカーはLLM出力をJSONスキーマで検証してから ai_jobs.output に保存する」
     const format = outputFormat(job.job_type);
@@ -220,7 +221,7 @@ async function processJob(queue: Queue, job: ClaimedJob): Promise<void> {
     }
 
     await queue.complete(job.id, validated.value, null, model);
-    log('完了', { id: job.id, jobType: job.job_type });
+    log('完了', { id: job.id, jobType: job.job_type, ms: Date.now() - startedAt });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 

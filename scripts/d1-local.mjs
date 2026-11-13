@@ -13,9 +13,15 @@ const dir = demo ? '.wrangler/demo' : '.wrangler/app-local';
 const port = demo ? '3105' : '3104';
 const origin = `http://127.0.0.1:${port}`;
 process.env.WRANGLER_SEND_METRICS = 'false';
-if (demo && process.argv.includes('--reset')) await rm(dir, { recursive: true, force: true });
-await mkdir(dir, { recursive: true });
 const secretFile = `${dir}/auth-secret`;
+if (demo && process.argv.includes('--reset')) {
+  // 秘密値は残す。AIワーカーのトークンが変わらず、やり直してもワーカーを起動し直さずに済む
+  const kept = await readFile(secretFile, 'utf8').catch(() => null);
+  await rm(dir, { recursive: true, force: true, maxRetries: 10 });
+  await mkdir(dir, { recursive: true });
+  if (kept) await writeFile(secretFile, kept);
+}
+await mkdir(dir, { recursive: true });
 let secret;
 try {
   secret = await readFile(secretFile, 'utf8');
@@ -92,6 +98,10 @@ const child = spawn(
         DEMO_PLANNER_EMAIL: demoLogin.planner,
         DEMO_COUPLE_EMAIL: demoLogin.couple,
         DEMO_LOGIN_PASSWORD: demoPassword,
+        // 打ち合わせ記録を ?memo=demo で開くと、メモ欄にこの文面が入った状態になる
+        DEMO_MEETING_MEMO: await readFile('docs/発表/AIデモ/打ち合わせメモ.txt', 'utf8').catch(
+          () => '',
+        ),
       }),
     },
   },
