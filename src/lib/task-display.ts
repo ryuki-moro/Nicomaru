@@ -32,3 +32,17 @@ export function relativeTaskDeadline(
   if (days === 0) return '今日まで';
   return `${-days}日過ぎています`;
 }
+
+/**
+ * M02 の状態フィルタに出す件数。statuses が null のタブ（すべて）は、除外する状態以外の合計。
+ * 件数の無い状態は 0 として数える。
+ */
+export function taskTabCount(
+  statuses: readonly TaskStatus[] | null,
+  counts: Partial<Record<TaskStatus, number>>,
+  excludedFromAll: readonly TaskStatus[],
+): number {
+  const targets =
+    statuses ?? (Object.keys(counts) as TaskStatus[]).filter((s) => !excludedFromAll.includes(s));
+  return targets.reduce((sum, status) => sum + (counts[status] ?? 0), 0);
+}
