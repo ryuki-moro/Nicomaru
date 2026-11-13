@@ -261,6 +261,7 @@ test('D1 dashboard/通知履歴: 集計・リスク根拠・送信履歴は担�
   const planner = actor('planner', ids.plannerA);
   const summary = await dashboard(db, planner);
   assert.equal(summary.caseCount, 1);
+  assert.equal(typeof summary.pendingReviewCount, 'number');
   assert.ok(summary.followUps.every((r) => [ids.caseA, ids.caseA2].includes(r.caseId)));
   assert.ok(summary.followUps.every((r) => Array.isArray(r.reasons)));
   await assert.rejects(dashboard(db, actor('couple', ids.coupleA)));

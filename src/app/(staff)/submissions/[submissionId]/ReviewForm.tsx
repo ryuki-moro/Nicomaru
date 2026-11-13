@@ -13,6 +13,7 @@
 'use client';
 import { DraftAssist } from '@/app/(staff)/submissions/[submissionId]/DraftAssist';
 import { TranslationPanel } from '@/app/(staff)/submissions/[submissionId]/TranslationPanel';
+import { AiUnavailable } from '@/components/ai/AiNotice';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { ApiCallError, api, handleApiError } from '@/lib/api/client';
 import {
@@ -112,15 +113,17 @@ export function ReviewForm({
         <FieldError message={fieldErrors.decision} />
       </fieldset>
 
-      {/* 9-11 翻訳補助（拡張）。辞書フォールバックがあるため常時出す（配置はコメント欄の直上） */}
-      <TranslationPanel
-        caseId={caseId}
-        taskId={taskId}
-        sourceText={sourceText || comment}
-        aiAvailable={aiAvailable}
-        lastSeenAt={lastSeenAt}
-        onAdopt={setComment}
-      />
+      {/* 9-11 翻訳補助（拡張）。配置はコメント欄の直上。AIが使えないときは下の1行の案内にまとめる */}
+      {aiAvailable && (
+        <TranslationPanel
+          caseId={caseId}
+          taskId={taskId}
+          sourceText={sourceText || comment}
+          aiAvailable={aiAvailable}
+          lastSeenAt={lastSeenAt}
+          onAdopt={setComment}
+        />
+      )}
 
       <div className="mb-4">
         <label htmlFor="review-comment" className="field-label">
@@ -142,17 +145,40 @@ export function ReviewForm({
         <FieldError message={fieldErrors.comment} />
       </div>
 
-      <DraftAssist
-        caseId={caseId}
-        taskId={taskId}
-        taskTitle={taskTitle}
-        decision={decision}
-        memo={comment}
-        defectNotes={defectNotes}
-        aiAvailable={aiAvailable}
-        lastSeenAt={lastSeenAt}
-        onAdopt={setComment}
-      />
+      {aiAvailable ? (
+        <DraftAssist
+          caseId={caseId}
+          taskId={taskId}
+          taskTitle={taskTitle}
+          decision={decision}
+          memo={comment}
+          defectNotes={defectNotes}
+          aiAvailable={aiAvailable}
+          lastSeenAt={lastSeenAt}
+          onAdopt={setComment}
+        />
+      ) : (
+        // AIが使えないあいだは、分類・翻訳・下書きの3つの欄を並べず1行の案内にまとめ、
+        // 確認結果の入力を画面の下へ押し出さない（7-1 手動運用へのフォールバック）。
+        // AIが無くても使える辞書翻訳だけは、折りたたみの中に残す。
+        <div className="mb-4">
+          <AiUnavailable
+            summary="ただいまAI補助（分類・翻訳・下書き）を利用できません（詳細）"
+            lastSeenAt={lastSeenAt}
+            fallback="確認結果とコメントは、そのまま手入力で登録できます。定型表現の翻訳だけは、下の「辞書で翻訳する」でその場で訳せます。"
+          >
+            <TranslationPanel
+              caseId={caseId}
+              taskId={taskId}
+              sourceText={sourceText || comment}
+              aiAvailable={false}
+              lastSeenAt={lastSeenAt}
+              onAdopt={setComment}
+              hideUnavailableNotice
+            />
+          </AiUnavailable>
+        </div>
+      )}
 
       <div className="flex flex-col gap-2 sm:flex-row-reverse">
         <button type="submit" className="btn-primary sm:w-40" disabled={pending}>
