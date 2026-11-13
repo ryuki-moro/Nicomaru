@@ -340,6 +340,7 @@ export async function reviewSubmission(
   }).catch(() => console.warn('[communication] 記録を保存できませんでした'));
   return { id, caseId: task.case_id, caseTaskId: task.id, reviewStatus: input.decision };
 }
+/** D02 確認待ち一覧。急ぐものから確認できるよう、宿題の期限が近い順（同じ期限は提出の早い順）に返す。 */
 export async function pendingSubmissions(db: D1Database, user: Actor, offset: number) {
   await taskRole(db, user, false);
   const where = `s.review_status='submitted' AND s.is_latest=1 AND t.status<>'waived' AND ${access}`;
@@ -351,7 +352,7 @@ export async function pendingSubmissions(db: D1Database, user: Actor, offset: nu
     .first<{ n: number }>();
   const ids = await db
     .prepare(
-      `SELECT s.id FROM task_submissions s JOIN case_tasks t ON t.id=s.case_task_id WHERE ${where} ORDER BY s.submitted_at,s.id LIMIT ? OFFSET ?`,
+      `SELECT s.id FROM task_submissions s JOIN case_tasks t ON t.id=s.case_task_id WHERE ${where} ORDER BY t.due_date,s.submitted_at,s.id LIMIT ? OFFSET ?`,
     )
     .bind(user.id, LIST_PAGE_SIZE, offset)
     .all<{ id: string }>();
