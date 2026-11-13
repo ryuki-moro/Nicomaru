@@ -1,7 +1,10 @@
 /**
  * D01 プランナーダッシュボード（4-1／4-3 D01）。
  *
- * サマリーカードは「担当案件数」「未提出件数」「リスク高件数」の3枚（機能4-1／6-2、Phase 2）。
+ * サマリーカードは「担当案件数」「未提出件数」「リスク高件数」（機能4-1／6-2、Phase 2）に、
+ * 「確認待ちの提出物」を加えた4枚。毎朝最初に開く画面なので、カードは低く横一列に並べ、
+ * PC（1440×900）の最初の表示に「今日フォローすべきカップル」の先頭が入るようにする。
+ * 「確認待ちの提出物」は件数からそのまま提出物確認（D02）へ移動できる。
  * 「今日フォローすべきカップル」は機能4-2。リスクの高い順に並べ、
  * スコアだけでなく**根拠を必ず併記**する（4-3 D01）。
  * 根拠なしの数値だけを出さないのは、1-4「最終判断はプランナーが行う。
@@ -29,6 +32,7 @@ export default async function PlannerDashboardPage() {
   const {
     caseCount,
     unsubmittedCount,
+    pendingReviewCount,
     highRiskCount,
     followUps: allFollowUps,
   } = await dashboard(await localDB(), user);
@@ -41,13 +45,21 @@ export default async function PlannerDashboardPage() {
       <h1 className="section-head">ダッシュボード</h1>
       <p className="mt-1 text-caption text-text-muted">{user.displayName} さんの担当状況です。</p>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      {/* 4枚を 2列（スマートフォン）／4列（PC）で並べ、1枚だけ次の段に残らないようにする */}
+      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <SummaryCard label={caseCountLabel} value={caseCount} unit="件" />
         <SummaryCard
           label="未提出の宿題"
           value={unsubmittedCount}
           unit="件"
           note="未着手・不備ありの合計です"
+        />
+        <SummaryCard
+          label="確認待ちの提出物"
+          value={pendingReviewCount}
+          unit="件"
+          href="/submissions"
+          linkLabel="提出物確認を開く"
         />
         <SummaryCard
           label="リスクが高い案件"
@@ -57,7 +69,7 @@ export default async function PlannerDashboardPage() {
         />
       </div>
 
-      <section className="mt-6">
+      <section className="mt-5">
         <h2 className="section-head">今日フォローすべきカップル</h2>
         <p className="mt-1 text-caption text-text-muted">
           リスクの高い順に表示しています。判断の材料としてお使いください。
@@ -65,28 +77,39 @@ export default async function PlannerDashboardPage() {
         {followUps.length === 0 ? (
           <p className="card mt-2 text-label text-text-muted">いま気にかけたい案件はありません。</p>
         ) : (
-          <ul className="mt-2 space-y-2">
+          // 1件を1行にまとめて上から走査できるようにする。行全体が案件詳細へのリンクで、
+          // 左にリスク、中央に名前と根拠、右に「開ける」ことを示す矢印を置く。
+          <ul className="mt-2 overflow-hidden rounded-card border border-border-light bg-surface">
             {followUps.map((item) => (
-              <li key={item.caseId} className="card">
-                <Link href={`/cases/${item.caseId}`} prefetch={false} className="block">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-base text-text-primary">
-                      {item.coupleName || item.caseCode}
-                    </span>
+              <li key={item.caseId} className="border-b border-border-light last:border-b-0">
+                <Link
+                  href={`/cases/${item.caseId}`}
+                  prefetch={false}
+                  className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-field-filled-bg"
+                >
+                  <span className="w-16 shrink-0 pt-[2px]">
                     <RiskBadge level={item.scoreLevel} reasons={item.reasons} />
-                  </div>
-                  <p className="mt-1 text-caption text-text-muted">
-                    {item.caseCode}
-                    {item.weddingDate ? ` ／ 挙式 ${formatDate(item.weddingDate)}` : ''}
-                  </p>
-                  {/* 4-3 D01「スコア根拠を併記」。根拠のない数値だけは出さない */}
-                  <ul className="mt-2 space-y-1">
-                    {item.reasons.map((reason) => (
-                      <li key={reason.conditionKey} className="text-caption text-text-secondary">
-                        ・{reason.description ?? reason.name}
-                      </li>
-                    ))}
-                  </ul>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-baseline gap-x-3">
+                      <span className="text-base font-bold text-text-primary">
+                        {item.coupleName || item.caseCode}
+                      </span>
+                      <span className="text-caption text-text-muted">
+                        {item.caseCode}
+                        {item.weddingDate ? ` ／ 挙式 ${formatDate(item.weddingDate)}` : ''}
+                      </span>
+                    </span>
+                    {/* 4-3 D01「スコア根拠を併記」。根拠のない数値だけは出さない */}
+                    <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                      {item.reasons.map((reason) => (
+                        <li key={reason.conditionKey} className="text-label text-text-secondary">
+                          ・{reason.description ?? reason.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </span>
+                  <ChevronRight />
                 </Link>
               </li>
             ))}
@@ -138,21 +161,66 @@ function SummaryCard({
   value,
   unit,
   note,
+  href,
+  linkLabel,
 }: {
   label: string;
   value: number;
   unit: string;
   note?: string;
+  /** 件数から移動できる先。指定するとカード全体がリンクになる */
+  href?: string;
+  /** リンクであることを文字でも示す（色や枠だけに頼らない） */
+  linkLabel?: string;
 }) {
-  return (
-    <div className="card">
+  const body = (
+    <>
       <p className="text-caption text-text-muted">{label}</p>
-      <p className="mt-1">
-        <span className="text-hero font-bold text-text-primary">{value}</span>
+      <p className="mt-[2px]">
+        <span className="text-[28px] font-bold leading-9 text-text-primary">{value}</span>
         <span className="ml-1 text-label text-text-secondary">{unit}</span>
       </p>
-      {note && <p className="mt-1 text-caption text-text-muted">{note}</p>}
-    </div>
+      {note && <p className="text-caption text-text-muted">{note}</p>}
+      {href && linkLabel && (
+        <p className="flex items-center gap-1 text-caption font-bold text-link">
+          {linkLabel}
+          <ChevronRight small />
+        </p>
+      )}
+    </>
+  );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        prefetch={false}
+        className="card block py-3 transition-colors hover:bg-field-filled-bg"
+      >
+        {body}
+      </Link>
+    );
+  }
+  return <div className="card py-3">{body}</div>;
+}
+
+/** Tabler Icons の chevron-right（design_guide 6 のアイコンセット）。 */
+function ChevronRight({ small = false }: { small?: boolean }) {
+  const size = small ? 14 : 20;
+  return (
+    <svg
+      aria-hidden
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={small ? 'shrink-0' : 'mt-[2px] shrink-0 text-text-muted'}
+    >
+      <path d="M9 6l6 6l-6 6" />
+    </svg>
   );
 }
 
