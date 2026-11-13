@@ -172,7 +172,7 @@ export default async function MyPage() {
           </Link>
           <nav aria-label="そのほかのメニュー" className="flex flex-wrap justify-center gap-2">
             <Link href="/mypage/timeline" prefetch={false} className="btn-ghost">
-              準備タイムラインを見る
+              準備の流れを見る
             </Link>
             {/* 4-3 M01「通知一覧（M05）は Phase 2 で追加する」 */}
             <Link href="/mypage/notifications" prefetch={false} className="btn-ghost">
