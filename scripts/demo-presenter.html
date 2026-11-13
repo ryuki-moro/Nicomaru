@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <title>にこまる AIデモ</title>
     <!-- npm run demo:all が http://demo.localhost:3106/ で配る発表用の画面。
-         画面を複製して投影しても、この1枚だけで導入〜締めまで進められるようにする（スライドも同じ画面に出す）。 -->
+         画面を複製して投影しても、この1枚だけで導入〜第2幕まで進められるようにする（スライドも同じ画面に出す）。 -->
     <style>
       :root {
         color-scheme: light;
@@ -196,19 +196,6 @@
         box-shadow: 0 2px 12px #0003;
         border-radius: 6px;
       }
-      #slide .title {
-        font-size: clamp(28px, 4vw, 56px);
-        font-weight: 800;
-        color: #2b2622;
-        text-align: center;
-        line-height: 1.5;
-      }
-      #slide .title small {
-        display: block;
-        font-size: 0.45em;
-        font-weight: 500;
-        color: var(--muted);
-      }
     </style>
   </head>
   <body>
@@ -219,6 +206,9 @@
       <span id="caption"></span>
       <button id="backup" title="AIが遅い・止まったときに、この場面の画像を出します">
         予備の画像
+      </button>
+      <button id="memo" title="第1幕でメモ欄に貼る打ち合わせメモをコピーします">
+        メモをコピー
       </button>
       <button id="refresh" title="新郎新婦の画面を開き直します">右を更新</button>
       <button id="reset" title="データを初期状態に戻します（AIワーカーはそのまま）">
@@ -246,49 +236,29 @@
       <aside id="script" aria-label="台本"></aside>
     </div>
     <script>
-      // 発表台本.md の流れ。slide は docs/発表/AIデモ/画面/ の番号、live は左に出す場面。
+      // 発表台本.md の流れ。左はダッシュボードから始めて、各幕の画面までその場でたどる（場面ごとに先に開いておくと、どこから来たか伝わらないため）。
+      // 新郎新婦に届いた様子は右のスマホで見せる。backup は AI が遅いときの docs/発表/AIデモ/画面/ の番号。
       const STEPS = [
         {
           label: '導入',
           section: '導入',
-          caption: 'プランナーの「読む・書く・訳す」をAIが下ごしらえ',
-          slide: '01',
+          caption: 'プランナーの「読む・書く」をAIが下ごしらえ',
+          live: true,
         },
         {
           label: '第1幕',
           section: '第1幕',
           caption: '第1幕　打ち合わせメモ → AIが宿題の案',
-          live: 'meeting',
+          live: true,
           backup: ['02'],
-        },
-        {
-          label: '届いた宿題',
-          section: '第1幕',
-          caption: '新郎新婦のスマホに宿題が届く',
-          slide: '03',
         },
         {
           label: '第2幕',
           section: '第2幕',
           caption: '第2幕　ゲストリスト → AIの不備チェック → 差し戻し文',
-          live: 'guests',
+          live: true,
           backup: ['04', '05'],
         },
-        {
-          label: '届いた連絡',
-          section: '第2幕',
-          caption: '新郎新婦に差し戻しの連絡が届く',
-          slide: '06',
-        },
-        {
-          label: '第3幕',
-          section: '第3幕',
-          caption: '第3幕　英語のBGMリクエスト → AIが翻訳',
-          live: 'bgm',
-          backup: ['07b'],
-        },
-        { label: '届いた返事', section: '第3幕', caption: '新郎様に英語の返事が届く', slide: '08' },
-        { label: '締め', section: '締め', caption: 'AIが下ごしらえして、人が決める', title: true },
       ];
       const port = location.port;
       const loginUrl = (role, next) =>
@@ -309,23 +279,18 @@
         $('prev').disabled = current === 0;
         $('next').disabled = current === STEPS.length - 1;
         $('backup').disabled = !step.backup;
-        document
-          .querySelectorAll('#left iframe')
-          .forEach((f) => f.classList.toggle('active', f.dataset.scene === step.live));
+        $('planner')?.classList.toggle('active', Boolean(step.live));
         const slide = $('slide');
-        const image = step.slide ?? (backupIndex >= 0 ? step.backup?.[backupIndex] : undefined);
+        const image = backupIndex >= 0 ? step.backup?.[backupIndex] : undefined;
         slide.replaceChildren();
-        if (step.title) {
-          slide.innerHTML =
-            '<div class="title">AIが下ごしらえして、人が決める。<small>AIは自宅のPCで動き、ゲストの個人情報は外部のAIサービスへ出ません</small></div>';
-        } else if (image) {
+        if (image) {
           const file = slides.find((name) => name.startsWith(`${image}_`));
           const img = document.createElement('img');
           img.alt = file ?? image;
           img.src = `/__demo/slide/${encodeURIComponent(file ?? '')}`;
           slide.append(img);
         }
-        slide.classList.toggle('shown', Boolean(step.title || image));
+        slide.classList.toggle('shown', Boolean(image));
         renderScript(step);
       }
       /** 発表台本.md の該当の節（手元だけに出す） */
@@ -355,7 +320,7 @@
         current = Math.max(0, Math.min(STEPS.length - 1, index));
         backupIndex = -1;
         render();
-        // 届いた様子の画像のあとに戻ってきたとき、右が古いままにならないように
+        // 左で登録・確定したあと場面を進めたとき、右が古いままにならないように
         if (STEPS[current].live && dirty) refreshCouple();
       }
       async function refreshCouple() {
@@ -378,20 +343,16 @@
             return b;
           }),
         );
-        const left = $('left');
-        for (const scene of ['meeting', 'guests', 'bgm']) {
-          const f = document.createElement('iframe');
-          f.title = `プランナー ${scene}`;
-          f.dataset.scene = scene;
-          left.append(f);
-        }
+        const f = document.createElement('iframe');
+        f.id = 'planner';
+        f.title = 'プランナー';
+        $('left').append(f);
         render();
-        // 同じ人の3画面を順に開く（同時に開くとログインが重なるため）
-        for (const f of left.querySelectorAll('iframe'))
-          await new Promise((done) => {
-            f.onload = done;
-            f.src = loginUrl('planner', s.scenes[f.dataset.scene]);
-          });
+        // プランナーと新郎新婦を順に開く（同時に開くとログインが重なるため）
+        await new Promise((done) => {
+          f.onload = done;
+          f.src = loginUrl('planner', '/dashboard');
+        });
         $('couple').src = loginUrl('couple', '/mypage');
       }
 
@@ -465,6 +426,11 @@
         render();
       };
       $('refresh').onclick = refreshCouple;
+      $('memo').onclick = async () => {
+        await navigator.clipboard.writeText(await fetch('/__demo/memo').then((r) => r.text()));
+        $('memo').textContent = 'コピーしました';
+        setTimeout(() => ($('memo').textContent = 'メモをコピー'), 2000);
+      };
       // 左を操作したあとマウスが右に入ったら、右を開き直す
       setInterval(() => {
         if ([...document.querySelectorAll('#left iframe')].includes(document.activeElement))

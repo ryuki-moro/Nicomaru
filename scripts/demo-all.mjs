@@ -283,6 +283,13 @@ async function handleHome(req, res, url) {
       JSON.stringify(parseScript(await readFile(`${DOCS}/発表台本.md`, 'utf8'))),
       'application/json',
     );
+  if (req.method === 'GET' && url.pathname === '/__demo/memo')
+    return send(
+      res,
+      200,
+      await readFile(`${DOCS}/打ち合わせメモ.txt`, 'utf8'),
+      'text/plain; charset=utf-8',
+    );
   if (req.method === 'GET' && url.pathname.startsWith('/__demo/slide/')) {
     let name = '';
     try {
