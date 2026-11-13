@@ -32,5 +32,18 @@
     ".next-d1/types/**/*.ts",
     ".next-demo/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "Nicomaru", "Nicomaru-1", "spikes"]
+  "exclude": [
+    "node_modules",
+    "Nicomaru",
+    "Nicomaru-1",
+    "spikes",
+    ".codex-work",
+    ".isolated",
+    ".local-review",
+    ".spike-qr",
+    ".work",
+    "_isolated",
+    "_sessions",
+    ".open-next"
+  ]
 }
