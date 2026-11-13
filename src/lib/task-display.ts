@@ -9,6 +9,16 @@ export const TASK_ANSWER_METHOD_LABEL: Record<SubmissionFormat, string> = {
   none: '確認のみ',
 };
 
+/**
+ * 回答が空のまま提出したときの理由。回答方法ごとに「何を直せばよいか」が分かる文言にする。
+ * 確認のみ（none）は空の回答が無いため対象外。
+ */
+export const MISSING_ANSWER_REASON: Record<Exclude<SubmissionFormat, 'none'>, string> = {
+  text: '回答を入力してください',
+  select: '回答を入力してください',
+  file: 'ファイルを選んでください',
+};
+
 /** 完了・免除後には期限までの日数を表示しない。基準日は呼び出し側がJSTで渡す。 */
 export function relativeTaskDeadline(
   dueDate: IsoDate,
@@ -21,4 +31,18 @@ export function relativeTaskDeadline(
   if (days > 0) return `あと${days}日`;
   if (days === 0) return '今日まで';
   return `${-days}日過ぎています`;
+}
+
+/**
+ * M02 の状態フィルタに出す件数。statuses が null のタブ（すべて）は、除外する状態以外の合計。
+ * 件数の無い状態は 0 として数える。
+ */
+export function taskTabCount(
+  statuses: readonly TaskStatus[] | null,
+  counts: Partial<Record<TaskStatus, number>>,
+  excludedFromAll: readonly TaskStatus[],
+): number {
+  const targets =
+    statuses ?? (Object.keys(counts) as TaskStatus[]).filter((s) => !excludedFromAll.includes(s));
+  return targets.reduce((sum, status) => sum + (counts[status] ?? 0), 0);
 }
