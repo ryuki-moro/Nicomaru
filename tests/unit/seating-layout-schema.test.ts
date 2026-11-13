@@ -51,6 +51,22 @@ describe('seatingLayoutSchema', () => {
     ).toBe(true);
   });
 
+  it('卓の大きさは50〜200%で、省略すると標準（1）', () => {
+    expect(seatingLayoutSchema.parse(layout()).tables[0].scale).toBe(1);
+    expect(
+      seatingLayoutSchema.parse(layout({ tables: [table({ scale: 1.5 })] })).tables[0].scale,
+    ).toBe(1.5);
+    expect(seatingLayoutSchema.safeParse(layout({ tables: [table({ scale: 0.4 })] })).success).toBe(
+      false,
+    );
+    expect(seatingLayoutSchema.safeParse(layout({ tables: [table({ scale: 2.1 })] })).success).toBe(
+      false,
+    );
+    expect(seatingLayoutSchema.safeParse(layout({ tables: [table({ scale: '1' })] })).success).toBe(
+      false,
+    );
+  });
+
   it('座れる人のキーの形が正しくなければ拒否する', () => {
     for (const bad of ['side:Groom', 'unknown:x', 'tag:xyz', 'allergy:x', 'side:', '']) {
       expect(

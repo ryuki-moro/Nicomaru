@@ -36,6 +36,9 @@ import {
   TABLE_CAPACITY_MAX,
   TABLE_CAPACITY_MIN,
   TABLE_NAME_MAX,
+  TABLE_SCALE_DEFAULT,
+  TABLE_SCALE_MAX,
+  TABLE_SCALE_MIN,
   TABLE_SHAPES,
   TABLE_TAGS_MAX,
   TABLES_PER_LAYOUT_MAX,
@@ -365,6 +368,12 @@ export const seatingTableSchema = z.object({
     .min(TABLE_CAPACITY_MIN, `定員は${TABLE_CAPACITY_MIN}名以上にしてください`)
     .max(TABLE_CAPACITY_MAX, `定員は${TABLE_CAPACITY_MAX}名以下にしてください`),
   shape: z.enum(TABLE_SHAPES),
+  // 大きさを送らない古い画面・クライアントからの保存は標準の大きさにする
+  scale: z
+    .number()
+    .min(TABLE_SCALE_MIN, `卓の大きさは${TABLE_SCALE_MIN * 100}%以上にしてください`)
+    .max(TABLE_SCALE_MAX, `卓の大きさは${TABLE_SCALE_MAX * 100}%以下にしてください`)
+    .default(TABLE_SCALE_DEFAULT),
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
   allowedTags: z

@@ -22,6 +22,8 @@ export interface HallMapTable {
   name: string;
   capacity: number;
   shape: TableShape;
+  /** 大きさの倍率（1 が標準）。省略すると標準 */
+  scale?: number;
   /** 会場図の中の位置（左上 0、右下 1 の割合） */
   x: number;
   y: number;
@@ -37,8 +39,8 @@ const DRAG_THRESHOLD_PX = 6;
 const KEY_STEP = 0.01;
 
 /**
- * 卓の大きさ。会場図の幅に合わせて伸び縮みさせる（幅の割合。最小・最大は px）。
- * 縦型の会場図は幅が狭いので、割合を大きめにする。
+ * 卓の標準の大きさ。会場図の幅に合わせて伸び縮みさせる（幅の割合。最小・最大は px）。
+ * 縦型の会場図は幅が狭いので、割合を大きめにする。卓ごとの倍率（scale）をこれに掛ける。
  */
 const TABLE_SIZE: Record<HallShape, Record<TableShape, { width: string; aspectRatio: string }>> = {
   wide: {
@@ -129,7 +131,8 @@ export function HallMap<T extends HallMapTable>({
         const position = {
           left: `${table.x * 100}%`,
           top: `${table.y * 100}%`,
-          width: size.width,
+          width:
+            table.scale && table.scale !== 1 ? `calc(${size.width} * ${table.scale})` : size.width,
           aspectRatio: size.aspectRatio,
         };
 

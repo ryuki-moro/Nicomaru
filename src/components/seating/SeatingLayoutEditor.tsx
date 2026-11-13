@@ -8,8 +8,9 @@
  *   - 変更はAPIで保存したあと router.refresh() でサーバーの値を読み直す
  */
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { HallMap } from '@/components/seating/HallMap';
 import { ErrorSummary } from '@/components/ui/ErrorSummary';
 import { ApiCallError, api } from '@/lib/api/client';
 import type { SeatingLayout } from '@/lib/d1/seating';
@@ -24,6 +25,10 @@ import {
   TABLE_CAPACITY_MAX,
   TABLE_CAPACITY_MIN,
   TABLE_NAME_MAX,
+  TABLE_SCALE_DEFAULT,
+  TABLE_SCALE_MAX,
+  TABLE_SCALE_MIN,
+  TABLE_SCALE_STEP,
   TABLE_SHAPES,
   TABLE_SHAPE_LABEL,
   applyRules,
@@ -58,29 +63,10 @@ interface Props {
 // 会場図の中で卓を動かせる範囲（高砂・壁にかからないように）
 const X_RANGE = [0.1, 0.9] as const;
 const Y_RANGE = [0.24, 0.84] as const;
-const DRAG_THRESHOLD_PX = 6;
-const KEY_STEP = 0.01;
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
 const clamp = (n: number, [min, max]: readonly [number, number]) =>
   round3(Math.min(max, Math.max(min, n)));
-
-/**
- * 卓の大きさ。会場図の幅に合わせて伸び縮みさせる（幅の割合。最小・最大は px）。
- * 縦型の会場図は幅が狭いので、割合を大きめにする。
- */
-const TABLE_SIZE: Record<HallShape, Record<TableShape, { width: string; aspectRatio: string }>> = {
-  wide: {
-    round: { width: 'clamp(56px, 12%, 92px)', aspectRatio: '1 / 1' },
-    rect: { width: 'clamp(84px, 18%, 150px)', aspectRatio: '2.4 / 1' },
-    rectv: { width: 'clamp(44px, 8%, 64px)', aspectRatio: '1 / 2.6' },
-  },
-  tall: {
-    round: { width: 'clamp(56px, 20%, 92px)', aspectRatio: '1 / 1' },
-    rect: { width: 'clamp(84px, 32%, 150px)', aspectRatio: '2.4 / 1' },
-    rectv: { width: 'clamp(44px, 14%, 64px)', aspectRatio: '1 / 2.6' },
-  },
-};
 
 /** 席数と出席人数の比較（作る前・編集中の両方で使う） */
 function seatSummary(tables: Pick<SeatingTable, 'capacity'>[], attending: number): string {
@@ -509,6 +495,7 @@ const toPayloadTables = (tables: DraftTable[]): SeatingTable[] =>
     name: t.name.trim(),
     capacity: t.capacity,
     shape: t.shape,
+    scale: t.scale,
     x: t.x,
     y: t.y,
     allowedTags: t.allowedTags,
@@ -545,6 +532,7 @@ function makeNewTable(tables: DraftTable[]): DraftTable {
     name,
     capacity: 8,
     shape: 'round',
+    scale: TABLE_SCALE_DEFAULT,
     x: pos?.x ?? 0.5,
     y: pos?.y ?? 0.5,
     allowedTags: [],
@@ -803,130 +791,6 @@ function LayoutPanel({
   );
 }
 
-// ---------------------------------------------------------------------- 会場図
-function HallMap({
-  hall,
-  tables,
-  selectedKey,
-  editable,
-  onSelect,
-  onMove,
-}: {
-  hall: HallShape;
-  tables: DraftTable[];
-  selectedKey: string | null;
-  editable: boolean;
-  onSelect: (key: string) => void;
-  onMove: (key: string, x: number, y: number) => void;
-}) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const drag = useRef<{
-    key: string;
-    startX: number;
-    startY: number;
-    originX: number;
-    originY: number;
-    moved: boolean;
-  } | null>(null);
-
-  return (
-    <div
-      ref={mapRef}
-      className="relative w-full overflow-hidden rounded-card border border-border-mid bg-field-filled-bg"
-      style={{
-        aspectRatio: hall === 'wide' ? '3 / 2' : '3 / 4',
-        maxWidth: hall === 'wide' ? 760 : 440,
-      }}
-      role="group"
-      aria-label={`会場図（${HALL_SHAPE_LABEL[hall]}）`}
-    >
-      <div className="absolute left-1/2 top-2 w-[34%] -translate-x-1/2 rounded-card bg-primary-dark px-2 py-1 text-center text-caption font-bold text-white">
-        高砂
-      </div>
-      <span className="absolute left-2 top-2 text-caption text-text-secondary">◀ 新郎側</span>
-      <span className="absolute right-2 top-2 text-caption text-text-secondary">新婦側 ▶</span>
-
-      {tables.map((table) => {
-        const size = TABLE_SIZE[hall][table.shape];
-        const on = table.key === selectedKey;
-        return (
-          <button
-            key={table.key}
-            type="button"
-            aria-pressed={on}
-            aria-label={`${table.name}、${TABLE_SHAPE_LABEL[table.shape]}、定員${table.capacity}名${
-              editable ? '。矢印キーで動かせます' : ''
-            }`}
-            className={`absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center border-2 px-1 text-center leading-tight ${
-              table.shape === 'round' ? 'rounded-full' : 'rounded-card'
-            } ${
-              on
-                ? 'border-primary bg-primary text-white'
-                : 'border-border-mid bg-surface text-text-primary'
-            } ${editable ? 'cursor-grab touch-none' : 'cursor-default'}`}
-            style={{
-              left: `${table.x * 100}%`,
-              top: `${table.y * 100}%`,
-              width: size.width,
-              aspectRatio: size.aspectRatio,
-            }}
-            onClick={() => onSelect(table.key)}
-            onPointerDown={(e) => {
-              onSelect(table.key);
-              if (!editable) return;
-              e.currentTarget.setPointerCapture?.(e.pointerId);
-              drag.current = {
-                key: table.key,
-                startX: e.clientX,
-                startY: e.clientY,
-                originX: table.x,
-                originY: table.y,
-                moved: false,
-              };
-            }}
-            onPointerMove={(e) => {
-              const d = drag.current;
-              const rect = mapRef.current?.getBoundingClientRect();
-              if (!d || d.key !== table.key || !rect || rect.width === 0) return;
-              const dx = e.clientX - d.startX;
-              const dy = e.clientY - d.startY;
-              if (!d.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
-              d.moved = true;
-              onMove(table.key, d.originX + dx / rect.width, d.originY + dy / rect.height);
-            }}
-            onPointerUp={(e) => {
-              e.currentTarget.releasePointerCapture?.(e.pointerId);
-              drag.current = null;
-            }}
-            onPointerCancel={() => {
-              drag.current = null;
-            }}
-            onKeyDown={(e) => {
-              if (!editable) return;
-              const step: Record<string, [number, number]> = {
-                ArrowLeft: [-KEY_STEP, 0],
-                ArrowRight: [KEY_STEP, 0],
-                ArrowUp: [0, -KEY_STEP],
-                ArrowDown: [0, KEY_STEP],
-              };
-              const move = step[e.key];
-              if (!move) return;
-              e.preventDefault();
-              onSelect(table.key);
-              onMove(table.key, table.x + move[0], table.y + move[1]);
-            }}
-          >
-            <span className="line-clamp-2 max-w-full break-all text-[11px] font-bold">
-              {table.name}
-            </span>
-            <span className="text-[10px]">{table.capacity}名</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 // ------------------------------------------------------------------ 卓の編集欄
 function TableForm({
   table,
@@ -1010,6 +874,33 @@ function TableForm({
               </option>
             ))}
           </select>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <label className="field-label" htmlFor="table-scale">
+          卓の大きさ（会場図での表示）：{Math.round(table.scale * 100)}%
+        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            id="table-scale"
+            type="range"
+            className="w-full max-w-xs accent-primary"
+            min={TABLE_SCALE_MIN}
+            max={TABLE_SCALE_MAX}
+            step={TABLE_SCALE_STEP}
+            value={table.scale}
+            aria-valuetext={`${Math.round(table.scale * 100)}%`}
+            onChange={(e) => onChange({ scale: Math.round(Number(e.target.value) * 100) / 100 })}
+          />
+          <button
+            type="button"
+            className="btn-ghost"
+            disabled={table.scale === TABLE_SCALE_DEFAULT}
+            onClick={() => onChange({ scale: TABLE_SCALE_DEFAULT })}
+          >
+            標準に戻す
+          </button>
         </div>
       </div>
 
