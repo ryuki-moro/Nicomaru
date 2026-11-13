@@ -8,13 +8,13 @@
  *
  * /api/tasks/{taskId}/submit に寄せる。どの宿題が見えるかは付録A の RLS が決める。
  */
+import { ConfirmedAnswer } from '@/app/(couple)/mypage/tasks/[taskId]/ConfirmedAnswer';
 import { SubmitForm } from '@/app/(couple)/mypage/tasks/[taskId]/SubmitForm';
 import { taskBackHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { TaskStatusBadge } from '@/components/ui/StatusBadge';
 import { requireRole } from '@/lib/auth/session';
 import {
   ALLOWED_FILE_TYPES,
-  SUBMISSION_FORMAT_LABEL,
   type AllowedFileType,
   type ReviewStatus,
   type SubmissionFormat,
@@ -25,6 +25,7 @@ import { localDB } from '@/lib/d1/runtime';
 import { latestSubmission, taskRow } from '@/lib/d1/tasks';
 import { formatDateJp } from '@/lib/format';
 import { type IsoDate } from '@/lib/services/schedule';
+import { TASK_ANSWER_METHOD_LABEL } from '@/lib/task-display';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 export const metadata = { title: '宿題の詳細' };
@@ -124,6 +125,31 @@ export default async function TaskDetailPage({
       )?.original_filename ?? null;
   }
   const format = task.submission_format;
+  const defaultText = initialText(latest?.text_value ?? null);
+  const defaultComment = latest?.comment ?? '';
+  // 確認済の宿題で読み取り表示する回答。空の項目は出さない。
+  const answerItems = [
+    { label: '回答', value: format === 'text' ? defaultText : (latest?.selected_value ?? '') },
+    { label: '添付ファイル', value: attachedFileName ?? '' },
+    { label: '補足', value: defaultComment },
+  ].filter((item) => item.value !== '');
+  const form = (
+    <SubmitForm
+      taskId={task.id}
+      submissionFormat={format}
+      choices={choicesOf(task.options)}
+      allowedFileTypes={allowedTypesOf(task.allowed_file_types)}
+      defaultText={defaultText}
+      defaultSelected={latest?.selected_value ?? ''}
+      defaultComment={defaultComment}
+      defaultFileId={latest?.file_id ?? null}
+      defaultFileName={attachedFileName}
+      // submission_format='none' はボタンのラベルだけを差し替える（表4-13）
+      submitLabel={format === 'none' ? '確認しました' : '提出する'}
+      canSaveDraft={latest?.review_status !== 'submitted'}
+      backHref={backHref}
+    />
+  );
   return (
     <div className="flex flex-col gap-3">
       <header>
@@ -131,7 +157,7 @@ export default async function TaskDetailPage({
         <div className="mt-2 flex items-center gap-2">
           <TaskStatusBadge status={task.status} />
           <span className="text-label text-text-muted">
-            {formatDateJp(task.due_date)}まで・{SUBMISSION_FORMAT_LABEL[format]}
+            {formatDateJp(task.due_date)}まで・{TASK_ANSWER_METHOD_LABEL[format]}
           </span>
         </div>
       </header>
@@ -159,7 +185,11 @@ export default async function TaskDetailPage({
 
       {task.status === 'confirmed' && (
         <div className="banner-info">
-          <span>確認済みです。内容を変えたいときは、入力し直して提出してください。</span>
+          <span>
+            {format === 'none'
+              ? '確認済みです。'
+              : '確認済みです。内容を変えたいときは「内容を変更する」を押してください。'}
+          </span>
         </div>
       )}
 
@@ -173,22 +203,12 @@ export default async function TaskDetailPage({
             戻る
           </Link>
         </>
+      ) : task.status === 'confirmed' ? (
+        <ConfirmedAnswer items={answerItems} backHref={backHref} canChange={format !== 'none'}>
+          {form}
+        </ConfirmedAnswer>
       ) : (
-        <SubmitForm
-          taskId={task.id}
-          submissionFormat={format}
-          choices={choicesOf(task.options)}
-          allowedFileTypes={allowedTypesOf(task.allowed_file_types)}
-          defaultText={initialText(latest?.text_value ?? null)}
-          defaultSelected={latest?.selected_value ?? ''}
-          defaultComment={latest?.comment ?? ''}
-          defaultFileId={latest?.file_id ?? null}
-          defaultFileName={attachedFileName}
-          // submission_format='none' はボタンのラベルだけを差し替える（表4-13）
-          submitLabel={format === 'none' ? '確認しました' : '提出する'}
-          canSaveDraft={latest?.review_status !== 'submitted'}
-          backHref={backHref}
-        />
+        form
       )}
     </div>
   );
