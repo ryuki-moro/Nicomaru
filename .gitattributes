@@ -7,3 +7,4 @@
 *.pptx binary
 *.xlsx binary
 *.docx binary
+*.bat text eol=crlf

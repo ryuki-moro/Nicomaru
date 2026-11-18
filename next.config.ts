@@ -21,6 +21,8 @@ const nextConfig: NextConfig = {
   // middlewareの転送先127.0.0.1をNext.jsがlocalhostへ書き換えないようにする。
   // ログインCookieと更新APIの同一Origin検証を、設定したURLで一致させる。
   skipMiddlewareUrlNormalize: true,
+  // npm run demo は発表で投影するため、開発中の目印（左下の N）を出さない
+  ...(process.env.NICOMARU_DEMO_LOGIN === 'true' && { devIndicators: false as const }),
   // 開発サーバーを複数同時に動かすと、互いの生成物やローカルDBの書込みで再コンパイルが続く。
   webpack: (config, { dev }) => {
     if (dev)
