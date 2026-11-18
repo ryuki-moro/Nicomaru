@@ -20,8 +20,9 @@ export const DEMO_PLAN_TYPES = {
   一般挙式: '21111111-1111-4111-8111-111111111114',
 } as const;
 
-/** seed.sql の宿題テンプレート（提出形式が text／select のものだけを提出に使う） */
+/** 提出に使う宿題テンプレート（text／select と、添付を用意した file） */
 export const DEMO_TEMPLATES = {
+  ゲストリスト提出: '31111111-1111-4111-8111-111111111101',
   BGMリクエスト: '31111111-1111-4111-8111-111111111103',
   料理コースの選択: '31111111-1111-4111-8111-111111111104',
   引き出物の選択: '31111111-1111-4111-8111-111111111105',
@@ -58,6 +59,8 @@ export interface DemoSubmission {
   text?: string;
   /** select 形式の回答（seed.sql の選択肢から選ぶ） */
   selected?: string;
+  /** file 形式の添付（リポジトリ内のパス）。提出済みの添付として R2 に置く */
+  file?: string;
   /** 不備ありのときの指摘（必須） */
   feedback?: string;
 }
@@ -109,7 +112,8 @@ export const DEMO_CASES: readonly DemoCase[] = [
   },
   {
     key: 'demo-02',
-    purpose: '不備ありの差し戻しと、確認待ちの提出がある',
+    // AIデモ（docs/発表/AIデモ/発表台本.md）の主役。提出は済ませておき、本番はプランナー側のAI操作だけを見せる
+    purpose: 'AIデモ：不備入りのゲストリストと英語のBGM希望が確認待ち',
     daysUntilWedding: 70,
     planType: '家族婚',
     guestCount: 24,
@@ -118,11 +122,19 @@ export const DEMO_CASES: readonly DemoCase[] = [
     bride: { name: '石井 結衣', email: 'demo-02-bride@demo.nicomaru.test', registered: true },
     submissions: [
       {
+        template: 'ゲストリスト提出',
+        result: 'submitted',
+        file: 'docs/発表/AIデモ/ゲストリスト_石井家.csv',
+      },
+      {
         template: 'BGMリクエスト',
-        result: 'needs_fix',
-        text: '入場：おまかせ',
-        feedback:
-          '入場・歓談・退場それぞれのご希望を教えてください。曲名が未定なら雰囲気だけでも大丈夫です。',
+        result: 'submitted',
+        text: [
+          'Entrance: "Canon in D" played on piano, please.',
+          'During dinner: relaxed acoustic songs, nothing too loud.',
+          'Exit: an upbeat pop song so everyone can clap along.',
+          'My grandparents are flying in from Sydney, so could we also play one Australian song during the toast? We will send the title by next week.',
+        ].join('\n'),
       },
       { template: '料理コースの選択', result: 'submitted', selected: 'グレードアップ' },
       { template: '引き出物の選択', result: 'confirmed', selected: 'カタログギフトA' },

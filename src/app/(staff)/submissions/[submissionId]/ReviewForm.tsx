@@ -34,6 +34,8 @@ interface Props {
   lastSeenAt: string | null;
   /** 9-11 翻訳の初期値（提出の自由記述）。無い画面では空 */
   sourceText?: string;
+  /** 一次チェックの指摘（行番号つき）。差し戻し文の下書きの材料にする */
+  defectNotes?: string[];
 }
 export function ReviewForm({
   submissionId,
@@ -43,6 +45,7 @@ export function ReviewForm({
   aiAvailable,
   lastSeenAt,
   sourceText = '',
+  defectNotes = [],
 }: Props) {
   const router = useRouter();
   const [decision, setDecision] = useState<ReviewDecision | null>(null);
@@ -145,6 +148,7 @@ export function ReviewForm({
         taskTitle={taskTitle}
         decision={decision}
         memo={comment}
+        defectNotes={defectNotes}
         aiAvailable={aiAvailable}
         lastSeenAt={lastSeenAt}
         onAdopt={setComment}

@@ -118,6 +118,7 @@ export async function MeetingSheetPageD1({
           </p>
         )}
         <SheetDraftPanel
+          key={draftJob?.id ?? 'none'}
           initialJob={draftJob}
           aiAvailable={aiStatus.available}
           lastSeenAt={aiStatus.lastSeenAt}

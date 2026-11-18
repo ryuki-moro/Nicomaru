@@ -6,6 +6,9 @@ on:
   push:
     branches: [main, develop]
   pull_request:
+  # GITHUB_TOKEN による push（自動修正・ブランチ更新）では pull_request が発火しないため、
+  # auto-merge.yml / ci-autofix.yml / claude.yml から明示的に起動する。
+  workflow_dispatch:
 
 jobs:
   verify:

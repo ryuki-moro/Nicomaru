@@ -294,6 +294,7 @@ export default async function CaseDetailPage({
   const incomplete = tasks.filter((task) => INCOMPLETE_TASK_STATUSES.includes(task.status)).length;
   const done = tasks.length - incomplete;
   const archived = row.archived_at !== null;
+  const isAdmin = user.role === 'admin' || user.role === 'system_admin';
   // ゲストの出欠回答とタグ。回答の追加は新郎新婦が配るURLから行い、タグは新郎新婦が付けたものを確認・修正できる。
   const guestBook = await loadD1GuestBook(user, row.id);
   // 席次（#180 配置パターン / #182 承認・差し戻し）。D1版でのみ提供する。
@@ -340,12 +341,37 @@ export default async function CaseDetailPage({
             </Link>
           )}
           {/* 4-3 K02 のボタン「打ち合わせ前準備シート（D03、Phase 2）」 */}
-          {false}
-          {false}
+          {!archived && (
+            <Link href={`/cases/${row.id}/sheet`} className="btn-secondary w-auto px-5 text-center">
+              打ち合わせ前準備シート
+            </Link>
+          )}
+          {!archived && (
+            <Link
+              href={`/cases/${row.id}/follow`}
+              className="btn-secondary w-auto px-5 text-center"
+            >
+              フォロー記録
+            </Link>
+          )}
           {/* 4-3 D05 打ち合わせ記録・宿題起票（Phase 3）。
-        D04 フォロー記録が「連絡したこと」、こちらが「決まったこと」 */}
-          {false}
-          {false}
+              D04 フォロー記録が「連絡したこと」、こちらが「決まったこと」 */}
+          {!archived && (
+            <Link
+              href={`/cases/${row.id}/meeting-notes`}
+              className="btn-secondary w-auto px-5 text-center"
+            >
+              打ち合わせ記録
+            </Link>
+          )}
+          {isAdmin && !archived && (
+            <Link
+              href={`/cases/${row.id}/archive`}
+              className="btn-secondary w-auto px-5 text-center"
+            >
+              アーカイブ
+            </Link>
+          )}
         </div>
       </div>
 

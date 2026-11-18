@@ -41,9 +41,11 @@ async function saveMeetingNoteAction(formData: FormData) {
 export async function MeetingNotesPageD1({
   caseId,
   user,
+  initialMemo,
 }: {
   caseId: string;
   user: { id: string; role: string };
+  initialMemo?: string;
 }) {
   const db = await localDB();
   const actor = user as Parameters<typeof caseRow>[1];
@@ -123,6 +125,7 @@ export async function MeetingNotesPageD1({
                 required
                 maxLength={INPUT_LIMITS.textArea}
                 className="field"
+                defaultValue={initialMemo}
                 placeholder="BGMは新婦が候補を出す／引き出物はカタログAで内定、最終確定は次回 など"
               />
             </div>
@@ -133,7 +136,9 @@ export async function MeetingNotesPageD1({
         </section>
       )}
 
+      {/* 保存のたびに新しいジョブが届く。key で作り直し、新しいジョブの完了を待ち受ける */}
       <TaskProposalPanel
+        key={latestJob?.id ?? 'none'}
         caseId={caseId}
         initialJob={latestJob}
         aiAvailable={aiStatus.available}
