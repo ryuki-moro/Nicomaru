@@ -17,11 +17,14 @@ import {
   GUEST_ASSISTANCE_NEED_SHORT_LABEL,
   GUEST_RELATIONSHIPS,
   GUEST_RELATIONSHIP_LABEL,
+  GUEST_SEAT_ROLES,
+  GUEST_SEAT_ROLE_LABEL,
   PARTNER_ROLES,
   PARTNER_ROLE_LABEL,
   type GuestAgeCategory,
   type GuestAssistanceNeed,
   type GuestRelationship,
+  type GuestSeatRole,
   type PartnerRole,
 } from '@/lib/constants';
 
@@ -72,6 +75,12 @@ export const AUTO_GUEST_TAGS: readonly GuestTag[] = [
     label: GUEST_ASSISTANCE_NEED_SHORT_LABEL[value],
     kind: 'auto' as const,
   })),
+  // 席次での役割（#179）。主賓は前の卓の上座、乾杯のご発声はその次の席へ入れる手がかり
+  ...GUEST_SEAT_ROLES.map((value) => ({
+    key: `role:${value}`,
+    label: value === 'toast' ? '乾杯' : GUEST_SEAT_ROLE_LABEL[value],
+    kind: 'auto' as const,
+  })),
 ];
 
 const AUTO_TAG_BY_KEY = new Map(AUTO_GUEST_TAGS.map((tag) => [tag.key, tag]));
@@ -82,6 +91,8 @@ export interface TaggableGuest {
   ageCategory: GuestAgeCategory | null;
   allergyNote: string;
   assistanceNeeds: GuestAssistanceNeed[];
+  /** 席次での役割。新郎新婦がゲスト一覧の確認で設定する */
+  seatRole?: GuestSeatRole | null;
   tagIds: string[];
 }
 
@@ -93,6 +104,7 @@ export function guestTags(guest: TaggableGuest, customTags: GuestCustomTag[]): G
     guest.ageCategory && `age:${guest.ageCategory}`,
     guest.allergyNote && ALLERGY_TAG_KEY,
     ...guest.assistanceNeeds.map((need) => `assistance:${need}`),
+    guest.seatRole && `role:${guest.seatRole}`,
   ].filter((key): key is string => Boolean(key));
   return [
     ...autoKeys.flatMap((key) => AUTO_TAG_BY_KEY.get(key) ?? []),

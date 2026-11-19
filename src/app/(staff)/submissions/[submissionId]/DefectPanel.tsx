@@ -14,12 +14,20 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
-import { AiHeading, AiJobState, AiUnavailable } from '@/components/ai/AiNotice';
+import {
+  AiHeading,
+  AiJobState,
+  AiOutcomeTombstone,
+  AiTimeoutNotice,
+  AiUnavailable,
+} from '@/components/ai/AiNotice';
 import { useAiJob, type AiJobView } from '@/components/ai/useAiJob';
 import { FieldError } from '@/components/ui/ErrorSummary';
 import { adoptedOutput } from '@/lib/ai/assist';
+import { defectSummaryText } from '@/lib/ai/aiMessages';
 import type { DefectFinding } from '@/lib/ai/defectCheck';
 import { DEFECT_TYPE_LABEL } from '@/lib/ai/schemas';
 import { ApiCallError, api } from '@/lib/api/client';
@@ -55,8 +63,19 @@ export function DefectPanel({
   aiAvailable,
   lastSeenAt,
 }: Props) {
+  const router = useRouter();
   const { job, setJob, track, timedOut } = useAiJob(initialJob);
   const [pending, setPending] = useState(false);
+  // AIの指摘が出たら描画し直し、差し戻し文の下書き（ReviewForm）の材料に加える。
+  // ジョブごとに一度だけ（描画時点で完了済みのジョブは材料に入っているので対象外）
+  const jobId = job?.id;
+  const status = job?.status;
+  const refreshedFor = useRef(initialJob?.status === 'done' ? initialJob.id : null);
+  useEffect(() => {
+    if (status !== 'done' || !jobId || refreshedFor.current === jobId) return;
+    refreshedFor.current = jobId;
+    router.refresh();
+  }, [jobId, status, router]);
   const [error, setError] = useState<string | null>(null);
 
   // 検査対象外の宿題では、この欄自体を出さない（テキスト提出に不備チェックは要らない）。
@@ -94,6 +113,8 @@ export function DefectPanel({
     try {
       await api.patch(`/api/ai/jobs/${job.id}`, { decision });
       setJob({ ...job, status: decision });
+      // 破棄した指摘を下書きの材料から外す
+      router.refresh();
     } catch (cause) {
       setError(
         cause instanceof ApiCallError
@@ -113,6 +134,11 @@ export function DefectPanel({
       <AiHeading note="機械的な確認の結果です。不備かどうかの判断と、新郎新婦へのご連絡はプランナーが行ってください。">
         AIによる一次チェック（要確認）
       </AiHeading>
+
+      {/* 件数サマリーを一覧より先に出す（全部で何件あるかを先に把握できるように） */}
+      <p className="mb-3 text-label font-medium text-text-primary" role="status">
+        {defectSummaryText(ruleFindings.length, showLlm ? llmFindings.length : 0, showLlm)}
+      </p>
 
       {/* ---- ①ルールベース。LLM の状態に関係なく必ず出る（7-2） ---- */}
       <div>
@@ -149,14 +175,13 @@ export function DefectPanel({
               status={job.status}
               errorMessage={job.error_message}
               fallback="表記ゆれ・敬称は目視でご確認ください。"
+              onRetry={job.status === 'failed' && aiAvailable ? requestCheck : undefined}
             />
           </div>
         )}
 
         {timedOut && (job?.status === 'queued' || job?.status === 'processing') && (
-          <p className="mt-1 text-caption text-text-muted">
-            時間がかかっています。画面を開き直すと最新の状態が表示されます。
-          </p>
+          <AiTimeoutNotice />
         )}
 
         {showLlm &&
@@ -193,15 +218,15 @@ export function DefectPanel({
             <>
               <button
                 type="button"
-                className="btn-secondary sm:w-40"
+                className="btn-primary sm:w-48"
                 disabled={pending}
                 onClick={() => review('confirmed')}
               >
-                確認した
+                このチェックを採用する
               </button>
               <button
                 type="button"
-                className="btn-secondary sm:w-32"
+                className="btn-ghost sm:w-32"
                 disabled={pending}
                 onClick={() => review('discarded')}
               >
@@ -210,6 +235,8 @@ export function DefectPanel({
             </>
           )}
         </div>
+
+        {job?.status === 'confirmed' && <AiOutcomeTombstone status="confirmed" />}
       </div>
     </section>
   );

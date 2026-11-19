@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { AiJobStatus } from '@/lib/ai/assist';
 import { api } from '@/lib/api/client';
+import { publicDemoLogin } from '@/lib/d1/mode';
 
 export interface AiJobView {
   id: string;
@@ -24,13 +25,14 @@ export interface AiJobView {
   error_message: string | null;
 }
 
-const POLL_INTERVAL_MS = 5_000;
+/** npm run demo だけは発表の待ち時間を詰めるため0.5秒（同じPC内なので負荷は問題にならない）。 */
+const POLL_INTERVAL_MS = publicDemoLogin() ? 500 : 5_000;
 /**
- * 打ち切りまでの回数。5秒 × 48 = 4分。
+ * 打ち切りまでの回数。4分ぶん（5秒なら48回）。
  * 7-3 の「目安は数分以内」を超えたら、待ち続けるより開き直してもらったほうがよい。
  * 打ち切っても処理は続いているので、結果が消えるわけではない。
  */
-const MAX_POLLS = 48;
+const MAX_POLLS = 240_000 / POLL_INTERVAL_MS;
 
 function isPending(status: AiJobStatus): boolean {
   return status === 'queued' || status === 'processing';

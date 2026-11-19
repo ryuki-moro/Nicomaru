@@ -13,18 +13,18 @@
  * つまり「1回目の送信＝プレビュー取得」「2回目の送信＝適用」であり、
  * 画面に出した差分とDBへ適用される内容が必ず一致する。
  */
-import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { api, handleApiError } from '@/lib/api/client';
 import {
-  SENDABLE_CHANNELS,
   CONTACT_CHANNEL_LABEL,
   INPUT_LIMITS,
   PARTNER_ROLES,
   PARTNER_ROLE_LABEL,
+  SENDABLE_CHANNELS,
   type ContactChannel,
   type PartnerRole,
 } from '@/lib/constants';
@@ -72,6 +72,58 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
   const [summary, setSummary] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<PlanChangePreview | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const updateButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogWasOpen = useRef(false);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (preview) {
+      if (!dialog.open) dialog.showModal();
+      dialogWasOpen.current = true;
+      cancelButtonRef.current?.focus();
+      return;
+    }
+
+    if (submitting) return;
+    if (dialog.open) dialog.close();
+    if (dialogWasOpen.current) {
+      dialogWasOpen.current = false;
+      updateButtonRef.current?.focus();
+    }
+  }, [preview, submitting]);
+
+  useEffect(() => {
+    const fieldOrder = [
+      'weddingDate',
+      'weddingTime',
+      'groomName',
+      'brideName',
+      'primaryContact',
+      'contactEmail',
+      'contactChannel',
+      'guestCount',
+      'planTypeId',
+      'primaryPlannerId',
+    ];
+    const firstInvalid = fieldOrder.find((field) => fieldErrors[field]);
+    if (!firstInvalid) return;
+    const input = document.getElementById(firstInvalid);
+    input?.focus({ preventScroll: true });
+    input?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [fieldErrors]);
+
+  const fieldA11y = (field: string, helpId?: string) => {
+    const invalid = Boolean(fieldErrors[field]);
+    return {
+      'aria-invalid': invalid || undefined,
+      'aria-describedby':
+        [helpId, invalid ? `${field}-error` : undefined].filter(Boolean).join(' ') || undefined,
+    };
+  };
 
   const update = <K extends keyof CaseEditInitial>(key: K, value: CaseEditInitial[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -157,9 +209,10 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.weddingDate}
               onChange={(e) => update('weddingDate', e.target.value)}
+              {...fieldA11y('weddingDate')}
               required
             />
-            <FieldError message={fieldErrors.weddingDate} />
+            <FieldError id="weddingDate-error" message={fieldErrors.weddingDate} />
           </div>
 
           <div>
@@ -172,8 +225,9 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.weddingTime}
               onChange={(e) => update('weddingTime', e.target.value)}
+              {...fieldA11y('weddingTime')}
             />
-            <FieldError message={fieldErrors.weddingTime} />
+            <FieldError id="weddingTime-error" message={fieldErrors.weddingTime} />
           </div>
 
           <div>
@@ -186,9 +240,10 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               maxLength={INPUT_LIMITS.shortText}
               value={form.groomName}
               onChange={(e) => update('groomName', e.target.value)}
+              {...fieldA11y('groomName')}
               required
             />
-            <FieldError message={fieldErrors.groomName} />
+            <FieldError id="groomName-error" message={fieldErrors.groomName} />
           </div>
 
           <div>
@@ -201,9 +256,10 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               maxLength={INPUT_LIMITS.shortText}
               value={form.brideName}
               onChange={(e) => update('brideName', e.target.value)}
+              {...fieldA11y('brideName')}
               required
             />
-            <FieldError message={fieldErrors.brideName} />
+            <FieldError id="brideName-error" message={fieldErrors.brideName} />
           </div>
 
           <div>
@@ -215,6 +271,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.primaryContact}
               onChange={(e) => update('primaryContact', e.target.value as PartnerRole)}
+              {...fieldA11y('primaryContact')}
             >
               {PARTNER_ROLES.map((role) => (
                 <option key={role} value={role}>
@@ -222,7 +279,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
                 </option>
               ))}
             </select>
-            <FieldError message={fieldErrors.primaryContact} />
+            <FieldError id="primaryContact-error" message={fieldErrors.primaryContact} />
           </div>
 
           <div>
@@ -235,9 +292,10 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.contactEmail}
               onChange={(e) => update('contactEmail', e.target.value)}
+              {...fieldA11y('contactEmail')}
               required
             />
-            <FieldError message={fieldErrors.contactEmail} />
+            <FieldError id="contactEmail-error" message={fieldErrors.contactEmail} />
           </div>
 
           <div>
@@ -249,6 +307,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.contactChannel}
               onChange={(e) => update('contactChannel', e.target.value as ContactChannel)}
+              {...fieldA11y('contactChannel')}
             >
               {SENDABLE_CHANNELS.map((channel) => (
                 <option key={channel} value={channel}>
@@ -256,7 +315,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
                 </option>
               ))}
             </select>
-            <FieldError message={fieldErrors.contactChannel} />
+            <FieldError id="contactChannel-error" message={fieldErrors.contactChannel} />
           </div>
 
           <div>
@@ -271,8 +330,9 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.guestCount}
               onChange={(e) => update('guestCount', e.target.value)}
+              {...fieldA11y('guestCount')}
             />
-            <FieldError message={fieldErrors.guestCount} />
+            <FieldError id="guestCount-error" message={fieldErrors.guestCount} />
           </div>
 
           <div>
@@ -284,6 +344,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               className="field"
               value={form.planTypeId}
               onChange={(e) => update('planTypeId', e.target.value)}
+              {...fieldA11y('planTypeId')}
               required
             >
               <option value="">選択してください</option>
@@ -293,7 +354,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
                 </option>
               ))}
             </select>
-            <FieldError message={fieldErrors.planTypeId} />
+            <FieldError id="planTypeId-error" message={fieldErrors.planTypeId} />
           </div>
 
           {planners && (
@@ -306,6 +367,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
                 className="field"
                 value={form.primaryPlannerId}
                 onChange={(e) => update('primaryPlannerId', e.target.value)}
+                {...fieldA11y('primaryPlannerId')}
               >
                 {planners.map((planner) => (
                   <option key={planner.id} value={planner.id}>
@@ -313,13 +375,13 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
                   </option>
                 ))}
               </select>
-              <FieldError message={fieldErrors.primaryPlannerId} />
+              <FieldError id="primaryPlannerId-error" message={fieldErrors.primaryPlannerId} />
             </div>
           )}
         </div>
 
         <div className="flex gap-3">
-          <button type="submit" className="btn-primary" disabled={submitting}>
+          <button ref={updateButtonRef} type="submit" className="btn-primary" disabled={submitting}>
             {submitting ? '確認しています…' : '更新する'}
           </button>
           <Link href={`/cases/${caseId}`} className="btn-secondary text-center">
@@ -328,14 +390,33 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
         </div>
       </form>
 
-      {preview && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="case-diff-title"
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-text-primary/40 p-4"
-        >
-          <div className="card mt-8 w-full max-w-2xl space-y-4">
+      <dialog
+        ref={dialogRef}
+        aria-labelledby="case-diff-title"
+        onKeyDown={(event) => {
+          if (event.key !== 'Tab') return;
+          event.preventDefault();
+          const buttons = Array.from(
+            event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
+          );
+          if (buttons.length === 0) return;
+          const current = buttons.findIndex((button) => button === document.activeElement);
+          const next =
+            current < 0
+              ? event.shiftKey
+                ? buttons.length - 1
+                : 0
+              : (current + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
+          buttons[next]?.focus();
+        }}
+        onCancel={(event) => {
+          event.preventDefault();
+          if (!submitting) setPreview(null);
+        }}
+        className="fixed inset-0 z-50 m-0 h-full w-full max-h-none max-w-none overflow-y-auto border-0 bg-transparent p-4 backdrop:bg-text-primary/40"
+      >
+        {preview && (
+          <div className="card mx-auto mt-8 w-full max-w-2xl space-y-4">
             <h2 id="case-diff-title" className="section-head">
               変更内容の確認
             </h2>
@@ -418,6 +499,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               <button
                 type="button"
                 className="btn-secondary"
+                ref={cancelButtonRef}
                 onClick={() => setPreview(null)}
                 disabled={submitting}
               >
@@ -425,8 +507,8 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </dialog>
     </>
   );
 }

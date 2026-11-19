@@ -3,7 +3,6 @@
  *
  * 正本: 基本設計書 Version 1.2 表6-9「DB値とUI表示名の対応」。
  * 12-2 の開発標準により、画面ごとに独自の表示名を発明せず必ず本モジュールを参照する。
- * 値域を増減するときは、対応する CHECK 制約（supabase/migrations）も同時に変更する。
  */
 
 // ---------------------------------------------------------------- ロール
@@ -243,6 +242,16 @@ export const GUEST_RELATIONSHIP_LABEL: Record<GuestRelationship, string> = {
   teacher: '恩師',
   other: 'その他',
 };
+
+/** 席次での役割。主賓は前の卓の上座、乾杯のご発声はその次の席に入れる（#179）。 */
+export const GUEST_SEAT_ROLES = ['chief', 'toast'] as const;
+export type GuestSeatRole = (typeof GUEST_SEAT_ROLES)[number];
+export const GUEST_SEAT_ROLE_LABEL: Record<GuestSeatRole, string> = {
+  chief: '主賓',
+  toast: '乾杯のご発声',
+};
+/** 席次表に載せる肩書きの上限。DB の varchar(30) と揃える。 */
+export const GUEST_SEAT_TITLE_MAX = 30;
 
 export const INVITATION_PURPOSES = ['initial_registration', 'mypage_access'] as const;
 export type InvitationPurpose = (typeof INVITATION_PURPOSES)[number];

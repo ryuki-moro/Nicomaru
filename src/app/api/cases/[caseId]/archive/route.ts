@@ -9,17 +9,17 @@
  */
 import { ok, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
-import { setCaseArchived } from '@/lib/services/cases';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { setCaseArchived } from '@/lib/d1/cases';
+import { localDB } from '@/lib/d1/runtime';
 
 export const POST = route(
   async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
     // K05 は admin のみ（4-1 表4-10）。DB側 apply_case_update でもロールを再検証する。
-    await requireRole('admin', 'system_admin');
+    const user = await requireRole('admin', 'system_admin');
     const { caseId } = await context.params;
-    const supabase = await createSupabaseServerClient();
+    const db = await localDB();
 
-    await setCaseArchived(supabase, caseId, true);
+    await setCaseArchived(db, user, caseId, true);
 
     return ok({ archived: true });
   },

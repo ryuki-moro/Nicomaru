@@ -9,19 +9,14 @@
  * 一覧を開いた時点で既読にするのは、7-2 のマイページ内通知が「開いて読むもの」であり、
  * 個別に既読ボタンを押させる導線が 4-3 に無いため。
  */
-import { usingD1 } from '@/lib/d1/mode';
-import Link from 'next/link';
-
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { formatDateTime } from '@/lib/format';
 import { NOTIFICATION_TYPE_LABEL, type NotificationType } from '@/lib/notify/templates';
 import { resolvePage } from '@/lib/pagination';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
+import Link from 'next/link';
 export const dynamic = 'force-dynamic';
-
 interface NotificationRow {
   id: string;
   case_id: string | null;
@@ -34,20 +29,19 @@ interface NotificationRow {
   read_at: string | null;
   created_at: string;
 }
-
 interface Props {
-  searchParams: Promise<{ page?: string | string[] }>;
+  searchParams: Promise<{
+    page?: string | string[];
+  }>;
 }
-
 export default async function NotificationsPage({ searchParams }: Props) {
   const user = await getAppUser();
   const params = await searchParams;
   const page = resolvePage(params.page);
   const offset = (page - 1) * LIST_PAGE_SIZE;
-
   let data: unknown[] | null = null;
   let error: unknown = null;
-  if (usingD1()) {
+  {
     try {
       if (user) {
         const { localDB } = await import('@/lib/d1/runtime');
@@ -66,39 +60,15 @@ export default async function NotificationsPage({ searchParams }: Props) {
     } catch (cause) {
       error = cause;
     }
-  } else {
-    const supabase = await createSupabaseServerClient();
-    const result = await supabase
-      .from('notifications')
-      .select(
-        'id, case_id, link_path, notification_type, title, body, status, sent_at, read_at, created_at',
-      )
-      .order('created_at', { ascending: false })
-      .order('id', { ascending: false })
-      .range(offset, offset + LIST_PAGE_SIZE);
-    data = result.data;
-    error = result.error;
-    const unread = ((data ?? []) as NotificationRow[])
-      .slice(0, LIST_PAGE_SIZE)
-      .filter((n) => n.read_at === null)
-      .map((n) => n.id);
-    if (user && unread.length > 0)
-      await supabase
-        .from('notifications')
-        .update({ read_at: new Date().toISOString(), status: 'read' })
-        .in('id', unread);
   }
-
   const rows = (data ?? []) as unknown as NotificationRow[];
   const hasNext = rows.length > LIST_PAGE_SIZE;
   const visible = rows.slice(0, LIST_PAGE_SIZE);
-
   // 未読を既読にする。失敗しても一覧の表示は妨げない（既読は補助的な状態）。
-
   return (
     <div className="space-y-4">
       {/* お知らせは下部ナビに項目を持たないマイページの子画面（遷移図 M01 → M05）。
-          入口がマイページの小さなボタンだけなので、戻り先を見出しの上に示す */}
+            入口がマイページの小さなボタンだけなので、戻り先を見出しの上に示す */}
       <Link href="/mypage" className="btn-ghost self-start">
         ホームへ戻る
       </Link>

@@ -7,23 +7,17 @@
  *   - phase_name（例：3か月前・1か月前・直前）で見出しをまとめる。値は割当時に
  *     サービス層の phaseNameFor() で決まっており、ここでは再計算しない（6-6-2）。
  *
- * 読み取りのみなので Supabase クライアントから直接 select する（6-5）。
  * 対象案件の絞り込みは付録A の RLS に委ねる。
  */
-import Link from 'next/link';
-
 import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { requirePageUser } from '@/lib/auth/session';
-import { usingD1 } from '@/lib/d1/mode';
+import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { formatDateJp } from '@/lib/format';
-import { phaseNameFor, type IsoDate } from '@/lib/services/schedule';
 import { resolvePage } from '@/lib/pagination';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
+import { phaseNameFor, type IsoDate } from '@/lib/services/schedule';
+import Link from 'next/link';
 export const metadata = { title: '準備タイムライン' };
-
 interface TimelineRow {
   id: string;
   title: string;
@@ -32,12 +26,10 @@ interface TimelineRow {
   phase_name: string | null;
   related_task_id: string | null;
 }
-
 interface PhaseGroup {
   phase: string;
   items: TimelineRow[];
 }
-
 /**
  * due_date 昇順で並んだ行を phase_name ごとにまとめる。
  * 並び替えはせず「先頭から連続する同じ見出しをまとめる」だけにして、
@@ -53,8 +45,6 @@ function groupByPhase(rows: readonly TimelineRow[]): PhaseGroup[] {
   }
   return groups;
 }
-
-/** D1には timeline_items がない。Supabase版でも自動項目は宿題と1対1なので、宿題から同じ形を作る。 */
 async function loadD1Timeline(from: number) {
   const user = await requirePageUser('couple');
   const { localDB } = await import('@/lib/d1/runtime');
@@ -81,29 +71,18 @@ async function loadD1Timeline(from: number) {
     return { data: null, error: true };
   }
 }
-
 export default async function TimelinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string | string[] }>;
+  searchParams: Promise<{
+    page?: string | string[];
+  }>;
 }) {
   const page = resolvePage((await searchParams).page);
-
   // 既定の表示件数は50件、以降はページング（4-3 一覧画面共通）。
   // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する。
   const from = (page - 1) * LIST_PAGE_SIZE;
-  const { data, error } = usingD1()
-    ? await loadD1Timeline(from)
-    : await (
-        await createSupabaseServerClient()
-      )
-        .from('timeline_items')
-        .select('id, title, description, due_date, phase_name, related_task_id')
-        .order('due_date', { ascending: true })
-        .order('display_order', { ascending: true })
-        .order('id', { ascending: true })
-        .range(from, from + LIST_PAGE_SIZE);
-
+  const { data, error } = await loadD1Timeline(from);
   if (error) {
     return (
       <div role="alert" className="banner-error">
@@ -111,11 +90,9 @@ export default async function TimelinePage({
       </div>
     );
   }
-
   const fetched = (data ?? []) as TimelineRow[];
   const hasNext = fetched.length > LIST_PAGE_SIZE;
   const groups = groupByPhase(fetched.slice(0, LIST_PAGE_SIZE));
-
   return (
     <div>
       <h1 className="section-head mb-3">準備タイムライン</h1>

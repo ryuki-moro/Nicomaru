@@ -591,6 +591,31 @@ label {
 .task-actions {
   margin-top: 12px;
 }
+.ai-panel {
+  margin-top: 14px;
+  border: 1px dashed var(--primary);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--hero);
+}
+.ai-panel h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+section.ai-panel {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+section.ai-panel h2 {
+  font-size: 16px;
+}
+.ai-proposal {
+  display: block;
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  font-size: 13px;
+}
 .feedback {
   margin-top: 12px;
   border-radius: 8px;
@@ -913,6 +938,7 @@ noscript {
   .toolbar,
   .button,
   .notice,
+  .ai-panel,
   .modal-overlay {
     display: none !important;
   }

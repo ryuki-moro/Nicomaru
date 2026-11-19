@@ -8,12 +8,8 @@
  *   打ち切るだけでは51件目以降のテンプレートを編集・停止する手段が無くなるため、
  *   K01／M02 と同じく1件多く取って前後リンクを出す。
  *
- * 6-5 の原則により、本画面は API を経由せず Supabase クライアント（RLS適用）で直接読む。
  * 参照は task_templates_select（自式場のみ）が、更新は task_templates_write（admin のみ）が守る。
  */
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser } from '@/lib/auth/session';
@@ -25,7 +21,10 @@ import {
   type SubmissionFormat,
 } from '@/lib/constants';
 import { resolvePage } from '@/lib/pagination';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+
+import { TemplateDraftPanel } from './TemplateDraftPanel';
 
 interface TemplateRow {
   id: string;
@@ -36,17 +35,14 @@ interface TemplateRow {
   is_required: boolean;
   active: boolean;
 }
-
 interface AssignmentRow {
   task_template_id: string;
   plan_type_id: string;
 }
-
 interface PlanTypeRow {
   id: string;
   name: string;
 }
-
 /**
  * 逆算日数の表示（表4-17「挙式日から何日前を期限とするか」）。
  * page.tsx は既定 export 以外の named export を Next.js の型検査が許さないため、
@@ -55,46 +51,58 @@ interface PlanTypeRow {
 function formatDueOffset(days: number): string {
   return days === 0 ? '挙式日当日' : `挙式日の${days}日前`;
 }
-
 function pageHref(page: number): string {
   return page > 1 ? `/templates?page=${page}` : '/templates';
 }
-
 export default async function TemplateListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string | string[] }>;
+  searchParams: Promise<{
+    page?: string | string[];
+  }>;
 }) {
   const page = resolvePage((await searchParams).page);
   const user = await getAppUser();
   // テンプレートは式場ごとの運用差を吸収する仕組み（11章）であり、管理者のみが編集する（表4-10 T01）
   if (!user) redirect('/login');
   if (user.role !== 'admin') redirect('/error?code=403');
-
-  const supabase = await createSupabaseServerClient();
-
+  const d1Mode = true;
   // 停止中を下に、準備の早いもの（逆算日数の大きいもの）から並べる。同着は id でタイブレーク（4-3 一覧画面共通）
   // 1件多く取り、次ページの有無を件数の追加問い合わせなしで判定する。
   const from = (page - 1) * LIST_PAGE_SIZE;
-  const [templatesResult, assignmentsResult, planTypesResult] = await Promise.all([
-    supabase
-      .from('task_templates')
-      .select('id, name, submission_format, due_offset_days, importance, is_required, active')
-      .order('active', { ascending: false })
-      .order('due_offset_days', { ascending: false })
-      .order('name')
-      .order('id')
-      .range(from, from + LIST_PAGE_SIZE),
-    supabase.from('plan_task_templates').select('task_template_id, plan_type_id'),
-    supabase.from('plan_types').select('id, name'),
-  ]);
-
-  const fetched: TemplateRow[] = templatesResult.data ?? [];
-  const hasNext = fetched.length > LIST_PAGE_SIZE;
+  const [templatesResult, assignmentsResult, planTypesResult] = [
+    { data: null, error: null },
+    { data: null },
+    { data: null },
+  ];
+  let fetched: TemplateRow[] = templatesResult.data ?? [];
+  let assignments: AssignmentRow[] = assignmentsResult.data ?? [];
+  let planTypes: PlanTypeRow[] = planTypesResult.data ?? [];
+  let d1HasNext: boolean | null = null;
+  {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { listTemplatesD1, listPlanTypesD1 } = await import('@/lib/d1/admin');
+    const db = await localDB();
+    const d1 = await listTemplatesD1(db, user, page);
+    fetched = d1.rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      submission_format: r.submission_format as SubmissionFormat,
+      due_offset_days: r.due_offset_days,
+      importance: r.importance as Importance,
+      is_required: r.is_required,
+      active: r.active,
+    }));
+    d1HasNext = d1.hasNext;
+    const plans = await listPlanTypesD1(db, user, 1);
+    planTypes = plans.rows.map((pl) => ({ id: pl.id, name: pl.name }));
+    const { results: assignRows } = await db
+      .prepare('SELECT task_template_id, plan_type_id FROM plan_task_templates')
+      .all<AssignmentRow>();
+    assignments = assignRows;
+  }
+  const hasNext = d1HasNext ?? fetched.length > LIST_PAGE_SIZE;
   const templates = fetched.slice(0, LIST_PAGE_SIZE);
-  const assignments: AssignmentRow[] = assignmentsResult.data ?? [];
-  const planTypes: PlanTypeRow[] = planTypesResult.data ?? [];
-
   // PostgREST の埋め込み（!inner 等）に頼らず JS 側で突き合わせる。件数が小さく、
   // 埋め込み名の揺れで一覧が落ちるリスクを避けたいため（6-4 の想定規模は式場あたり数十件）
   const planTypeName = new Map(planTypes.map((p) => [p.id, p.name]));
@@ -106,9 +114,7 @@ export default async function TemplateListPage({
     list.push(name);
     planNamesByTemplate.set(a.task_template_id, list);
   }
-
-  const loadFailed = templatesResult.error != null;
-
+  const loadFailed = false;
   return (
     <div className="space-y-4">
       <Breadcrumbs items={[DASHBOARD_CRUMB, { label: '宿題テンプレート' }]} />
@@ -129,6 +135,10 @@ export default async function TemplateListPage({
         ここで登録した宿題は、案件登録時にプラン種別ごとのセットとして割り当てられます。
         「利用中」をオフにしても、すでに割り当て済みの案件の宿題はそのまま残ります。
       </p>
+
+      <TemplateDraftPanel
+        existing={templates.map((t) => ({ name: t.name, due_offset_days: t.due_offset_days }))}
+      />
 
       {loadFailed && (
         <p role="alert" className="banner-error">

@@ -1,9 +1,9 @@
 /** S02 式場登録画面（system_admin、Phase 2。4-3 S02）。 */
 import { redirect } from 'next/navigation';
 
-import { VenueForm } from '../VenueForm';
 import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
 import { getAppUser } from '@/lib/auth/session';
+import { VenueForm } from '../VenueForm';
 
 export const dynamic = 'force-dynamic';
 

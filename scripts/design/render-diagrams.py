@@ -128,8 +128,8 @@ d = Diagram("01-構成と責任", "01  構成と責任分担", "利用者の通�
 d.flow({
     "client": (36,130,305,115,"ブラウザ / ホーム画面アプリ","couple / planner / admin\nService Workerは機微情報を保存しない"),
     "web": (434,130,330,115,"Next.js / Vercel","画面・入力検証・認証・Origin検証\nRLSクライアントによる読み書き"),
-    "auth": (855,130,310,115,"Supabase Auth","OTP / パスワード / セッション\nactiveプロフィールと照合"),
-    "db": (434,355,330,115,"Supabase DB / Storage","RPCの原子性 + RLSの行境界\n非公開ファイル + 短命署名URL"),
+    "auth": (855,130,310,115,"Better Auth","OTP / パスワード / セッション\nactiveプロフィールと照合"),
+    "db": (434,355,330,115,"Cloudflare D1 / R2","D1 batch + 所属・担当の境界\n非公開ファイル + 短命署名URL"),
     "notify": (855,355,310,115,"LINE / Resend","通知本文を外部へ送信する専用出口\n送信結果・上限・代替を管理"),
     "cron": (36,355,305,115,"pg_cron / GitHub Actions","定期登録 + 共有secret認証\n容量・監視・削除・通知・回収"),
     "worker": (434,580,330,115,"校内・自宅のAI worker","専用DBロールでpull / 30秒周期\nService Roleを渡さない"),

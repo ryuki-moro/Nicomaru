@@ -17,15 +17,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { ErrorSummary } from '@/components/ui/ErrorSummary';
 import { InvitationStateBadge } from '@/components/ui/StatusBadge';
 import { ApiCallError, api } from '@/lib/api/client';
-import { formatDateTime } from '@/lib/format';
 import {
-  SENDABLE_CHANNELS,
   CONTACT_CHANNEL_LABEL,
   PARTNER_ROLE_LABEL,
+  SENDABLE_CHANNELS,
   type ContactChannel,
   type InvitationState,
   type PartnerRole,
 } from '@/lib/constants';
+import { formatDateTime } from '@/lib/format';
 
 interface InvitationSummary {
   id: string;

@@ -16,7 +16,13 @@
 
 import { useState } from 'react';
 
-import { AiHeading, AiJobState, AiUnavailable } from '@/components/ai/AiNotice';
+import {
+  AiHeading,
+  AiJobState,
+  AiOutcomeTombstone,
+  AiTimeoutNotice,
+  AiUnavailable,
+} from '@/components/ai/AiNotice';
 import { useAiJob } from '@/components/ai/useAiJob';
 import { FieldError } from '@/components/ui/ErrorSummary';
 import { adoptedOutput } from '@/lib/ai/assist';
@@ -31,9 +37,25 @@ interface Props {
   decision: ReviewDecision | null;
   /** プランナーが書いた要点。これが下書きの元になる */
   memo: string;
+  /** 一次チェックの指摘。「不備あり」のときは要点が空でもこれを材料に下書きできる */
+  defectNotes: string[];
   aiAvailable: boolean;
   lastSeenAt: string | null;
   onAdopt: (text: string) => void;
+}
+
+/** 指摘が多いCSVでも依頼の入力上限を超えないよう、収まる分だけ並べて残りは件数で示す */
+function listWithinLimit(notes: string[], maxChars = 1500): string {
+  const lines: string[] = [];
+  let length = 0;
+  for (const note of notes) {
+    const line = `- ${note}`;
+    if (length + line.length + 1 > maxChars) break;
+    lines.push(line);
+    length += line.length + 1;
+  }
+  const rest = notes.length - lines.length;
+  return rest > 0 ? `${lines.join('\n')}\n- ほか${rest}件` : lines.join('\n');
 }
 
 export function DraftAssist({
@@ -42,13 +64,17 @@ export function DraftAssist({
   taskTitle,
   decision,
   memo,
+  defectNotes,
   aiAvailable,
   lastSeenAt,
   onAdopt,
 }: Props) {
+  const notes = decision === 'needs_fix' ? defectNotes : [];
   const { job, track, setJob, timedOut } = useAiJob(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** コメント欄に入力済みの文章がある状態で採用するときの上書き確認 */
+  const [confirmingOverwrite, setConfirmingOverwrite] = useState(false);
 
   async function request() {
     setError(null);
@@ -63,7 +89,14 @@ export function DraftAssist({
         jobType: 'draft',
         relatedTaskId: taskId,
         input: {
-          text: `宿題: ${taskTitle}\n状況: ${situation}\n伝えたいこと: ${memo.trim()}`,
+          text: [
+            `宿題: ${taskTitle}`,
+            `状況: ${situation}`,
+            memo.trim() && `伝えたいこと: ${memo.trim()}`,
+            notes.length > 0 && `直していただきたい箇所:\n${listWithinLimit(notes)}`,
+          ]
+            .filter(Boolean)
+            .join('\n'),
           params: { purpose: 'submission_review_comment' },
         },
       });
@@ -85,6 +118,18 @@ export function DraftAssist({
     }
   }
 
+  function handleAdoptClick() {
+    const output = adoptedOutput('draft', job);
+    if (!output) return;
+    // コメント欄には下書きの元になった要点が入力されていることが多い。
+    // 無確認で置き換えるとプランナーの文章が消えるため、入力済みなら確認を挟む。
+    if (memo.trim() !== '' && memo.trim() !== output.text.trim()) {
+      setConfirmingOverwrite(true);
+      return;
+    }
+    void adopt();
+  }
+
   async function adopt() {
     if (!job) return;
     const output = adoptedOutput('draft', job);
@@ -95,14 +140,27 @@ export function DraftAssist({
       // 記録に失敗しても文面は渡す。下書きを入れること自体は業務上の副作用が無い。
       await api.patch(`/api/ai/jobs/${job.id}`, { decision: 'confirmed' }).catch(() => undefined);
       setJob({ ...job, status: 'confirmed' });
+      setConfirmingOverwrite(false);
       onAdopt(output.text.slice(0, INPUT_LIMITS.textArea));
     } finally {
       setPending(false);
     }
   }
 
+  async function discard() {
+    if (!job) return;
+    setPending(true);
+    try {
+      await api.patch(`/api/ai/jobs/${job.id}`, { decision: 'discarded' }).catch(() => undefined);
+      setJob({ ...job, status: 'discarded' });
+      setConfirmingOverwrite(false);
+    } finally {
+      setPending(false);
+    }
+  }
+
   const output = adoptedOutput('draft', job);
-  const canRequest = decision !== null && memo.trim() !== '';
+  const canRequest = decision !== null && (memo.trim() !== '' || notes.length > 0);
 
   return (
     <div className="mb-4 rounded-card border border-border-light bg-bg px-3 py-3">
@@ -122,13 +180,12 @@ export function DraftAssist({
           status={job.status}
           errorMessage={job.error_message}
           fallback="コメントは手入力で登録できます。"
+          onRetry={job.status === 'failed' && canRequest ? request : undefined}
         />
       )}
 
       {timedOut && (job?.status === 'queued' || job?.status === 'processing') && (
-        <p className="text-caption text-text-muted">
-          時間がかかっています。少し待ってから、もう一度お試しください。
-        </p>
+        <AiTimeoutNotice />
       )}
 
       {output && (
@@ -160,20 +217,65 @@ export function DraftAssist({
           </button>
         )}
         {job?.status === 'done' && output && (
-          <button
-            type="button"
-            className="btn-secondary sm:w-48"
-            disabled={pending}
-            onClick={adopt}
-          >
-            コメント欄に入れる
-          </button>
+          <>
+            <button
+              type="button"
+              className="btn-primary sm:w-48"
+              disabled={pending}
+              onClick={handleAdoptClick}
+            >
+              下書きを採用する
+            </button>
+            <button
+              type="button"
+              className="btn-ghost sm:w-32"
+              disabled={pending}
+              onClick={discard}
+            >
+              破棄する
+            </button>
+          </>
         )}
       </div>
+
+      {confirmingOverwrite && job?.status === 'done' && output && (
+        <div className="banner-error mt-3" role="alert">
+          <div>
+            <p>
+              コメント欄には入力済みの文章があります。下書きを採用すると、その文章が下書きの内容に置き換わります。よろしいですか？
+            </p>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                className="btn-primary sm:w-40"
+                disabled={pending}
+                onClick={adopt}
+              >
+                置き換える
+              </button>
+              <button
+                type="button"
+                className="btn-ghost sm:w-32"
+                disabled={pending}
+                onClick={() => setConfirmingOverwrite(false)}
+              >
+                やめる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {job?.status === 'confirmed' && <AiOutcomeTombstone status="confirmed" />}
 
       {!canRequest && aiAvailable && (
         <p className="mt-2 text-caption text-text-muted">
           確認結果を選び、伝えたいことをコメント欄に書いてから依頼してください。
+        </p>
+      )}
+      {notes.length > 0 && !job && (
+        <p className="mt-2 text-caption text-text-muted">
+          一次チェックの指摘{notes.length}件（行番号つき）を材料に下書きします。
         </p>
       )}
     </div>

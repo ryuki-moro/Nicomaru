@@ -2,7 +2,6 @@
  * T02 宿題テンプレート登録・編集フォーム（admin）。
  *
  * 正本: 基本設計書 Version 1.2 4-3 表4-17。
- * 保存は page.tsx の Server Action（Supabase クライアント経由・RLS適用）へ委ねる。
  * ここは入力と表示だけを持ち、値域・表示名は @/lib/constants を単一ソースとする（12-2）。
  */
 'use client';

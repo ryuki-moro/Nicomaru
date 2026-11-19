@@ -1,11 +1,9 @@
 import { ok, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
 import { caseRow, listCases } from '@/lib/d1/cases';
-import { localDB, usingD1 } from '@/lib/d1/runtime';
+import { localDB } from '@/lib/d1/runtime';
 import { notFound } from '@/lib/errors';
-
 export const GET = route(async (request: Request) => {
-  if (!usingD1()) throw notFound();
   const user = await requireRole('couple');
   const db = await localDB();
   const id =

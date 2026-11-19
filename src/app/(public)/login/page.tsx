@@ -1,13 +1,10 @@
-import { localD1 } from '@/lib/d1/mode';
+import { demoLogin, localD1 } from '@/lib/d1/mode';
 import type { Metadata } from 'next';
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-import { getDevAdminConfig, isLoopbackHost } from '@/lib/auth/dev-admin';
 import { normalizeNext } from '@/lib/auth/next';
 import { getAppUser, landingPathFor } from '@/lib/auth/session';
 
-import { DevAdminLoginButton } from './DevAdminLoginButton';
 import { LoginForm } from './LoginForm';
 
 // セッションの有無で分岐するため常に動的に評価する
@@ -19,7 +16,7 @@ export const metadata: Metadata = { title: 'ログイン' };
  * P01 ログイン画面（全利用者）。
  *
  * 正本: 基本設計書 Version 1.2 4-3 P01（表4-11）／6-3-1「認証方式」。
- *   - couple: ワンタイム認証（マジックリンク＋6桁コード）
+ *   - couple: ワンタイム認証（6桁コード）
  *   - planner／admin／system_admin: メールアドレス＋パスワード
  *   - 認証成功時の遷移先は landingPathFor(role)（4-2）
  */
@@ -42,19 +39,15 @@ export default async function LoginPage({
   const user = await getAppUser();
   if (user) redirect(destination ?? landingPathFor(user.role));
 
-  const host = (await headers()).get('host') ?? '';
-  const showDevAdmin = Boolean(getDevAdminConfig()) && isLoopbackHost(host);
-
   return (
     <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-title font-bold text-text-primary">ログイン</h1>
         <p className="mt-1 text-label text-text-muted">
+          {/* フォーム内の切り替えでは書き換わらないため、方式によらない説明にする */}
           {localD1()
-            ? '新郎新婦は確認コード、プランナー・管理者はパスワードでログインできます。'
-            : initialMode === 'password'
-              ? 'プランナー・管理者はメールアドレスとパスワードでログインしてください。'
-              : '新郎新婦さまはメールアドレスだけでログインできます。'}
+            ? '新郎新婦は確認コード、プランナー・式場管理者・システム管理者はパスワードでログインできます。'
+            : '新郎新婦さまはメールアドレスだけで、プランナー・式場管理者・システム管理者はパスワードでログインできます。'}
         </p>
       </div>
 
@@ -64,8 +57,15 @@ export default async function LoginPage({
         </div>
       )}
 
-      {showDevAdmin && <DevAdminLoginButton />}
-      {localD1() && (
+      {demoLogin() && (
+        <div role="note" className="banner-info">
+          <span>
+            デモ版です。入力は空欄のままでログインできます。「確認コードを送信」で新郎新婦、
+            「パスワードでログイン」でプランナーとして入ります。
+          </span>
+        </div>
+      )}
+      {localD1() && !demoLogin() && (
         <a href="/dev/mailbox" target="_blank" rel="noopener noreferrer" className="btn-ghost">
           ローカル受信箱で確認コードを見る
         </a>

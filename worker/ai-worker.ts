@@ -8,8 +8,7 @@
  *   「受け渡しはプル型（ワーカーからのアウトバウンド接続のみ）とし、
  *     ローカルLLMサーバーを外部公開しない」
  *   「ポーリング間隔は30秒」
- *   「ワーカーには Service Role Key を配布せず、ジョブ取得と結果書き込みのみを許す
- *     security definer RPC を用意し、ワーカー専用DBロールに EXECUTE を付与する」
+ *   ワーカーは共有トークンでアプリのHTTPS APIへ接続する。
  *
  * 【なぜアプリ本体と別プロセスなのか】
  * 推論は数十秒かかることがあり、Vercel のサーバーレス実行時間に収まらない（2-2-1）。
@@ -18,18 +17,35 @@
  * ローカルLLMサーバーを外部公開せずに済む（7-1 のデータ保護とも整合する）。
  *
  * 起動:
- *   AI_WORKER_DATABASE_URL=postgres://ai_worker:<pw>@<host>:5432/postgres \
+ *   AI_WORKER_API_URL=https://nicomaru.nicomaru-app.workers.dev \
+ *   AI_WORKER_TOKEN=<token> \
  *   OLLAMA_ENDPOINT=http://localhost:11434 \
  *   npx tsx worker/ai-worker.ts
  */
 import { hostname } from 'node:os';
 
-import { Client } from 'pg';
+import { z } from 'zod';
 
-import { AI_JOB_TYPES, validateAiOutput, type AiJobType } from '../src/lib/ai/schemas';
+import {
+  AI_JOB_TYPES,
+  AI_OUTPUT_SCHEMAS,
+  validateAiOutput,
+  type AiJobType,
+} from '../src/lib/ai/schemas';
+
+/** 出力スキーマを Ollama の structured outputs に渡す形（文法制約で enum・必須項目を守らせる） */
+function outputFormat(jobType: AiJobType): Record<string, unknown> {
+  const schema: Record<string, unknown> = z.toJSONSchema(AI_OUTPUT_SCHEMAS[jobType], {
+    io: 'output',
+  });
+  delete schema.$schema;
+  return schema;
+}
+/** スキーマ不一致のとき、滞留回収（30分）を待たずにその場で生成し直す回数 */
+const VALIDATION_TRIES = 3;
 
 /** 7-3「ポーリング間隔は30秒」。 */
-const POLL_INTERVAL_MS = 30_000;
+const POLL_INTERVAL_MS = Number(process.env.AI_WORKER_POLL_MS) || 30_000;
 /** ジョブが無いときに待つ時間。空振りでログを埋めないよう間隔は同じにする。 */
 const IDLE_INTERVAL_MS = POLL_INTERVAL_MS;
 
@@ -47,9 +63,6 @@ const DEFAULT_MODEL = process.env.OLLAMA_MODEL ?? 'gemma3:12b';
 interface ClaimedJob {
   id: string;
   job_type: AiJobType;
-  venue_id: string;
-  case_id: string | null;
-  related_task_id: string | null;
   input_ref: {
     ref?: { table: string; id: string };
     text?: string;
@@ -57,12 +70,52 @@ interface ClaimedJob {
   };
   model_name: string | null;
   prompt_text: string | null;
-  prompt_template_id: string | null;
   attempts: number;
+}
+
+/** ジョブの受け渡し口。アプリの /api/internal/ai-worker。 */
+interface Queue {
+  ping(): Promise<void>;
+  claim(): Promise<ClaimedJob | null>;
+  complete(id: string, output: unknown, error: string | null, model: string): Promise<void>;
+  close(): Promise<void>;
 }
 
 const workerId = `${hostname()}:${process.pid}`;
 let stopping = false;
+
+/**
+ * D1版。DB接続情報を配らず、3操作しかできない共有トークンだけを持たせる（7-3）。
+ * 向きはワーカー→アプリのアウトバウンドのままなので、LLMサーバーを外部公開しない。
+ */
+function httpQueue(baseUrl: string, token: string): Queue {
+  const { protocol, hostname: host } = new URL(baseUrl);
+  if (protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(host)) {
+    throw new Error(
+      'AI_WORKER_API_URL は https で指定してください（トークンを平文で送らないため）',
+    );
+  }
+  const call = async <T>(body: Record<string, unknown>): Promise<T> => {
+    const response = await fetch(new URL('/api/internal/ai-worker', baseUrl), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ worker: workerId, ...body }),
+    });
+    if (!response.ok) throw new Error(`アプリがエラーを返しました: ${response.status}`);
+    return (await response.json()) as T;
+  };
+  return {
+    ping: async () => {
+      await call({ action: 'ping', model: DEFAULT_MODEL });
+    },
+    claim: async () =>
+      (await call<{ job: ClaimedJob | null }>({ action: 'claim', jobTypes: AI_JOB_TYPES })).job,
+    complete: async (id, output, error, model) => {
+      await call({ action: 'complete', id, output: error ? undefined : output, error, model });
+    },
+    close: async () => undefined,
+  };
+}
 
 function log(message: string, extra?: unknown) {
   // 本文や個人情報は出さない（7-4）。出すのは job_type と id まで。
@@ -72,10 +125,15 @@ function log(message: string, extra?: unknown) {
 /**
  * Ollama を呼ぶ（7-6 生成エンジン）。
  *
- * format: 'json' を付けるのは、出力を zod で検証する前提だから（7-6 出力検証）。
+ * format に出力スキーマを渡すのは、出力を zod で検証する前提だから（7-6 出力検証）。
  * 自由文で返させると検証がほぼ必ず落ち、リトライを空振りさせる。
  */
-async function callOllama(model: string, prompt: string, input: string): Promise<unknown> {
+async function callOllama(
+  model: string,
+  prompt: string,
+  input: string,
+  format: Record<string, unknown>,
+): Promise<unknown> {
   const endpoint = process.env.OLLAMA_ENDPOINT ?? 'http://localhost:11434';
   const apiKey = process.env.OLLAMA_API_KEY;
 
@@ -88,8 +146,9 @@ async function callOllama(model: string, prompt: string, input: string): Promise
     body: JSON.stringify({
       model,
       prompt: `${prompt}\n\n---\n${input}`,
-      format: 'json',
+      format,
       stream: false,
+      ...(process.env.OLLAMA_KEEP_ALIVE ? { keep_alive: process.env.OLLAMA_KEEP_ALIVE } : {}),
       options: { temperature: 0.2 },
     }),
   });
@@ -123,27 +182,33 @@ function buildInput(job: ClaimedJob): string {
   return parts.join('\n\n');
 }
 
-async function processJob(client: Client, job: ClaimedJob): Promise<void> {
+async function processJob(queue: Queue, job: ClaimedJob): Promise<void> {
   const model = job.model_name ?? DEFAULT_MODEL;
 
   // プロンプトは ai_prompt_templates（DB管理）から来る（7-6）。
   // 見つからない場合はコードに埋め込んだ文言で代用せず、失敗させて設定漏れを表面化させる。
   if (!job.prompt_text) {
-    await client.query('select complete_ai_job($1, $2, null, $3, $4)', [
+    await queue.complete(
       job.id,
-      workerId,
+      null,
       `job_type=${job.job_type} の有効なプロンプトテンプレートがありません`,
       model,
-    ]);
+    );
     log('プロンプト未設定のため failed', { id: job.id, jobType: job.job_type });
     return;
   }
 
+  const startedAt = Date.now();
   try {
-    const raw = await callOllama(model, job.prompt_text, buildInput(job));
-
     // 7-6「ワーカーはLLM出力をJSONスキーマで検証してから ai_jobs.output に保存する」
-    const validated = validateAiOutput(job.job_type, raw);
+    const format = outputFormat(job.job_type);
+    let validated = validateAiOutput(job.job_type, null);
+    for (let attempt = 1; attempt <= VALIDATION_TRIES; attempt++) {
+      const raw = await callOllama(model, job.prompt_text, buildInput(job), format);
+      validated = validateAiOutput(job.job_type, raw);
+      if (validated.ok) break;
+      log('出力がスキーマに合いませんでした', { id: job.id, attempt, error: validated.error });
+    }
     if (!validated.ok) {
       // 検証失敗はリトライの対象（上限を超えたら滞留回収が failed にする）。
       // ここで failed を書かずに processing のまま抜けると、
@@ -155,25 +220,15 @@ async function processJob(client: Client, job: ClaimedJob): Promise<void> {
       return;
     }
 
-    await client.query('select complete_ai_job($1, $2, $3::jsonb, null, $4)', [
-      job.id,
-      workerId,
-      JSON.stringify(validated.value),
-      model,
-    ]);
-    log('完了', { id: job.id, jobType: job.job_type });
+    await queue.complete(job.id, validated.value, null, model);
+    log('完了', { id: job.id, jobType: job.job_type, ms: Date.now() - startedAt });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
     // 試行上限に達していれば failed として確定させ、画面を手動運用へ倒す（7-1）。
     // 達していなければ processing のまま抜け、滞留回収で queued へ戻す。
     if (job.attempts >= 3) {
-      await client.query('select complete_ai_job($1, $2, null, $3, $4)', [
-        job.id,
-        workerId,
-        message,
-        model,
-      ]);
+      await queue.complete(job.id, null, message, model);
       log('試行上限のため failed', { id: job.id, message });
     } else {
       log('失敗。再試行に回します', { id: job.id, message });
@@ -182,18 +237,15 @@ async function processJob(client: Client, job: ClaimedJob): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const url = process.env.AI_WORKER_DATABASE_URL;
-  if (!url) {
-    console.error(
-      'AI_WORKER_DATABASE_URL が設定されていません。' +
-        'ワーカー専用ロール（ai_worker）の接続情報を渡してください（7-3）。',
-    );
+  const apiUrl = process.env.AI_WORKER_API_URL;
+  const token = process.env.AI_WORKER_TOKEN;
+  let queue: Queue;
+  if (apiUrl && token) queue = httpQueue(apiUrl, token);
+  else {
+    console.error('AI_WORKER_API_URL と AI_WORKER_TOKEN を設定してください（7-3）。');
     process.exit(1);
   }
-
-  const client = new Client({ connectionString: url });
-  await client.connect();
-  log('起動しました', { models: DEFAULT_MODEL });
+  log('起動しました', { models: DEFAULT_MODEL, via: 'api' });
 
   const shutdown = () => {
     stopping = true;
@@ -207,19 +259,15 @@ async function main(): Promise<void> {
       // 心拍。7-3 (4)「『利用不可』表示は、最終ポーリングから10分以上経過したことを
       // 判定条件とする」。ジョブの有無に関わらず毎回打つ。
       // ジョブが無い間は locked_at が動かないので、それでは「暇」と「停止」を区別できない。
-      await client.query('select ai_worker_ping($1, $2)', [workerId, DEFAULT_MODEL]);
+      await queue.ping();
 
-      const claimed = await client.query<ClaimedJob>('select * from claim_ai_job($1, $2)', [
-        workerId,
-        AI_JOB_TYPES as unknown as string[],
-      ]);
-
-      if (claimed.rows.length === 0) {
+      const claimed = await queue.claim();
+      if (!claimed) {
         await new Promise((resolve) => setTimeout(resolve, IDLE_INTERVAL_MS));
         continue;
       }
 
-      await processJob(client, claimed.rows[0]);
+      await processJob(queue, claimed);
       // ジョブがあった直後は続けて取りに行く（滞留を減らす）
     } catch (error) {
       // 接続断などはここで拾う。落としてしまうと再起動まで止まる。
@@ -228,7 +276,7 @@ async function main(): Promise<void> {
     }
   }
 
-  await client.end();
+  await queue.close();
   log('終了しました');
 }
 

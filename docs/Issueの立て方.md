@@ -77,6 +77,17 @@ Issue は次の大きさにそろえます。
 - PR が大きくなりそうなら、先に Issue を分けてから PR も分けます
 - 書き方は PR を作ると出てくるテンプレートに従います（やったこと・確かめたこと・AIを使わずに確かめる手順）
 
+### CIが通ったら自動マージ・落ちたらClaudeが自動修正
+
+- **main 向けの PR は、必須チェック（verify・e2e・security）がすべて通ると自動でマージされる**（merge commit。PR内のコミットはそのまま残る）。止めたいときは下書き（Draft）にするか「マージ保留」ラベルを付ける
+- main が先に進んで遅れた PR は、自動で main を取り込んで CI をやり直す。衝突したときは手で直す
+- **CI が落ちたら、Claude Code が失敗ログを読んで直し、`[ci-autofix]` 付きのコミットを PR に足す**。直す箇所がない一過性の失敗なら1回だけ再実行する。3回直しても通らなければ「自動修正しない」ラベルを付けて止まるので、人が原因を確かめる
+- 自動修正を使わない PR には「自動修正しない」ラベルを付ける。フォークからの PR と Dependabot の PR は自動修正の対象外
+- Issue・PR のコメントで `@claude 〜して` と書くと、Claude Code が質問に答えたり修正をコミットしたりする（書き込み権限のある人の呼びかけだけに反応する）
+- Claude を動かすには、リポジトリの secret に `CLAUDE_CODE_OAUTH_TOKEN`（`claude setup-token` で発行）か `ANTHROPIC_API_KEY` が要る。未設定のあいだ自動修正は動かず、自動マージだけが動く
+
+設定は [auto-merge.yml](../.github/workflows/auto-merge.yml)・[ci-autofix.yml](../.github/workflows/ci-autofix.yml)・[claude.yml](../.github/workflows/claude.yml) にあります。
+
 ### 依存関係の自動更新PR（Dependabot）
 
 部品（npm パッケージ・GitHub Actions）の更新は Dependabot が自動で PR を作ります。PR が増えすぎないよう、次の形にしています。
@@ -84,6 +95,6 @@ Issue は次の大きさにそろえます。
 - **毎月1日に、npm で1本・GitHub Actions で1本**（最大2本）にまとめて届く
 - npm の**メジャー更新（例: 22.x → 26.x）は届かない**。互換性の確認が要るので、必要になったら「作業」Issue を立てて手で上げる
 - **脆弱性を直すセキュリティ更新は別枠で、見つかりしだい届く**
-- CI が通ればマージしてよい。特定のパッケージで CI が落ちる場合は、PR に `@dependabot ignore パッケージ名` とコメントすると、そのパッケージを除いて作り直される
+- CI が通れば自動でマージされる（下の「CIが通ったら自動マージ」）。特定のパッケージで CI が落ちる場合は、PR に `@dependabot ignore パッケージ名` とコメントすると、そのパッケージを除いて作り直される
 
 設定は [.github/dependabot.yml](../.github/dependabot.yml) にあります。

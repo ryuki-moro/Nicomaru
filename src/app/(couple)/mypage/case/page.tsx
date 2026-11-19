@@ -15,41 +15,33 @@
  *
  * couple が見られるのは自分の案件だけ（付録A accessible_case_ids()）なので、
  * M01 と同じくパスに caseId を取らず、参照できる案件から挙式日が近いものを主として解決する。
- * 読み取りのみなので Route Handler を経由せず Supabase クライアント（RLS適用）で直接 select する（6-5）。
  */
-import Link from 'next/link';
-
 import { EmptyState } from '@/components/ui/EmptyState';
+import { requirePageUser } from '@/lib/auth/session';
 import {
-  COUPLE_PROFILE_COLUMNS,
   INCOMPLETE_TASK_STATUSES,
   PARTNER_ROLES,
   PARTNER_ROLE_LABEL,
   type PartnerRole,
 } from '@/lib/constants';
-import { requirePageUser } from '@/lib/auth/session';
 import { readPii } from '@/lib/crypto';
-import { usingD1 } from '@/lib/d1/mode';
 import { formatDateJp } from '@/lib/format';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
+import Link from 'next/link';
 export const metadata = { title: '挙式情報' };
-
 interface CaseRow {
   id: string;
   case_code: string;
   wedding_date: string;
   wedding_time: string | null;
   guest_count: number | null;
-  plan_types: { name: string } | null;
+  plan_types: {
+    name: string;
+  } | null;
 }
-
 interface ProfileRow {
   partner_role: PartnerRole;
   full_name: string | null;
 }
-
-/** D1では案件・氏名・宿題を caseRow でまとめて読み、Supabase版と同じ形にする。 */
 async function D1CoupleCase() {
   const user = await requirePageUser('couple');
   const { localDB } = await import('@/lib/d1/runtime');
@@ -74,7 +66,6 @@ async function D1CoupleCase() {
     />
   );
 }
-
 const LoadError = () => (
   <div role="alert" className="banner-error">
     <span>挙式の情報を読み込めませんでした。時間をおいて開き直してください。</span>
@@ -83,59 +74,9 @@ const LoadError = () => (
 const Waiting = () => (
   <EmptyState message="担当プランナーが準備を進めています。案件の情報が届くまでお待ちください。" />
 );
-
 export default async function CoupleCasePage() {
-  if (usingD1()) return D1CoupleCase();
-  const supabase = await createSupabaseServerClient();
-
-  // 案件の絞り込みは書かない。どれが見えるかは付録A の RLS が決める（6-5）。
-  // 同着は id を最終タイブレークに用いる（4-3 一覧画面共通）。
-  const { data, error } = await supabase
-    .from('wedding_cases')
-    .select('id, case_code, wedding_date, wedding_time, guest_count, plan_types ( name )')
-    .order('wedding_date', { ascending: true })
-    .order('id', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) return <LoadError />;
-  if (!data) return <Waiting />;
-
-  // plan_types の埋め込みを含む select は supabase-js の型パーサが行の形を推論しきれないため、
-  // 上の CaseRow を正本として扱う。
-  const weddingCase = data as unknown as CaseRow;
-
-  const [profileResult, totalResult, incompleteResult] = await Promise.all([
-    supabase.from('couple_profiles').select(COUPLE_PROFILE_COLUMNS).eq('case_id', weddingCase.id),
-    // 進捗は件数だけあれば足りるので、行を運ばず count で取る（8-3 の初期表示3秒以内）
-    supabase
-      .from('case_tasks')
-      .select('id', { count: 'exact', head: true })
-      .eq('case_id', weddingCase.id),
-    supabase
-      .from('case_tasks')
-      .select('id', { count: 'exact', head: true })
-      .eq('case_id', weddingCase.id)
-      .in('status', [...INCOMPLETE_TASK_STATUSES]),
-  ]);
-
-  // COUPLE_PROFILE_COLUMNS は連結で組み立てた string のため、行の形は ProfileRow が正本。
-  // 案件登録時に groom／bride の2行が必ず作られる（6-6-1）ので、
-  // 取得結果を並べ替えるのではなく PARTNER_ROLES の順に引き当てる。
-  // こうすると片方が欠けても・読み込めなくても、基本情報から新郎新婦の欄自体が消えない。
-  const profileByRole = new Map(
-    ((profileResult.data ?? []) as unknown as ProfileRow[]).map((p) => [p.partner_role, p]),
-  );
-
-  // 進捗の数え方は K02（式場側）と揃える。confirmed／waived を完了として数える。
-  const total = totalResult.count ?? 0;
-  const done = total - (incompleteResult.count ?? 0);
-
-  return (
-    <CaseView weddingCase={weddingCase} profileByRole={profileByRole} total={total} done={done} />
-  );
+  return D1CoupleCase();
 }
-
 function CaseView({
   weddingCase,
   profileByRole,
@@ -202,12 +143,9 @@ function CaseView({
         内容の変更が必要なときは、担当プランナーへお知らせください。
       </p>
 
-      {/* ゲスト出欠はD1へ未移行 */}
-      {!usingD1() && (
-        <Link href="/mypage/guests" className="btn-secondary block text-center">
-          ゲストの出欠を見る
-        </Link>
-      )}
+      <Link href="/mypage/guests" className="btn-secondary block text-center">
+        ゲストの出欠を見る
+      </Link>
 
       <Link href="/mypage/tasks" className="btn-secondary block text-center">
         宿題・提出物を見る

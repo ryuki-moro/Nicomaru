@@ -11,25 +11,21 @@
  * 容量は内部バッチが採取した日次スナップショットを表示する。
  * 未取得・上限未設定・集計の期限切れは0%や正常として表示しない。
  */
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { getAppUser } from '@/lib/auth/session';
+import { formatDateTime } from '@/lib/format';
+import { NOTIFICATION_TYPE_LABEL, type NotificationType } from '@/lib/notify/templates';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-
-import { NotificationLogExportForm } from './NotificationLogExportForm';
 import {
   MonitoringSummary,
   UsageSummary,
   type SystemAlert,
   type UsageSnapshot,
 } from './MonitoringSummary';
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { getAppUser } from '@/lib/auth/session';
-import { formatDateTime } from '@/lib/format';
-import { NOTIFICATION_TYPE_LABEL, type NotificationType } from '@/lib/notify/templates';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
+import { NotificationLogExportForm } from './NotificationLogExportForm';
 export const dynamic = 'force-dynamic';
-
 /** 6-12 表6-12 の処理名。batch_runs.job_type と対応する。 */
 const JOB_LABEL: Record<string, string> = {
   risk_recalculate: 'リスク再計算',
@@ -43,7 +39,6 @@ const JOB_LABEL: Record<string, string> = {
   audit_log_purge: '監査ログの保持期限処理',
   monitoring: '障害条件の監視',
 };
-
 interface BatchRunRow {
   id: string;
   job_type: string;
@@ -53,7 +48,6 @@ interface BatchRunRow {
   http_status: number | null;
   error_message: string | null;
 }
-
 interface NotificationLogRow {
   id: string;
   provider: string;
@@ -63,61 +57,57 @@ interface NotificationLogRow {
   notifications: {
     notification_type: NotificationType;
     case_id: string | null;
-    venues: { name: string } | null;
-    wedding_cases: { case_code: string } | null;
+    venues: {
+      name: string;
+    } | null;
+    wedding_cases: {
+      case_code: string;
+    } | null;
   } | null;
 }
-
 // 動的なサーバーリクエストの時刻を、表示コンポーネントへの入力として固定する。
 function requestTime(): number {
   return Date.now();
 }
-
 export default async function SystemStatusPage() {
   const user = await getAppUser();
   if (!user || user.role !== 'system_admin') redirect('/error?code=403');
-
-  const supabase = await createSupabaseServerClient();
-
-  const [venues, cases, users, batches, logs, usage, alerts] = await Promise.all([
-    supabase.from('venues').select('id', { count: 'exact', head: true }),
-    supabase.from('wedding_cases').select('id', { count: 'exact', head: true }),
-    supabase
-      .from('user_profiles')
-      .select('id', { count: 'exact', head: true })
-      .neq('status', 'deleted'),
-    supabase
-      .from('batch_runs')
-      .select('id, job_type, started_at, finished_at, target_count, http_status, error_message')
-      .order('started_at', { ascending: false })
-      .limit(20),
-    supabase
-      .from('notification_logs')
-      .select(
-        `id, provider, status, provider_message_id, created_at,
-         notifications ( notification_type, case_id,
-                         venues ( name ), wedding_cases ( case_code ) )`,
-      )
-      .order('created_at', { ascending: false })
-      .limit(50),
-    supabase
-      .from('usage_snapshots')
-      .select('*')
-      .order('measured_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from('system_alerts')
-      .select('alert_key, source, affected_count, last_detected_at, published_at, resolved_at')
-      .order('resolved_at', { ascending: true, nullsFirst: true })
-      .order('last_detected_at', { ascending: false })
-      .limit(50),
-  ]);
-
-  const batchRows = (batches.data ?? []) as unknown as BatchRunRow[];
-  const logRows = (logs.data ?? []) as unknown as NotificationLogRow[];
-  const checkedAt = requestTime();
-
+  {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { systemSummaryD1 } = await import('@/lib/d1/admin');
+    const summary = await systemSummaryD1(await localDB(), user);
+    const checkedAtD1 = requestTime();
+    return (
+      <SystemView
+        venueCount={summary.venueCount}
+        caseCount={summary.caseCount}
+        userCount={summary.userCount}
+        batchRows={summary.batches as BatchRunRow[]}
+        logRows={summary.logs as unknown as NotificationLogRow[]}
+        usage={summary.usage as UsageSnapshot | null}
+        usageFailed={false}
+        alerts={summary.alerts as SystemAlert[]}
+        alertsFailed={false}
+        checkedAt={checkedAtD1}
+      />
+    );
+  }
+}
+function SystemView(props: {
+  venueCount: number | null;
+  caseCount: number | null;
+  userCount: number | null;
+  batchRows: BatchRunRow[];
+  batchesFailed?: boolean;
+  logRows: NotificationLogRow[];
+  logsFailed?: boolean;
+  usage: UsageSnapshot | null;
+  usageFailed: boolean;
+  alerts: SystemAlert[];
+  alertsFailed: boolean;
+  checkedAt: number;
+}) {
+  const { batchRows, logRows } = props;
   return (
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: '利用状況・通知ログ' }]} />
@@ -132,28 +122,25 @@ export default async function SystemStatusPage() {
       <section>
         <h2 className="section-head">利用状況</h2>
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
-          <Summary label="式場数" value={venues.error ? null : venues.count} />
-          <Summary label="案件数" value={cases.error ? null : cases.count} />
-          <Summary label="利用者数" value={users.error ? null : users.count} />
+          <Summary label="式場数" value={props.venueCount} />
+          <Summary label="案件数" value={props.caseCount} />
+          <Summary label="利用者数" value={props.userCount} />
         </div>
         <UsageSummary
-          snapshot={usage.data as UsageSnapshot | null}
-          failed={Boolean(usage.error)}
-          checkedAt={checkedAt}
+          snapshot={props.usage}
+          failed={props.usageFailed}
+          checkedAt={props.checkedAt}
         />
       </section>
 
-      <MonitoringSummary
-        alerts={(alerts.data ?? []) as SystemAlert[]}
-        failed={Boolean(alerts.error)}
-      />
+      <MonitoringSummary alerts={props.alerts} failed={props.alertsFailed} />
 
       <section>
         <h2 className="section-head">定期処理の直近の実行結果</h2>
         <p className="mt-1 text-caption text-text-muted">
           pg_net は結果を待たずに送るため、失敗はこの記録でしか分かりません。
         </p>
-        {batches.error ? (
+        {props.batchesFailed ? (
           <p className="mt-2" role="alert">
             実行記録を読み込めませんでした。
           </p>
@@ -198,7 +185,7 @@ export default async function SystemStatusPage() {
       <section>
         <h2 className="section-head">通知ログ</h2>
         <NotificationLogExportForm />
-        {logs.error ? (
+        {props.logsFailed ? (
           <p className="mt-2" role="alert">
             通知ログを読み込めませんでした。
           </p>
@@ -242,7 +229,6 @@ export default async function SystemStatusPage() {
     </div>
   );
 }
-
 function Summary({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="card">

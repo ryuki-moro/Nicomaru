@@ -26,7 +26,13 @@ before(async () => {
   process.env.PII_ENCRYPTION_KEY = randomBytes(32).toString('base64');
   platform = await getPlatformProxy({ configPath: 'cloudflare/wrangler.jsonc', persist: false });
   db = platform.env.DB;
-  for (const file of ['0001_auth.sql', '0002_cases.sql', '0003_onboarding.sql', '0004_tasks.sql']) {
+  for (const file of [
+    '0001_auth.sql',
+    '0002_cases.sql',
+    '0003_onboarding.sql',
+    '0004_tasks.sql',
+    '0022_follow.sql',
+  ]) {
     const sql = await readFile(`cloudflare/migrations/${file}`, 'utf8');
     await db.batch(
       sql

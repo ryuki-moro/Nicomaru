@@ -7,27 +7,39 @@
  */
 import { z } from 'zod';
 
+import { aiJobInputSchema } from '@/lib/ai/schemas';
 import {
   ALLOWED_FILE_TYPES,
-  SENDABLE_CHANNELS,
   FOLLOW_METHODS,
   GUEST_AGE_CATEGORIES,
   GUEST_ASSISTANCE_NEEDS,
   GUEST_GENDERS,
   GUEST_RELATIONSHIPS,
   GUEST_RESPONSE_MAX_PEOPLE,
+  GUEST_SEAT_ROLES,
+  GUEST_SEAT_TITLE_MAX,
   IMPORTANCE_LEVELS,
   INPUT_LIMITS,
   PARTNER_ROLES,
   PASSWORD_MIN_LENGTH,
   REVIEW_DECISIONS,
+  SENDABLE_CHANNELS,
   SUBMISSION_FORMATS,
 } from '@/lib/constants';
 import { type ErrorDetail } from '@/lib/errors';
-import { GUEST_TAG_MAX_PER_CASE, GUEST_TAG_NAME_MAX } from '@/lib/guest-tags';
 import { todayInJst } from '@/lib/format';
-import { aiJobInputSchema } from '@/lib/ai/schemas';
+import { GUEST_TAG_MAX_PER_CASE, GUEST_TAG_NAME_MAX } from '@/lib/guest-tags';
 import { NOTIFICATION_TYPES } from '@/lib/notify/templates';
+import {
+  HALL_SHAPES,
+  LAYOUT_NAME_MAX,
+  TABLE_CAPACITY_MAX,
+  TABLE_CAPACITY_MIN,
+  TABLE_NAME_MAX,
+  TABLE_SHAPES,
+  TABLE_TAGS_MAX,
+  TABLES_PER_LAYOUT_MAX,
+} from '@/lib/seating/layout';
 
 /**
  * staff が /api/ai/jobs から投入できる job_type。
@@ -44,7 +56,22 @@ const AI_CORE_JOB_TYPES_FOR_STAFF = [
   'translation',
 ] as const;
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日付の形式が正しくありません');
+/**
+ * 実在する暦日か（2028-02-31 のような存在しない日付を弾く）。
+ * setUTCFullYear で年を直接指定し、月日の繰り上がりがあれば不一致として検出する。
+ */
+const isRealCalendarDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  );
+};
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, '日付の形式が正しくありません')
+  .refine(isRealCalendarDate, '存在しない日付です');
 const shortText = z.string().trim().min(1, '入力してください').max(INPUT_LIMITS.shortText);
 const optionalTextArea = z.string().trim().max(INPUT_LIMITS.textArea).optional().nullable();
 const email = z
@@ -301,6 +328,93 @@ export const guestTagAssignmentSchema = z.object({
   tagIds: z.array(z.string().uuid()).max(GUEST_TAG_MAX_PER_CASE),
 });
 
+/**
+ * ゲスト1人の確認・修正（#179）。送った項目だけを更新する。
+ * seatRole／seatTitle は null で「なし」「自動の候補に戻す」。
+ */
+export const guestReviewSchema = z
+  .object({
+    checked: z.boolean().optional(),
+    relationship: z.enum(GUEST_RELATIONSHIPS, { message: 'ご関係を選択してください' }).optional(),
+    seatRole: z.enum(GUEST_SEAT_ROLES, { message: '役割が正しくありません' }).nullable().optional(),
+    seatTitle: z
+      .string()
+      .trim()
+      .max(GUEST_SEAT_TITLE_MAX, `${GUEST_SEAT_TITLE_MAX}文字以内で入力してください`)
+      .nullable()
+      .optional(),
+  })
+  .strict()
+  .refine((v) => Object.keys(v).length > 0, { message: '変更する項目がありません' });
+
+// ------------------------------------------------------ 卓の配置パターン（#180）
+/** 卓の「座れる人」に使えるタグのキー（src/lib/guest-tags.ts のキーと同じ形） */
+const SEATING_TAG_KEY =
+  /^(side|relationship|age|assistance|role):[a-z_]+$|^allergy$|^tag:[0-9a-f-]{36}$/;
+
+export const seatingTableSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z
+    .string()
+    .trim()
+    .min(1, '卓の名前を入力してください')
+    .max(TABLE_NAME_MAX, `卓の名前は${TABLE_NAME_MAX}文字以内で入力してください`),
+  capacity: z
+    .number()
+    .int('定員は整数で入力してください')
+    .min(TABLE_CAPACITY_MIN, `定員は${TABLE_CAPACITY_MIN}名以上にしてください`)
+    .max(TABLE_CAPACITY_MAX, `定員は${TABLE_CAPACITY_MAX}名以下にしてください`),
+  shape: z.enum(TABLE_SHAPES),
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  allowedTags: z
+    .array(z.string().regex(SEATING_TAG_KEY, '座れる人の条件の形が正しくありません'))
+    .max(TABLE_TAGS_MAX),
+});
+
+/** 配置パターンの保存（新規・更新とも、卓は全件を送る。送らなかった卓は消える） */
+export const seatingLayoutSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1, '配置の名前を入力してください')
+      .max(LAYOUT_NAME_MAX, `配置の名前は${LAYOUT_NAME_MAX}文字以内で入力してください`),
+    hallShape: z.enum(HALL_SHAPES),
+    tables: z.array(seatingTableSchema).min(1).max(TABLES_PER_LAYOUT_MAX),
+  })
+  .strict();
+
+/** 新郎新婦に送る／送るのをやめる */
+export const seatingLayoutOfferSchema = z.object({ offered: z.boolean() }).strict();
+
+// ------------------------------------------------------------ 席次（#181・#182）
+/** 席次の保存。version は読み込んだときの版（まだ席次が無ければ 0）。送らなかった人は未配置になる */
+export const seatingChartSaveSchema = z
+  .object({
+    layoutId: z.string().uuid().nullable(),
+    version: z.number().int().min(0),
+    assignments: z
+      .array(z.object({ guestId: z.string().uuid(), tableId: z.string().uuid() }).strict())
+      .max(500),
+  })
+  .strict();
+
+/** 席次の提出 */
+export const seatingChartSubmitSchema = z.object({ version: z.number().int().min(0) }).strict();
+
+/** 席次の確認（#182）。差し戻しはコメント必須、承認でも任意で付けられる */
+export const seatingChartReviewSchema = z
+  .object({
+    decision: z.enum(['approved', 'returned']),
+    feedback: z.string().trim().max(1000).optional().nullable(),
+  })
+  .strict()
+  .refine((v) => v.decision !== 'returned' || Boolean(v.feedback), {
+    path: ['feedback'],
+    message: '修正のお願いには、直してほしい内容を入力してください',
+  });
+
 // ------------------------------------------------------ 招待・フォロー・利用者
 export const invitationIssueSchema = z
   .object({
@@ -434,13 +548,6 @@ export const casePatchSchema = caseUpdateSchema.extend({
 });
 
 // ------------------------------------------------- 認証（追記。P03／/api/auth/**）
-/**
- * /api/auth/complete-invite の本文。
- * 対象行は呼び出し元JWTの auth.uid() から決まるため入力項目を持たない（6-3-1）。
- * 利用者IDを本文で受け取らないこと自体が「他人の行を active にできない」担保になる。
- */
-export const completeInviteSchema = z.object({});
-
 /** POST /api/notifications/send（機能7-1、Phase 2）。文面は付録D のテンプレートから組む。 */
 export const notificationSendSchema = z
   .object({
@@ -500,6 +607,10 @@ export const aiJobCreateSchema = z.object({
   jobType: z.enum(AI_CORE_JOB_TYPES_FOR_STAFF),
   relatedTaskId: z.string().uuid().optional().nullable(),
   input: aiJobInputSchema,
+});
+/** D1版の宿題IDはUUIDに限らない（検証用データ）。範囲はD1側の権限SQLで縛る。 */
+export const aiJobCreateSchemaD1 = aiJobCreateSchema.extend({
+  relatedTaskId: z.string().min(1).max(64).optional().nullable(),
 });
 
 /**

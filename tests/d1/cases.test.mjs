@@ -33,6 +33,7 @@ before(async () => {
     '0002_cases.sql',
     '0003_onboarding.sql',
     '0004_tasks.sql',
+    '0022_follow.sql',
     '0005_notifications.sql',
   ]) {
     const sql = await readFile(`cloudflare/migrations/${file}`, 'utf8');

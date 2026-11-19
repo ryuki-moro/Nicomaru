@@ -1,9 +1,13 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it, vi } from 'vitest';
 
-const { server } = vi.hoisted(() => ({ server: vi.fn() }));
-vi.mock('@/lib/auth/session', () => ({ getAppUser: async () => null }));
-vi.mock('@/lib/supabase/server', () => ({ createSupabaseServerClient: server }));
+const { list } = vi.hoisted(() => ({ list: vi.fn() }));
+vi.mock('@/lib/auth/session', () => ({ getAppUser: async () => ({ id: 'couple' }) }));
+vi.mock('@/lib/d1/runtime', () => ({ localDB: async () => ({}) }));
+vi.mock('@/lib/d1/notifications', () => ({
+  listNotifications: list,
+  markNotificationsRead: async () => {},
+}));
 
 import NotificationsPage from '@/app/(couple)/mypage/notifications/page';
 
@@ -22,12 +26,7 @@ it('M05は宿題詳細へリンクし、旧NULL行は案件の有無で一覧・
     sent_at: null,
     created_at: '2026-10-23T00:00:00Z',
   }));
-  const query = {
-    select: () => query,
-    order: () => query,
-    range: async () => ({ data: rows, error: null }),
-  };
-  server.mockResolvedValue({ from: () => query });
+  list.mockResolvedValue(rows);
   const html = renderToStaticMarkup(await NotificationsPage({ searchParams: Promise.resolve({}) }));
   expect(html).toContain('href="/mypage/tasks/task-id"');
   expect(html).toContain('href="/mypage/tasks"');

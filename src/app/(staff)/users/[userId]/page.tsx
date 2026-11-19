@@ -3,23 +3,17 @@
  *
  * 正本: 基本設計書 Version 1.2 4-3 表4-20／U04 の記述。
  *
- * 読み取りは Supabase クライアント（RLS適用）で行い、更新・削除だけを
  * /api/admin/users/{userId} へ送る（Auth Admin API が必要なため。6-3-5 表6-4）。
  * ここでの管理範囲チェックは導線を正すためのもので、実際の防御は API 層と RLS が担う。
  */
-import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
-
 import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
 import { usersLabelFor } from '@/components/layout/staffNavItems';
 import { getAppUser, type AppUser } from '@/lib/auth/session';
 import { ROLE_LABEL, type Role, type UserStatus } from '@/lib/constants';
-import { usingD1 } from '@/lib/d1/mode';
 import { ApiError } from '@/lib/errors';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-
+import Link from 'next/link';
+import { notFound, redirect } from 'next/navigation';
 import { UserEditForm, type SuccessorOption } from './UserEditForm';
-
 interface ProfileRow {
   id: string;
   display_name: string;
@@ -29,15 +23,18 @@ interface ProfileRow {
   status: UserStatus;
   venue_id: string | null;
 }
-
-export default async function UserEditPage({ params }: { params: Promise<{ userId: string }> }) {
+export default async function UserEditPage({
+  params,
+}: {
+  params: Promise<{
+    userId: string;
+  }>;
+}) {
   const { userId } = await params;
-
   const user = await getAppUser();
   if (!user) redirect('/login');
   if (user.role !== 'admin' && user.role !== 'system_admin') redirect('/error?code=403');
-
-  if (usingD1()) {
+  {
     const db = await (await import('@/lib/d1/runtime')).localDB();
     const staff = await import('@/lib/d1/staff');
     const target = await staff.managedStaff(db, user, userId).catch((error: unknown) => {
@@ -55,67 +52,7 @@ export default async function UserEditPage({ params }: { params: Promise<{ userI
       />
     );
   }
-
-  const supabase = await createSupabaseServerClient();
-
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .select('id, display_name, email, phone, role, status, venue_id')
-    .eq('id', userId)
-    .maybeSingle();
-
-  // RLS で 0 行になる場合（別式場など）も「見つからない」として扱い、存在を漏らさない
-  if (error || !data) notFound();
-  const target = data as ProfileRow;
-
-  const manageable =
-    user.role === 'admin'
-      ? target.role === 'planner' && target.venue_id === user.venueId
-      : target.role === 'planner' || target.role === 'admin';
-  if (!manageable) notFound();
-
-  const { data: venue } = target.venue_id
-    ? await supabase.from('venues').select('name').eq('id', target.venue_id).maybeSingle()
-    : { data: null };
-
-  // U04: 担当案件がある planner は引き継ぎ先の指定が必須になる
-  let assignedCaseCount = 0;
-  let successorOptions: SuccessorOption[] = [];
-
-  if (target.role === 'planner') {
-    const { count } = await supabase
-      .from('wedding_cases')
-      .select('id', { count: 'exact', head: true })
-      .eq('primary_planner_id', target.id);
-    assignedCaseCount = count ?? 0;
-
-    if (assignedCaseCount > 0 && target.venue_id) {
-      const { data: candidates } = await supabase
-        .from('user_profiles')
-        .select('id, display_name')
-        .eq('role', 'planner')
-        .eq('status', 'active')
-        .eq('venue_id', target.venue_id)
-        .neq('id', target.id)
-        .order('display_name')
-        .order('id');
-      successorOptions = ((candidates ?? []) as { id: string; display_name: string }[]).map(
-        (row) => ({ id: row.id, displayName: row.display_name }),
-      );
-    }
-  }
-
-  return (
-    <UserEditView
-      user={user}
-      target={target}
-      venueName={(venue as { name: string } | null)?.name ?? null}
-      assignedCaseCount={assignedCaseCount}
-      successorOptions={successorOptions}
-    />
-  );
 }
-
 function UserEditView({
   user,
   target,

@@ -1,11 +1,7 @@
 'use client';
-
-import { publicD1 } from '@/lib/d1/mode';
+import { isCoupleNavActive, type CoupleNavItem } from '@/components/couple/coupleNavActive';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-import { isCoupleNavActive, type CoupleNavItem } from '@/components/couple/coupleNavActive';
-
 /**
  * couple 側の主要導線を下部に固定表示する（4-3 全画面共通仕様）。
  *
@@ -60,17 +56,15 @@ const ITEMS: readonly CoupleNavItem[] = [
     icon: ['M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0', 'M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2'],
   },
 ];
-
 export function CoupleNav() {
   const pathname = usePathname();
-
   return (
     <nav
       aria-label="主要メニュー"
       className="no-print fixed inset-x-0 bottom-0 z-10 border-t border-border-light bg-surface"
     >
       <ul className="mx-auto flex max-w-phone">
-        {ITEMS.filter((item) => !publicD1() || item.href !== '/mypage/account').map((item) => {
+        {ITEMS.map((item) => {
           const active = isCoupleNavActive(item, pathname);
           return (
             <li key={item.href} className="flex-1">

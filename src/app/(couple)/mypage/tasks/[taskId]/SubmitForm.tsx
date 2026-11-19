@@ -122,6 +122,8 @@ export function SubmitForm({
   const [comment, setComment] = useState(defaultComment);
   const [file, setFile] = useState<File | null>(null);
   const [fileId, setFileId] = useState<string | null>(defaultFileId);
+  const [savedFileName, setSavedFileName] = useState(defaultFileName);
+  const [pendingFileName, setPendingFileName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -136,6 +138,7 @@ export function SubmitForm({
 
     try {
       let attachedId = fileId;
+      let attachedName = pendingFileName ?? savedFileName;
       if (submissionFormat === 'file' && file) {
         const localError = validateFile(file, allowedFileTypes);
         if (localError) {
@@ -143,8 +146,12 @@ export function SubmitForm({
           return;
         }
         attachedId = await uploadFile(taskId, file);
+        attachedName = file.name;
         setFileId(attachedId);
+        setPendingFileName(file.name);
         setFile(null);
+        const fileInput = document.getElementById('answer-file');
+        if (fileInput instanceof HTMLInputElement) fileInput.value = '';
       }
 
       await api.post(`/api/tasks/${taskId}/submit`, {
@@ -158,6 +165,10 @@ export function SubmitForm({
 
       if (draft) {
         // 一時保存はその場に留まる。保存済みの内容をサーバーから取り直す。
+        if (submissionFormat === 'file' && attachedId) {
+          setSavedFileName(attachedName);
+          setPendingFileName(null);
+        }
         setNotice('入力中の内容を保存しました。あとから続きを入力できます。');
         router.refresh();
       } else {
@@ -267,6 +278,7 @@ export function SubmitForm({
               type="file"
               accept={accept}
               className="peer sr-only"
+              disabled={busy}
               aria-labelledby="answer-file-label answer-file-button"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
               aria-invalid={fieldErrors.file || fieldErrors.fileId ? true : undefined}
@@ -283,15 +295,25 @@ export function SubmitForm({
                 <>
                   {file.name}（{formatFileSize(file.size)}）
                 </>
+              ) : pendingFileName ? (
+                <>
+                  {pendingFileName}
+                  {busy ? '（送信中）' : '（未保存・再試行できます）'}
+                </>
+              ) : savedFileName ? (
+                <>保存済み: {savedFileName}</>
               ) : (
                 <span className="text-text-muted">まだ選んでいません</span>
               )}
             </span>
           </div>
-          {!file && defaultFileName && (
+          {!file && savedFileName && !pendingFileName && (
             <p className="mt-1 text-caption text-text-muted">
-              現在の添付: {defaultFileName}（選び直さなければこのまま提出されます）
+              現在の添付: {savedFileName}（選び直さなければこのまま提出されます）
             </p>
+          )}
+          {!file && savedFileName && pendingFileName && (
+            <p className="mt-1 text-caption text-text-muted">現在保存済みの添付: {savedFileName}</p>
           )}
           {allowedFileTypes.includes('csv') && (
             <p className="mt-1 text-caption text-text-muted">CSVは UTF-8 で保存してください。</p>

@@ -1,13 +1,13 @@
+import type { AppUser, ResolvedUser } from '@/lib/auth/session';
+import { OTP, PASSWORD_MIN_LENGTH } from '@/lib/constants';
+import { hmacHash } from '@/lib/crypto';
+import type { D1Database } from '@cloudflare/workers-types';
 import { betterAuth } from 'better-auth';
 import { APIError } from 'better-auth/api';
 import { emailOTP } from 'better-auth/plugins';
-import type { D1Database } from '@cloudflare/workers-types';
 import { headers } from 'next/headers';
-import { OTP, PASSWORD_MIN_LENGTH } from '@/lib/constants';
-import { hmacHash } from '@/lib/crypto';
-import type { ResolvedUser, AppUser } from '@/lib/auth/session';
-import { localDB } from './runtime';
 import { deliverMail } from './mailbox';
+import { localDB } from './runtime';
 
 /** トークンはフラグメントに置き、サーバーのアクセスログとReferer に残さない。 */
 export const passwordLink = (mode: 'reset' | 'invite', token: string) =>
@@ -16,6 +16,21 @@ export const passwordLink = (mode: 'reset' | 'invite', token: string) =>
 export async function d1Auth() {
   return createD1Auth(await localDB());
 }
+/** メールアドレス＋パスワードで認証する。成功時の応答は Set-Cookie を持つ。 */
+export async function signInD1WithPassword(email: string, password: string, ip: string) {
+  return (await d1Auth()).handler(
+    new Request(new URL('/api/auth/sign-in/email', process.env.APP_BASE_URL), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        origin: process.env.APP_BASE_URL!,
+        'x-nicomaru-local-ip': ip,
+      },
+      body: JSON.stringify({ email, password }),
+    }),
+  );
+}
+
 export function createD1Auth(db: D1Database) {
   return betterAuth({
     database: db,

@@ -1,8 +1,8 @@
-import { headers } from 'next/headers';
-import { notFound } from 'next/navigation';
+import { readMailbox, requireMailbox } from '@/lib/d1/mailbox';
 import { demoMailbox } from '@/lib/d1/mode';
 import { localDB } from '@/lib/d1/runtime';
-import { readMailbox, requireMailbox } from '@/lib/d1/mailbox';
+import { headers } from 'next/headers';
+import { notFound } from 'next/navigation';
 
 const KIND_LABEL = {
   otp: 'ログイン確認コード',

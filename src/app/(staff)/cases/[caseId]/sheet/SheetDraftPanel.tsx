@@ -19,7 +19,13 @@
 
 import { useState } from 'react';
 
-import { AiHeading, AiJobState, AiUnavailable } from '@/components/ai/AiNotice';
+import {
+  AiHeading,
+  AiJobState,
+  AiOutcomeTombstone,
+  AiTimeoutNotice,
+  AiUnavailable,
+} from '@/components/ai/AiNotice';
 import { useAiJob, type AiJobView } from '@/components/ai/useAiJob';
 import { FieldError } from '@/components/ui/ErrorSummary';
 import { adoptedOutput } from '@/lib/ai/assist';
@@ -83,9 +89,7 @@ export function SheetDraftPanel({ initialJob, aiAvailable, lastSeenAt, requestSl
       )}
 
       {timedOut && (job?.status === 'queued' || job?.status === 'processing') && (
-        <p className="text-caption text-text-muted">
-          時間がかかっています。画面を開き直すと最新の状態が表示されます。
-        </p>
+        <AiTimeoutNotice />
       )}
 
       {output && job?.status === 'done' && (
@@ -104,9 +108,12 @@ export function SheetDraftPanel({ initialJob, aiAvailable, lastSeenAt, requestSl
       )}
 
       {job?.status === 'confirmed' && (
-        <p className="text-label text-text-secondary">
-          下書きをシートに載せました。内容はシート本体でご確認ください。
-        </p>
+        <>
+          <AiOutcomeTombstone status="confirmed" />
+          <p className="mt-1 text-label text-text-secondary">
+            下書きをシートに載せました。内容はシート本体でご確認ください。
+          </p>
+        </>
       )}
 
       <FieldError message={error ?? undefined} />
@@ -117,15 +124,15 @@ export function SheetDraftPanel({ initialJob, aiAvailable, lastSeenAt, requestSl
           <>
             <button
               type="button"
-              className="btn-secondary w-auto px-5"
+              className="btn-primary w-auto px-5"
               disabled={pending}
               onClick={() => review('confirmed')}
             >
-              シートに載せる
+              要点を採用してシートに載せる
             </button>
             <button
               type="button"
-              className="btn-secondary w-auto px-5"
+              className="btn-ghost w-auto px-5"
               disabled={pending}
               onClick={() => review('discarded')}
             >

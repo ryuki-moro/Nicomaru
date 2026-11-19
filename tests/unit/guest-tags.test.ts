@@ -80,6 +80,8 @@ describe('guestTags', () => {
       'assistance:hearing',
       'assistance:vision',
       'assistance:other',
+      'role:chief',
+      'role:toast',
     ]);
   });
 });

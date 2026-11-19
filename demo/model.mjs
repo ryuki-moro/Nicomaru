@@ -7,6 +7,7 @@ import {
   seedData,
   todayJst,
 } from './data.mjs';
+import { CLASSIFICATION_LABELS } from './ai.mjs';
 
 const text = (value, max) => typeof value === 'string' && value.length <= max;
 const identifier = (value) => text(value, 80) && /^[a-zA-Z0-9_-]+$/.test(value);
@@ -44,6 +45,7 @@ export function validState(state) {
       item.guestCount < 1 ||
       item.guestCount > 1000 ||
       !text(item.notes, 2000) ||
+      (item.aiSheetDraft !== undefined && !text(item.aiSheetDraft, 4000)) ||
       !Array.isArray(item.tasks) ||
       item.tasks.length > 32
     )
@@ -63,7 +65,11 @@ export function validState(state) {
         typeof task.status !== 'string' ||
         !Object.hasOwn(STATUS_LABELS, task.status) ||
         !text(task.answer, 2000) ||
-        !text(task.feedback, 1000)
+        !text(task.feedback, 1000) ||
+        (task.aiLabels !== undefined &&
+          (!Array.isArray(task.aiLabels) ||
+            task.aiLabels.length > 3 ||
+            !task.aiLabels.every((label) => CLASSIFICATION_LABELS.includes(label))))
       )
         return false;
       if (
@@ -213,6 +219,64 @@ export function saveCase(state, fields, caseId = null, now = new Date()) {
     caseId = item.id;
   }
   return { state: next, caseId };
+}
+
+/** デモ用AIの分類結果を、プランナーの「採用」操作でだけ宿題へ保存する。 */
+export function adoptAiLabels(state, caseId, taskId, labels, now = new Date()) {
+  const next = structuredClone(state);
+  const { item, task } = findTask(next, caseId, taskId);
+  const adopted = (Array.isArray(labels) ? labels : []).filter((label) =>
+    CLASSIFICATION_LABELS.includes(label),
+  );
+  if (!adopted.length) throw new Error('採用できる分類がありません。');
+  task.aiLabels = [...new Set(adopted)].slice(0, 3);
+  record(next, `${item.code}「${task.title}」のAI分類を採用しました`, now);
+  return next;
+}
+
+/** デモ用AIの準備シート下書きを、プランナーの「採用」操作でだけシートへ保存する。 */
+export function adoptAiSheetDraft(state, caseId, textValue, now = new Date()) {
+  const next = structuredClone(state);
+  const item = next.cases.find((entry) => entry.id === caseId);
+  if (!item) throw new Error('案件が見つかりません。');
+  const value = String(textValue ?? '').trim();
+  if (!value || value.length > 4000) throw new Error('下書きを1〜4000文字で入力してください。');
+  item.aiSheetDraft = value;
+  record(next, `${item.code} の準備シートにAI下書きを反映しました`, now);
+  return next;
+}
+
+/**
+ * デモ用AIの宿題起票案を、プランナーが選んだものだけ宿題として追加する。
+ * proposals: [{ title, description, dueDate }]（dueDate は画面側で解決済み）
+ */
+export function addTaskProposals(state, caseId, proposals, now = new Date()) {
+  const next = structuredClone(state);
+  const item = next.cases.find((entry) => entry.id === caseId);
+  if (!item) throw new Error('案件が見つかりません。');
+  const list = Array.isArray(proposals) ? proposals : [];
+  if (!list.length) throw new Error('追加する宿題案を選んでください。');
+  if (item.tasks.length + list.length > 32) throw new Error('宿題は32件までです。');
+  for (const proposal of list) {
+    const title = String(proposal.title ?? '').trim();
+    const description = String(proposal.description ?? '').trim();
+    if (!title || title.length > 120) throw new Error('宿題案の題名が正しくありません。');
+    if (description.length > 1000) throw new Error('宿題案の説明が長すぎます。');
+    if (!isDate(proposal.dueDate)) throw new Error('宿題案の期限が正しくありません。');
+    item.tasks.push({
+      id: `ai-${crypto.randomUUID()}`,
+      title,
+      description,
+      type: 'text',
+      important: false,
+      dueDate: proposal.dueDate,
+      status: 'not_started',
+      answer: '',
+      feedback: '',
+    });
+  }
+  record(next, `${item.code} にAIの宿題案を${list.length}件追加しました`, now);
+  return next;
 }
 
 export function escapeHtml(value) {

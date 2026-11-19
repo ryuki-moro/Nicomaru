@@ -1,18 +1,9 @@
-# 死活監視（6-12）。
-#
-# 「Supabase Free はアクセスが無いとプロジェクトが一時停止され、停止すると pg_cron 自体も
-#   動かず自分を起こせない。そのため死活監視（定期アクセス）だけは pg_cron 一本化の例外とし、
-#   GitHub Actions の schedule から Supabase 外部より API を叩く構成とする」（6-5-2／6-12）
-#
-#   契機・頻度   : 6時間ごと
-#   対象範囲     : プロジェクト全体（軽量な GET 1本）
-#   失敗時の扱い : 連続失敗で開発チームへ通知
-#   失敗の検知先 : GitHub Actions の失敗通知
+# Cloudflare Workers + D1 の死活監視（6時間ごと）。
 name: Keepalive
 
 on:
   schedule:
-    # 6時間ごと（UTC）。pg_cron を止めないことが目的なので時刻に意味は無い
+    # 6時間ごと（UTC）。D1の疎通を定期確認する
     - cron: '17 */6 * * *'
   workflow_dispatch:
 
@@ -20,11 +11,9 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      # APP_BASE_URL が未設定のリポジトリでは何もしない（fork や検証用クローン向け）
       - name: Ping
-        if: ${{ vars.APP_BASE_URL != '' }}
         env:
-          APP_BASE_URL: ${{ vars.APP_BASE_URL }}
+          APP_BASE_URL: https://nicomaru.nicomaru-app.workers.dev
         run: |
           set -euo pipefail
           # 一過性の接続失敗で警告せず、10秒間隔で2回連続した失敗をCI通知へつなぐ。
@@ -53,5 +42,5 @@ jobs:
             echo "Keepalive failed (attempt $attempt, HTTP ${status:-none}) - $last_detail"
             if [ "$attempt" = "1" ]; then sleep 10; fi
           done
-          echo "::error::Keepalive failed twice consecutively (last HTTP ${last_status:-none}). $last_detail - Check the application and Supabase status."
+          echo "::error::Keepalive failed twice consecutively (last HTTP ${last_status:-none}). $last_detail - Check the application and D1 status."
           exit 1

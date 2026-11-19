@@ -16,12 +16,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('@/lib/d1/auth', () => ({ resolveD1User: mocks.d1 }));
-vi.mock('@/lib/supabase/server', () => ({
-  createSupabaseServerClient: vi.fn(async () => ({
-    auth: { getUser: mocks.getUser },
-    from: mocks.from,
-  })),
-}));
 
 import {
   getAppUser,
@@ -47,7 +41,17 @@ const profile = (role: Role = 'planner') => ({
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv('NICOMARU_DB', '');
-  mocks.getUser.mockResolvedValue({ data: { user: { id: 'verified-auth-id' } }, error: null });
+  mocks.d1.mockResolvedValue({
+    state: 'active',
+    user: {
+      id: 'profile-id',
+      authUserId: 'verified-auth-id',
+      role: 'planner',
+      venueId: 'venue-id',
+      displayName: 'テスト担当',
+      email: 'fixture@example.test',
+    },
+  });
   mocks.maybeSingle.mockResolvedValue({ data: profile(), error: null });
   mocks.from.mockReturnValue({ select: mocks.select });
   mocks.select.mockReturnValue({ eq: mocks.eq });
@@ -56,7 +60,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe('検証済みセッションと有効プロフィールの境界', () => {
-  it('D1モードではD1の検証結果を使い、Supabaseへ問い合わせない', async () => {
+  it('D1モードではD1の検証結果を使い、D1の結果をそのまま返す', async () => {
     vi.stubEnv('NICOMARU_DB', 'd1-local');
     const result = {
       state: 'active',
@@ -69,7 +73,7 @@ describe('検証済みセッションと有効プロフィールの境界', () =
     expect(mocks.from).not.toHaveBeenCalled();
   });
   it('未認証はプロフィールを検索しない', async () => {
-    mocks.getUser.mockResolvedValue({ data: { user: null }, error: { message: 'expired' } });
+    mocks.d1.mockResolvedValue({ state: 'anonymous' });
     expect(await resolveAppUser()).toEqual({ state: 'anonymous' });
     expect(mocks.from).not.toHaveBeenCalled();
     await expect(requireAppUser()).rejects.toMatchObject({ status: 401 });
@@ -80,7 +84,7 @@ describe('検証済みセッションと有効プロフィールの境界', () =
   it.each(['invited', 'suspended', 'deleted'])(
     '%s は API 403・画面ログインに統一する',
     async (status) => {
-      mocks.maybeSingle.mockResolvedValue({ data: { ...profile(), status }, error: null });
+      mocks.d1.mockResolvedValue({ state: 'inactive' });
       expect(await resolveAppUser()).toEqual({ state: 'inactive' });
       await expect(requireAppUser()).rejects.toMatchObject({ status: 403 });
       expect(await getAppUser()).toBeNull();
@@ -92,7 +96,7 @@ describe('検証済みセッションと有効プロフィールの境界', () =
     { data: null, error: null },
     { data: profile(), error: { code: 'XX000' } },
   ])('プロフィール不在/検索失敗は権限を与えない (%j)', async (response) => {
-    mocks.maybeSingle.mockResolvedValue(response);
+    mocks.d1.mockResolvedValue({ state: 'inactive' });
     expect(await resolveAppUser()).toEqual({ state: 'inactive' });
   });
 
@@ -106,9 +110,7 @@ describe('検証済みセッションと有効プロフィールの境界', () =
       displayName: 'テスト担当',
       email: 'fixture@example.test',
     });
-    expect(mocks.getUser).toHaveBeenCalledTimes(1);
-    expect(mocks.from).toHaveBeenCalledWith('user_profiles');
-    expect(mocks.eq).toHaveBeenCalledWith('auth_user_id', 'verified-auth-id');
+    expect(mocks.d1).toHaveBeenCalledTimes(1);
     expect(await getAppUser()).toEqual(user);
     expect(await requirePageUser()).toEqual(user);
     expect(await requirePageUser('planner', 'admin')).toEqual(user);
@@ -117,29 +119,29 @@ describe('検証済みセッションと有効プロフィールの境界', () =
   it.each(['planner', 'admin', 'system_admin'] as Role[])(
     '%s を staff として許可する',
     async (role) => {
-      mocks.maybeSingle.mockResolvedValue({ data: profile(role), error: null });
+      mocks.d1.mockResolvedValue({ state: 'active', user: { role } });
       expect((await requireStaff()).role).toBe(role);
       expect((await requireRole(role)).role).toBe(role);
     },
   );
 
   it('couple は staff API を実行できない', async () => {
-    mocks.maybeSingle.mockResolvedValue({ data: profile('couple'), error: null });
+    mocks.d1.mockResolvedValue({ state: 'active', user: { role: 'couple' } });
     await expect(requireStaff()).rejects.toMatchObject({ status: 403 });
     await expect(requireRole('admin', 'system_admin')).rejects.toMatchObject({ status: 403 });
     await expect(requirePageUser('planner', 'admin')).rejects.toThrow('REDIRECT:/error?code=403');
   });
 
   it('staff どうしでもロールが足りなければ P04（403）へ送る', async () => {
-    mocks.maybeSingle.mockResolvedValue({ data: profile('planner'), error: null });
+    mocks.d1.mockResolvedValue({ state: 'active', user: { role: 'planner' } });
     await expect(requirePageUser('admin')).rejects.toThrow('REDIRECT:/error?code=403');
   });
 
   it.each([
     ['couple', '/mypage'],
-    ['planner', '/dashboard'],
-    ['admin', '/dashboard'],
-    ['system_admin', '/system'],
+    ['planner', '/cases'],
+    ['admin', '/users'],
+    ['system_admin', '/users'],
   ] as const)('%s の初期遷移先は %s', (role, path) => {
     expect(landingPathFor(role)).toBe(path);
   });
@@ -160,9 +162,9 @@ describe('検証済みセッションと有効プロフィールの境界', () =
 
   it.each([
     ['couple', 'マイページ'],
-    ['planner', 'ダッシュボード'],
-    ['admin', 'ダッシュボード'],
-    ['system_admin', '利用状況'],
+    ['planner', '案件一覧'],
+    ['admin', 'プランナー管理'],
+    ['system_admin', '職員管理'],
   ] as const)('%s の着地点の画面名は %s', (role, label) => {
     expect(landingLabelFor(role)).toBe(label);
   });

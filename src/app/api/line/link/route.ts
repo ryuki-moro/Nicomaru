@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import { route } from '@/lib/api/route';
+import { NextResponse } from 'next/server';
 
 export const POST = route(async () => {
   return NextResponse.json(

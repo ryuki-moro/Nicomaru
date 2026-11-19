@@ -7,8 +7,21 @@ import {
   riskFor,
   transitionTask,
   saveCase,
+  adoptAiLabels,
+  adoptAiSheetDraft,
+  addTaskProposals,
   escapeHtml,
 } from './model.mjs';
+import {
+  classifyText,
+  draftMessage,
+  draftMeetingSheet,
+  checkCsvDefects,
+  looksLikeCsv,
+  extractTaskProposals,
+  resolveProposalDate,
+  DEFECT_TYPE_LABEL,
+} from './ai.mjs';
 
 const app = document.getElementById('app');
 const notice = document.getElementById('notice');
@@ -27,6 +40,11 @@ let modal = null;
 let returnFocus = null;
 let noticeTimer;
 const filters = { query: '', risk: 'all', task: 'all' };
+/** デモ用AIの未採用の作業結果（保存しない。「採用」で初めて state へ反映する）。 */
+let aiWork = {};
+const aiWorkFor = (caseId) => (aiWork[caseId] ??= {});
+const AI_NOTE =
+  '<p class="muted">デモ用AI：ブラウザ内でルール判定しています（実LLMではありません）。外部送信は行いません。結果は「採用」するまで本文に反映されません。</p>';
 const e = escapeHtml;
 const dateLabel = (value) =>
   new Intl.DateTimeFormat('ja-JP', {
@@ -167,7 +185,7 @@ function dashboard() {
             .join('')
         : '<div class="empty-state">いま気にかけたい案件はありません。</div>'
     }</div></section>
-    <section class="section-gap card"><h2>デモの試し方</h2><ol class="reason-list"><li>「案件一覧」から気になる案件を開きます。</li><li>「新郎新婦の画面で見る」で宿題を提出します。</li><li>「プランナー」に切り替えて、提出内容を確認します。</li></ol><a class="button primary" href="#cases">案件一覧を見る</a></section>
+    <section class="section-gap card"><h2>デモの試し方</h2><ol class="reason-list"><li>「案件一覧」から気になる案件を開きます。</li><li>「新郎新婦の画面で見る」で宿題を提出します。</li><li>「プランナー」に切り替えて、提出内容を確認します。</li><li>提出済の宿題カードと準備シートでは、デモ用AI（分類・下書き・起票案）も試せます。</li></ol><a class="button primary" href="#cases">案件一覧を見る</a></section>
     ${
       state.activity.length
         ? `<section class="section-gap card"><h2>最近の操作</h2><ul class="reason-list">${state.activity
@@ -224,11 +242,30 @@ function detailPage(item) {
     <section class="section-gap"><h2>宿題・提出内容</h2><p class="subtitle">提出済の内容を確認して、確認済にするか修正をお願いします。</p><div class="tasks">${item.tasks.map((task) => taskCard(item, task, false)).join('')}</div></section>`;
 }
 
+function aiPanelForTask(item, task) {
+  const adopted = task.aiLabels?.length
+    ? `<p class="meta">AI分類（採用済み）: ${task.aiLabels.map((label) => `<span class="badge neutral">${e(label)}</span>`).join(' ')}</p>`
+    : '';
+  const analysis = aiWork[item.id]?.analysis?.[task.id];
+  if (!analysis)
+    return `<div class="ai-panel"><h4>デモ用AI補助（分類・不備チェック）</h4>${AI_NOTE}${adopted}<div class="task-actions">${button('AIで分類・チェックする', 'ai-analyze', taskAttrs(item, task), 'secondary small')}</div></div>`;
+  const findings = analysis.isCsv
+    ? analysis.findings.length
+      ? `<ul class="reason-list">${analysis.findings.map((f) => `<li>${f.row ? `${f.row}行目` : '全体'} / ${e(f.column || '-')} / ${e(DEFECT_TYPE_LABEL[f.type] ?? f.type)}: ${e(f.detail)}</li>`).join('')}</ul>`
+      : '<p class="meta">ルールチェック①で不備は見つかりませんでした。</p>'
+    : '<p class="meta">CSV形式の提出ではないため、不備チェック①（列・形式の判定）は対象外です。</p>';
+  return `<div class="ai-panel"><h4>デモ用AI補助（分類・不備チェック）</h4>${AI_NOTE}${adopted}
+    <p class="meta">分類の候補: ${analysis.labels.map((label) => `<span class="badge warning">${e(label)}</span>`).join(' ')} <span>確信度 ${Math.round(analysis.confidence * 100)}%</span></p>
+    ${findings}
+    <div class="task-actions">${button('この分類を採用する', 'ai-adopt-labels', taskAttrs(item, task), 'secondary small')}</div></div>`;
+}
+
 function taskCard(item, task, couple) {
   const editable = ['not_started', 'needs_fix'].includes(task.status);
   const overdue = editable && task.dueDate < todayJst();
   return `<article class="card task-card"><div class="task-header"><h3>${e(task.title)}</h3>${badge(task)}</div><p class="meta">期限 ${dateLabel(task.dueDate)}${overdue ? ' <span class="badge danger">期限を過ぎています</span>' : ''}</p><p class="task-description">${e(task.description)}</p>
     ${task.answer ? `<div class="task-body"><strong>提出内容</strong><p>${e(task.answer)}</p></div>` : ''}
+    ${!couple && task.status === 'submitted' ? aiPanelForTask(item, task) : ''}
     ${task.feedback ? `<div class="feedback"><strong>プランナーからのお願い</strong><p>${e(task.feedback)}</p></div>` : ''}
     <div class="task-actions">${couple && editable ? button(task.status === 'needs_fix' ? '修正して提出' : '回答して提出', 'submit', taskAttrs(item, task), 'primary') : ''}${!couple && task.status === 'submitted' ? button('確認済にする', 'confirm', taskAttrs(item, task), 'primary') + button('修正をお願いする', 'return', taskAttrs(item, task)) : ''}${task.status === 'confirmed' ? '<p class="muted">プランナーが内容を確認しました。</p>' : couple && task.status === 'submitted' ? '<p class="muted">プランナーの確認をお待ちください。</p>' : !couple && editable ? '<p class="muted">新郎新婦からの提出をお待ちください。</p>' : ''}</div></article>`;
 }
@@ -281,9 +318,24 @@ function timelinePage(item) {
   return `${heading('準備のタイムライン', '宿題の期限と挙式日を一覧で確認できます。')}<ol class="timeline">${tasks.map((task) => `<li class="timeline-item card"><p class="meta">${dateLabel(task.dueDate)}</p><div class="task-header"><h2>${e(task.title)}</h2>${badge(task)}</div><p>${e(task.description)}</p><a class="button secondary small" href="#tasks/${e(item.id)}">宿題を見る</a></li>`).join('')}<li class="timeline-item hero"><p class="meta">${dateLabel(item.weddingDate)}</p><h2>結婚式当日</h2><p>${e(coupleName(item))} さん</p></li></ol>`;
 }
 
+function aiPrepPanel(item) {
+  const work = aiWork[item.id] ?? {};
+  const sheet = work.sheetDraft
+    ? `<div><label class="field-label" for="ai-sheet-text">AI下書き（編集できます。シートには「反映する」を押したときだけ載ります）</label><textarea class="field" id="ai-sheet-text" rows="7">${e(work.sheetDraft.text)}</textarea>${work.sheetDraft.cautions.length ? `<ul class="reason-list">${work.sheetDraft.cautions.map((c) => `<li>確認: ${e(c)}</li>`).join('')}</ul>` : ''}<div class="task-actions">${button('この下書きをシートへ反映する', 'ai-sheet-adopt', caseAttrs(item), 'primary small')}</div></div>`
+    : '';
+  const proposals = work.proposals
+    ? work.proposals.length
+      ? `<div><p class="field-label">宿題の起票案（打ち合わせメモから。追加する案だけ選んでください）</p>${work.proposals.map((p, i) => `<label class="ai-proposal"><input type="checkbox" name="ai-proposal" value="${i}" checked> <strong>${e(p.title)}</strong> <span class="meta">期限の目安: ${e(p.due_hint || 'なし')} → ${dateLabel(p.dueDate)}</span><br><span class="meta">${e(p.description)}</span></label>`).join('')}<div class="task-actions">${button('選んだ案を宿題に追加する', 'ai-proposals-add', caseAttrs(item), 'primary small')}</div></div>`
+      : '<p class="meta">打ち合わせメモから起票案を作れませんでした。メモに「〜してください」「○月○日まで」などを書くと案になります。</p>'
+    : '';
+  return `<section class="card ai-panel no-print"><h2>デモ用AI補助（準備シート下書き・宿題起票案）</h2>${AI_NOTE}
+    <div class="task-actions">${button('AIで要点の下書きを作る', 'ai-sheet-generate', caseAttrs(item), 'secondary small')}${button('メモから宿題案を作る', 'ai-proposals-generate', caseAttrs(item), 'secondary small')}</div>
+    ${sheet}${proposals}</section>`;
+}
+
 function prepPage(item) {
   const pending = pendingTasks(item);
-  return `<p class="meta no-print"><a href="#case/${e(item.id)}">案件詳細へ戻る</a></p>${heading('打ち合わせ前準備シート', e(coupleName(item)), button('印刷する', 'print', '', 'secondary no-print'))}<article class="card stack">${caseInfo(item)}<h2>今回確認したいこと</h2><ul class="reason-list">${pending.map((task) => `<li>${e(task.title)} / ${STATUS_LABELS[task.status]} / 期限 ${dateLabel(task.dueDate)}</li>`).join('') || '<li>未提出の宿題はありません。</li>'}</ul><h2>確認待ちの提出</h2><ul class="reason-list">${
+  return `<p class="meta no-print"><a href="#case/${e(item.id)}">案件詳細へ戻る</a></p>${heading('打ち合わせ前準備シート', e(coupleName(item)), button('印刷する', 'print', '', 'secondary no-print'))}${aiPrepPanel(item)}<article class="card stack section-gap">${caseInfo(item)}<h2>今回確認したいこと</h2><ul class="reason-list">${pending.map((task) => `<li>${e(task.title)} / ${STATUS_LABELS[task.status]} / 期限 ${dateLabel(task.dueDate)}</li>`).join('') || '<li>未提出の宿題はありません。</li>'}</ul><h2>確認待ちの提出</h2><ul class="reason-list">${
     item.tasks
       .filter((task) => task.status === 'submitted')
       .map(
@@ -291,7 +343,7 @@ function prepPage(item) {
           `<li><strong>${e(task.title)}</strong><p class="task-body">${e(task.answer)}</p></li>`,
       )
       .join('') || '<li>確認待ちの提出はありません。</li>'
-  }</ul><h2>打ち合わせメモ</h2><p class="task-body">${e(item.notes) || 'メモはありません。'}</p><p class="muted">ログイン不要デモ / 架空データ</p></article>`;
+  }</ul><h2>打ち合わせメモ</h2><p class="task-body">${e(item.notes) || 'メモはありません。'}</p>${item.aiSheetDraft ? `<h2>打ち合わせ要点（AI下書き・採用済み）</h2><p class="task-body">${e(item.aiSheetDraft)}</p>` : ''}<p class="muted">ログイン不要デモ / 架空データ</p></article>`;
 }
 
 function openModal(value, opener) {
@@ -330,7 +382,11 @@ function renderModal() {
         : task.type === 'select'
           ? `<label class="field-label" for="answer">回答</label><select id="answer" class="field" name="answer" required><option value="">選んでください</option>${task.options.map((option) => `<option value="${e(option)}" ${task.answer === option ? 'selected' : ''}>${e(option)}</option>`).join('')}</select>`
           : `<label class="field-label" for="answer">回答</label><textarea class="field" id="answer" name="answer" rows="6" maxlength="2000" required>${e(task.answer)}</textarea>`;
-    content = `<p class="task-description">${e(task.description)}</p><form id="task-form" class="stack">${field}<p id="form-error" class="feedback" role="alert" hidden></p><div class="actions">${button('キャンセル', 'close-modal')}<button class="button primary" type="submit">${modal.kind === 'return' ? '修正をお願いする' : 'デモ内で提出'}</button></div></form>`;
+    const aiDraft =
+      modal.kind === 'return'
+        ? `<div class="ai-panel"><h4>デモ用AI補助（文面の下書き）</h4>${AI_NOTE}<div class="task-actions">${button('差し戻しの下書きを作る', 'ai-draft', 'data-purpose="return"', 'secondary small')}${button('お礼の下書きを作る', 'ai-draft', 'data-purpose="thanks"', 'secondary small')}</div><div id="ai-draft-cautions"></div></div>`
+        : '';
+    content = `<p class="task-description">${e(task.description)}</p>${aiDraft}<form id="task-form" class="stack">${field}<p id="form-error" class="feedback" role="alert" hidden></p><div class="actions">${button('キャンセル', 'close-modal')}<button class="button primary" type="submit">${modal.kind === 'return' ? '修正をお願いする' : 'デモ内で提出'}</button></div></form>`;
   }
   return `<div class="modal-overlay"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-heading"><h2 id="modal-title">${title}</h2><button type="button" class="close-button" data-action="close-modal" aria-label="閉じる">×</button></div>${content}</section></div>`;
 }
@@ -346,6 +402,7 @@ app.addEventListener('click', (event) => {
     } else if (action === 'reset') openModal({ kind: 'reset' }, control.dataset);
     else if (action === 'reset-confirm') {
       const saved = persist(seedData());
+      aiWork = {};
       modal = null;
       filters.query = '';
       filters.risk = 'all';
@@ -364,6 +421,87 @@ app.addEventListener('click', (event) => {
       const saved = persist(transitionTask(state, caseId, taskId, 'confirm'));
       render();
       if (saved) showNotice('提出内容を確認済にしました。');
+    } else if (action === 'ai-analyze') {
+      const item = caseFor(caseId);
+      const task = item?.tasks.find((entry) => entry.id === taskId);
+      if (!item || !task) throw new Error('宿題が見つかりません。');
+      const classified = classifyText(task.answer);
+      const isCsv = looksLikeCsv(task.answer);
+      const work = aiWorkFor(item.id);
+      (work.analysis ??= {})[task.id] = {
+        labels: classified.labels,
+        confidence: classified.confidence,
+        isCsv,
+        findings: isCsv ? checkCsvDefects(task.answer) : [],
+      };
+      render();
+    } else if (action === 'ai-adopt-labels') {
+      const analysis = aiWork[caseId]?.analysis?.[taskId];
+      if (!analysis) throw new Error('先にAIで分類してください。');
+      const saved = persist(adoptAiLabels(state, caseId, taskId, analysis.labels));
+      render();
+      if (saved) showNotice('AIの分類を採用しました。');
+    } else if (action === 'ai-sheet-generate') {
+      const item = caseFor(caseId);
+      if (!item) throw new Error('案件が見つかりません。');
+      aiWorkFor(item.id).sheetDraft = draftMeetingSheet({
+        coupleName: coupleName(item),
+        weddingDateLabel: dateLabel(item.weddingDate),
+        plan: item.plan,
+        guestCount: item.guestCount,
+        pending: pendingTasks(item).map((task) => ({
+          title: task.title,
+          dueDateLabel: dateLabel(task.dueDate),
+          overdue: task.dueDate < todayJst(),
+        })),
+        submitted: item.tasks
+          .filter((task) => task.status === 'submitted')
+          .map((task) => ({ title: task.title })),
+        notes: item.notes,
+      });
+      render();
+    } else if (action === 'ai-sheet-adopt') {
+      const textValue = document.getElementById('ai-sheet-text')?.value ?? '';
+      const saved = persist(adoptAiSheetDraft(state, caseId, textValue));
+      render();
+      if (saved) showNotice('AIの下書きを準備シートへ反映しました。');
+    } else if (action === 'ai-proposals-generate') {
+      const item = caseFor(caseId);
+      if (!item) throw new Error('案件が見つかりません。');
+      aiWorkFor(item.id).proposals = extractTaskProposals(item.notes).tasks.map((proposal) => ({
+        ...proposal,
+        dueDate:
+          resolveProposalDate(proposal.due_hint, item.weddingDate) ??
+          shiftDate(item.weddingDate, -30),
+      }));
+      render();
+    } else if (action === 'ai-proposals-add') {
+      const proposals = aiWork[caseId]?.proposals ?? [];
+      const chosen = [...app.querySelectorAll('input[name="ai-proposal"]:checked')]
+        .map((input) => proposals[Number(input.value)])
+        .filter(Boolean);
+      const saved = persist(addTaskProposals(state, caseId, chosen));
+      delete aiWork[caseId].proposals;
+      render();
+      if (saved) showNotice(`AIの宿題案を${chosen.length}件追加しました。`);
+    } else if (action === 'ai-draft') {
+      const item = caseFor(modal?.caseId);
+      const task = item?.tasks.find((entry) => entry.id === modal?.taskId);
+      if (!item || !task) throw new Error('宿題が見つかりません。');
+      const draft = draftMessage({
+        purpose: control.dataset.purpose || 'return',
+        coupleName: coupleName(item),
+        taskTitle: task.title,
+        dueDateLabel: dateLabel(task.dueDate),
+      });
+      const field = document.getElementById('answer');
+      if (field) field.value = draft.text;
+      const cautions = document.getElementById('ai-draft-cautions');
+      if (cautions)
+        cautions.innerHTML = draft.cautions.length
+          ? `<ul class="reason-list">${draft.cautions.map((c) => `<li>確認: ${e(c)}</li>`).join('')}</ul>`
+          : '';
+      showNotice('AIの下書きを入力欄へ入れました。内容を確認してから送信してください。');
     } else if (action === 'print') window.print();
   } catch (error) {
     showNotice(error.message);

@@ -144,7 +144,8 @@ test(
       assert.equal((await planner.post(review, { data: { decision: 'needs_fix' } })).status(), 400);
       await staffPage.goto(`${origin}/submissions`);
       await staffPage.locator(`a[href="/submissions/${first}"]`).click();
-      await staffPage.getByText('最初の提出内容', { exact: true }).waitFor();
+      // AI翻訳パネルの翻訳元にも提出本文が初期値として入るため、段落に限定する。
+      await staffPage.getByRole('paragraph').filter({ hasText: '最初の提出内容' }).waitFor();
       await staffPage.getByRole('radio', { name: '不備あり', exact: true }).check();
       await staffPage.getByLabel('コメント', { exact: false }).fill('人数を追記してください');
       await staffPage.getByRole('button', { name: '確定する', exact: true }).click();

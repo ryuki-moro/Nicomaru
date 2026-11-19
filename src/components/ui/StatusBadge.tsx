@@ -3,9 +3,9 @@
  * 画面ごとに独自の表示名を作らない。
  */
 import {
+  INVITATION_STATE_LABEL,
   REVIEW_STATUS_LABEL,
   TASK_STATUS_LABEL,
-  INVITATION_STATE_LABEL,
   type InvitationState,
   type ReviewStatus,
   type TaskStatus,

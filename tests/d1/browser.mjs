@@ -127,7 +127,8 @@ test('本体API: 4ロール・他式場・権限昇格・CSRF・失効', { timeo
     contexts.push(replay);
     assert.equal((await replay.get('/api/cases')).status(), 401);
     assert.equal((await anonymous.post('/api/auth/sign-up/email', { data: {} })).status(), 503);
-    assert.equal((await anonymous.get('/api/venues')).status(), 503);
+    // /api/venues は D1 移行済みのため、未認証は 503 ではなく 401。
+    assert.equal((await anonymous.get('/api/venues')).status(), 401);
     const response = await (await login('adminB')).get(`/api/cases/${ids.caseB}`);
     assert.equal((await response.json()).guestCount, 50);
     assert.match(response.headers()['cache-control'], /no-store/);
@@ -159,7 +160,13 @@ test(
         await page.getByLabel('メールアドレス', { exact: true }).fill(users[name].email);
         await page.getByLabel('パスワード', { exact: true }).fill(users[name].password);
         await page.getByRole('button', { name: 'パスワードでログイン', exact: true }).click();
-        await page.waitForURL(name === 'coupleA' ? '**/mypage' : '**/cases');
+        const landing = { adminA: 'users', plannerA: 'cases', system: 'users', coupleA: 'mypage' };
+        await page.waitForURL(`**/${landing[name]}`);
+        if (landing[name] === 'users') {
+          const label = name === 'system' ? '職員管理' : 'プランナー管理';
+          await page.getByRole('heading', { name: label, exact: true }).waitFor();
+          await page.goto(origin + '/cases');
+        }
         if (name === 'coupleA') {
           await page.getByRole('heading', { name: '次にやること' }).waitFor();
           assert.equal((await page.locator('body').innerText()).includes('内部メモ'), false);
