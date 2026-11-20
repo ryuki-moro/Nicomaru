@@ -63,6 +63,13 @@ jobs:
               fi
               echo "::warning::#$num のマージに失敗しました"
             fi
+            # 承認されないまま残った bot 更新後のCIがあれば、承認して見届ける（必須チェックが未報告のまま止まるため）
+            if [ -z "$updated" ] && [ "$(gh api "repos/$GH_REPO/actions/runs?head_sha=$sha&event=pull_request" --jq '[.workflow_runs[] | select(.name == "CI")][0].conclusion')" = "action_required" ]; then
+              updated="$num"
+              echo "sha=$sha" >> "$GITHUB_OUTPUT"
+              echo "#$num の承認待ちCIを承認します"
+              continue
+            fi
             # マージ後は他のPRが遅れるため、CLEAN だったものも取り込み対象にする。
             # 作業中のPRまで更新しないよう、必須チェックが通っていて遅れているだけのPRに限る。
             # 1本ずつ順に通す（まとめて更新すると、マージのたびに全PRのCIをやり直すことになる）
