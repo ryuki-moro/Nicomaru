@@ -2,7 +2,7 @@
  * D03 準備シートのD1版（Wave2）。
  *
  * src/lib/d1/sheet.ts（meeting_sheets 0014＋D1 AI基盤）で行う。
- * フォロー記録・連絡履歴は D1 にテーブルが無いため空として表示する（別Waveで移行）。
+ * 直近の連絡・フォロー記録は src/lib/d1/follow.ts（0022_follow）から新しい順に出す。
  */
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -10,7 +10,8 @@ import { redirect } from 'next/navigation';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { adoptedOutput } from '@/lib/ai/assist';
 import { getAppUser } from '@/lib/auth/session';
-import { INCOMPLETE_TASK_STATUSES, TASK_STATUS_LABEL } from '@/lib/constants';
+import { FOLLOW_METHOD_LABEL, INCOMPLETE_TASK_STATUSES, TASK_STATUS_LABEL } from '@/lib/constants';
+import { listCommunications, listFollowLogs } from '@/lib/d1/follow';
 import { localDB } from '@/lib/d1/runtime';
 import { recordSheet, requestSheetDraft, sheetData, sheetDraftState } from '@/lib/d1/sheet';
 import { formatDate, formatDateJp, formatDateTime, todayInJst } from '@/lib/format';
@@ -19,6 +20,16 @@ import { PrintButton } from './PrintButton';
 import { SheetDraftPanel } from './SheetDraftPanel';
 
 export const dynamic = 'force-dynamic';
+
+/** 印刷1枚に収まるよう、旧実装（Supabase版）と同じ件数で打ち切る。 */
+const SHEET_COMMUNICATION_LIMIT = 15;
+const SHEET_FOLLOW_LIMIT = 10;
+
+interface CommunicationRow {
+  id: string;
+  summary: string;
+  created_at: string;
+}
 
 async function recordSheetAction(formData: FormData) {
   'use server';
@@ -70,6 +81,21 @@ export async function MeetingSheetPageD1({
   const today = todayInJst();
   const { status: aiStatus, job: draftJob } = await sheetDraftState(db, actor, caseId);
   const sheetDraft = draftJob?.status === 'confirmed' ? adoptedOutput('draft', draftJob) : null;
+  // 履歴が読めなくてもシート本体（宿題の状況）は出す。読めなかったときは「記録なし」と同じ扱い。
+  const [communications, followLogs] = await Promise.all([
+    listCommunications(db, actor, caseId, 0, SHEET_COMMUNICATION_LIMIT)
+      .then((rows) => rows as unknown as CommunicationRow[])
+      .catch((error: unknown) => {
+        console.warn('[sheet] 連絡履歴を読めませんでした', error);
+        return [] as CommunicationRow[];
+      }),
+    listFollowLogs(db, actor, caseId, 0, SHEET_FOLLOW_LIMIT)
+      .then((page) => page.items)
+      .catch((error: unknown) => {
+        console.warn('[sheet] フォロー記録を読めませんでした', error);
+        return [];
+      }),
+  ]);
 
   const coupleName = target.couple_profiles
     .slice()
@@ -203,16 +229,33 @@ export async function MeetingSheetPageD1({
 
         <section>
           <h3 className="section-head">直近の連絡</h3>
-          <p className="mt-1 text-label text-text-muted">
-            記録はまだありません。（連絡履歴はD1への移行が別途必要です）
-          </p>
+          {communications.length === 0 ? (
+            <p className="mt-1 text-label text-text-muted">記録はまだありません。</p>
+          ) : (
+            <ul className="mt-1 space-y-1">
+              {communications.map((row) => (
+                <li key={row.id} className="text-label text-text-secondary">
+                  {formatDateTime(row.created_at)} ／ {row.summary}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <section>
           <h3 className="section-head">フォロー記録</h3>
-          <p className="mt-1 text-label text-text-muted">
-            記録はまだありません。（フォロー記録はD1への移行が別途必要です）
-          </p>
+          {followLogs.length === 0 ? (
+            <p className="mt-1 text-label text-text-muted">記録はまだありません。</p>
+          ) : (
+            <ul className="mt-1 space-y-1">
+              {followLogs.map((row) => (
+                <li key={row.id} className="text-label text-text-secondary">
+                  {formatDateTime(row.followed_at)} ／ {FOLLOW_METHOD_LABEL[row.method]}
+                  {row.note ? ` ／ ${row.note}` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         {sheetDraft && (

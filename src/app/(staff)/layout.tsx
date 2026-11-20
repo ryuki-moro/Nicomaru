@@ -20,8 +20,9 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       <AppHeader role={user.role} displayName={user.displayName} />
       <main id={MAIN_CONTENT_ID} className="mx-auto w-full max-w-6xl px-4 py-6">
         {localD1() && (
-          <p className="banner-info">
-            ローカル検証：データはローカルのD1に保存し、外部への送信は行いません。
+          // 画面上の案内なので印刷（準備シートなど）には出さない。
+          <p className="banner-info no-print">
+            ローカル検証：データはこのPCの中だけに保存し、外部への送信は行いません。
           </p>
         )}
         {children}
