@@ -6,8 +6,8 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-  # GITHUB_TOKEN による push（自動修正・ブランチ更新）では pull_request が発火しないため、
-  # auto-merge.yml / ci-autofix.yml / claude.yml から明示的に起動する。
+  # 手動の再実行用。必須チェックとして数えられるのは pull_request の実行だけなので、
+  # github-actions[bot] の更新後は auto-merge.yml などが承認待ちの pull_request 実行を承認する。
   workflow_dispatch:
 
 jobs:

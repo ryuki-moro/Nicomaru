@@ -57,7 +57,7 @@ jobs:
             --model claude-sonnet-5-5
             --max-turns 60
 
-      # GITHUB_TOKEN の push では pull_request が発火しないため、ClaudeがPRへ push したらCIを起動し直す
+      # ClaudeがPRへ push したら、承認待ちになった pull_request のCIを承認する
       - name: Retry CI on PR
         if: always() && steps.before.outputs.sha
         shell: bash
@@ -67,6 +67,18 @@ jobs:
           PR: ${{ github.event.issue.number || github.event.pull_request.number }}
           BEFORE: ${{ steps.before.outputs.sha }}
         run: |
+          # github-actions[bot] の更新で起きた pull_request のCIは承認待ちになる（必須チェックは pull_request の実行だけが数えられる）
+          approve_ci() {
+            for _ in $(seq 1 30); do
+              ids=$(gh api "repos/$GH_REPO/actions/runs?head_sha=$1&event=pull_request" --jq '.workflow_runs[] | select(.conclusion == "action_required") | .id')
+              if [ -n "$ids" ]; then
+                for id in $ids; do gh api -X POST "repos/$GH_REPO/actions/runs/$id/approve" >/dev/null; done
+                return 0
+              fi
+              sleep 4
+            done
+            echo "::warning::$1 の承認待ちCIが見つかりませんでした"
+          }
           read -r branch sha cross < <(gh pr view "$PR" --json headRefName,headRefOid,isCrossRepository \
             --jq '"\(.headRefName) \(.headRefOid) \(.isCrossRepository)"')
-          if [ "$cross" = "false" ] && [ "$sha" != "$BEFORE" ]; then gh workflow run ci.yml --ref "$branch"; fi
+          if [ "$cross" = "false" ] && [ "$sha" != "$BEFORE" ]; then approve_ci "$sha"; fi
