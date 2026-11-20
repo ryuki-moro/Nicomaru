@@ -5,6 +5,7 @@ import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { getPlatformProxy } from 'wrangler';
 import { seedAppFixtures } from './d1-fixtures.mjs';
 import { seedDemoFixtures } from './d1-demo-fixtures.mjs';
+import { renameAppliedMigrations } from './d1-renamed-migrations.mjs';
 
 // --demo: ログイン不要デモ（架空の5案件・ログイン素通り）。--reset でデモのデータを作り直す。
 const demo = process.argv.includes('--demo');
@@ -42,6 +43,20 @@ process.env.PII_HMAC_KEY = Buffer.from(
 process.env.AI_WORKER_TOKEN = Buffer.from(
   hkdfSync('sha256', Buffer.from(secret, 'hex'), '', 'nicomaru-local-ai-worker', 32),
 ).toString('base64url');
+// 番号を付け替える前の名前で適用済みの手元DBを、今の名前に揃えてから流す（Issue #266）
+{
+  const before = await getPlatformProxy({
+    configPath: 'cloudflare/wrangler.jsonc',
+    persist: { path: `${dir}/v3` },
+  });
+  try {
+    for (const { from, to } of await renameAppliedMigrations(before.env.DB)) {
+      console.log(`適用済みのマイグレーション名を付け替えました: ${from} → ${to}`);
+    }
+  } finally {
+    await before.dispose();
+  }
+}
 execFileSync(
   process.execPath,
   [
