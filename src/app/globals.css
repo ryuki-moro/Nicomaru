@@ -72,6 +72,14 @@
     font-size: max(1rem, 1em);
   }
 
+  /* 入力に問題がある欄は枠を赤くする。文言（.field-error）だけだと、長いフォームでどの欄か探しにくい。
+     - aria-invalid="true" … サーバー側の検証で見つかった問題（画面側でセット済み）
+     - :user-invalid      … 必須・形式の問題。触った欄・送信した後だけ赤くし、開いた直後の空欄は赤くしない */
+  .field[aria-invalid='true'],
+  .field:user-invalid {
+    @apply border-danger;
+  }
+
   .field-error {
     @apply mt-1 text-caption text-danger;
   }

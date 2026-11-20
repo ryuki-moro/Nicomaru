@@ -18,6 +18,7 @@ import Link from 'next/link';
 
 import { CoupleNav } from '@/components/couple/CoupleNav';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { MAIN_CONTENT_ID, SkipLink } from '@/components/layout/SkipLink';
 import { landingLabelFor, landingPathFor, resolveAppUser } from '@/lib/auth/session';
 import { isStaff } from '@/lib/constants';
 
@@ -59,8 +60,9 @@ export async function ErrorScreen({ message }: { message: ErrorMessage }) {
   if (user && isStaff(user.role)) {
     return (
       <div className="min-h-dvh bg-bg">
+        <SkipLink />
         <AppHeader role={user.role} displayName={user.displayName} />
-        <main className="mx-auto w-full max-w-6xl px-4 py-6">
+        <main id={MAIN_CONTENT_ID} className="mx-auto w-full max-w-6xl px-4 py-6">
           <div className="mx-auto w-full max-w-2xl">{content}</div>
         </main>
       </div>

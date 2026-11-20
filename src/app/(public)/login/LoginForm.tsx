@@ -1,5 +1,6 @@
 'use client';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { api, ApiCallError } from '@/lib/api/client';
 import { OTP } from '@/lib/constants';
 import { publicDemoLogin, publicLocalD1 } from '@/lib/d1/mode';
@@ -250,10 +251,8 @@ export function LoginForm({
             <label className="field-label" htmlFor="login-password">
               パスワード
             </label>
-            <input
+            <PasswordInput
               id="login-password"
-              className="field"
-              type="password"
               autoComplete="current-password"
               required={!publicDemoLogin()}
               disabled={pending}
