@@ -20,6 +20,17 @@
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-primary;
   }
+
+  /* モーダル（<dialog> を showModal で開いたもの）の裏でページがスクロールしないようにする。
+     html／body の overflow を書き換えるとスクロール位置が飛ぶので使わない */
+  dialog:modal {
+    overscroll-behavior: contain;
+  }
+
+  dialog::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
 }
 
 @layer components {
@@ -36,7 +47,10 @@
   }
 
   /* 補助的な操作（戻る・ページ送り・再送信など）。テキストリンク風だと押せる場所が
-     分かりにくいため、控えめな枠付きボタンにそろえる。タップ領域は 44px を確保する */
+     分かりにくいため、控えめな枠付きボタンにそろえる。タップ領域は 44px を確保する。
+     下線つきの文字リンクを使ってよいのは次の2つだけ（Issue #208）。
+       - パンくず・本文中の参照リンク
+       - 表のセルの中で、その行の詳細を開くリンク（.table-link。1行に1つ） */
   .btn-ghost {
     @apply inline-flex min-h-[44px] items-center justify-center rounded-button border
            border-border-mid bg-surface px-4 py-2 text-label text-text-primary
@@ -53,6 +67,17 @@
     @apply w-full rounded-field border border-border-mid bg-surface px-3 py-[10px]
            text-label text-text-primary placeholder:text-text-muted
            focus:border-primary;
+    /* iOS Safari は 16px 未満の入力欄にフォーカスすると画面を拡大する。
+       text-label の行の高さは残しつつ、文字だけは最低 1rem にそろえる */
+    font-size: max(1rem, 1em);
+  }
+
+  /* 入力に問題がある欄は枠を赤くする。文言（.field-error）だけだと、長いフォームでどの欄か探しにくい。
+     - aria-invalid="true" … サーバー側の検証で見つかった問題（画面側でセット済み）
+     - :user-invalid      … 必須・形式の問題。触った欄・送信した後だけ赤くし、開いた直後の空欄は赤くしない */
+  .field[aria-invalid='true'],
+  .field:user-invalid {
+    @apply border-danger;
   }
 
   .field-error {
@@ -126,6 +151,14 @@
 
   .table td {
     @apply border-b border-border-light px-3 py-3 align-middle;
+  }
+
+  /* 表の行から詳細を開くリンク。セルごとに枠付きボタンを並べると表がボタンで埋まり、
+     どれを押しても同じ画面へ行くのに選ばせてしまう。行の名前にあたる1か所だけを
+     下線つきのリンクにし、押せることは色・太字・下線で示す。タップ領域は 44px を確保する */
+  .table-link {
+    @apply inline-flex min-h-[44px] items-center font-bold text-link underline underline-offset-2
+           hover:no-underline;
   }
 }
 

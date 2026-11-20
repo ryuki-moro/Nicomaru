@@ -2,6 +2,7 @@ import { localD1 } from '@/lib/d1/mode';
 import { redirect } from 'next/navigation';
 
 import { AppHeader } from '@/components/layout/AppHeader';
+import { MAIN_CONTENT_ID, SkipLink } from '@/components/layout/SkipLink';
 import { getAppUser } from '@/lib/auth/session';
 import { isStaff } from '@/lib/constants';
 
@@ -15,8 +16,9 @@ export default async function StaffLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-dvh bg-bg">
+      <SkipLink />
       <AppHeader role={user.role} displayName={user.displayName} />
-      <main className="mx-auto w-full max-w-6xl px-4 py-6">
+      <main id={MAIN_CONTENT_ID} className="mx-auto w-full max-w-6xl px-4 py-6">
         {localD1() && (
           // 画面上の案内なので印刷（準備シートなど）には出さない。
           <p className="banner-info no-print">

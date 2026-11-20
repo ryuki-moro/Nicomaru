@@ -13,6 +13,7 @@
     "demo:ai": "node scripts/demo-ai.mjs",
     "demo:all": "node scripts/demo-all.mjs",
     "demo:static": "node scripts/demo-server.mjs",
+    "screenshots": "tsx scripts/screenshots.mts",
     "test:demo": "node --test tests/demo/*.test.mjs",
     "test:demo:browser": "node --test tests/demo/browser-smoke.mjs",
     "build": "next build",
