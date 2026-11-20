@@ -3,7 +3,7 @@
 #   - 対象: main 向け・下書きでない・このリポジトリ内のブランチ（フォーク除外）・「マージ保留」ラベルなし
 #   - マージ方法は merge commit（PR内のコミットを1変更単位のまま残す）
 #   - main が進んで遅れたPR（BEHIND）のうち必須チェックが通っているものは main を取り込み、CIを起動し直す
-#     （GITHUB_TOKEN の push では pull_request が発火しないため workflow_dispatch で起動する）
+#     （github-actions[bot] による更新のため、承認待ちになった pull_request のCIを承認する）
 #   - 1回の実行でマージ・main の取り込みはそれぞれ1本まで。次のCI完了で次のPRへ進む
 #   - CI完了時に加え、30分ごとにも見回る（Dependabot起点やラベル変更の取りこぼし対策）
 name: 自動マージ
@@ -37,6 +37,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # github-actions[bot] の更新で起きた pull_request のCIは承認待ちになる（必須チェックは pull_request の実行だけが数えられる）
+          approve_ci() {
+            for _ in $(seq 1 30); do
+              ids=$(gh api "repos/$GH_REPO/actions/runs?head_sha=$1&event=pull_request" --jq '.workflow_runs[] | select(.conclusion == "action_required") | .id')
+              if [ -n "$ids" ]; then
+                for id in $ids; do gh api -X POST "repos/$GH_REPO/actions/runs/$id/approve" >/dev/null; done
+                return 0
+              fi
+              sleep 4
+            done
+            echo "::warning::$1 の承認待ちCIが見つかりませんでした"
+          }
           merged=""
           updated=""
           prs=$(gh pr list --state open --base main --limit 50 \
@@ -68,11 +80,13 @@ jobs:
               gh pr checks "$num" --required >/dev/null 2>&1; then
               if gh api -X PUT "repos/$GH_REPO/pulls/$num/update-branch" -f expected_head_sha="$sha" >/dev/null; then
                 # update-branch は非同期のため、先頭コミットが変わってからCIを起動する
+                new_sha="$sha"
                 for _ in $(seq 1 15); do
-                  [ "$(gh pr view "$num" --json headRefOid --jq .headRefOid)" != "$sha" ] && break
+                  new_sha=$(gh pr view "$num" --json headRefOid --jq .headRefOid)
+                  [ "$new_sha" != "$sha" ] && break
                   sleep 2
                 done
-                gh workflow run ci.yml --ref "$branch"
+                approve_ci "$new_sha"
                 updated="$num"
                 echo "#$num に main を取り込み、CIを起動しました"
               else

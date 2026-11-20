@@ -126,6 +126,18 @@ jobs:
           PR: ${{ steps.target.outputs.pr }}
         run: |
           set -euo pipefail
+          # github-actions[bot] の更新で起きた pull_request のCIは承認待ちになる（必須チェックは pull_request の実行だけが数えられる）
+          approve_ci() {
+            for _ in $(seq 1 30); do
+              ids=$(gh api "repos/$GH_REPO/actions/runs?head_sha=$1&event=pull_request" --jq '.workflow_runs[] | select(.conclusion == "action_required") | .id')
+              if [ -n "$ids" ]; then
+                for id in $ids; do gh api -X POST "repos/$GH_REPO/actions/runs/$id/approve" >/dev/null; done
+                return 0
+              fi
+              sleep 4
+            done
+            echo "::warning::$1 の承認待ちCIが見つかりませんでした"
+          }
           summary_file="$RUNNER_TEMP/autofix-summary.md"
           summary=$(cat "$summary_file" 2>/dev/null || echo "（要約なし）")
           run_url="${GITHUB_SERVER_URL}/${GH_REPO}/actions/runs/${RUN_ID}"
@@ -135,8 +147,7 @@ jobs:
             git add -A
             git commit -q -m "CIの失敗を自動修正する [ci-autofix]" -m "$summary" -m "失敗した実行: $run_url"
             git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" "HEAD:$BRANCH"
-            # GITHUB_TOKEN の push では pull_request が発火しないため明示的に起動する
-            gh workflow run ci.yml --ref "$BRANCH"
+            approve_ci "$(git rev-parse HEAD)"
             gh pr comment "$PR" --body "$(printf 'CIの失敗をClaudeが自動修正しました（%s）。\n\n%s\n\n失敗した実行: %s' "$(git rev-parse --short HEAD)" "$summary" "$run_url")"
           elif [ "$RUN_ATTEMPT" = "1" ]; then
             gh run rerun "$RUN_ID" --failed
