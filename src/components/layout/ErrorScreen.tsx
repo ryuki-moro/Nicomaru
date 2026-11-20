@@ -7,6 +7,11 @@
  * ログイン中に「ログイン画面へ戻る」だけを出すと、/login が着地点へ送り返すので
  * 押しても前に進めず、出口がなくなっていた（docs/ui-review/p2 高-3）。
  *
+ * ログイン中は、役割に合ったヘッダーとナビも出す（staff はヘッダー内の StaffNav、couple は下部の CoupleNav）。
+ * /error と not-found はどのレイアウト（(staff)／(couple)）にも属さないので、ここで同じ外枠を組む。
+ * 出口がボタン1つだけにならず、ログアウトやほかの画面へもそのまま移れる。
+ * 未ログインのときはこれまでどおり、外枠なしで中央に出す。
+ *
  * page.tsx から default 以外を export できない（Next.js の型検証）ため、ページではなく部品として置く。
  */
 import Link from 'next/link';
