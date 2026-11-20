@@ -42,14 +42,17 @@ const config: Config = {
           'sans-serif',
         ],
       },
+      // nav／caption／label／body はモックアップの実測値より1段階大きくしている（Issue #203）。
+      // 実測値のままだとプランナーの表や小さなラベルが読みにくいため、画面ごとに調整せず
+      // トークン側で一括して上げる。見出し側（base 以上）は body との段差を保つために1pxずつ上げる。
       fontSize: {
-        nav: ['10px', '14px'],
-        caption: ['11px', '16px'],
-        label: ['12px', '18px'],
-        body: ['13px', '20px'],
-        base: ['14px', '22px'],
-        section: ['15px', '22px'],
-        title: ['16px', '24px'],
+        nav: ['11px', '15px'],
+        caption: ['12px', '18px'],
+        label: ['13px', '20px'],
+        body: ['14px', '22px'],
+        base: ['15px', '24px'],
+        section: ['16px', '24px'],
+        title: ['17px', '26px'],
         logo: ['20px', '28px'],
         hero: ['40px', '44px'],
       },

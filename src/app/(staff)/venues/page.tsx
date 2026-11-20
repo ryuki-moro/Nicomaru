@@ -109,7 +109,7 @@ export default async function VenueListPage({ searchParams }: Props) {
                 return (
                   <tr key={row.id}>
                     <td>
-                      <Link href={`/venues/${row.id}`} className="btn-ghost">
+                      <Link href={`/venues/${row.id}`} className="table-link">
                         {row.code}
                       </Link>
                     </td>
