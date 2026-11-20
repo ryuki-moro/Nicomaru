@@ -223,13 +223,10 @@ export default async function CaseListPage({ searchParams }: Props) {
               {visible.map((row) => (
                 <tr key={row.id}>
                   {/* 案件番号は途中で折り返すと読み違えやすいので1行に保つ（スマホでは表を横に送る） */}
-                  <td className="whitespace-nowrap">
-                    <Link href={`/cases/${row.id}`} className="btn-ghost">
-                      {row.caseCode}
-                    </Link>
-                  </td>
+                  <td className="whitespace-nowrap">{row.caseCode}</td>
+                  {/* 案件詳細を開くリンクは行に1つ（カップル名）。案件番号と2つ並べない */}
                   <td>
-                    <Link href={`/cases/${row.id}`} className="btn-ghost">
+                    <Link href={`/cases/${row.id}`} className="table-link">
                       {row.coupleName || '（氏名未登録）'}
                     </Link>
                   </td>
