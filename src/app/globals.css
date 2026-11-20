@@ -10,6 +10,9 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /* 配色はライトのみ。端末がダークモードでも、入力欄・スクロールバーなどの標準部品を
+       ライトの見た目にそろえ、ページ背景と食い違わないようにする（ルート要素に指定する） */
+    color-scheme: light;
   }
 
   body {

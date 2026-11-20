@@ -19,14 +19,19 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // アプリアイコン（public/icons/icon.svg）と同じ色。manifest の theme_color とそろえる
   themeColor: '#D4537E',
+  // CSS（globals.css の color-scheme）より先に、読み込み直後の背景もライトにする
+  colorScheme: 'light',
 };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
       <body>
         {children}
-        {!true && <PwaRegistration />}
+        {/* 開発サーバー（npm run dev:d1 など）では登録しない。古い Service Worker が残って
+            再コンパイル後の画面と食い違うのを避ける。本番ビルドではホーム画面追加のために登録する */}
+        {process.env.NODE_ENV === 'production' && <PwaRegistration />}
         <PerformanceReporter />
       </body>
     </html>
