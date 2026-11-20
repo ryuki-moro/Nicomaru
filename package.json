@@ -2,7 +2,7 @@
   "name": "bridalhub",
   "version": "0.1.0",
   "private": true,
-  "description": "にこまる (BridalHub) — 結婚式準備進行管理アプリ",
+  "description": "Bellink（ベリンク） — 結婚式準備進行管理アプリ",
   "engines": {
     "node": "^22.13.0 || >=24.0.0"
   },

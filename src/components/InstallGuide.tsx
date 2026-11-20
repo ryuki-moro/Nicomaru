@@ -91,7 +91,7 @@ export function InstallGuide() {
         </button>
       </div>
       <p className="mt-2 text-label text-text-secondary">
-        ホーム画面に追加すると、次回からにこまるを開きやすくなります。
+        ホーム画面に追加すると、次回からBellinkを開きやすくなります。
       </p>
       {kind === 'ios' ? (
         <>

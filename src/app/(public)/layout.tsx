@@ -16,7 +16,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <header className="border-b border-border-light bg-surface">
         <div className="mx-auto flex max-w-phone items-center justify-center px-screen py-3">
           <Link href="/login" className="text-logo font-bold text-text-primary">
-            にこまる
+            Bellink
           </Link>
         </div>
       </header>
