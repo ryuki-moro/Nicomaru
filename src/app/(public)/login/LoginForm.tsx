@@ -1,18 +1,24 @@
 'use client';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { api, ApiCallError } from '@/lib/api/client';
 import { navigateAfterSessionChange } from '@/lib/auth/navigate';
 import { OTP } from '@/lib/constants';
 import { publicDemoLogin, publicLocalD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 /**
  * ワンタイムコード入力（design_guide 5.4）。
- * 6マス横並び、各 36×44px・角丸8px。既定は border-mid 1px、入力中は primary 2px。
+ *
+ * 6桁を1つの入力欄で受け取る。マスを6つに分けると、iOS／ブラウザの
+ * `autocomplete="one-time-code"` による自動入力が1マス目にしか届かず、
+ * 読み上げでも6つの欄として扱われるため、1欄にして字間で桁を見やすくする。
+ * 既定は border-mid 1px、入力中は primary 2px。文字は 16px 以上（iOS の自動拡大を防ぐ）。
  *
  * P02 の確認コード入力（6-6-1 のLINE案内経路）でも同じ見た目を使うため export する。
  */
 export function OtpInput({
+  id,
   value,
   onChange,
   onComplete,
@@ -20,6 +26,7 @@ export function OtpInput({
   invalid = false,
   describedBy,
 }: {
+  id: string;
   value: string;
   onChange: (value: string) => void;
   onComplete?: (value: string) => void;
@@ -27,72 +34,34 @@ export function OtpInput({
   invalid?: boolean;
   describedBy?: string;
 }) {
-  const refs = useRef<Array<HTMLInputElement | null>>([]);
-  const focusAt = (index: number) => {
-    refs.current[Math.min(Math.max(index, 0), OTP.length - 1)]?.focus();
-  };
-  const commit = (next: string) => {
-    onChange(next);
-    if (next.length === OTP.length) onComplete?.(next);
-  };
   return (
-    <div className="flex justify-between gap-2" role="group" aria-label="ワンタイムコード">
-      {Array.from({ length: OTP.length }, (_, index) => (
-        <input
-          key={index}
-          ref={(element) => {
-            refs.current[index] = element;
-          }}
-          value={value[index] ?? ''}
-          disabled={disabled}
-          type="text"
-          inputMode="numeric"
-          // ブラウザ・iOS のSMS／メール自動入力に載せる
-          autoComplete={index === 0 ? 'one-time-code' : 'off'}
-          maxLength={1}
-          aria-label={`ワンタイムコード ${index + 1}桁目`}
-          aria-invalid={invalid || undefined}
-          aria-describedby={describedBy}
-          className={[
-            'h-11 w-9 rounded-field bg-surface text-center text-base text-text-primary',
-            'focus:border-2 focus:border-primary focus:outline-hidden',
-            'disabled:cursor-not-allowed disabled:opacity-50',
-            invalid ? 'border border-danger' : 'border border-border-mid',
-          ].join(' ')}
-          onChange={(event) => {
-            const digit = event.target.value.replace(/\D/g, '').slice(-1);
-            if (!digit) return;
-            // 途中のマスに入力したときは以降を捨てる。桁の抜けが起きない形に正規化する。
-            commit((value.slice(0, index) + digit).slice(0, OTP.length));
-            focusAt(index + 1);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Backspace') {
-              event.preventDefault();
-              if (value[index]) {
-                commit(value.slice(0, index));
-                focusAt(index);
-              } else {
-                commit(value.slice(0, Math.max(index - 1, 0)));
-                focusAt(index - 1);
-              }
-            }
-            if (event.key === 'ArrowLeft') focusAt(index - 1);
-            if (event.key === 'ArrowRight') focusAt(index + 1);
-          }}
-          onPaste={(event) => {
-            event.preventDefault();
-            const pasted = event.clipboardData
-              .getData('text')
-              .replace(/\D/g, '')
-              .slice(0, OTP.length);
-            if (!pasted) return;
-            commit(pasted);
-            focusAt(pasted.length);
-          }}
-        />
-      ))}
-    </div>
+    <input
+      id={id}
+      value={value}
+      disabled={disabled}
+      type="text"
+      inputMode="numeric"
+      // ブラウザ・iOS のSMS／メール自動入力に載せる
+      autoComplete="one-time-code"
+      enterKeyHint="done"
+      spellCheck={false}
+      maxLength={OTP.length}
+      aria-invalid={invalid || undefined}
+      aria-describedby={describedBy}
+      className={[
+        'h-12 w-full rounded-field bg-surface px-3 text-center font-mono text-title tracking-[0.5em] text-text-primary',
+        'focus:border-2 focus:border-primary focus:outline-hidden',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        invalid ? 'border border-danger' : 'border border-border-mid',
+      ].join(' ')}
+      onChange={(event) => {
+        // 貼り付け・自動入力で空白やハイフンが混じっても数字だけを残す
+        const next = event.target.value.replace(/\D/g, '').slice(0, OTP.length);
+        if (next === value) return;
+        onChange(next);
+        if (next.length === OTP.length) onComplete?.(next);
+      }}
+    />
   );
 }
 type Mode = 'otp' | 'password';
@@ -279,10 +248,8 @@ export function LoginForm({
             <label className="field-label" htmlFor="login-password">
               パスワード
             </label>
-            <input
+            <PasswordInput
               id="login-password"
-              className="field"
-              type="password"
               autoComplete="current-password"
               required={!publicDemoLogin()}
               disabled={pending}
@@ -301,8 +268,11 @@ export function LoginForm({
 
         {mode === 'otp' && codeSent && (
           <div>
-            <span className="field-label">ワンタイムコード（6桁）</span>
+            <label className="field-label" htmlFor="login-code">
+              ワンタイムコード（6桁）
+            </label>
             <OtpInput
+              id="login-code"
               value={code}
               onChange={setCode}
               onComplete={(completed) => void verifyOtp(completed)}

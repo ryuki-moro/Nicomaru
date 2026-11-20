@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'にこまる' },
   icons: { icon: '/icons/icon.svg', apple: '/icons/apple-touch-icon.png' },
+  // 端末（iOS の Dynamic Type など）の文字サイズ設定を 1rem に反映させる。
+  // 文字サイズは tailwind.config.ts で rem 指定にしてあるので、画面全体が一緒に拡大する
+  other: { 'text-scale': 'scale' },
 };
 export const viewport: Viewport = {
   width: 'device-width',

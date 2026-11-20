@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>にこまる AIデモ（投影）</title>
+    <!-- 投影用。発表者の画面のデモ部分（台本を除く）を映すだけで、操作は発表者の画面で行う。 -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #f4f1ec;
+        font-family: system-ui, 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+      }
+      video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+      }
+      #msg[hidden] {
+        display: none;
+      }
+      #msg {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-content: center;
+        text-align: center;
+        color: #5c534c;
+        font-size: 18px;
+        line-height: 2;
+      }
+    </style>
+  </head>
+  <body>
+    <video id="screen" autoplay muted playsinline></video>
+    <div id="msg">
+      このウィンドウをプロジェクターの画面へ移し、ダブルクリックで全画面にしてください。<br />
+      発表者の画面で「投影を開始」を押すと、ここにデモが映ります。
+    </div>
+    <script>
+      const video = document.getElementById('screen');
+      const msg = document.getElementById('msg');
+      function attach() {
+        let stream = null;
+        try {
+          stream = window.opener?.demoStream ?? null;
+        } catch {
+          // 発表者の画面が閉じられた
+        }
+        if (video.srcObject !== stream) {
+          video.srcObject = stream;
+          if (stream) video.play().catch(() => undefined);
+        }
+        msg.hidden = Boolean(stream?.active);
+      }
+      addEventListener('message', (e) => e.origin === location.origin && attach());
+      setInterval(attach, 1000);
+      attach();
+      addEventListener('dblclick', () =>
+        document.fullscreenElement
+          ? document.exitFullscreen()
+          : document.documentElement.requestFullscreen(),
+      );
+    </script>
+  </body>
+</html>

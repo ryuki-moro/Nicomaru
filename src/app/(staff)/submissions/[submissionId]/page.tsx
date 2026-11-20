@@ -20,6 +20,7 @@ import {
 } from '@/app/(staff)/submissions/[submissionId]/ReviewForm';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { ReviewStatusBadge, TaskStatusBadge } from '@/components/ui/StatusBadge';
+import { adoptedOutput } from '@/lib/ai/assist';
 import type { DefectFinding } from '@/lib/ai/defectCheck';
 import { csvSchemaOf } from '@/lib/ai/submissionCheck';
 import { requireStaff } from '@/lib/auth/session';
@@ -157,6 +158,22 @@ export default async function SubmissionReviewPage({
       .catch(() => null);
     if (checked) ruleFindings = checked.findings;
   }
+  // 差し戻し文の下書き（9-3）の材料。ルールの指摘と、確認待ち・採用済みのAIの指摘を行番号つきで渡す
+  const aiDefects =
+    defectJob?.status === 'done' || defectJob?.status === 'confirmed'
+      ? (adoptedOutput('defect_check', defectJob)?.findings ?? [])
+      : [];
+  const defectNotes = [...(ruleFindings ?? []), ...aiDefects].map(
+    (f) =>
+      `${f.row === 0 ? 'ファイル全体' : `${f.row}行目`}${f.column ? `「${f.column}」` : ''}: ${f.detail}`,
+  );
+  const classificationPanel = (
+    <ClassificationPanel
+      initialJob={classificationJob}
+      aiAvailable={aiStatus.available}
+      lastSeenAt={aiStatus.lastSeenAt}
+    />
+  );
 
   return (
     <div>
@@ -247,11 +264,12 @@ export default async function SubmissionReviewPage({
         )}
       </section>
 
-      <ClassificationPanel
-        initialJob={classificationJob}
-        aiAvailable={aiStatus.available}
-        lastSeenAt={aiStatus.lastSeenAt}
-      />
+      {/*
+        AIが使えないあいだは、結果の無い分類欄を出さない。確認結果の入力（ReviewForm）の中の
+        1行の案内にまとめ、入力欄が提出内容のすぐ下に来るようにする。
+        すでに付いている分類結果は消さず、確認結果の入力のあとに出す。
+      */}
+      {aiStatus.available && classificationPanel}
 
       <DefectPanel
         submissionId={submission.id}
@@ -275,6 +293,7 @@ export default async function SubmissionReviewPage({
             aiAvailable={aiStatus.available}
             lastSeenAt={aiStatus.lastSeenAt}
             sourceText={textValue ?? ''}
+            defectNotes={defectNotes}
           />
         </section>
       ) : (
@@ -305,6 +324,8 @@ export default async function SubmissionReviewPage({
           </div>
         </section>
       )}
+
+      {!aiStatus.available && classificationJob && classificationPanel}
     </div>
   );
 }

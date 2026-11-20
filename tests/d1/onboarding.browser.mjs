@@ -178,12 +178,11 @@ test(
       await couple.getByLabel('お名前', { exact: true }).fill('本人確認 花子');
       await couple.getByRole('checkbox').check();
       await couple.getByRole('button', { name: '登録してマイページへ', exact: true }).click();
-      await couple.getByLabel('ワンタイムコード 1桁目').waitFor();
+      await couple.getByLabel(/コード（6桁）/).waitFor();
       const otp = (
         await (await staff.request.get(origin + '/api/dev/mailbox')).json()
       ).messages.find((m) => m.kind === 'otp' && m.email === email).code;
-      for (let i = 0; i < 6; i++)
-        await couple.getByLabel(`ワンタイムコード ${i + 1}桁目`).fill(otp[i]);
+      await couple.getByLabel(/コード（6桁）/).fill(otp);
       await couple.waitForURL('**/mypage');
       await couple.getByRole('heading', { name: '次にやること', exact: true }).waitFor();
       assert.equal((await couple.locator('body').innerText()).includes('画面検証 花子'), true);
@@ -207,12 +206,11 @@ test(
         await platform.dispose();
       }
       await couple.getByRole('button', { name: '確認コードを送信', exact: true }).click();
-      await couple.getByLabel('ワンタイムコード 1桁目').waitFor();
+      await couple.getByLabel(/コード（6桁）/).waitFor();
       const newOtp = (
         await (await staff.request.get(origin + '/api/dev/mailbox')).json()
       ).messages.find((m) => m.kind === 'otp' && m.email === email).code;
-      for (let i = 0; i < 6; i++)
-        await couple.getByLabel(`ワンタイムコード ${i + 1}桁目`).fill(newOtp[i]);
+      await couple.getByLabel(/コード（6桁）/).fill(newOtp);
       await couple.waitForURL('**/mypage');
       const own = await (await couple.request.get(origin + '/api/mypage/case')).json();
       assert.equal(own.id, created.caseId);

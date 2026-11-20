@@ -32,6 +32,8 @@ interface Props {
   aiAvailable: boolean;
   lastSeenAt: string | null;
   onAdopt: (text: string) => void;
+  /** 呼び出し側が「AI補助を利用できません」をまとめて案内しているとき、この欄では重ねて出さない */
+  hideUnavailableNotice?: boolean;
 }
 
 export function TranslationPanel({
@@ -41,6 +43,7 @@ export function TranslationPanel({
   aiAvailable,
   lastSeenAt,
   onAdopt,
+  hideUnavailableNotice = false,
 }: Props) {
   const { job, track, setJob, timedOut } = useAiJob(null);
   const [target, setTarget] = useState<'en' | 'ja'>('en');
@@ -100,7 +103,7 @@ export function TranslationPanel({
         AIによる翻訳（要確認）
       </AiHeading>
 
-      {!aiAvailable && !shown && (
+      {!aiAvailable && !shown && !hideUnavailableNotice && (
         <AiUnavailable
           lastSeenAt={lastSeenAt}
           fallback="AI翻訳は使えませんが、下の「辞書で翻訳する」で定型表現だけはその場で訳せます。コメントは手入力でも登録できます。"

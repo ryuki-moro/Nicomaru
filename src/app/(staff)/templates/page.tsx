@@ -173,7 +173,7 @@ export default async function TemplateListPage({
                 return (
                   <tr key={template.id}>
                     <td>
-                      <Link href={`/templates/${template.id}`} className="btn-ghost">
+                      <Link href={`/templates/${template.id}`} className="table-link">
                         {template.name}
                       </Link>
                       {!template.is_required && <span className="ml-2 badge-neutral">任意</span>}

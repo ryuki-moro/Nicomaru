@@ -1,5 +1,6 @@
 'use client';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { api, ApiCallError } from '@/lib/api/client';
 import { PASSWORD_MIN_LENGTH } from '@/lib/constants';
 import { passwordUpdateSchema, toErrorDetails } from '@/lib/validation';
@@ -190,10 +191,8 @@ export function PasswordForms({ mode }: { mode: Mode }) {
               <label className="field-label" htmlFor="new-password">
                 新しいパスワード（{PASSWORD_MIN_LENGTH}文字以上）
               </label>
-              <input
+              <PasswordInput
                 id="new-password"
-                className="field"
-                type="password"
                 autoComplete="new-password"
                 required
                 minLength={PASSWORD_MIN_LENGTH}
@@ -210,10 +209,8 @@ export function PasswordForms({ mode }: { mode: Mode }) {
               <label className="field-label" htmlFor="new-password-confirm">
                 新しいパスワード（確認）
               </label>
-              <input
+              <PasswordInput
                 id="new-password-confirm"
-                className="field"
-                type="password"
                 autoComplete="new-password"
                 required
                 disabled={pending}

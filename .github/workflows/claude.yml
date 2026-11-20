@@ -1,0 +1,84 @@
+# Issue・PRのコメントで @claude と書くと Claude Code が応答する（質問への回答・レビュー・修正のコミット）。
+# 公開リポジトリのため、書き込み権限のある人（OWNER / MEMBER / COLLABORATOR）の呼びかけだけに反応する。
+# 認証は ci-autofix.yml と同じ secret（CLAUDE_CODE_OAUTH_TOKEN か ANTHROPIC_API_KEY）。
+name: Claude
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+jobs:
+  claude:
+    if: >-
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association)) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Record PR head
+        id: before
+        if: github.event.issue.pull_request || github.event.pull_request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: echo "sha=$(gh pr view "$PR" --json headRefOid --jq .headRefOid)" >> "$GITHUB_OUTPUT"
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          additional_permissions: |
+            actions: read
+          claude_args: |
+            --model claude-sonnet-5-5
+            --max-turns 60
+
+      # ClaudeがPRへ push したら、そのCIを follow-ci で承認・待機し、自動マージ／自動修正へ引き継ぐ
+      - name: Check push
+        id: after
+        if: always() && steps.before.outputs.sha
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.issue.number || github.event.pull_request.number }}
+          BEFORE: ${{ steps.before.outputs.sha }}
+        run: |
+          read -r sha cross < <(gh pr view "$PR" --json headRefOid,isCrossRepository --jq '"\(.headRefOid) \(.isCrossRepository)"')
+          if [ "$cross" = "false" ] && [ "$sha" != "$BEFORE" ]; then echo "sha=$sha" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/checkout@v7
+        if: always() && steps.after.outputs.sha
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: .ci-tools
+          sparse-checkout: .github/actions
+
+      - uses: ./.ci-tools/.github/actions/follow-ci
+        if: always() && steps.after.outputs.sha
+        with:
+          sha: ${{ steps.after.outputs.sha }}

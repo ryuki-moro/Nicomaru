@@ -6,6 +6,9 @@ on:
   push:
     branches: [main, develop]
   pull_request:
+  # 手動の再実行用。必須チェックとして数えられるのは pull_request の実行だけなので、
+  # github-actions[bot] の更新後は .github/actions/follow-ci が承認待ちの pull_request 実行を承認する。
+  workflow_dispatch:
 
 jobs:
   verify:
