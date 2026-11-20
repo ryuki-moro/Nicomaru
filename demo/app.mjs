@@ -128,7 +128,7 @@ function render(focusMain = false) {
         navLink(`tasks/${selectedId}`, '宿題', current.page === 'tasks') +
         navLink(`timeline/${selectedId}`, 'タイムライン', current.page === 'timeline');
   app.innerHTML = `<header class="app-header"><div class="container header-inner">
-    <a class="brand" href="#${role === 'planner' ? 'dashboard' : `mypage/${selectedId}`}" aria-label="にこまる ホーム"><span class="brand-mark" aria-hidden="true">n</span>にこまる</a>
+    <a class="brand" href="#${role === 'planner' ? 'dashboard' : `mypage/${selectedId}`}" aria-label="Bellink ホーム"><span class="brand-mark" aria-hidden="true">B</span>Bellink</a>
     <div class="header-actions"><div class="role-switch" role="group" aria-label="デモの表示切替">
       <button type="button" data-action="role" data-role="planner" class="${role === 'planner' ? 'active' : ''}" aria-pressed="${role === 'planner'}">プランナー</button>
       <button type="button" data-action="role" data-role="couple" class="${role === 'couple' ? 'active' : ''}" aria-pressed="${role === 'couple'}">新郎新婦</button>
