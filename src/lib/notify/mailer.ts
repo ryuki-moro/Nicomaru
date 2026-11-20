@@ -127,13 +127,13 @@ interface PasswordSetupMailParams {
 export function passwordSetupMessage(params: PasswordSetupMailParams): MailMessage {
   const belongs = params.venueName ? `${params.venueName}の` : '';
   const subject = params.isResend
-    ? '【にこまる】パスワード設定リンクの再送のご案内'
-    : '【にこまる】アカウント登録のご案内';
+    ? '【Bellink】パスワード設定リンクの再送のご案内'
+    : '【Bellink】アカウント登録のご案内';
 
   const text = [
     `${params.displayName} 様`,
     '',
-    `${belongs}にこまる（BridalHub）に、${params.roleLabel}としてのアカウントをご用意しました。`,
+    `${belongs}Bellink（ベリンク）に、${params.roleLabel}としてのアカウントをご用意しました。`,
     '下のリンクから、ご自身でパスワードを設定してご利用を開始してください。',
     '',
     params.actionLink,

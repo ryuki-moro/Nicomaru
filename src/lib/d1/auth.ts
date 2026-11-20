@@ -48,7 +48,7 @@ export function createD1Auth(db: D1Database) {
           kind: 'password',
           email: user.email,
           url: passwordLink('reset', token),
-          subject: '【にこまる】パスワード再設定のご案内',
+          subject: '【Bellink】パスワード再設定のご案内',
           text: `${user.name} 様
 
 下のリンクから新しいパスワードを設定してください。
@@ -76,7 +76,7 @@ ${passwordLink('reset', token)}
             email,
             code: otp,
             expiresAt: new Date(Date.now() + OTP.ttlSeconds * 1000).toISOString(),
-            subject: 'ログイン確認コード（にこまる）',
+            subject: 'ログイン確認コード（Bellink）',
             text: `ログイン確認コード: ${otp}
 
 このコードの有効期限は${minutes}分です。
