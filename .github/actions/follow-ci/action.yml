@@ -22,9 +22,10 @@ runs:
         set -euo pipefail
         id=""
         for _ in $(seq 1 30); do
-          read -r id status conclusion < <(gh api "repos/$GH_REPO/actions/runs?head_sha=$SHA&event=pull_request" \
+          read -r id _ conclusion < <(gh api "repos/$GH_REPO/actions/runs?head_sha=$SHA&event=pull_request" \
             --jq '[.workflow_runs[] | select(.name == "CI")][0] // {} | "\(.id) \(.status) \(.conclusion)"')
-          [ "$id" != "null" ] && { [ "$status" != "completed" ] || [ "$conclusion" = "action_required" ]; } && break
+          # 再実行は呼び出し側が先に要求しているため、ここで見つかるのは新しい実行（完了済みでもよい）
+          [ "$id" != "null" ] && break
           id=""
           sleep 4
         done
