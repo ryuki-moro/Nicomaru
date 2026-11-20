@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
+import { Modal } from '@/components/ui/Modal';
 import { api, handleApiError } from '@/lib/api/client';
 import {
   CONTACT_CHANNEL_LABEL,
@@ -72,29 +73,8 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
   const [summary, setSummary] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<PlanChangePreview | null>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const updateButtonRef = useRef<HTMLButtonElement>(null);
-  const dialogWasOpen = useRef(false);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-
-    if (preview) {
-      if (!dialog.open) dialog.showModal();
-      dialogWasOpen.current = true;
-      cancelButtonRef.current?.focus();
-      return;
-    }
-
-    if (submitting) return;
-    if (dialog.open) dialog.close();
-    if (dialogWasOpen.current) {
-      dialogWasOpen.current = false;
-      updateButtonRef.current?.focus();
-    }
-  }, [preview, submitting]);
 
   useEffect(() => {
     const fieldOrder = [
@@ -390,33 +370,17 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
         </div>
       </form>
 
-      <dialog
-        ref={dialogRef}
-        aria-labelledby="case-diff-title"
-        onKeyDown={(event) => {
-          if (event.key !== 'Tab') return;
-          event.preventDefault();
-          const buttons = Array.from(
-            event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
-          );
-          if (buttons.length === 0) return;
-          const current = buttons.findIndex((button) => button === document.activeElement);
-          const next =
-            current < 0
-              ? event.shiftKey
-                ? buttons.length - 1
-                : 0
-              : (current + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
-          buttons[next]?.focus();
-        }}
-        onCancel={(event) => {
-          event.preventDefault();
-          if (!submitting) setPreview(null);
-        }}
-        className="fixed inset-0 z-50 m-0 h-full w-full max-h-none max-w-none overflow-y-auto border-0 bg-transparent p-4 backdrop:bg-text-primary/40"
+      {/* 開閉・Esc・フォーカス移動は共通モーダル（Modal）にそろえる（Issue #206） */}
+      <Modal
+        open={preview !== null}
+        labelledBy="case-diff-title"
+        busy={submitting}
+        onClose={() => setPreview(null)}
+        initialFocusRef={cancelButtonRef}
+        returnFocusRef={updateButtonRef}
       >
         {preview && (
-          <div className="card mx-auto mt-8 w-full max-w-2xl space-y-4">
+          <>
             <h2 id="case-diff-title" className="section-head">
               変更内容の確認
             </h2>
@@ -506,9 +470,9 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
                 やめる
               </button>
             </div>
-          </div>
+          </>
         )}
-      </dialog>
+      </Modal>
     </>
   );
 }

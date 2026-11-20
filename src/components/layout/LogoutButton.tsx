@@ -8,7 +8,7 @@ export function LogoutButton() {
   return (
     <button
       type="button"
-      className="btn-ghost min-h-[36px] px-3 py-1 text-caption"
+      className="btn-ghost min-h-[36px] shrink-0 whitespace-nowrap px-3 py-1 text-caption"
       disabled={pending}
       onClick={async () => {
         setPending(true);
