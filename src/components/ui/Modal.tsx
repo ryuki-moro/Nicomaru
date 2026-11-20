@@ -12,20 +12,12 @@
  *              （閉じると二度と表示できない内容を、押し間違いで失わないため）。
  *   - 処理中 … busy のあいだは Esc でも閉じず、open が false になっても閉じるのを待つ
  *              （保存の結果が出る前に背面へ戻れてしまわないようにする）。
- *   - Tab    … モーダルの中の操作できる要素だけを順に巡る。
+ *   - Tab    … 背面は showModal() が inert にするので、自前で閉じ込めない。
+ *              閉じ込めるとアドレスバーなどブラウザの操作へ抜けられなくなる。
  */
 'use client';
 
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
-
-const FOCUSABLE = [
-  'a[href]',
-  'button:not(:disabled)',
-  'input:not(:disabled)',
-  'select:not(:disabled)',
-  'textarea:not(:disabled)',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',');
 
 interface Props {
   open: boolean;
@@ -83,24 +75,19 @@ export function Modal({
       ref={dialogRef}
       aria-labelledby={labelledBy}
       tabIndex={-1}
-      onKeyDown={(event) => {
-        if (event.key !== 'Tab') return;
-        event.preventDefault();
-        const targets = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE));
-        if (targets.length === 0) return;
-        const current = targets.findIndex((target) => target === document.activeElement);
-        const next =
-          current < 0
-            ? event.shiftKey
-              ? targets.length - 1
-              : 0
-            : (current + (event.shiftKey ? -1 : 1) + targets.length) % targets.length;
-        targets[next]?.focus();
-      }}
+      // Esc で閉じられないモーダルは、対応ブラウザでは閉じる要求そのものを受け付けない。
+      // 未対応のブラウザでは下の onCancel／onClose が代わりを務める
+      {...({ closedby: onClose && !busy ? 'closerequest' : 'none' } as Record<string, string>)}
       onCancel={(event) => {
         // 既定の「Esc で閉じる」は止め、閉じるかどうかは open を持つ呼び出し側に決めさせる
         event.preventDefault();
         if (!busy) onClose?.();
+      }}
+      onClose={(event) => {
+        // Esc を続けて押すと cancel を止められずに閉じるブラウザがある。
+        // まだ開いているはず（open が true）なら開き直し、内容を失わないようにする
+        const dialog = event.currentTarget;
+        if (open && dialog.isConnected && !dialog.open) dialog.showModal();
       }}
       className="fixed inset-0 z-50 m-0 h-full max-h-none w-full max-w-none overflow-y-auto border-0 bg-transparent p-4 backdrop:bg-text-primary/40 focus:outline-none"
     >
