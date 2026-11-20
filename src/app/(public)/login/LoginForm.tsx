@@ -2,10 +2,10 @@
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { api, ApiCallError } from '@/lib/api/client';
+import { navigateAfterSessionChange } from '@/lib/auth/navigate';
 import { OTP } from '@/lib/constants';
 import { publicDemoLogin, publicLocalD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 /**
  * ワンタイムコード入力（design_guide 5.4）。
@@ -84,7 +84,6 @@ export function LoginForm({
   initialMode?: Mode;
   initialEmail?: string;
 }) {
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [codeSent, setCodeSent] = useState(false);
   // 送信後はメール欄を固定する。ただし旧形式のリンクで着地に失敗したときは
@@ -98,12 +97,10 @@ export function LoginForm({
   const [notice, setNotice] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [resendIn, setResendIn] = useState(0);
+  // セッションが切り替わるので、クライアントルーターを使わずページ全体で遷移する（src/lib/auth/navigate.ts）
   const goToLanding = useCallback(
-    (fallback: string) => {
-      router.replace(next ?? fallback);
-      router.refresh();
-    },
-    [next, router],
+    (fallback: string) => navigateAfterSessionChange(next ?? fallback),
+    [next],
   );
   const handleFailure = (cause: unknown, fallbackMessage: string) => {
     if (cause instanceof ApiCallError) {
