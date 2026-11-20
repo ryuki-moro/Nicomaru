@@ -36,7 +36,10 @@
   }
 
   /* 補助的な操作（戻る・ページ送り・再送信など）。テキストリンク風だと押せる場所が
-     分かりにくいため、控えめな枠付きボタンにそろえる。タップ領域は 44px を確保する */
+     分かりにくいため、控えめな枠付きボタンにそろえる。タップ領域は 44px を確保する。
+     下線つきの文字リンクを使ってよいのは次の2つだけ（Issue #208）。
+       - パンくず・本文中の参照リンク
+       - 表のセルの中で、その行の詳細を開くリンク（.table-link。1行に1つ） */
   .btn-ghost {
     @apply inline-flex min-h-[44px] items-center justify-center rounded-button border
            border-border-mid bg-surface px-4 py-2 text-label text-text-primary
@@ -126,6 +129,14 @@
 
   .table td {
     @apply border-b border-border-light px-3 py-3 align-middle;
+  }
+
+  /* 表の行から詳細を開くリンク。セルごとに枠付きボタンを並べると表がボタンで埋まり、
+     どれを押しても同じ画面へ行くのに選ばせてしまう。行の名前にあたる1か所だけを
+     下線つきのリンクにし、押せることは色・太字・下線で示す。タップ領域は 44px を確保する */
+  .table-link {
+    @apply inline-flex min-h-[44px] items-center font-bold text-link underline underline-offset-2
+           hover:no-underline;
   }
 }
 

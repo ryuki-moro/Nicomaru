@@ -1,0 +1,44 @@
+# github-actions[bot] がPRを更新したあとのCIを最後まで見届け、自動マージ／自動修正へ引き継ぐ。
+#
+#   - bot の更新で起きた pull_request のCIは承認待ち（action_required）になるため承認する。
+#     必須チェックとして数えられるのは pull_request の実行だけで、workflow_dispatch の実行は数えられない
+#   - bot が承認・再実行したCIは完了しても workflow_run を起こさないため、ここで完了を待ち、
+#     auto-merge.yml を起動し（失敗したPRは見送って次へ進む）、失敗なら ci-autofix.yml も起動する
+name: follow-ci
+description: botが更新したPRのCIを承認・待機し、自動マージか自動修正へ引き継ぐ
+inputs:
+  sha:
+    description: 見届けるPRの先頭コミット
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        SHA: ${{ inputs.sha }}
+      run: |
+        set -euo pipefail
+        id=""
+        for _ in $(seq 1 30); do
+          read -r id _ conclusion < <(gh api "repos/$GH_REPO/actions/runs?head_sha=$SHA&event=pull_request" \
+            --jq '[.workflow_runs[] | select(.name == "CI")][0] // {} | "\(.id) \(.status) \(.conclusion)"')
+          # 再実行は呼び出し側が先に要求しているため、ここで見つかるのは新しい実行（完了済みでもよい）
+          [ "$id" != "null" ] && break
+          id=""
+          sleep 4
+        done
+        if [ -z "$id" ]; then
+          echo "::warning::$SHA の pull_request CIが見つかりませんでした"
+          exit 0
+        fi
+        if [ "$conclusion" = "action_required" ]; then
+          gh api -X POST "repos/$GH_REPO/actions/runs/$id/approve" >/dev/null
+          echo "CI $id を承認しました"
+        fi
+        gh run watch "$id" --interval 20 >/dev/null || true
+        if [ "$(gh run view "$id" --json conclusion --jq .conclusion)" != "success" ]; then
+          gh workflow run ci-autofix.yml -f run_id="$id"
+        fi
+        gh workflow run auto-merge.yml

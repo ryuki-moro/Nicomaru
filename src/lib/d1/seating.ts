@@ -126,6 +126,7 @@ interface TableRow {
   name: string;
   capacity: number;
   shape: TableShape;
+  scale: number;
   pos_x: number;
   pos_y: number;
   allowed_tags: string;
@@ -179,6 +180,7 @@ export async function loadSeatingLayouts(
       name: t.name,
       capacity: t.capacity,
       shape: t.shape,
+      scale: t.scale,
       x: t.pos_x,
       y: t.pos_y,
       allowedTags: parseTags(t.allowed_tags),
@@ -281,12 +283,14 @@ export async function saveSeatingLayout(
       t.id
         ? db
             .prepare(
-              'UPDATE seating_tables SET name=?, capacity=?, shape=?, pos_x=?, pos_y=?, allowed_tags=?, sort_order=?, updated_at=? WHERE id=? AND layout_id=?',
+              'UPDATE seating_tables SET name=?, capacity=?, shape=?, scale=?, pos_x=?, pos_y=?, allowed_tags=?, sort_order=?, updated_at=? WHERE id=? AND layout_id=?',
             )
             .bind(
               t.name,
               t.capacity,
               t.shape,
+              // API は zod で既定値を入れるが、関数を直接呼ぶ場合に備えて標準に寄せる
+              Math.round((t.scale ?? 1) * 100) / 100,
               Math.round(t.x * 1000) / 1000,
               Math.round(t.y * 1000) / 1000,
               JSON.stringify(dedupeTags(t.allowedTags)),
@@ -297,7 +301,7 @@ export async function saveSeatingLayout(
             )
         : db
             .prepare(
-              'INSERT INTO seating_tables (id, layout_id, name, capacity, shape, pos_x, pos_y, allowed_tags, sort_order, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+              'INSERT INTO seating_tables (id, layout_id, name, capacity, shape, scale, pos_x, pos_y, allowed_tags, sort_order, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
             )
             .bind(
               randomUUID(),
@@ -305,6 +309,8 @@ export async function saveSeatingLayout(
               t.name,
               t.capacity,
               t.shape,
+              // API は zod で既定値を入れるが、関数を直接呼ぶ場合に備えて標準に寄せる
+              Math.round((t.scale ?? 1) * 100) / 100,
               Math.round(t.x * 1000) / 1000,
               Math.round(t.y * 1000) / 1000,
               JSON.stringify(dedupeTags(t.allowedTags)),

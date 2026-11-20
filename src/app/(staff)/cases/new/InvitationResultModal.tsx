@@ -9,10 +9,14 @@
  * 平文トークンは保存しないため（6-3-6）、このモーダルを閉じるとURLは再表示できない。
  * 「メールで送信」「LINEで送信」も再発行を伴うため、押すたびに表示中のURLは失効し、
  * 新しく発行されたURLに置き換わる。取り違えを防ぐため、応答のURLで必ず表示を更新する。
+ *
+ * 見た目・フォーカス移動は共通モーダル（Modal）にそろえる（Issue #206）。
+ * 閉じるとURLを見られなくなるので、Esc では閉じず「閉じて案件一覧へ」だけで閉じる。
  */
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { Modal } from '@/components/ui/Modal';
 import { ApiCallError, api } from '@/lib/api/client';
 import {
   CONTACT_CHANNEL_LABEL,
@@ -150,13 +154,8 @@ export function InvitationResultModal({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="invitation-result-title"
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-text-primary/40 p-4"
-    >
-      <div className="card mt-8 w-full max-w-2xl space-y-4">
+    <Modal open labelledBy="invitation-result-title">
+      <>
         <div>
           <h2 id="invitation-result-title" className="section-head">
             案件を登録しました
@@ -270,7 +269,7 @@ export function InvitationResultModal({
         <button type="button" className="btn-primary" onClick={() => router.push('/cases')}>
           閉じて案件一覧へ
         </button>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }
