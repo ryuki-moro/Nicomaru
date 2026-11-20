@@ -13,6 +13,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { ModalDialog } from '@/components/ui/ModalDialog';
 import { ApiCallError, api } from '@/lib/api/client';
 import {
   CONTACT_CHANNEL_LABEL,
@@ -150,13 +151,9 @@ export function InvitationResultModal({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="invitation-result-title"
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-text-primary/40 p-4"
-    >
-      <div className="card mt-8 w-full max-w-2xl space-y-4">
+    // 招待URLはこの画面でしか確認できないため、Esc では閉じない（閉じるボタンだけ）
+    <ModalDialog labelledBy="invitation-result-title">
+      <div className="card mx-auto mt-8 w-full max-w-2xl space-y-4">
         <div>
           <h2 id="invitation-result-title" className="section-head">
             案件を登録しました
@@ -271,6 +268,6 @@ export function InvitationResultModal({
           閉じて案件一覧へ
         </button>
       </div>
-    </div>
+    </ModalDialog>
   );
 }

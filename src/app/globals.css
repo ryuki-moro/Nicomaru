@@ -20,6 +20,17 @@
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-primary;
   }
+
+  /* モーダル（<dialog> を showModal で開いたもの）の裏でページがスクロールしないようにする。
+     html／body の overflow を書き換えるとスクロール位置が飛ぶので使わない */
+  dialog:modal {
+    overscroll-behavior: contain;
+  }
+
+  dialog::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
 }
 
 @layer components {
@@ -53,6 +64,9 @@
     @apply w-full rounded-field border border-border-mid bg-surface px-3 py-[10px]
            text-label text-text-primary placeholder:text-text-muted
            focus:border-primary;
+    /* iOS Safari は 16px 未満の入力欄にフォーカスすると画面を拡大する。
+       text-label の行の高さは残しつつ、文字だけは最低 1rem にそろえる */
+    font-size: max(1rem, 1em);
   }
 
   .field-error {

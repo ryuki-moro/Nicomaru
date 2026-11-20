@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { OtpInput } from '@/app/(public)/login/LoginForm';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
+import { ModalDialog } from '@/components/ui/ModalDialog';
 import { api, ApiCallError } from '@/lib/api/client';
 import { INPUT_LIMITS, OTP } from '@/lib/constants';
 
@@ -218,17 +219,19 @@ export function RegisterForm({ token }: { token: string }) {
 
         {otpPurpose !== null && (
           <div>
-            <span className="field-label">
+            <label className="field-label" htmlFor="register-code">
               {otpPurpose === 'verify' ? '確認コード（6桁）' : 'ワンタイムコード（6桁）'}
-            </span>
+            </label>
             <OtpInput
+              id="register-code"
               value={code}
               onChange={setCode}
               onComplete={(completed) => void verifyCode(completed)}
               disabled={pending}
               invalid={Boolean(fieldErrors.code)}
+              describedBy={fieldErrors.code ? 'register-code-error' : undefined}
             />
-            <FieldError message={fieldErrors.code} />
+            <FieldError id="register-code-error" message={fieldErrors.code} />
           </div>
         )}
 
@@ -254,38 +257,38 @@ export function RegisterForm({ token }: { token: string }) {
       )}
 
       {termsOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/40 px-4 pb-6"
-          role="dialog"
-          aria-modal="true"
-          aria-label="利用規約"
-        >
-          <div className="card max-h-[70vh] w-full max-w-phone overflow-y-auto">
-            <h2 className="section-head mb-2">利用規約（要約）</h2>
-            <ul className="flex flex-col gap-2 text-label text-text-secondary">
-              <li>
-                本サービスは、結婚式の準備状況をプランナーとおふたりで共有するためのものです。
-              </li>
-              <li>
-                ログインはメールアドレス宛のワンタイム認証で行います。
-                メールアドレスの管理がそのままアカウントの保護になりますので、
-                受信できる端末・アカウントの管理にご注意ください。
-              </li>
-              <li>
-                ご入力いただいた個人情報は、担当プランナーと式場の管理者のみが確認します。
-                案件の終了後は一定期間を経て削除します。
-              </li>
-              <li>ご招待いただくゲストの情報を代理でご入力いただく場合があります。</li>
-            </ul>
-            <button
-              type="button"
-              className="btn-secondary mt-4"
-              onClick={() => setTermsOpen(false)}
-            >
-              閉じる
-            </button>
+        <ModalDialog labelledBy="terms-title" onClose={() => setTermsOpen(false)}>
+          {/* 画面下からせり上がるシート状に置く */}
+          <div className="flex min-h-full items-end justify-center pb-2">
+            <div className="card max-h-[70vh] w-full max-w-phone overflow-y-auto">
+              <h2 id="terms-title" className="section-head mb-2">
+                利用規約（要約）
+              </h2>
+              <ul className="flex flex-col gap-2 text-label text-text-secondary">
+                <li>
+                  本サービスは、結婚式の準備状況をプランナーとおふたりで共有するためのものです。
+                </li>
+                <li>
+                  ログインはメールアドレス宛のワンタイム認証で行います。
+                  メールアドレスの管理がそのままアカウントの保護になりますので、
+                  受信できる端末・アカウントの管理にご注意ください。
+                </li>
+                <li>
+                  ご入力いただいた個人情報は、担当プランナーと式場の管理者のみが確認します。
+                  案件の終了後は一定期間を経て削除します。
+                </li>
+                <li>ご招待いただくゲストの情報を代理でご入力いただく場合があります。</li>
+              </ul>
+              <button
+                type="button"
+                className="btn-secondary mt-4"
+                onClick={() => setTermsOpen(false)}
+              >
+                閉じる
+              </button>
+            </div>
           </div>
-        </div>
+        </ModalDialog>
       )}
     </div>
   );

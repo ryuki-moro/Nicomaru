@@ -42,16 +42,18 @@ const config: Config = {
           'sans-serif',
         ],
       },
+      // 既定の文字サイズ（16px）のときにモックアップの実測値（コメントの px）と一致する。
+      // rem と単位なしの行の高さにして、ブラウザ・端末の文字サイズ設定に追従させる。
       fontSize: {
-        nav: ['10px', '14px'],
-        caption: ['11px', '16px'],
-        label: ['12px', '18px'],
-        body: ['13px', '20px'],
-        base: ['14px', '22px'],
-        section: ['15px', '22px'],
-        title: ['16px', '24px'],
-        logo: ['20px', '28px'],
-        hero: ['40px', '44px'],
+        nav: ['0.625rem', '1.4'], // 10px / 14px
+        caption: ['0.6875rem', '1.4545'], // 11px / 16px
+        label: ['0.75rem', '1.5'], // 12px / 18px
+        body: ['0.8125rem', '1.5385'], // 13px / 20px
+        base: ['0.875rem', '1.5715'], // 14px / 22px
+        section: ['0.9375rem', '1.4667'], // 15px / 22px
+        title: ['1rem', '1.5'], // 16px / 24px
+        logo: ['1.25rem', '1.4'], // 20px / 28px
+        hero: ['2.5rem', '1.1'], // 40px / 44px
       },
       borderRadius: {
         badge: '20px',

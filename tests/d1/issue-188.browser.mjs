@@ -51,10 +51,17 @@ test(
       await expect(cancel).toBeFocused();
       await page.screenshot({ path: 'docs/ui-review/issue-188/dialog.png', fullPage: true });
 
-      await page.keyboard.press('Tab');
-      await expect(dialog.getByRole('button', { name: 'この内容で更新する' })).toBeFocused();
+      // showModal() で開くので背面は inert。Tab を自前で閉じ込めないため、最後のボタンから先は
+      // ブラウザの操作部へ抜ける。ここではダイアログ内のボタン間を移動できることを確かめる
       await page.keyboard.press('Shift+Tab');
+      await expect(dialog.getByRole('button', { name: 'この内容で更新する' })).toBeFocused();
+      await page.keyboard.press('Tab');
       await expect(dialog.getByRole('button', { name: 'やめる' })).toBeFocused();
+      assert.equal(
+        await page.evaluate(() => document.querySelector('dialog')?.matches(':modal')),
+        true,
+        'showModal() で開いている',
+      );
 
       await page.keyboard.press('Escape');
       await dialog.waitFor({ state: 'hidden' });

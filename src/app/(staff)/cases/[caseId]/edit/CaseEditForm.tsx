@@ -90,6 +90,8 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
 
     if (submitting) return;
     if (dialog.open) dialog.close();
+    // 通常はブラウザが開く前のボタンへフォーカスを戻すが、このダイアログは確認中（更新ボタンが
+    // disabled）の間に開くため戻し先が無い。そのため更新ボタンへ明示的に戻す
     if (dialogWasOpen.current) {
       dialogWasOpen.current = false;
       updateButtonRef.current?.focus();
@@ -393,22 +395,8 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
       <dialog
         ref={dialogRef}
         aria-labelledby="case-diff-title"
-        onKeyDown={(event) => {
-          if (event.key !== 'Tab') return;
-          event.preventDefault();
-          const buttons = Array.from(
-            event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
-          );
-          if (buttons.length === 0) return;
-          const current = buttons.findIndex((button) => button === document.activeElement);
-          const next =
-            current < 0
-              ? event.shiftKey
-                ? buttons.length - 1
-                : 0
-              : (current + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
-          buttons[next]?.focus();
-        }}
+        // Tab の閉じ込めは showModal() が背面を inert にすることで足りる。自前で閉じ込めると
+        // アドレスバーなどブラウザの操作へ抜けられなくなるため行わない
         onCancel={(event) => {
           event.preventDefault();
           if (!submitting) setPreview(null);
