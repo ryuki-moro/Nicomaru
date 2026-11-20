@@ -174,6 +174,15 @@ export default async function SubmissionReviewPage({
       lastSeenAt={aiStatus.lastSeenAt}
     />
   );
+  const defectPanel = (
+    <DefectPanel
+      submissionId={submission.id}
+      ruleFindings={ruleFindings}
+      initialJob={defectJob}
+      aiAvailable={aiStatus.available}
+      lastSeenAt={aiStatus.lastSeenAt}
+    />
+  );
 
   return (
     <div>
@@ -270,14 +279,7 @@ export default async function SubmissionReviewPage({
         すでに付いている分類結果は消さず、確認結果の入力のあとに出す。
       */}
       {aiStatus.available && classificationPanel}
-
-      <DefectPanel
-        submissionId={submission.id}
-        ruleFindings={ruleFindings}
-        initialJob={defectJob}
-        aiAvailable={aiStatus.available}
-        lastSeenAt={aiStatus.lastSeenAt}
-      />
+      {aiStatus.available && defectPanel}
 
       {isPending ? (
         <section className="card mt-4">
@@ -325,6 +327,8 @@ export default async function SubmissionReviewPage({
         </section>
       )}
 
+      {/* AI停止中は確認フォームを提出内容の直後に置き、補助チェックは後ろへ回す。 */}
+      {!aiStatus.available && defectPanel}
       {!aiStatus.available && classificationJob && classificationPanel}
     </div>
   );
