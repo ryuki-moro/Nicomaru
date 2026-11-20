@@ -2,7 +2,22 @@ import { describe, expect, it } from 'vitest';
 
 import { SUBMISSION_FORMATS, TASK_STATUSES } from '@/lib/constants';
 import { todayInJst } from '@/lib/format';
-import { relativeTaskDeadline, TASK_ANSWER_METHOD_LABEL } from '@/lib/task-display';
+import {
+  MISSING_ANSWER_REASON,
+  relativeTaskDeadline,
+  TASK_ANSWER_METHOD_LABEL,
+} from '@/lib/task-display';
+
+describe('回答が空のときの理由', () => {
+  it('ファイルの宿題は、選ぶ操作が分かる文言にする', () => {
+    expect(MISSING_ANSWER_REASON.file).toBe('ファイルを選んでください');
+  });
+
+  it('テキスト・選択式の文言は変えない', () => {
+    expect(MISSING_ANSWER_REASON.text).toBe('回答を入力してください');
+    expect(MISSING_ANSWER_REASON.select).toBe('回答を入力してください');
+  });
+});
 
 describe('宿題の相対期限', () => {
   it.each([

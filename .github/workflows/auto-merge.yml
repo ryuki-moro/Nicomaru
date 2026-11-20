@@ -3,7 +3,7 @@
 #   - 対象: main 向け・下書きでない・このリポジトリ内のブランチ（フォーク除外）・「マージ保留」ラベルなし
 #   - マージ方法は merge commit（PR内のコミットを1変更単位のまま残す）
 #   - main が進んで遅れたPR（BEHIND）のうち必須チェックが通っているものは main を取り込み、CIを起動し直す
-#     （github-actions[bot] による更新のため、承認待ちになった pull_request のCIを承認する）
+#     （bot の更新後のCIは follow-ci が承認・待機し、終わったらこのワークフローを起動し直す）
 #   - 1回の実行でマージ・main の取り込みはそれぞれ1本まで。次のCI完了で次のPRへ進む
 #   - CI完了時に加え、30分ごとにも見回る（Dependabot起点やラベル変更の取りこぼし対策）
 name: 自動マージ
@@ -29,26 +29,16 @@ jobs:
   merge:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
       - name: Merge passing PRs
+        id: sweep
         shell: bash
         run: |
           set -euo pipefail
-          # github-actions[bot] の更新で起きた pull_request のCIは承認待ちになる（必須チェックは pull_request の実行だけが数えられる）
-          approve_ci() {
-            for _ in $(seq 1 30); do
-              ids=$(gh api "repos/$GH_REPO/actions/runs?head_sha=$1&event=pull_request" --jq '.workflow_runs[] | select(.conclusion == "action_required") | .id')
-              if [ -n "$ids" ]; then
-                for id in $ids; do gh api -X POST "repos/$GH_REPO/actions/runs/$id/approve" >/dev/null; done
-                return 0
-              fi
-              sleep 4
-            done
-            echo "::warning::$1 の承認待ちCIが見つかりませんでした"
-          }
           merged=""
           updated=""
           prs=$(gh pr list --state open --base main --limit 50 \
@@ -73,22 +63,29 @@ jobs:
               fi
               echo "::warning::#$num のマージに失敗しました"
             fi
+            # 承認されないまま残った bot 更新後のCIがあれば、承認して見届ける（必須チェックが未報告のまま止まるため）
+            if [ -z "$updated" ] && [ "$(gh api "repos/$GH_REPO/actions/runs?head_sha=$sha&event=pull_request" --jq '[.workflow_runs[] | select(.name == "CI")][0].conclusion')" = "action_required" ]; then
+              updated="$num"
+              echo "sha=$sha" >> "$GITHUB_OUTPUT"
+              echo "#$num の承認待ちCIを承認します"
+              continue
+            fi
             # マージ後は他のPRが遅れるため、CLEAN だったものも取り込み対象にする。
             # 作業中のPRまで更新しないよう、必須チェックが通っていて遅れているだけのPRに限る。
             # 1本ずつ順に通す（まとめて更新すると、マージのたびに全PRのCIをやり直すことになる）
             if [ -z "$updated" ] && { [ "$state" = "BEHIND" ] || { [ -n "$merged" ] && [ "$state" = "CLEAN" ]; }; } &&
               gh pr checks "$num" --required >/dev/null 2>&1; then
               if gh api -X PUT "repos/$GH_REPO/pulls/$num/update-branch" -f expected_head_sha="$sha" >/dev/null; then
-                # update-branch は非同期のため、先頭コミットが変わってからCIを起動する
+                # update-branch は非同期のため、先頭コミットが変わるのを待つ
                 new_sha="$sha"
                 for _ in $(seq 1 15); do
                   new_sha=$(gh pr view "$num" --json headRefOid --jq .headRefOid)
                   [ "$new_sha" != "$sha" ] && break
                   sleep 2
                 done
-                approve_ci "$new_sha"
                 updated="$num"
-                echo "#$num に main を取り込み、CIを起動しました"
+                echo "sha=$new_sha" >> "$GITHUB_OUTPUT"
+                echo "#$num に main を取り込みました"
               else
                 echo "::warning::#$num のブランチ更新に失敗しました（衝突の可能性）"
               fi
@@ -96,3 +93,13 @@ jobs:
               echo "#$num: $state のため見送り"
             fi
           done <<< "$prs"
+
+      - uses: actions/checkout@v7
+        if: steps.sweep.outputs.sha
+        with:
+          sparse-checkout: .github/actions
+
+      - uses: ./.github/actions/follow-ci
+        if: steps.sweep.outputs.sha
+        with:
+          sha: ${{ steps.sweep.outputs.sha }}

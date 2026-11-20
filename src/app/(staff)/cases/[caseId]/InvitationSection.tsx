@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { ErrorSummary } from '@/components/ui/ErrorSummary';
-import { ModalDialog } from '@/components/ui/ModalDialog';
+import { Modal } from '@/components/ui/Modal';
 import { InvitationStateBadge } from '@/components/ui/StatusBadge';
 import { ApiCallError, api } from '@/lib/api/client';
 import {
@@ -288,10 +288,10 @@ export function InvitationSection({ caseId, readOnly }: { caseId: string; readOn
         </div>
       )}
 
-      {revealed && (
-        // 一度しか表示できないURLなので、Esc では閉じない（閉じるボタンだけ）
-        <ModalDialog labelledBy="invitation-url-title">
-          <div className="card mx-auto mt-16 w-full max-w-xl space-y-3">
+      {/* 一度しか表示できないURLなので、Esc では閉じない（閉じるボタンだけ） */}
+      <Modal open={revealed !== null} labelledBy="invitation-url-title">
+        {revealed && (
+          <>
             <h3 id="invitation-url-title" className="section-head">
               {PARTNER_ROLE_LABEL[revealed.role]}の招待URL
             </h3>
@@ -327,9 +327,9 @@ export function InvitationSection({ caseId, readOnly }: { caseId: string; readOn
                 閉じる
               </button>
             </div>
-          </div>
-        </ModalDialog>
-      )}
+          </>
+        )}
+      </Modal>
     </section>
   );
 }
