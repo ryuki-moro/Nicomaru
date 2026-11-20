@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { CoupleNav } from '@/components/couple/CoupleNav';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { landingLabelFor, landingPathFor, resolveAppUser } from '@/lib/auth/session';
+import { isStaff } from '@/lib/constants';
 
 export interface ErrorMessage {
   heading: string;
@@ -32,8 +33,8 @@ export async function ErrorScreen({ message }: { message: ErrorMessage }) {
   const resolved = await resolveAppUser();
   const user = resolved.state === 'active' ? resolved.user : null;
 
-  const body = (
-    <div className="screen flex flex-col gap-4">
+  const content = (
+    <div className="flex flex-col gap-4">
       <div className="card flex flex-col gap-2 text-center">
         <h1 className="text-title font-bold text-text-primary">{message.heading}</h1>
         {/* 要件: 責められていると感じさせず、次の操作が分かる文言にする */}
@@ -53,16 +54,32 @@ export async function ErrorScreen({ message }: { message: ErrorMessage }) {
     </div>
   );
 
-  if (!user) {
-    return <div className="flex min-h-dvh flex-col items-center justify-center bg-bg">{body}</div>;
+  // App Router の not-found / P04 は通常の staff・couple layout の外で描画される
+  // 場合があるため、認証済みならここで利用者のナビを含む共通外枠を再現する。
+  if (user && isStaff(user.role)) {
+    return (
+      <div className="min-h-dvh bg-bg">
+        <AppHeader role={user.role} displayName={user.displayName} />
+        <main className="mx-auto w-full max-w-6xl px-4 py-6">
+          <div className="mx-auto w-full max-w-2xl">{content}</div>
+        </main>
+      </div>
+    );
   }
 
-  const couple = user.role === 'couple';
+  if (user) {
+    return (
+      <div className="min-h-dvh bg-bg pb-20">
+        <AppHeader role={user.role} displayName={user.displayName} minimal />
+        <main className="screen py-5">{content}</main>
+        <CoupleNav />
+      </div>
+    );
+  }
+
   return (
-    <div className={`flex min-h-dvh flex-col bg-bg ${couple ? 'pb-20' : ''}`}>
-      <AppHeader role={user.role} displayName={user.displayName} minimal={couple} />
-      <main className="flex flex-1 flex-col items-center justify-center py-8">{body}</main>
-      {couple && <CoupleNav />}
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-bg">
+      <div className="screen">{content}</div>
     </div>
   );
 }

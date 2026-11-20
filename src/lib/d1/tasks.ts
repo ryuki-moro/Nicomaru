@@ -4,6 +4,7 @@ import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { encryptPii, readPii } from '@/lib/crypto';
 import { badRequest, conflict, forbidden, notFound, unprocessable } from '@/lib/errors';
 import { phaseNameFor } from '@/lib/services/schedule';
+import { MISSING_ANSWER_REASON } from '@/lib/task-display';
 import {
   caseTaskCreateSchema,
   caseTaskUpdateSchema,
@@ -93,6 +94,25 @@ export async function taskList(
       .all<StoredTask>()
   ).results.map(decodeTask);
 }
+/**
+ * M02 の状態フィルタに出す件数。見える範囲は taskList と同じ条件（access・有効な couple）にそろえる。
+ * 該当が無い状態はキーごと返らないので、呼び出し側で 0 として扱う。
+ */
+export async function taskStatusCounts(
+  db: D1Database,
+  user: Actor,
+): Promise<Partial<Record<TaskStatus, number>>> {
+  await taskRole(db, user, true);
+  const rows = (
+    await db
+      .prepare(
+        `SELECT status, COUNT(*) AS n FROM case_tasks WHERE ${access} AND EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.role='couple' AND r.status='active') GROUP BY status`,
+      )
+      .bind(user.id, user.id)
+      .all<{ status: TaskStatus; n: number }>()
+  ).results;
+  return Object.fromEntries(rows.map((row) => [row.status, Number(row.n)]));
+}
 export async function latestSubmission(db: D1Database, user: Actor, id: string) {
   await taskRow(db, user, id);
   const row = await db
@@ -170,6 +190,7 @@ export async function submitTask(
   const file = task.submission_format === 'file' ? (body.fileId ?? null) : null;
   if (
     !body.draft &&
+    task.submission_format !== 'none' &&
     ((task.submission_format === 'text' && !text) ||
       (task.submission_format === 'select' && !selected) ||
       (task.submission_format === 'file' && !file))
@@ -182,7 +203,7 @@ export async function submitTask(
             : task.submission_format === 'select'
               ? 'selectedValue'
               : 'fileId',
-        reason: '回答を入力してください',
+        reason: MISSING_ANSWER_REASON[task.submission_format],
       },
     ]);
   if (

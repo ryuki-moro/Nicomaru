@@ -12,6 +12,7 @@
 import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { InstallGuide } from '@/components/InstallGuide';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { TaskStatusBadge } from '@/components/ui/StatusBadge';
 import { requirePageUser } from '@/lib/auth/session';
 import {
   PARTNER_ROLES,
@@ -132,7 +133,13 @@ export default async function MyPage() {
                     prefetch={false}
                     className="flex items-center gap-3 rounded-card bg-field-filled-bg px-4 py-[13px]"
                   >
-                    <span className="flex-1">
+                    <span className="min-w-0 flex-1">
+                      {/* 差し戻しはいちばん急ぐので、色だけに頼らず文字つきのバッジで示す */}
+                      {task.status === 'needs_fix' && (
+                        <span className="mb-1 block">
+                          <TaskStatusBadge status={task.status} />
+                        </span>
+                      )}
                       <span className="block text-label text-text-muted">
                         {formatDateJp(task.due_date)}まで
                         {relativeDeadline && (
@@ -165,7 +172,7 @@ export default async function MyPage() {
           </Link>
           <nav aria-label="そのほかのメニュー" className="flex flex-wrap justify-center gap-2">
             <Link href="/mypage/timeline" prefetch={false} className="btn-ghost">
-              準備タイムラインを見る
+              準備の流れを見る
             </Link>
             {/* 4-3 M01「通知一覧（M05）は Phase 2 で追加する」 */}
             <Link href="/mypage/notifications" prefetch={false} className="btn-ghost">
