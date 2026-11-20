@@ -12,6 +12,7 @@ import {
   reviewSubmission,
   submissionRow,
   taskList,
+  taskStatusCounts,
   pendingSubmissions,
   latestSubmission,
 } from '../../src/lib/d1/tasks.ts';
@@ -93,6 +94,10 @@ test('他式場・同式場の別担当・ロール偽装・停止・アーカ�
   await assert.rejects(submitTask(db, planner, task, answer()), { code: 'FORBIDDEN' });
   await assert.rejects(submitTask(db, actor(ids.coupleB), task, answer()), { code: 'NOT_FOUND' });
   assert.equal((await taskList(db, actor(ids.coupleB), ['confirmed'], 0)).length, 0);
+  // 件数も一覧と同じ範囲だけを数える（他カップルの確認済は入らない）
+  assert.equal((await taskStatusCounts(db, couple)).confirmed, 1);
+  assert.equal((await taskStatusCounts(db, actor(ids.coupleB))).confirmed, undefined);
+  await assert.rejects(taskStatusCounts(db, planner), { code: 'FORBIDDEN' });
   await db
     .prepare("UPDATE user_profiles SET status='suspended' WHERE id=?")
     .bind(ids.coupleA)

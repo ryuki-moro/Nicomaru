@@ -164,13 +164,23 @@ test(
       await staffPage.waitForURL(/\/submissions\?reviewed=[^&]+$/);
       await page.goto(`${origin}/mypage/tasks/${taskId}`);
       await page
-        .getByText('確認済みです。内容を変えたいときは、入力し直して提出してください。')
+        .getByText('確認済みです。内容を変えたいときは「内容を変更する」を押してください。')
         .waitFor();
+      // 確認済は読み取り表示。入力欄と「提出する」は「内容を変更する」を押すまで出ない。
+      await page.getByText('人数を追記した回答', { exact: true }).waitFor();
+      assert.equal(await page.getByRole('button', { name: '提出する', exact: true }).count(), 0);
+      assert.equal(await page.getByLabel('回答', { exact: true }).count(), 0);
       await mkdir('.wrangler/app-local/evidence', { recursive: true });
       await page.screenshot({
         path: '.wrangler/app-local/evidence/tasks-confirmed.png',
         fullPage: true,
       });
+      await page.getByRole('button', { name: '内容を変更する', exact: true }).click();
+      assert.equal(
+        await page.getByLabel('回答', { exact: true }).inputValue(),
+        '人数を追記した回答',
+      );
+      await page.getByRole('button', { name: '提出する', exact: true }).waitFor();
       // select / none とファイルも同じ本体APIで送信する。
       const select = await add(planner, 'select', { options: { choices: ['参加', '欠席'] } });
       assert.equal(
