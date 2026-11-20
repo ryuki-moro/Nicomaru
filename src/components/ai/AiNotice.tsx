@@ -63,15 +63,19 @@ export function AiHeading({
 export function AiUnavailable({
   lastSeenAt,
   fallback,
+  summary = 'ただいまAI補助を利用できません（詳細）',
+  children,
 }: {
   lastSeenAt: string | null;
   fallback: string;
+  /** 1行目の文言。複数のAI欄をまとめて案内するときに、対象を書き添える */
+  summary?: string;
+  /** AIが無くても使える代わりの手段（辞書翻訳など）。折りたたみの中に置く */
+  children?: ReactNode;
 }) {
   return (
     <details className="text-label text-text-secondary">
-      <summary className="cursor-pointer py-1 text-text-muted">
-        ただいまAI補助を利用できません（詳細）
-      </summary>
+      <summary className="cursor-pointer py-1 text-text-muted">{summary}</summary>
       <div className="banner-info mt-1">
         <div>
           <p>{fallback}</p>
@@ -82,6 +86,7 @@ export function AiUnavailable({
           )}
         </div>
       </div>
+      {children && <div className="mt-2">{children}</div>}
     </details>
   );
 }
