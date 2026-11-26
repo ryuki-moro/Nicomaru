@@ -418,10 +418,24 @@
         render();
       };
       $('refresh').onclick = refreshCouple;
+      // 押した操作のうちにコピーできるよう、メモは先に読んでおく
+      const memo = fetch('/__demo/memo').then((r) => r.text());
       $('memo').onclick = async () => {
-        const memo = await fetch('/__demo/memo').then((r) => r.text());
-        await navigator.clipboard.writeText(memo);
-        $('status').textContent = 'メモをコピーしました';
+        const text = await memo;
+        // クリップボードAPIが拒まれる環境では、選択してコピーする方法に切り替える
+        const copied = await navigator.clipboard.writeText(text).then(
+          () => true,
+          () => {
+            const area = document.createElement('textarea');
+            area.value = text;
+            document.body.append(area);
+            area.select();
+            const ok = document.execCommand('copy');
+            area.remove();
+            return ok;
+          },
+        );
+        $('status').textContent = copied ? 'メモをコピーしました' : 'メモをコピーできませんでした';
       };
       // 左を操作したあとマウスが右に入ったら、右を開き直す
       setInterval(() => {
