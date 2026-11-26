@@ -115,7 +115,7 @@ export function PlanTypeForm({ mode, initial, templates, save }: Props) {
 
     const selected = templates.filter((t) => assignments[t.id]?.selected);
     if (selected.length === 0) {
-      localErrors.assignments = '宿題テンプレートを1件以上選択してください';
+      localErrors.assignments = 'やることテンプレートを1件以上選択してください';
     }
 
     const rows: {
@@ -272,13 +272,13 @@ export function PlanTypeForm({ mode, initial, templates, save }: Props) {
       <fieldset className="space-y-2">
         <legend className="field-label">割当テンプレート（1件以上）</legend>
         <p className="text-caption text-text-muted">
-          チェックした宿題が、このプラン種別の案件に一括で割り当てられます。
-          逆算日数を空欄にすると、宿題テンプレート側の日数がそのまま使われます。
+          チェックしたやることが、このプラン種別の案件に一括で割り当てられます。
+          逆算日数を空欄にすると、やることテンプレート側の日数がそのまま使われます。
         </p>
 
         {templates.length === 0 ? (
           <p className="banner-info">
-            先に宿題テンプレートを登録してください。宿題テンプレート画面から追加できます。
+            先にやることテンプレートを登録してください。やることテンプレート画面から追加できます。
           </p>
         ) : (
           <div className="table-wrap">
@@ -286,7 +286,7 @@ export function PlanTypeForm({ mode, initial, templates, save }: Props) {
               <thead>
                 <tr>
                   <th scope="col">割当</th>
-                  <th scope="col">宿題名</th>
+                  <th scope="col">やることの名前</th>
                   <th scope="col">既定の逆算日数</th>
                   <th scope="col">表示順</th>
                   <th scope="col">逆算日数の上書き</th>

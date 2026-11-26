@@ -169,12 +169,12 @@ export function InvitationResultModal({
           <div role="alert" className="banner-error">
             <span>
               {assignError}
-              　案件詳細画面から宿題の割り当てをやり直せます。
+              　案件詳細画面からやることの割り当てをやり直せます。
             </span>
           </div>
         ) : (
           <div className="banner-info">
-            <span>宿題を{assignedCount}件割り当て、準備タイムラインを作成しました。</span>
+            <span>やることを{assignedCount}件割り当て、準備タイムラインを作成しました。</span>
           </div>
         )}
 

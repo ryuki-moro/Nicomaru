@@ -145,7 +145,7 @@ export function CaseForm({ plans, today }: Props) {
         assignError =
           error instanceof ApiCallError
             ? error.message
-            : '宿題の割り当てが完了しませんでした。案件詳細から再度お試しください。';
+            : 'やることの割り当てが完了しませんでした。案件詳細から再度お試しください。';
       }
 
       setResult({ ...created, assigned, assignError });
@@ -339,10 +339,10 @@ export function CaseForm({ plans, today }: Props) {
         </div>
 
         <section className="card space-y-2">
-          <h2 className="section-head">割当宿題プレビュー</h2>
+          <h2 className="section-head">割り当てるやることのプレビュー</h2>
           {preview.length === 0 ? (
             <p className="text-label text-text-muted">
-              挙式日とプラン種別を選ぶと、割り当てる宿題と期限を確認できます。
+              挙式日とプラン種別を選ぶと、割り当てるやることと期限を確認できます。
             </p>
           ) : (
             <ul className="space-y-1 text-label">

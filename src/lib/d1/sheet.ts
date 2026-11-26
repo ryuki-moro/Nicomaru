@@ -86,7 +86,9 @@ export async function requestSheetDraft(db: D1Database, user: AppUser, caseId: s
   );
   const text = [
     `本日: ${formatDate(today)}`,
-    pendingLines.length > 0 ? `未提出の宿題:\n${pendingLines.join('\n')}` : '未提出の宿題: なし',
+    pendingLines.length > 0
+      ? `未提出のやること:\n${pendingLines.join('\n')}`
+      : '未提出のやること: なし',
     '直近の連絡: なし（D1では連絡履歴は未移行）',
   ].join('\n\n');
   return enqueueJob(db, user, {

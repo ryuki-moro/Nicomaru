@@ -126,7 +126,7 @@ export default async function TimelinePage({
                         href={taskDetailHref(item.related_task_id, 'timeline')}
                         className="btn-ghost mt-2"
                       >
-                        関連宿題を見る
+                        関連するやることを見る
                       </Link>
                     )}
                   </li>

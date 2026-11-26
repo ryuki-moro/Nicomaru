@@ -28,7 +28,7 @@ import { NotificationLogExportForm } from './NotificationLogExportForm';
 export const dynamic = 'force-dynamic';
 /** 6-12 表6-12 の処理名。batch_runs.job_type と対応する。 */
 const JOB_LABEL: Record<string, string> = {
-  risk_recalculate: 'リスク再計算',
+  risk_recalculate: '遅れの度合いの再計算',
   notifications_dispatch: '通知ディスパッチ',
   ai_job_reclaim: 'AIジョブの滞留回収',
   case_purge: '案件終了後の自動削除',

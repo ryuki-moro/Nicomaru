@@ -129,7 +129,7 @@ export default async function SubmissionsPage({
       <h1 className="section-head">提出物確認</h1>
       <p className="mt-1 text-caption text-text-muted">
         新郎新婦から届いた提出物のうち、確認待ちのものを期限の近い順に表示しています（全 {total}{' '}
-        件）。宿題名を押すと確認画面が開きます。
+        件）。やることの名前を押すと確認画面が開きます。
       </p>
 
       {notice && (
@@ -152,7 +152,7 @@ export default async function SubmissionsPage({
           <table className="table min-w-0 sm:min-w-[640px]">
             <thead>
               <tr>
-                <th scope="col">宿題</th>
+                <th scope="col">やること</th>
                 <th scope="col" className="hidden sm:table-cell">
                   案件番号
                 </th>

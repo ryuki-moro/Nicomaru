@@ -98,8 +98,8 @@ export function buildReschedulePlan(input: {
 
   const explanation =
     shifts.length === 0
-      ? '遅れている宿題はありません。現在の期限のままで問題ありません。'
-      : `次の${shifts.length}件の宿題について、期限の見直し案を作成しました。` +
+      ? '遅れているやることはありません。現在の期限のままで問題ありません。'
+      : `次の${shifts.length}件のやることについて、期限の見直し案を作成しました。` +
         shifts.map((s) => `「${s.title}」は ${s.from} から ${s.to} へ変更する案です。`).join('') +
         '日付の計算はルールに基づいており、最終的な決定はプランナーが行います。';
 
@@ -121,7 +121,7 @@ export function rescheduleJobInput(plan: ReschedulePlan): {
   return {
     text:
       plan.shifts.map((s) => `「${s.title}」: ${s.from} → ${s.to}`).join('\n') ||
-      '変更対象の宿題はありません',
+      '変更対象のやることはありません',
     params: { shifts: plan.shifts },
   };
 }

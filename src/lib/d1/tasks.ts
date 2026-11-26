@@ -165,7 +165,7 @@ async function commit(
   );
   const results = await db.batch(statements);
   if (!results.at(-1)?.meta.changes)
-    throw conflict('宿題の内容が更新されました。開き直してください');
+    throw conflict('やることの内容が更新されました。開き直してください');
 }
 export async function submitTask(
   db: D1Database,
@@ -181,10 +181,10 @@ export async function submitTask(
     );
   const body = input.data,
     task = await taskRow(db, user, id);
-  if (task.status === 'waived') throw unprocessable('この宿題は対応不要です');
+  if (task.status === 'waived') throw unprocessable('このやることは対応不要です');
   if (body.submissionType !== task.submission_format) throw conflict('提出形式が更新されています');
   if (body.draft && task.submission_format === 'none')
-    throw badRequest([{ field: 'draft', reason: '確認のみの宿題は一時保存できません' }]);
+    throw badRequest([{ field: 'draft', reason: '確認のみのやることは一時保存できません' }]);
   const text = task.submission_format === 'text' ? body.textValue?.trim() || null : null;
   const selected = task.submission_format === 'select' ? body.selectedValue?.trim() || null : null;
   const file = task.submission_format === 'file' ? (body.fileId ?? null) : null;
@@ -272,7 +272,7 @@ export async function submitTask(
     await logCommunication(db, user, task.case_id, {
       channel: 'in_app',
       direction: 'inbound',
-      summary: '宿題を提出しました',
+      summary: 'やることを提出しました',
     }).catch(() => console.warn('[communication] 記録を保存できませんでした'));
   return { id: submissionId, reviewStatus: status };
 }
@@ -328,7 +328,7 @@ export async function reviewSubmission(
     task = row.case_tasks;
   if (row.task_version !== task.version || !row.is_latest || row.review_status !== 'submitted')
     throw conflict('この提出は確認できる状態ではありません');
-  if (task.status === 'waived') throw unprocessable('この宿題は対応不要です');
+  if (task.status === 'waived') throw unprocessable('このやることは対応不要です');
   const g = guard(task, user, false);
   await commit(
     db,
@@ -458,7 +458,7 @@ export async function updateTask(
   if (!Object.keys(input).length)
     throw badRequest([{ field: '_', reason: '変更する項目がありません' }]);
   if (input.waived !== undefined && !['not_started', 'waived'].includes(task.status))
-    throw unprocessable('提出済みの宿題は対応不要に変更できません');
+    throw unprocessable('提出済みのやることは対応不要に変更できません');
   const g = guard(task, user, false),
     columns: string[] = [],
     values: (string | null)[] = [];

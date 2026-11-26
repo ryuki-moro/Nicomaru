@@ -21,7 +21,7 @@ const ITEMS: readonly NavItem[] = [
   { href: '/cases', label: '案件一覧', roles: ['planner', 'admin', 'system_admin'] },
   { href: '/submissions', label: '提出物確認', roles: ['planner', 'admin', 'system_admin'] },
   { href: '/notifications', label: '通知履歴', roles: ['planner', 'admin', 'system_admin'] },
-  { href: '/templates', label: '宿題テンプレート', roles: ['admin'] },
+  { href: '/templates', label: 'やることテンプレート', roles: ['admin'] },
   { href: '/plan-types', label: 'プラン種別', roles: ['admin'] },
   // 名前は立場で変わる（usersLabelFor）。同じ画面でも管理する相手が違うため。
   { href: '/users', label: '利用者管理', roles: ['admin', 'system_admin'] },

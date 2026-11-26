@@ -79,7 +79,7 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
     setFieldError({});
 
     if (row.title.trim() === '') {
-      setFieldError({ [index]: '宿題名を入力してください' });
+      setFieldError({ [index]: 'やることの名前を入力してください' });
       return;
     }
     if (row.dueDate === '') {
@@ -134,13 +134,13 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
       {!aiAvailable && !job && (
         <AiUnavailable
           lastSeenAt={lastSeenAt}
-          fallback="起票案は出せませんが、宿題は案件詳細から手で追加できます。"
+          fallback="起票案は出せませんが、やることは案件詳細から手で追加できます。"
         />
       )}
 
       {!job && aiAvailable && (
         <p className="text-label text-text-muted">
-          打ち合わせ記録を保存すると、AIが宿題の案を作ります。
+          打ち合わせ記録を保存すると、AIがやることの案を作ります。
         </p>
       )}
 
@@ -148,7 +148,7 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
         <AiJobState
           status={job.status}
           errorMessage={job.error_message}
-          fallback="宿題は案件詳細から手で追加できます。"
+          fallback="やることは案件詳細から手で追加できます。"
         />
       )}
 
@@ -160,13 +160,15 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
 
       {(job?.status === 'done' || job?.status === 'confirmed') &&
         (rows.length === 0 ? (
-          <p className="text-label text-text-primary">宿題にあたる内容は見つかりませんでした。</p>
+          <p className="text-label text-text-primary">
+            やることにあたる内容は見つかりませんでした。
+          </p>
         ) : (
           <ul className="space-y-3">
             {rows.map((row, index) => (
               <li key={index} className="rounded-card border border-border-light px-3 py-3">
                 <label className="field-label" htmlFor={`proposal-title-${index}`}>
-                  宿題名
+                  やることの名前
                 </label>
                 <input
                   id={`proposal-title-${index}`}
@@ -206,7 +208,7 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
 
                 <div className="mt-3">
                   {row.registered ? (
-                    <p className="text-label text-success-text">宿題として登録しました。</p>
+                    <p className="text-label text-success-text">やることとして登録しました。</p>
                   ) : (
                     <button
                       type="button"
@@ -214,7 +216,7 @@ export function TaskProposalPanel({ caseId, initialJob, aiAvailable, lastSeenAt 
                       disabled={pendingIndex === index}
                       onClick={() => register(index)}
                     >
-                      {pendingIndex === index ? '登録中…' : 'この案を宿題として登録する'}
+                      {pendingIndex === index ? '登録中…' : 'この案をやることとして登録する'}
                     </button>
                   )}
                 </div>

@@ -122,8 +122,8 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
     run(async () => {
       const result = await api.post<{ added: number }>(`/api/cases/${caseId}/assign-tasks`);
       return result.added === 0
-        ? '追加する宿題はありませんでした。'
-        : `宿題を${result.added}件追加しました。`;
+        ? '追加するやることはありませんでした。'
+        : `やることを${result.added}件追加しました。`;
     });
 
   const saveDueDate = (taskId: string) =>
@@ -162,7 +162,7 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
       });
       setDraft(emptyDraft);
       setAdding(false);
-      return '宿題を追加しました。';
+      return 'やることを追加しました。';
     });
   };
 
@@ -177,7 +177,7 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="section-head">宿題（{tasks.length}件）</h2>
+        <h2 className="section-head">やること（{tasks.length}件）</h2>
         {!readOnly && (
           <button
             type="button"
@@ -185,7 +185,7 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
             onClick={() => setAdding((prev) => !prev)}
             disabled={busy}
           >
-            {adding ? '追加をやめる' : '宿題を追加'}
+            {adding ? '追加をやめる' : 'やることを追加'}
           </button>
         )}
       </div>
@@ -199,10 +199,10 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
 
       {tasks.length === 0 && (
         <div className="card space-y-2">
-          <p className="text-label text-text-secondary">まだ宿題が割り当てられていません。</p>
+          <p className="text-label text-text-secondary">まだやることが割り当てられていません。</p>
           {!readOnly && hasPlanType && (
             <button type="button" className="btn-primary" onClick={assignTasks} disabled={busy}>
-              プラン種別の宿題を割り当てる
+              プラン種別のやることを割り当てる
             </button>
           )}
           {!hasPlanType && (
@@ -218,7 +218,7 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
           <table className="table">
             <thead>
               <tr>
-                <th scope="col">宿題名</th>
+                <th scope="col">やることの名前</th>
                 <th scope="col">提出形式</th>
                 <th scope="col">重要度</th>
                 <th scope="col">期限</th>
@@ -356,11 +356,11 @@ export function TaskSection({ caseId, tasks, hasPlanType, readOnly }: Props) {
 
       {adding && !readOnly && (
         <form onSubmit={addTask} className="card space-y-3" noValidate>
-          <h3 className="text-label font-medium">宿題を追加</h3>
+          <h3 className="text-label font-medium">やることを追加</h3>
 
           <div>
             <label htmlFor="task-title" className="field-label">
-              宿題名（必須）
+              やることの名前（必須）
             </label>
             <input
               id="task-title"

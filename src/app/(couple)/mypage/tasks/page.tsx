@@ -31,7 +31,7 @@ import { daysBetween, type IsoDate } from '@/lib/services/schedule';
 import { relativeTaskDeadline, TASK_ANSWER_METHOD_LABEL, taskTabCount } from '@/lib/task-display';
 import { isUuid } from '@/lib/uuid';
 import Link from 'next/link';
-export const metadata = { title: '宿題・提出物' };
+export const metadata = { title: 'やること・提出物' };
 /** 期限が近い行だけ日付を warning-text にする（design_guide 5.7）。 */
 const DUE_SOON_DAYS = 7;
 interface TaskRow {
@@ -105,7 +105,7 @@ export default async function TaskListPage({
   const today = todayInJst();
   return (
     <div>
-      <h1 className="section-head mb-3">宿題・提出物</h1>
+      <h1 className="section-head mb-3">やること・提出物</h1>
       {notice && (
         <div role="status" className="banner-info mb-3">
           <span>{notice}</span>
@@ -120,7 +120,9 @@ export default async function TaskListPage({
       ) : tasks.length === 0 ? (
         <EmptyState
           message={
-            page > 1 ? 'これ以上の宿題はありません。' : 'このタブに表示する宿題はありません。'
+            page > 1
+              ? 'これ以上のやることはありません。'
+              : 'このタブに表示するやることはありません。'
           }
         />
       ) : (
