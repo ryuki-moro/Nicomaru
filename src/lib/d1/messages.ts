@@ -110,13 +110,27 @@ export async function listMessages(
   return { items: page.map((row) => toView(row, user)), hasMore };
 }
 
-const upsertRead = (db: D1Database, caseId: string, userId: string, at: string, now: string) =>
+// 既読位置は (last_read_at,last_read_id) の組で持ち、後戻りさせない（同じミリ秒の発言も cursor 順で区別する）。
+const READ_FORWARD = `(excluded.last_read_at,excluded.last_read_id)>(last_read_at,last_read_id)`;
+const ON_CONFLICT_READ = `ON CONFLICT(case_id,user_id) DO UPDATE SET
+  last_read_at=CASE WHEN ${READ_FORWARD} THEN excluded.last_read_at ELSE last_read_at END,
+  last_read_id=CASE WHEN ${READ_FORWARD} THEN excluded.last_read_id ELSE last_read_id END,
+  updated_at=excluded.updated_at`;
+
+const upsertRead = (
+  db: D1Database,
+  caseId: string,
+  userId: string,
+  at: string,
+  messageId: string,
+  now: string,
+) =>
   db
     .prepare(
-      `INSERT INTO case_message_reads(case_id,user_id,last_read_at,updated_at) VALUES (?,?,?,?)
-    ON CONFLICT(case_id,user_id) DO UPDATE SET last_read_at=MAX(last_read_at,excluded.last_read_at),updated_at=excluded.updated_at`,
+      `INSERT INTO case_message_reads(case_id,user_id,last_read_at,last_read_id,updated_at) VALUES (?,?,?,?,?)
+    ${ON_CONFLICT_READ}`,
     )
-    .bind(caseId, userId, at, now);
+    .bind(caseId, userId, at, messageId, now);
 
 export async function postMessage(
   db: D1Database,
@@ -135,7 +149,7 @@ export async function postMessage(
     .first<{ id: string }>();
   if (!inserted) throw notFound();
   // 自分の発言は既読として扱う
-  await upsertRead(db, caseId, user.id, now, now).run();
+  await upsertRead(db, caseId, user.id, now, id, now).run();
   const row = await db.prepare(`${SELECT_MESSAGE} WHERE m.id=?`).bind(id).first<MessageRow>();
   if (!row) throw notFound();
   return toView(row, user);
@@ -175,11 +189,11 @@ export async function markRead(
   const now = new Date().toISOString();
   const row = await db
     .prepare(
-      `INSERT INTO case_message_reads(case_id,user_id,last_read_at,updated_at)
-    SELECT c.id,?,?,? FROM wedding_cases c WHERE c.id=? AND ${scope}
-    ON CONFLICT(case_id,user_id) DO UPDATE SET last_read_at=MAX(last_read_at,excluded.last_read_at),updated_at=excluded.updated_at RETURNING case_id`,
+      `INSERT INTO case_message_reads(case_id,user_id,last_read_at,last_read_id,updated_at)
+    SELECT c.id,?,?,?,? FROM wedding_cases c WHERE c.id=? AND ${scope}
+    ${ON_CONFLICT_READ} RETURNING case_id`,
     )
-    .bind(user.id, parsed.createdAt, now, caseId, user.id)
+    .bind(user.id, parsed.createdAt, parsed.id, now, caseId, user.id)
     .first();
   if (!row) throw notFound();
 }
@@ -196,7 +210,8 @@ export async function unreadCounts(
     const { results } = await db
       .prepare(
         `SELECT c.id AS case_id,(SELECT count(*) FROM case_messages m WHERE m.case_id=c.id AND m.sender_user_id<>? AND m.deleted_at IS NULL
-      AND m.created_at>COALESCE((SELECT r.last_read_at FROM case_message_reads r WHERE r.case_id=c.id AND r.user_id=?),'')) AS n
+      AND NOT EXISTS (SELECT 1 FROM case_message_reads r WHERE r.case_id=c.id AND r.user_id=?
+        AND (m.created_at<r.last_read_at OR (m.created_at=r.last_read_at AND m.id<=r.last_read_id)))) AS n
       FROM wedding_cases c WHERE c.id IN (${chunk.map(() => '?').join(',')}) AND ${scope}`,
       )
       .bind(user.id, user.id, ...chunk, user.id)

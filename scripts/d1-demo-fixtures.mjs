@@ -292,11 +292,12 @@ export async function seedDemoFixtures(db, encode, password, files) {
     if (!messages.length) return;
     const caseId = uuid('51111111', caseIndex + 1);
     const coupleId = uuid('61111111', caseIndex + 1);
+    const messageId = (i) => uuid('a1111111', caseIndex * 100 + i + 1);
     const senderOf = (m) => (m.from === 'planner' ? PLANNER_ID : coupleId);
     messages.forEach((m, i) =>
       run(
         'INSERT INTO case_messages(id,case_id,sender_user_id,body_enc,created_at) VALUES (?,?,?,?,?)',
-        uuid('a1111111', caseIndex * 100 + i + 1),
+        messageId(i),
         caseId,
         senderOf(m),
         encode(m.body),
@@ -308,10 +309,11 @@ export async function seedDemoFixtures(db, encode, password, files) {
       const last = messages.findLast((m) => m.from === from);
       if (last)
         run(
-          'INSERT INTO case_message_reads(case_id,user_id,last_read_at,updated_at) VALUES (?,?,?,?)',
+          'INSERT INTO case_message_reads(case_id,user_id,last_read_at,last_read_id,updated_at) VALUES (?,?,?,?,?)',
           caseId,
           senderOf(last),
           iso(last.minutesAgo),
+          messageId(messages.indexOf(last)),
           iso(last.minutesAgo),
         );
     }

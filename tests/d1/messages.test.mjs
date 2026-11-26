@@ -301,15 +301,31 @@ test('既読は戻らず、未読数は自分の発言・取り消し済み・�
   // 古いカーソルで既読位置は戻らない
   await markRead(db, bride(), ids.caseA, encodeCursor(iso(t), uuid(1)));
   const marker = await db
-    .prepare('SELECT last_read_at FROM case_message_reads WHERE case_id=? AND user_id=?')
+    .prepare(
+      'SELECT last_read_at,last_read_id FROM case_message_reads WHERE case_id=? AND user_id=?',
+    )
     .bind(ids.caseA, ids.coupleA)
     .first();
   assert.equal(marker.last_read_at, iso(t + 1000));
+  assert.equal(marker.last_read_id, uuid(2));
   // 自分の投稿は既読扱い
   const sent = await postMessage(db, bride(), ids.caseA, '返信');
   assert.deepEqual(await unreadCounts(db, bride(), [ids.caseA]), { [ids.caseA]: 0 });
   assert.deepEqual(await unreadCounts(db, planner(), [ids.caseA]), { [ids.caseA]: 2 });
   assert.ok(sent.id);
+});
+
+test('同じミリ秒の発言も、既読位置より cursor が後ろなら未読として数える', async () => {
+  await clearMessages();
+  const t = iso(Date.UTC(2027, 0, 1));
+  await insertRaw(ids.caseA, 1, ids.plannerA, t);
+  await insertRaw(ids.caseA, 2, ids.plannerA, t);
+  await markRead(db, bride(), ids.caseA, encodeCursor(t, uuid(1)));
+  assert.deepEqual(await unreadCounts(db, bride(), [ids.caseA]), { [ids.caseA]: 1 });
+  // 同じミリ秒の後ろの発言まで読めば 0。前の位置へ戻す呼び出しでは戻らない
+  await markRead(db, bride(), ids.caseA, encodeCursor(t, uuid(2)));
+  await markRead(db, bride(), ids.caseA, encodeCursor(t, uuid(1)));
+  assert.deepEqual(await unreadCounts(db, bride(), [ids.caseA]), { [ids.caseA]: 0 });
 });
 
 test('未読数は束縛変数の上限を超える件数でも数えられる', async () => {

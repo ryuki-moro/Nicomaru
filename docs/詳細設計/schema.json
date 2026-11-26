@@ -775,6 +775,13 @@
     },
     {
       "table_name": "case_message_reads",
+      "column_name": "last_read_id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_message_reads",
       "column_name": "updated_at",
       "data_type": "text",
       "is_nullable": "NO",
@@ -3140,6 +3147,12 @@
     },
     {
       "table_name": "case_message_reads",
+      "name": "case_message_reads_last_read_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL last_read_id"
+    },
+    {
+      "table_name": "case_message_reads",
       "name": "case_message_reads_updated_at_not_null",
       "type": "n",
       "definition": "NOT NULL updated_at"
@@ -5201,7 +5214,7 @@
       "policyname": "case_message_reads_app_own",
       "roles": ["staff", "couple"],
       "cmd": "ALL",
-      "qual": "自分の既読位置(user_id=本人)だけ読み書きできる。last_read_at は後戻りしない。",
+      "qual": "自分の既読位置(user_id=本人)だけ読み書きできる。(last_read_at, last_read_id) は後戻りしない。",
       "with_check": null
     },
     {
