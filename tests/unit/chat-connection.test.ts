@@ -352,6 +352,15 @@ describe('ChatConnection', () => {
     expect(c2.getState().messages).toEqual([]);
   });
 
+  it('自分の投稿を反映しても、それより前に届いた相手の発言を飛ばさずに取り込む', async () => {
+    make([msg(1)]);
+    await connectOk();
+    server.push(msg(2)); // 相手の発言 A（まだ手元に無い）
+    await conn.send('自分'); // 自分の発言 B（A より後）
+    await conn.catchUp();
+    expect(conn.getState().messages.map((m) => m.body)).toEqual(['本文1', '本文2', '自分']);
+  });
+
   it('取り消し成功後に手元の発言を取り消し表示にする', async () => {
     make([msg(1, { mine: true })]);
     await conn.retract(uuid(1));

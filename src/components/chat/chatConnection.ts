@@ -68,12 +68,15 @@ export class ChatConnection {
   private started = false;
   private catchingUp = false;
   private catchUpAgain = false;
+  /** サーバーの一覧を途切れなく取り込めた位置。自分の投稿の反映では進めない（相手の発言を飛ばさないため）。 */
+  private syncCursor: string | undefined;
 
   constructor(
     private readonly caseId: string,
     initial: { messages: MessageView[]; hasOlder: boolean },
     private readonly deps: ChatDeps,
   ) {
+    this.syncCursor = latestCursor(initial.messages);
     this.state = {
       messages: initial.messages,
       connected: false,
@@ -284,14 +287,17 @@ export class ChatConnection {
     try {
       do {
         this.catchUpAgain = false;
+        let cursor = this.syncCursor;
         for (let page = 0; page < MAX_CATCH_UP_PAGES; page += 1) {
-          const cursor = latestCursor(this.state.messages);
           const query = cursor
             ? `?after=${encodeURIComponent(cursor)}&limit=${PAGE_SIZE}`
             : `?limit=${PAGE_SIZE}`;
           const { items, hasMore } = await this.deps.api.get<Page>(this.path(query));
-          if (items.length > 0) this.set({ messages: mergeMessages(this.state.messages, items) });
-          if (!hasMore || items.length === 0) break;
+          if (items.length === 0) break;
+          cursor = items[items.length - 1].cursor;
+          if (this.syncCursor === undefined || cursor > this.syncCursor) this.syncCursor = cursor;
+          this.set({ messages: mergeMessages(this.state.messages, items) });
+          if (!hasMore) break;
         }
       } while (this.catchUpAgain);
     } catch {
