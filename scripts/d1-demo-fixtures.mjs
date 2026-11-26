@@ -286,6 +286,36 @@ export async function seedDemoFixtures(db, encode, password, files) {
       );
     });
   });
+  const iso = (minutesAgo) => new Date(now - minutesAgo * 60_000).toISOString();
+  DEMO_CASES.forEach((demo, caseIndex) => {
+    const messages = demo.messages ?? [];
+    if (!messages.length) return;
+    const caseId = uuid('51111111', caseIndex + 1);
+    const coupleId = uuid('61111111', caseIndex + 1);
+    const senderOf = (m) => (m.from === 'planner' ? PLANNER_ID : coupleId);
+    messages.forEach((m, i) =>
+      run(
+        'INSERT INTO case_messages(id,case_id,sender_user_id,body_enc,created_at) VALUES (?,?,?,?,?)',
+        uuid('a1111111', caseIndex * 100 + i + 1),
+        caseId,
+        senderOf(m),
+        encode(m.body),
+        iso(m.minutesAgo),
+      ),
+    );
+    // 各自が最後に自分で書いた時点まで既読にする（担当者の最後の発言だけが新郎新婦の未読になる）
+    for (const from of ['planner', 'couple']) {
+      const last = messages.findLast((m) => m.from === from);
+      if (last)
+        run(
+          'INSERT INTO case_message_reads(case_id,user_id,last_read_at,updated_at) VALUES (?,?,?,?)',
+          caseId,
+          senderOf(last),
+          iso(last.minutesAgo),
+          iso(last.minutesAgo),
+        );
+    }
+  });
   for (const [year, value] of counters)
     run('INSERT INTO case_counters(venue_id,year,value) VALUES (?,?,?)', VENUE_ID, year, value);
   // 添付の保存を先に確かめてから D1 を確定する（R2 だけ失敗して D1 が残ると、再実行で投入が飛ばされる）
