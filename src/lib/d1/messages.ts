@@ -72,7 +72,7 @@ const SELECT_MESSAGE = `SELECT m.id,m.case_id,m.sender_user_id,m.body_enc,m.crea
   FROM case_messages m LEFT JOIN "user" u ON u.id=m.sender_user_id LEFT JOIN user_profiles p ON p.id=m.sender_user_id`;
 
 /** 案件の参加者だけが読める。アーカイブ済みは管理者のみ (scope の定義どおり)。 */
-async function assertCaseAccess(db: D1Database, user: AppUser, caseId: string) {
+export async function assertCaseAccess(db: D1Database, user: AppUser, caseId: string) {
   const row = await db
     .prepare(`SELECT c.id FROM wedding_cases c WHERE c.id=? AND ${scope}`)
     .bind(caseId, user.id)
