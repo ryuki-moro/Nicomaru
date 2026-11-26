@@ -7,10 +7,10 @@
   "compatibility_date": "2026-07-01",
   "workers_dev": true,
   "preview_urls": false,
-  // ダッシュボードで設定した APP_BASE_URL（本体のオリジン。末尾スラッシュなし）を配備で消さない。
   "keep_vars": true,
   "vars": {
-    "APP_BASE_URL": "https://nicomaru.example.workers.dev",
+    // 本体のオリジン（末尾スラッシュなし）。接続時の Origin 検証に使う。
+    "APP_BASE_URL": "https://nicomaru.nicomaru-app.workers.dev",
   },
   "durable_objects": {
     "bindings": [{ "name": "CHAT_ROOM", "class_name": "ChatRoom" }],

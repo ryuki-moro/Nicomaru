@@ -22,6 +22,8 @@
     "RESEND_FROM": "Bellink <onboarding@resend.dev>",
     // デモ中だけ有効。確認コード等を外部送信せず system_admin の受信箱へ保存する。実利用前に外す。
     "DEMO_MAILBOX": "on",
+    // チャットの WebSocket 接続先（nicomaru-chat Worker）
+    "CHAT_WS_URL": "wss://nicomaru-chat.nicomaru-app.workers.dev/ws",
   },
   "d1_databases": [
     {
