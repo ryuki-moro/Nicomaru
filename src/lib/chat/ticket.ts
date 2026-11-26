@@ -20,7 +20,10 @@ export interface ChatSignal {
   senderUserId: string;
 }
 
-const encoder = new TextEncoder();
+const textEncoder = new TextEncoder();
+
+// 型を Uint8Array<ArrayBuffer> に揃え、WebCrypto の BufferSource に渡せるようにする
+const encode = (value: string) => new Uint8Array(textEncoder.encode(value));
 
 function toBase64Url(bytes: Uint8Array): string {
   let binary = '';
@@ -28,7 +31,7 @@ function toBase64Url(bytes: Uint8Array): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-function fromBase64Url(value: string): Uint8Array | null {
+function fromBase64Url(value: string): Uint8Array<ArrayBuffer> | null {
   if (!/^[A-Za-z0-9_-]*$/.test(value)) return null;
   try {
     const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/'));
@@ -39,23 +42,19 @@ function fromBase64Url(value: string): Uint8Array | null {
 }
 
 function hmacKey(secret: string, usage: 'sign' | 'verify'): Promise<CryptoKey> {
-  return crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    [usage],
-  );
+  return crypto.subtle.importKey('raw', encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, [
+    usage,
+  ]);
 }
 
-async function hmac(secret: string, data: Uint8Array): Promise<Uint8Array> {
+async function hmac(secret: string, data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> {
   const sig = await crypto.subtle.sign('HMAC', await hmacKey(secret, 'sign'), data);
   return new Uint8Array(sig);
 }
 
 export async function signTicket(secret: string, t: ChatTicket): Promise<string> {
-  const payload = toBase64Url(encoder.encode(JSON.stringify(t)));
-  const sig = await hmac(secret, encoder.encode(payload));
+  const payload = toBase64Url(encode(JSON.stringify(t)));
+  const sig = await hmac(secret, encode(payload));
   return `${payload}.${toBase64Url(sig)}`;
 }
 
@@ -75,7 +74,7 @@ export async function verifyTicket(
     'HMAC',
     await hmacKey(secret, 'verify'),
     sig,
-    encoder.encode(payload),
+    encode(payload),
   );
   if (!ok) return null;
   let parsed: unknown;
@@ -94,5 +93,5 @@ export async function verifyTicket(
 
 /** 本体→チャットWorkerの /notify 用の内部トークン。 */
 export async function internalNotifyToken(secret: string): Promise<string> {
-  return toBase64Url(await hmac(secret, encoder.encode('nicomaru-chat-notify')));
+  return toBase64Url(await hmac(secret, encode('nicomaru-chat-notify')));
 }
