@@ -2,7 +2,7 @@
  * D04 フォロー記録画面（4-1／4-3 D04、要件4-4）。
  *
  * 記録は follow_logs へ登録し、直近の記録を一覧表示する。
- * 一覧の読み取りは 6-5 の原則どおり Server Component から RLS 適用クライアントで直接 select し、
+ * 一覧の読み取りは Server Component から D1 の listFollowLogs（担当・所属を検査）で直接行い、
  * 登録だけを /api/cases/{caseId}/follow-logs（表6-6）へ投げる。
  * フォロー記録は D03 準備シートと 6-8 リスク算出（最終アクティビティ）の参考情報になる。
  *
