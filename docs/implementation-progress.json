@@ -4810,6 +4810,37 @@
       "kind": "work_item"
     },
     {
+      "id": "CHAT-CASE",
+      "title": "案件ごとの担当者と新郎新婦のチャット（WebSocketで新着を即時反映）",
+      "category": "追加実装",
+      "phase": "2",
+      "status": "review",
+      "design": "追加実装（基本設計外）/ docs/詳細設計の図02・ER",
+      "screens": [
+        "K02",
+        "M01"
+      ],
+      "evidence": [
+        "cloudflare/chat/worker.ts",
+        "cloudflare/migrations/0028_case_messages.sql",
+        "src/lib/d1/messages.ts",
+        "src/app/api/cases/[caseId]/messages/route.ts",
+        "src/components/chat/ChatPanel.tsx",
+        "src/app/(staff)/cases/[caseId]/chat/page.tsx",
+        "src/app/(couple)/mypage/chat/page.tsx",
+        "tests/d1/messages.test.mjs",
+        "tests/chat/chat-worker.test.mjs"
+      ],
+      "note": "feature/case-chatに実装済みでmain未反映。投稿・取り消し(15分)・既読と未読バッジ、担当者投稿の新郎新婦への通知。本文は暗号化してD1に保存し、WebSocket(チャットWorkerのDurable Object)は「新着あり」の合図だけを流す。切断時は再接続と取りこぼし取得、さらに30秒の定期取得へ切り替える。デモの主役案件に会話を投入済み。F-*機能・画面IDは増やさず、K02/M01の拡張として扱う。",
+      "next": "本番のチャットWorkerのデプロイ・秘密値(CHAT_TICKET_SECRET)の設定・共有DBへの0028適用・人による試用を行い、mainへ反映する。",
+      "issues": [],
+      "prs": [],
+      "dependsOn": [],
+      "requiresAi": false,
+      "scope": "active",
+      "kind": "work_item"
+    },
+    {
       "id": "FIX-104",
       "title": "ログインをまたいで元の画面（パスと絞り込み）へ戻す",
       "category": "改善",
