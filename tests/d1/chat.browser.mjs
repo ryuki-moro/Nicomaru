@@ -7,7 +7,8 @@ import { getPlatformProxy } from 'wrangler';
 
 const origin = 'http://127.0.0.1:3104';
 const { users, ids } = JSON.parse(await readFile('.wrangler/app-local/credentials.json', 'utf8'));
-const REALTIME_MS = 3000;
+// 即時反映の待ち時間。CI の開発サーバーの遅れを見込みつつ、定期取得(30秒)と区別できる長さにする。
+const REALTIME_MS = 10000;
 const BACKFILL_MS = 45000;
 
 async function storageOf(name) {
