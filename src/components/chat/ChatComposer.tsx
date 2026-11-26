@@ -78,7 +78,8 @@ export function ChatComposer({ onSend }: { onSend: (body: string) => Promise<unk
       />
       <div className="mt-1 flex items-center justify-between gap-3">
         <p id="chat-body-hint" className="min-w-0 flex-1 text-caption text-text-muted">
-          {text.length} / {INPUT_LIMITS.textArea}字 ・ Ctrl+Enter でも送信できます
+          {text.length} / {INPUT_LIMITS.textArea}字
+          <span className="hidden sm:inline"> ・ Ctrl+Enter でも送信できます</span>
         </p>
         <button
           type="submit"
