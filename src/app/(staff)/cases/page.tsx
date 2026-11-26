@@ -11,6 +11,7 @@ import type { listCases } from '@/lib/d1/cases';
  *
  * Route Handler は経由しない。
  */
+import { UnreadBadge } from '@/components/chat/UnreadBadge';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { RiskBadge, RiskNotCalculated } from '@/components/ui/RiskBadge';
@@ -75,6 +76,7 @@ export default async function CaseListPage({ searchParams }: Props) {
   let hasNext = false;
   let truncated = false;
   let loadError = false;
+  let chatUnread: Record<string, number> = {};
   try {
     const load = async (options: Parameters<typeof listCases>[2]) => {
       const { localDB } = await import('@/lib/d1/runtime');
@@ -90,6 +92,18 @@ export default async function CaseListPage({ searchParams }: Props) {
     visible = result.items;
     hasNext = result.hasNext;
     truncated = result.truncated;
+    // チャットの未読件数。補助表示なので、取れなくても一覧は出す
+    try {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { unreadCounts } = await import('@/lib/d1/messages');
+      chatUnread = await unreadCounts(
+        await localDB(),
+        user,
+        visible.map((row) => row.id),
+      );
+    } catch {
+      chatUnread = {};
+    }
   } catch {
     loadError = true;
   }
@@ -229,6 +243,7 @@ export default async function CaseListPage({ searchParams }: Props) {
                     <Link href={`/cases/${row.id}`} className="table-link">
                       {row.coupleName || '（氏名未登録）'}
                     </Link>
+                    <UnreadBadge count={chatUnread[row.id] ?? 0} />
                   </td>
                   <td>{formatDate(row.weddingDate)}</td>
                   <td>{row.planTypeName}</td>
