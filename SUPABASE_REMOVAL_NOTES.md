@@ -1,6 +1,13 @@
 # Supabase 削除作業の記録
 
-## 状態: 未完了・指示の矛盾について回答待ち
+## 状態: 完了（2026-11-06 のコミット bf51baf で main に取り込み済み）
+
+2026-11-26 に main で再確認した結果（Issue #252）:
+
+- 下記「残存候補」12ファイルのうち9ファイルは D1 実装（`src/lib/d1/follow.ts`・`dashboard.ts`・`cases.ts` の `setCaseArchived` など）で動いている。`complete-invite` route・`dev-admin` route・`login-link.ts` の3ファイルは第2ラウンドの判断どおり削除済み。
+- `src`・`worker`・`scripts`・`tests`・`.github`・`package.json`・`package-lock.json` に `@supabase/*` の参照はない。`@supabase/ssr` と `@supabase/supabase-js` は依存にない。
+- フォロー記録・連絡履歴の D1 テーブルは `cloudflare/migrations/0022_follow.sql`、検証は `tests/d1/core-features.test.mjs` にある。
+- 以下の本文は作業当時の記録として残す。「未完了」「回答待ち」「コミットなし」は当時の状態で、現在の状態ではない。
 
 2026-11-06 に `SUPABASE_REMOVAL_TASK.md` を読み、D1 分岐の整理、旧依存・マイグレーション削除、テスト移行の作業を開始した。ただし、以下の条件が両立しないことを型チェックで確認した。
 
