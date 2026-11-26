@@ -65,6 +65,8 @@ export class ChatConnection {
   private readonly listeners = new Set<() => void>();
   private socket: SocketLike | null = null;
   private connecting = false;
+  /** 接続の試行ごとの番号。隠れて取り消された古い試行の応答を捨てるのに使う。 */
+  private attempt = 0;
   private failures = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private pingTimer: ReturnType<typeof setInterval> | null = null;
@@ -152,14 +154,20 @@ export class ChatConnection {
     this.clearReconnect();
     this.stopPing();
     this.stopPolling();
+    this.connecting = false;
+    this.attempt += 1;
+    this.detachSocket();
+    if (this.state.connected) this.set({ connected: false });
+  }
+
+  /** 手元の接続を、通知を受けない状態にして閉じる。 */
+  private detachSocket() {
     const socket = this.socket;
     this.socket = null;
-    this.connecting = false;
     if (socket) {
       socket.onopen = socket.onmessage = socket.onclose = socket.onerror = null;
       socket.close();
     }
-    if (this.state.connected) this.set({ connected: false });
   }
 
   private clearReconnect() {
@@ -197,14 +205,15 @@ export class ChatConnection {
   private async connect() {
     if (this.socket || this.connecting || !this.started || !this.deps.isVisible()) return;
     this.connecting = true;
+    const attempt = ++this.attempt;
     try {
       const { url } = await this.deps.api.post<{ url: string; expiresIn: number }>(
         this.path('/ticket'),
       );
-      if (!this.connecting || !this.started || !this.deps.isVisible()) return;
+      if (attempt !== this.attempt || !this.started || !this.deps.isVisible()) return;
       this.open(url);
     } catch (error) {
-      if (!this.connecting) return;
+      if (attempt !== this.attempt) return;
       this.connecting = false;
       if (this.deps.isUnavailable(error)) this.enterFallback(true);
       else this.connectFailed();
@@ -212,6 +221,7 @@ export class ChatConnection {
   }
 
   private open(url: string) {
+    this.detachSocket();
     let socket: SocketLike;
     try {
       socket = this.deps.createSocket(url);

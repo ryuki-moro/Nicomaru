@@ -336,6 +336,36 @@ describe('ChatConnection', () => {
     expect(conn.getState().messages).toHaveLength(2);
   });
 
+  it('隠れる前に始めたチケット取得が遅れて返っても、接続は1本だけ', async () => {
+    make();
+    const gates: (() => void)[] = [];
+    const base = deps();
+    const post = base.api.post;
+    base.api.post = (async (path: string, body?: unknown) => {
+      if (path.endsWith('/ticket')) await new Promise<void>((r) => gates.push(r));
+      return post(path, body);
+    }) as typeof post;
+    conn = new ChatConnection(
+      CASE_ID,
+      { messages: [], hasOlder: false, retractWindowMs: RETRACT_WINDOW },
+      base,
+    );
+    conn.start(); // 試行 A
+    await flush();
+    visible = false;
+    conn.onVisibilityChange();
+    visible = true;
+    conn.onVisibilityChange(); // 試行 B
+    await flush();
+    expect(gates).toHaveLength(2);
+    gates[0]();
+    await flush();
+    expect(sockets).toHaveLength(0); // A の応答は捨てる
+    gates[1]();
+    await flush();
+    expect(sockets).toHaveLength(1);
+  });
+
   it('オンラインに戻ったら待たずにつなぎ直す', async () => {
     make();
     tickets = 'fail';
