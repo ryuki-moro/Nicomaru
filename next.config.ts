@@ -28,8 +28,24 @@ const nextConfig: NextConfig = {
   skipMiddlewareUrlNormalize: true,
   // npm run demo は発表で投影するため、開発中の目印（左下の N）を出さない
   ...(process.env.NICOMARU_DEMO_LOGIN === 'true' && { devIndicators: false as const }),
-  // 開発サーバーを複数同時に動かすと、互いの生成物やローカルDBの書込みで再コンパイルが続く。
-  webpack: (config, { dev }) => {
+  webpack: (config, { dev, isServer, nextRuntime }) => {
+    // 開発時のサーバー側は node_modules をパッケージ単位の1ファイル(next は 7MB 超)に束ね、
+    // 画面を初めて開くたびに書き直す。Windows Defender は書き直された大きなファイルを
+    // 読み込み時に同期で検査するため、そのたびに十数秒止まる。3階層下のフォルダ単位に分け、
+    // 書き直す量を小さくする。
+    const vendor = config.optimization?.splitChunks?.cacheGroups?.vendor;
+    if (dev && isServer && nextRuntime === 'nodejs' && vendor) {
+      const packageName = vendor.name;
+      vendor.name = (module: { nameForCondition(): string | null }, ...rest: unknown[]) => {
+        const match = /node_modules[\\/]((?:@[^\\/]+[\\/])?[^\\/]+)[\\/](.*)$/.exec(
+          module.nameForCondition() ?? '',
+        );
+        if (!match) return packageName(module, ...rest);
+        const dirs = match[2].split(/[\\/]/).slice(0, -1).slice(0, 3);
+        return ['vendor-chunks/' + match[1].replace(/[\\/]/, '+'), ...dirs].join('-');
+      };
+    }
+    // 開発サーバーを複数同時に動かすと、互いの生成物やローカルDBの書込みで再コンパイルが続く。
     if (dev)
       config.watchOptions = {
         ...config.watchOptions,
