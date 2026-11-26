@@ -89,11 +89,7 @@ try {
   await platform.dispose();
 }
 const demoLogin = demo ? JSON.parse(await readFile(`${dir}/credentials.json`, 'utf8')) : null;
-console.log(
-  demo
-    ? `デモの準備完了。${origin}/login を開き、そのままログインしてください。`
-    : 'D1ローカル準備完了。検証アカウント: .wrangler/app-local/credentials.json',
-);
+if (!demo) console.log('D1ローカル準備完了。検証アカウント: .wrangler/app-local/credentials.json');
 if (process.argv.includes('--setup-only')) process.exit(0);
 const child = spawn(
   process.execPath,
@@ -124,3 +120,63 @@ const child = spawn(
 child.on('exit', (code) => process.exit(code ?? 1));
 process.on('SIGINT', () => child.kill('SIGINT'));
 process.on('SIGTERM', () => child.kill('SIGTERM'));
+if (demo) await warmDemo();
+
+// next dev は画面を初めて開いたときにコンパイルする（1画面20秒前後）。
+// 発表中に待たないよう、ログインと主な画面を先に一度開いておく。
+async function warmDemo() {
+  const get = (path, cookie) =>
+    fetch(origin + path, { headers: cookie ? { cookie } : {}, redirect: 'manual' }).then((r) =>
+      r.text(),
+    );
+  for (;;) {
+    try {
+      await get('/login');
+      break;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+  const pages = {
+    couple: [
+      '/mypage',
+      '/mypage/tasks',
+      '/mypage/guests',
+      '/mypage/seating',
+      '/mypage/timeline',
+      '/mypage/case',
+      '/mypage/notifications',
+    ],
+    planner: [
+      '/cases',
+      '/dashboard',
+      '/notifications',
+      '/submissions',
+      '/templates',
+      '/plan-types',
+    ],
+  };
+  for (const [role, paths] of Object.entries(pages)) {
+    try {
+      const response = await fetch(`${origin}/api/auth/demo-login`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin },
+        body: JSON.stringify({ role }),
+      });
+      const cookie = response.headers
+        .getSetCookie()
+        .map((c) => c.split(';')[0])
+        .join('; ');
+      for (const path of paths) {
+        const html = await get(path, cookie);
+        const caseId = path === '/cases' && html.match(/\/cases\/([\w-]{8,})/)?.[1];
+        if (caseId)
+          for (const sub of ['', '/sheet', '/follow', '/meeting-notes'])
+            await get(`/cases/${caseId}${sub}`, cookie);
+      }
+    } catch (cause) {
+      console.warn(`画面の事前準備に失敗しました（${role}）: ${cause}`);
+    }
+  }
+  console.log(`デモの準備完了。${origin}/login を開き、そのままログインしてください。`);
+}

@@ -18,6 +18,11 @@ const nextConfig: NextConfig = {
       : process.env.NICOMARU_DEMO_LOGIN === 'true'
         ? '.next-demo'
         : '.next-d1',
+  // デモは起動時に主な画面を先にコンパイルする（scripts/d1-local.mjs）。
+  // 既定では60秒・5画面で捨てられ、発表中に再コンパイルを待つため保持し続ける。
+  ...(process.env.NICOMARU_DEMO_LOGIN === 'true' && {
+    onDemandEntries: { maxInactiveAge: 24 * 60 * 60 * 1000, pagesBufferLength: 100 },
+  }),
   // middlewareの転送先127.0.0.1をNext.jsがlocalhostへ書き換えないようにする。
   // ログインCookieと更新APIの同一Origin検証を、設定したURLで一致させる。
   skipMiddlewareUrlNormalize: true,
