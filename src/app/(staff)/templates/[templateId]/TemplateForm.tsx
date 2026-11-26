@@ -132,7 +132,7 @@ export function TemplateForm({ mode, initial, save }: Props) {
 
       <div>
         <label className="field-label" htmlFor="template-name">
-          宿題名（必須）
+          やることの名前（必須）
         </label>
         <input
           id="template-name"
@@ -264,7 +264,7 @@ export function TemplateForm({ mode, initial, save }: Props) {
           ))}
         </select>
         <p className="mt-1 text-caption text-text-muted">
-          「重要」以上はプランナー側のリスク判定に使われます。
+          「重要」以上はプランナー側で遅れそうな案件を見つける判定に使われます。
         </p>
         <FieldError message={fieldErrors.importance} />
       </div>
@@ -285,7 +285,7 @@ export function TemplateForm({ mode, initial, save }: Props) {
         </label>
         <p className="mt-1 text-caption text-text-muted">
           オフにすると、これから登録する案件には割り当てられなくなります。
-          すでに割り当て済みの案件の宿題はそのまま残ります。
+          すでに割り当て済みの案件のやることはそのまま残ります。
         </p>
       </div>
 

@@ -82,8 +82,8 @@ export async function MeetingNotesPageD1({
         <section className="card">
           <h2 className="text-label font-bold text-text-primary">打ち合わせの記録</h2>
           <p className="mb-3 mt-1 text-caption text-text-muted">
-            決まったこと・宿題になりそうなことを書いてください。
-            保存すると、AIが宿題の案を作ります。
+            決まったこと・やることになりそうなことを書いてください。
+            保存すると、AIがやることの案を作ります。
           </p>
           <form action={saveMeetingNoteAction} className="space-y-3">
             <input type="hidden" name="caseId" value={caseId} />

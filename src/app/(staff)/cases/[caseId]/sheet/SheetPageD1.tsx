@@ -179,10 +179,10 @@ export async function MeetingSheetPageD1({
         </header>
 
         <section>
-          <h3 className="section-head">宿題の進み具合</h3>
+          <h3 className="section-head">やることの進み具合</h3>
           <p className="mt-1 text-label text-text-secondary">
             {taskRows.length === 0
-              ? '宿題はまだ割り当てられていません。'
+              ? 'やることはまだ割り当てられていません。'
               : `${taskRows.length}件中 ${done.length}件が完了しています。`}
           </p>
           {pending.length > 0 && (
@@ -193,7 +193,7 @@ export async function MeetingSheetPageD1({
               <table className="table mt-1">
                 <thead>
                   <tr>
-                    <th scope="col">宿題</th>
+                    <th scope="col">やること</th>
                     <th scope="col">期限</th>
                     <th scope="col">状態</th>
                   </tr>

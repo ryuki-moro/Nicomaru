@@ -80,7 +80,7 @@ test('準備シートAI下書き: 依頼→ワーカー処理→採用でシー�
   assert.ok(jobId);
   const claimed = await workerClaim(db, 'gpu-sheet', ['draft']);
   assert.equal(claimed.id, jobId);
-  assert.match(claimed.input_ref.text, /未提出の宿題/);
+  assert.match(claimed.input_ref.text, /未提出のやること/);
   assert.match(claimed.prompt_text, /下書き/);
   assert.equal(
     await workerComplete(db, 'gpu-sheet', {

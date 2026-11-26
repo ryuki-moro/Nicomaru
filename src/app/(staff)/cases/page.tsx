@@ -163,7 +163,7 @@ export default async function CaseListPage({ searchParams }: Props) {
           </label>
           <select id="sort" name="sort" defaultValue={sort} className="field">
             <option value="wedding_date">挙式日順</option>
-            <option value="risk">リスクが高い順</option>
+            <option value="risk">遅れそうな順</option>
           </select>
         </div>
 
@@ -213,8 +213,8 @@ export default async function CaseListPage({ searchParams }: Props) {
                 <th scope="col">カップル名</th>
                 <th scope="col">挙式日</th>
                 <th scope="col">プラン種別</th>
-                <th scope="col">宿題進捗</th>
-                <th scope="col">リスク</th>
+                <th scope="col">やることの進捗</th>
+                <th scope="col">遅れの度合い</th>
                 <th scope="col">状態</th>
                 {scope === 'archived' && canSeeArchived && <th scope="col">操作</th>}
               </tr>

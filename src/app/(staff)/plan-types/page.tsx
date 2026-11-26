@@ -237,7 +237,7 @@ export default async function PlanTypesPage({
         <h1 className="section-head">プラン種別管理</h1>
         <div className="flex items-center gap-3">
           <Link href="/templates" className="btn-ghost">
-            宿題テンプレート
+            やることテンプレート
           </Link>
           <Link href={hrefFor({ edit: 'new', page })} className="btn-primary w-auto">
             新規登録

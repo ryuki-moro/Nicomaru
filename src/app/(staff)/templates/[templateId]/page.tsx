@@ -37,7 +37,7 @@ function mapWriteError(error: { code?: string; message?: string }): SaveTemplate
     return {
       ok: false,
       code: 'CONFLICT',
-      message: '同じ宿題名のテンプレートが既に登録されています',
+      message: '同じやることの名前のテンプレートが既に登録されています',
       details: [{ field: 'name', reason: '式場内で重複しない名前を入力してください' }],
     };
   }
@@ -129,13 +129,15 @@ export default async function TemplateEditPage({
       <Breadcrumbs
         items={[
           DASHBOARD_CRUMB,
-          { label: '宿題テンプレート', href: '/templates' },
+          { label: 'やることテンプレート', href: '/templates' },
           { label: isNew ? '新規登録' : '編集' },
         ]}
       />
 
       <h1 className="section-head">
-        {isNew ? '宿題テンプレートの新規登録' : `宿題テンプレートの編集：${record?.name ?? ''}`}
+        {isNew
+          ? 'やることテンプレートの新規登録'
+          : `やることテンプレートの編集：${record?.name ?? ''}`}
       </h1>
 
       <TemplateForm

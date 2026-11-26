@@ -28,7 +28,7 @@ import { type IsoDate } from '@/lib/services/schedule';
 import { TASK_ANSWER_METHOD_LABEL } from '@/lib/task-display';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-export const metadata = { title: '宿題の詳細' };
+export const metadata = { title: 'やることの詳細' };
 interface TaskRow {
   id: string;
   title: string;
@@ -198,7 +198,7 @@ export default async function TaskDetailPage({
         // waived（マイページ表示は「対応不要」）は提出の対象外（表6-9）
         <>
           <p className="card text-label text-text-secondary">
-            この宿題は対応不要になりました。提出は必要ありません。
+            このやることは対応不要になりました。提出は必要ありません。
           </p>
           <Link href={backHref} className="btn-ghost self-center">
             戻る

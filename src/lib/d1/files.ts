@@ -43,7 +43,7 @@ export async function uploadFile(
     )
     .run();
   if (!result.meta.changes)
-    throw unprocessable('ファイル容量の上限または宿題の状態を確認してください');
+    throw unprocessable('ファイル容量の上限またはやることの状態を確認してください');
   try {
     await bucket.put(id, bytes);
   } catch (error) {

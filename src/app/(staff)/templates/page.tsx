@@ -117,10 +117,10 @@ export default async function TemplateListPage({
   const loadFailed = false;
   return (
     <div className="space-y-4">
-      <Breadcrumbs items={[DASHBOARD_CRUMB, { label: '宿題テンプレート' }]} />
+      <Breadcrumbs items={[DASHBOARD_CRUMB, { label: 'やることテンプレート' }]} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="section-head">宿題テンプレート</h1>
+        <h1 className="section-head">やることテンプレート</h1>
         <div className="flex items-center gap-3">
           <Link href="/plan-types" className="btn-ghost">
             プラン種別管理
@@ -132,8 +132,8 @@ export default async function TemplateListPage({
       </div>
 
       <p className="banner-info">
-        ここで登録した宿題は、案件登録時にプラン種別ごとのセットとして割り当てられます。
-        「利用中」をオフにしても、すでに割り当て済みの案件の宿題はそのまま残ります。
+        ここで登録したやることは、案件登録時にプラン種別ごとのセットとして割り当てられます。
+        「利用中」をオフにしても、すでに割り当て済みの案件のやることはそのまま残ります。
       </p>
 
       <TemplateDraftPanel
@@ -151,7 +151,7 @@ export default async function TemplateListPage({
           message={
             page > 1
               ? 'これ以上のテンプレートはありません。'
-              : 'まだ宿題テンプレートがありません。「新規登録」から追加してください。'
+              : 'まだやることテンプレートがありません。「新規登録」から追加してください。'
           }
         />
       ) : (
@@ -159,7 +159,7 @@ export default async function TemplateListPage({
           <table className="table">
             <thead>
               <tr>
-                <th scope="col">宿題名</th>
+                <th scope="col">やることの名前</th>
                 <th scope="col">対象プラン種別</th>
                 <th scope="col">逆算日数</th>
                 <th scope="col">提出フォーマット</th>

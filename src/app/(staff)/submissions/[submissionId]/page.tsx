@@ -257,8 +257,8 @@ export default async function SubmissionReviewPage({
         <dl className="mt-3 grid gap-1 border-t border-border-light pt-3 text-caption text-text-secondary">
           <Row label="提出形式">{SUBMISSION_FORMAT_LABEL[submission.submission_type]}</Row>
           <Row label="提出日時">{formatDateTime(submission.submitted_at)}</Row>
-          <Row label="宿題の期限">{formatDate(task.due_date)}</Row>
-          <Row label="宿題の状態">
+          <Row label="やることの期限">{formatDate(task.due_date)}</Row>
+          <Row label="やることの状態">
             <TaskStatusBadge status={task.status} />
           </Row>
         </dl>
@@ -301,7 +301,7 @@ export default async function SubmissionReviewPage({
       ) : (
         <section className="card mt-4">
           <h2 className="text-label font-bold text-text-primary">
-            {isWaived ? 'この宿題は「対応不要」です' : '確認済みの内容'}
+            {isWaived ? 'このやることは「対応不要」です' : '確認済みの内容'}
           </h2>
           <p className="mt-1 text-label text-text-secondary">
             {isWaived
