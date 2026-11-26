@@ -5,7 +5,8 @@
       "name": "nicomaru",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3000
+      "port": 3104,
+      "url": "http://127.0.0.1:3104"
     },
     {
       "name": "nicomaru-demo",
