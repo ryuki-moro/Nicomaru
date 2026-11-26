@@ -177,7 +177,7 @@ export function ChatThread({
                     <span className="ml-1">（{SIDE_LABEL[message.senderSide]}）</span>
                   </p>
                   {message.retracted ? (
-                    <p className="rounded-card border border-border-light bg-surface px-3 py-2 text-label italic text-text-muted">
+                    <p className="rounded-card border border-border-light bg-surface px-3 py-2 text-label text-text-muted">
                       メッセージは取り消されました
                     </p>
                   ) : (
