@@ -1,6 +1,7 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { encryptPii } from '../src/lib/crypto.ts';
 import { randomBytes, hkdfSync } from 'node:crypto';
+import { resolve } from 'node:path';
 import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { getPlatformProxy } from 'wrangler';
 import { seedAppFixtures } from './d1-fixtures.mjs';
@@ -14,6 +15,8 @@ const dir = demo ? '.wrangler/demo' : '.wrangler/app-local';
 const port = demo ? '3105' : '3104';
 const origin = `http://127.0.0.1:${port}`;
 process.env.WRANGLER_SEND_METRICS = 'false';
+// 複数のworktreeで同時起動しても、service binding(nicomaru-chat)が他の起動のWorkerへ向かないよう、registryを起動ごとに分ける
+process.env.WRANGLER_REGISTRY_PATH = resolve(dir, 'registry');
 const secretFile = `${dir}/auth-secret`;
 if (demo && process.argv.includes('--reset')) {
   // 秘密値は残す。AIワーカーのトークンが変わらず、やり直してもワーカーを起動し直さずに済む
