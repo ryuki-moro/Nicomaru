@@ -5,6 +5,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { getPlatformProxy } from 'wrangler';
 import { encryptPii } from '../../src/lib/crypto.ts';
 import { seedAppFixtures, ids } from '../../scripts/d1-fixtures.mjs';
+import { purgeCasesD1 } from '../../src/lib/d1/case-purge.ts';
 import {
   MESSAGE_RETRACT_WINDOW_MS,
   decodeCursor,
@@ -315,4 +316,44 @@ test('未読数は束縛変数の上限を超える件数でも数えられる',
   const many = Array.from({ length: 130 }, () => crypto.randomUUID());
   const counts = await unreadCounts(db, planner(), [...many, ids.caseA]);
   assert.deepEqual(Object.keys(counts), [ids.caseA]);
+});
+
+test('削除バッチは終了後180日を超えた案件のチャットを消す', async () => {
+  await clearMessages();
+  await insertRaw(ids.caseA, 1, ids.plannerA, iso(Date.now()));
+  await insertRaw(ids.caseA2, 2, ids.plannerA2, iso(Date.now()));
+  await markRead(db, planner(), ids.caseA, encodeCursor(iso(Date.now()), uuid(1)));
+  await markRead(
+    db,
+    actor('planner', ids.plannerA2),
+    ids.caseA2,
+    encodeCursor(iso(Date.now()), uuid(2)),
+  );
+  await db
+    .prepare("UPDATE wedding_cases SET archived_at='2020-01-01T00:00:00.000Z' WHERE id=?")
+    .bind(ids.caseA)
+    .run();
+  try {
+    await purgeCasesD1(db, null);
+    const count = (sql, id) => db.prepare(sql).bind(id).first('n');
+    assert.equal(
+      await count('SELECT count(*) AS n FROM case_messages WHERE case_id=?', ids.caseA),
+      0,
+    );
+    assert.equal(
+      await count('SELECT count(*) AS n FROM case_message_reads WHERE case_id=?', ids.caseA),
+      0,
+    );
+    // 対象外の案件は残る
+    assert.equal(
+      await count('SELECT count(*) AS n FROM case_messages WHERE case_id=?', ids.caseA2),
+      1,
+    );
+    assert.equal(
+      await count('SELECT count(*) AS n FROM case_message_reads WHERE case_id=?', ids.caseA2),
+      1,
+    );
+  } finally {
+    await db.prepare('UPDATE wedding_cases SET archived_at=NULL WHERE id=?').bind(ids.caseA).run();
+  }
 });
