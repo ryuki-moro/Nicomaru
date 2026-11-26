@@ -1,0 +1,8 @@
+# CI の Secret scan(gitleaks)の設定。既定の規則をそのまま使い、テスト専用の固定値だけを除く。
+[extend]
+useDefault = true
+
+[allowlist]
+description = "テスト専用の固定値(本番の秘密値ではない)"
+regexTarget = "match"
+regexes = ['''test-secret-0123456789abcdef''']
