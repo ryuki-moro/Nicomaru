@@ -1,5 +1,5 @@
 {
-  "source": "supabase/migrations/*.sql applied to isolated PGlite; catalog only, no application data",
+  "source": "supabase/migrations/*.sql applied to isolated PGlite; catalog only, no application data ／ case_messages・case_message_reads は cloudflare/migrations/0028_case_messages.sql (D1) から手で追記。列の型はD1のTEXT、policy欄はRLSでなくアプリ層の制御",
   "tables": [
     {
       "name": "ai_jobs",
@@ -32,6 +32,14 @@
     {
       "name": "case_invitations",
       "rls": true
+    },
+    {
+      "name": "case_message_reads",
+      "rls": false
+    },
+    {
+      "name": "case_messages",
+      "rls": false
     },
     {
       "name": "case_tasks",
@@ -743,6 +751,76 @@
       "data_type": "timestamp with time zone",
       "is_nullable": "NO",
       "column_default": "now()"
+    },
+    {
+      "table_name": "case_message_reads",
+      "column_name": "case_id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_message_reads",
+      "column_name": "user_id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_message_reads",
+      "column_name": "last_read_at",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_message_reads",
+      "column_name": "updated_at",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_messages",
+      "column_name": "id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_messages",
+      "column_name": "case_id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_messages",
+      "column_name": "sender_user_id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_messages",
+      "column_name": "body_enc",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_messages",
+      "column_name": "created_at",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_messages",
+      "column_name": "deleted_at",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
     },
     {
       "table_name": "case_tasks",
@@ -3049,6 +3127,90 @@
       "definition": "NOT NULL use_count"
     },
     {
+      "table_name": "case_message_reads",
+      "name": "case_message_reads_case_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_id"
+    },
+    {
+      "table_name": "case_message_reads",
+      "name": "case_message_reads_last_read_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL last_read_at"
+    },
+    {
+      "table_name": "case_message_reads",
+      "name": "case_message_reads_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "case_message_reads",
+      "name": "case_message_reads_user_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL user_id"
+    },
+    {
+      "table_name": "case_message_reads",
+      "name": "case_message_reads_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (case_id, user_id)"
+    },
+    {
+      "table_name": "case_message_reads",
+      "name": "case_message_reads_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "case_message_reads",
+      "name": "case_message_reads_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "case_messages",
+      "name": "case_messages_case_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL case_id"
+    },
+    {
+      "table_name": "case_messages",
+      "name": "case_messages_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table_name": "case_messages",
+      "name": "case_messages_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table_name": "case_messages",
+      "name": "case_messages_sender_user_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL sender_user_id"
+    },
+    {
+      "table_name": "case_messages",
+      "name": "case_messages_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "case_messages",
+      "name": "case_messages_case_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (case_id) REFERENCES wedding_cases(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "case_messages",
+      "name": "case_messages_sender_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (sender_user_id) REFERENCES user_profiles(id)"
+    },
+    {
       "table_name": "case_tasks",
       "name": "case_tasks_allowed_file_types_not_null",
       "type": "n",
@@ -5033,6 +5195,38 @@
       "cmd": "UPDATE",
       "qual": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))",
       "with_check": "((case_id IN ( SELECT accessible_case_ids() AS accessible_case_ids)) AND case_is_visible(case_id) AND (EXISTS ( SELECT 1\n   FROM current_app_user() u(id, role, venue_id)\n  WHERE (u.role = ANY (ARRAY['planner'::text, 'admin'::text, 'system_admin'::text])))))"
+    },
+    {
+      "table_name": "case_message_reads",
+      "policyname": "case_message_reads_app_own",
+      "roles": ["staff", "couple"],
+      "cmd": "ALL",
+      "qual": "自分の既読位置(user_id=本人)だけ読み書きできる。last_read_at は後戻りしない。",
+      "with_check": null
+    },
+    {
+      "table_name": "case_messages",
+      "policyname": "case_messages_app_select",
+      "roles": ["staff", "couple"],
+      "cmd": "SELECT",
+      "qual": "D1にRLSは無い。アプリ層(src/lib/d1/cases.ts の scope)で、案件の参加者(担当者・同じ式場の管理者・自案件の新郎新婦)だけに限る。アーカイブ済みは管理者のみ。",
+      "with_check": null
+    },
+    {
+      "table_name": "case_messages",
+      "policyname": "case_messages_app_insert",
+      "roles": ["staff", "couple"],
+      "cmd": "INSERT",
+      "qual": "D1にRLSは無い。アプリ層(src/lib/d1/cases.ts の scope)で、案件の参加者(担当者・同じ式場の管理者・自案件の新郎新婦)だけに限る。アーカイブ済みは管理者のみ。 本文は暗号化(body_enc)。",
+      "with_check": null
+    },
+    {
+      "table_name": "case_messages",
+      "policyname": "case_messages_app_retract",
+      "roles": ["sender"],
+      "cmd": "UPDATE",
+      "qual": "送信者本人が送信から15分以内だけ。本文を消して deleted_at のみ残す。",
+      "with_check": null
     },
     {
       "table_name": "case_tasks",

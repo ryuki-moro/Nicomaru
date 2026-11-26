@@ -279,7 +279,7 @@ for t in schema["tables"]:
     all_mermaid.append("  }")
 
 for slug, name, tables in groups:
-    d = Diagram(slug, slug[:2]+"  ER / "+name, "public全33テーブルの分冊。PKとFK参照・多重度を示す。全列/制約/RLSはデータ辞書。")
+    d = Diagram(slug, slug[:2]+"  ER / "+name, "public全35テーブルの分冊。PKとFK参照・多重度を示す。全列/制約/RLSはデータ辞書。")
     group_mmd = ["erDiagram"]
     group_edges = []
     for index,t in enumerate(tables):
