@@ -33,12 +33,12 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe('POST /api/auth/demo-login', () => {
   it.each([
-    ['planner', 'planner@example.test'],
-    ['couple', 'couple@example.test'],
-  ])('%s のデモアカウントで認証しCookieを渡す', async (role, email) => {
+    ['planner', 'planner@example.test', '/cases'],
+    ['couple', 'couple@example.test', '/mypage'],
+  ])('%s のデモアカウントで認証しCookieを渡す', async (role, email, landing) => {
     const response = await POST(request(role));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ redirectTo: '/' });
+    expect(await response.json()).toEqual({ redirectTo: landing });
     expect(response.headers.get('set-cookie')).toContain('session=demo');
     expect(signIn).toHaveBeenCalledWith(email, 'demo-test-password', '127.0.0.1');
   });
