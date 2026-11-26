@@ -58,6 +58,13 @@ function isMessages(response, method) {
   );
 }
 
+/** チャット画面を開き、即時更新の接続が済むまで待つ。接続すると取りこぼし取得(GET)が走る。 */
+async function openChat(page, url) {
+  const caughtUp = page.waitForResponse((r) => isMessages(r, 'GET'), { timeout: 30000 });
+  await page.goto(url);
+  await caughtUp;
+}
+
 test(
   'チャット: 投稿の即時反映・未読・返信・取り消し・オフライン後の取りこぼし取得',
   { timeout: 240000 },
@@ -78,7 +85,7 @@ test(
       const tag = randomUUID().slice(0, 8);
 
       // 担当者の投稿は、新郎新婦がチャットを開く前はマイページ(M01)で未読になる
-      await planner.page.goto(staffChat);
+      await openChat(planner.page, staffChat);
       const first = `ご連絡です ${tag}-1`;
       await send(planner.page, first);
       await couple.page.goto(`${origin}/mypage`);
@@ -95,7 +102,7 @@ test(
       assert.equal(await couple.page.getByRole('img', { name: /^未読/ }).count(), 0);
 
       // 開いたままの相手の画面へ、再読み込みなしで届く
-      await couple.page.goto(coupleChat);
+      await openChat(couple.page, coupleChat);
       await couple.page.getByText(first, { exact: true }).waitFor();
       const second = `次のご連絡です ${tag}-2`;
       await send(planner.page, second);
