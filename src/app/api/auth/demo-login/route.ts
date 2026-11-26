@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { ok, route } from '@/lib/api/route';
 import { isLocalDemoRequestAllowed } from '@/lib/auth/local-demo';
+import { landingPathFor } from '@/lib/auth/session';
 import { demoLogin } from '@/lib/d1/mode';
 import { ApiError, forbidden, rateLimited } from '@/lib/errors';
 import { parsePasswordBody } from '../password-body';
@@ -22,7 +23,8 @@ export const POST = route(async (request) => {
   if (result.status === 429) throw rateLimited();
   if (!result.ok)
     throw new ApiError('INTERNAL_ERROR', 'デモのアカウントでログインできませんでした');
-  const response = ok({ redirectTo: '/' });
+  // 「/」での振り分けを挟まず着地点へ直接移り、遷移を1回減らす
+  const response = ok({ redirectTo: landingPathFor(role) });
   response.headers.set('Cache-Control', 'no-store');
   for (const cookie of result.headers.getSetCookie()) response.headers.append('set-cookie', cookie);
   return response;
