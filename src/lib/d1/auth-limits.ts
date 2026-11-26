@@ -15,6 +15,15 @@ async function limit(db: D1Database, key: string, max: number, windowSeconds: nu
     .first<{ count: number }>();
   if (!row || row.count > max) throw rateLimited();
 }
+/** 利用者単位の固定窓レート制限。超えたら 429。 */
+export async function userRateLimit(
+  db: D1Database,
+  name: string,
+  userId: string,
+  rule: { windowSeconds: number; max: number },
+) {
+  await limit(db, `${name}:${userId}`, rule.max, rule.windowSeconds);
+}
 /** ゲストの出欠回答。送信元IP＋回答URLで数え、同じURLを使う別回線のゲストを巻き込まない。 */
 export async function guestRsvpLimit(db: D1Database, tokenHash: string, ip: string) {
   const { windowSeconds, max } = RATE_LIMITS.guest_rsvp;
