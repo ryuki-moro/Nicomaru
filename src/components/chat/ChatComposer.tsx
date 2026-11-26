@@ -25,8 +25,10 @@ export function ChatComposer({ onSend }: { onSend: (body: string) => Promise<unk
     setSending(true);
     setError(null);
     try {
-      await onSend(text.trim());
-      setText('');
+      const sent = text.trim();
+      await onSend(sent);
+      // 送信中に打ち足した分は消さない
+      setText((current) => (current.trim() === sent ? '' : current));
     } catch (cause) {
       // 失敗したときは入力を残し、そのまま送り直せるようにする
       if (cause instanceof ApiCallError && cause.status === 429) {
