@@ -42,8 +42,20 @@ async function resetChat() {
 
 async function send(page, text) {
   await page.getByLabel('メッセージ', { exact: true }).fill(text);
+  // getByText は入力欄の中身にも当たるため、保存の完了は投稿APIの応答と履歴への表示で確かめる
+  const posted = page.waitForResponse((r) => isMessages(r, 'POST'), { timeout: 30000 });
   await page.getByRole('button', { name: '送信', exact: true }).click();
-  await page.getByText(text, { exact: true }).waitFor({ timeout: 10000 });
+  assert.equal((await posted).status(), 201);
+  await page
+    .getByRole('log', { name: 'メッセージの履歴' })
+    .getByText(text, { exact: true })
+    .waitFor({ timeout: 10000 });
+}
+
+function isMessages(response, method) {
+  return (
+    response.request().method() === method && new URL(response.url()).pathname.endsWith('/messages')
+  );
 }
 
 test(
