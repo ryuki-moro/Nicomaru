@@ -5,7 +5,7 @@
  *
  * 物理削除は行わない。status='archived' と archived_at のみを記録し、
  * アーカイブ済み案件は K01 の表示範囲フィルタから admin が参照・復元できる（機能2-6）。
- * 復元は PATCH /api/cases/{caseId} に archived:false を渡す（同じ RPC の逆方向）。
+ * 復元は PATCH /api/cases/{caseId} に archived:false を渡す（同じ patchCase の逆方向）。
  */
 import { ok, route } from '@/lib/api/route';
 import { requireRole } from '@/lib/auth/session';
@@ -14,7 +14,7 @@ import { localDB } from '@/lib/d1/runtime';
 
 export const POST = route(
   async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
-    // K05 は admin のみ（4-1 表4-10）。DB側 apply_case_update でもロールを再検証する。
+    // K05 は admin のみ（4-1 表4-10）。D1 側 patchCase でもロール・所属・version を再検証する。
     const user = await requireRole('admin', 'system_admin');
     const { caseId } = await context.params;
     const db = await localDB();
