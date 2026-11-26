@@ -49,7 +49,7 @@ export default async function PlannerDashboardPage() {
       <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <SummaryCard label={caseCountLabel} value={caseCount} unit="件" />
         <SummaryCard
-          label="未提出の宿題"
+          label="未提出のやること"
           value={unsubmittedCount}
           unit="件"
           note="未着手・不備ありの合計です"
@@ -62,7 +62,7 @@ export default async function PlannerDashboardPage() {
           linkLabel="提出物確認を開く"
         />
         <SummaryCard
-          label="リスクが高い案件"
+          label="遅れそうな案件"
           value={highRiskCount}
           unit="件"
           note="直近の算出結果です"
@@ -72,7 +72,7 @@ export default async function PlannerDashboardPage() {
       <section className="mt-5">
         <h2 className="section-head">今日フォローすべきカップル</h2>
         <p className="mt-1 text-caption text-text-muted">
-          リスクの高い順に表示しています。判断の材料としてお使いください。
+          遅れそうな順に表示しています。判断の材料としてお使いください。
         </p>
         {followUps.length === 0 ? (
           <p className="card mt-2 text-label text-text-muted">いま気にかけたい案件はありません。</p>

@@ -386,12 +386,12 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
             </h2>
             <p className="text-label text-text-secondary">
               挙式日{preview.planChanged ? '・プラン種別' : ''}
-              の変更にともない、宿題の内容が次のように変わります。
+              の変更にともない、やることの内容が次のように変わります。
             </p>
 
             <section>
               <h3 className="text-label font-medium">
-                期限が変わる宿題（{preview.dueChanges.length}件）
+                期限が変わるやること（{preview.dueChanges.length}件）
               </h3>
               {preview.dueChanges.length === 0 ? (
                 <p className="text-caption text-text-muted">ありません。</p>
@@ -413,7 +413,9 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
             </section>
 
             <section>
-              <h3 className="text-label font-medium">追加される宿題（{preview.added.length}件）</h3>
+              <h3 className="text-label font-medium">
+                追加されるやること（{preview.added.length}件）
+              </h3>
               {preview.added.length === 0 ? (
                 <p className="text-caption text-text-muted">ありません。</p>
               ) : (
@@ -433,7 +435,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
 
             <section>
               <h3 className="text-label font-medium">
-                対応不要になる宿題（{preview.waived.length}件）
+                対応不要になるやること（{preview.waived.length}件）
               </h3>
               {preview.waived.length === 0 ? (
                 <p className="text-caption text-text-muted">ありません。</p>
@@ -447,7 +449,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
                 </ul>
               )}
               <p className="mt-1 text-caption text-text-muted">
-                対応不要にした宿題は削除されず、マイページでは「対応不要」と表示されます。
+                対応不要にしたやることは削除されず、マイページでは「対応不要」と表示されます。
               </p>
             </section>
 

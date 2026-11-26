@@ -53,7 +53,7 @@ export const POST = route(
       const row = await submissionRow(db, user, submissionId);
       if (!row.storage_files) throw unprocessable('この提出にはチェックできるファイルがありません');
       if (!csvSchemaOf(row.case_tasks.options))
-        throw unprocessable('この宿題にはCSVの期待列が設定されていないためチェックできません');
+        throw unprocessable('このやることにはCSVの期待列が設定されていないためチェックできません');
       const checked = await checkStoredCsv(
         await localFiles(),
         row.storage_files,

@@ -121,7 +121,7 @@ export default async function MyPage() {
       <section>
         <h2 className="section-head mb-2">次にやること</h2>
         {actions.length === 0 ? (
-          <EmptyState message="いまお願いしている宿題はありません。ゆっくり準備を進めましょう。" />
+          <EmptyState message="いまお願いしているやることはありません。ゆっくり準備を進めましょう。" />
         ) : (
           <ul className="flex flex-col gap-[10px]">
             {actions.map((task) => {
@@ -159,7 +159,7 @@ export default async function MyPage() {
 
       {/* 未提出件数。件数だけを淡々と示し、遅れを責める配色・文言にしない（4-3 M01） */}
       <section className="card flex items-center justify-between">
-        <span className="text-label text-text-secondary">これから提出する宿題</span>
+        <span className="text-label text-text-secondary">これから提出するやること</span>
         <span className="text-title font-bold text-text-primary">{unsubmitted}件</span>
       </section>
 
@@ -168,7 +168,7 @@ export default async function MyPage() {
       {
         <div className="mt-1 flex flex-col gap-[10px]">
           <Link href="/mypage/tasks" prefetch={false} className="btn-primary block text-center">
-            宿題・提出物を見る
+            やること・提出物を見る
           </Link>
           <nav aria-label="そのほかのメニュー" className="flex flex-wrap justify-center gap-2">
             <Link href="/mypage/timeline" prefetch={false} className="btn-ghost">

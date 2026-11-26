@@ -133,7 +133,7 @@ function CaseView({
 
       {/* 宿題進捗。M01 と同じく件数を淡々と示し、遅れを責める配色・文言にしない（4-3 M01） */}
       <section className="card flex items-center justify-between gap-3">
-        <span className="text-label text-text-secondary">宿題の進みぐあい</span>
+        <span className="text-label text-text-secondary">やることの進みぐあい</span>
         <span className="text-title font-bold text-text-primary">
           {total === 0 ? '準備中' : `${done} / ${total} 件（${Math.round((done / total) * 100)}%）`}
         </span>
@@ -148,7 +148,7 @@ function CaseView({
       </Link>
 
       <Link href="/mypage/tasks" className="btn-secondary block text-center">
-        宿題・提出物を見る
+        やること・提出物を見る
       </Link>
     </div>
   );

@@ -29,7 +29,7 @@ export function TemplateDraftPanel({ existing }: Props) {
         <table className="table">
           <thead>
             <tr>
-              <th scope="col">宿題名（案）</th>
+              <th scope="col">やることの名前（案）</th>
               <th scope="col">説明</th>
               <th scope="col">逆算日数</th>
               <th scope="col">登録</th>
@@ -41,7 +41,7 @@ export function TemplateDraftPanel({ existing }: Props) {
                 <td>
                   <input
                     className="field"
-                    aria-label="宿題名"
+                    aria-label="やることの名前"
                     value={t.name}
                     onChange={(e) =>
                       setRows(rows.map((r, j) => (j === i ? { ...r, name: e.target.value } : r)))

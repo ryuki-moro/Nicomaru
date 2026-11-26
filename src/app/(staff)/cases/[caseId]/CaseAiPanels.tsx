@@ -88,7 +88,7 @@ export function CaseAiPanels(props: Props) {
         {!props.aiAvailable && (
           <AiUnavailable
             lastSeenAt={props.lastSeenAt}
-            fallback="AIが使えないため、宿題の状態から自動集計した要約を表示しています。"
+            fallback="AIが使えないため、やることの状態から自動集計した要約を表示しています。"
           />
         )}
         {handover.job && (
@@ -165,7 +165,7 @@ export function CaseAiPanels(props: Props) {
             <table className="table">
               <thead>
                 <tr>
-                  <th scope="col">宿題</th>
+                  <th scope="col">やること</th>
                   <th scope="col">現在の期限</th>
                   <th scope="col">案</th>
                 </tr>
@@ -192,7 +192,7 @@ export function CaseAiPanels(props: Props) {
         <FieldError message={reschedule.error ?? undefined} />
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <label className="text-caption text-text-muted" htmlFor="reschedule-shift">
-            後ろ倒し日数（遅延が無い宿題向け）
+            後ろ倒し日数（遅延が無いやること向け）
           </label>
           <input
             id="reschedule-shift"
@@ -227,7 +227,7 @@ export function CaseAiPanels(props: Props) {
       {/* 9-10 テンプレート案 */}
       <section className="card">
         <AiHeading
-          note={`この案件のプランに不足している宿題テンプレートの案です。${
+          note={`この案件のプランに不足しているやることテンプレートの案です。${
             props.canRegisterTemplate
               ? '登録はテンプレート管理画面から行ってください。'
               : '登録は式場管理者がテンプレート管理画面で行います。'
@@ -257,7 +257,7 @@ export function CaseAiPanels(props: Props) {
             <table className="table">
               <thead>
                 <tr>
-                  <th scope="col">宿題名（案）</th>
+                  <th scope="col">やることの名前（案）</th>
                   <th scope="col">説明</th>
                   <th scope="col">期限の目安</th>
                   <th scope="col">登録</th>

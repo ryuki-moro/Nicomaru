@@ -42,7 +42,7 @@ export const AI_JOB_TYPE_LABEL: Record<AiJobType, string> = {
   classification: '自由記述の分類',
   draft: '文面の下書き',
   defect_check: '提出物の一次チェック',
-  task_extraction: '宿題の起票案',
+  task_extraction: 'やることの起票案',
   faq_answer: 'FAQ一次回答',
   reschedule_plan: 'リスケジュール案',
   handover_summary: '引き継ぎサマリー',

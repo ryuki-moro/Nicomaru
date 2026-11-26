@@ -67,17 +67,17 @@ export function buildHandoverFallback(input: {
   const days = daysBetween(input.weddingDate, input.today);
   const summary =
     `案件 ${input.caseCode}（挙式日 ${input.weddingDate}、あと${days}日）。` +
-    `宿題は全${a.total}件中、確認済み${a.confirmed}件、提出済み（確認待ち）${a.submitted}件、` +
+    `やることは全${a.total}件中、確認済み${a.confirmed}件、提出済み（確認待ち）${a.submitted}件、` +
     `差し戻し中${a.needsFix}件、未着手${a.notStarted}件、対応不要${a.waived}件です。` +
-    (a.nearestDue ? `直近の期限は ${a.nearestDue} です。` : '未完了の宿題はありません。');
+    (a.nearestDue ? `直近の期限は ${a.nearestDue} です。` : '未完了のやることはありません。');
   const decisions: string[] = [];
   if (a.confirmed > 0)
-    decisions.push(`確認済みの宿題が${a.confirmed}件あります（再確認は不要です）`);
+    decisions.push(`確認済みのやることが${a.confirmed}件あります（再確認は不要です）`);
   if (a.submitted > 0)
-    decisions.push(`提出済みでプランナー確認待ちの宿題が${a.submitted}件あります`);
+    decisions.push(`提出済みでプランナー確認待ちのやることが${a.submitted}件あります`);
   const cautions: string[] = [];
-  for (const title of a.overdueTitles) cautions.push(`期限を過ぎた宿題があります: ${title}`);
-  for (const title of a.needsFixTitles) cautions.push(`差し戻し中の宿題があります: ${title}`);
+  for (const title of a.overdueTitles) cautions.push(`期限を過ぎたやることがあります: ${title}`);
+  for (const title of a.needsFixTitles) cautions.push(`差し戻し中のやることがあります: ${title}`);
   if (a.submitted > 0)
     cautions.push('確認待ちの提出が滞留しないよう、引き継ぎ後すぐに確認してください');
   return handoverSummaryOutputSchema.parse({ summary, decisions, cautions });
@@ -94,7 +94,7 @@ export function handoverJobInput(input: {
     text: [
       `案件番号: ${input.caseCode}`,
       `挙式日: ${input.weddingDate}`,
-      `宿題: 全${a.total}件 / 確認済み${a.confirmed} / 提出済み${a.submitted} / 差し戻し${a.needsFix} / 未着手${a.notStarted} / 対応不要${a.waived}`,
+      `やること: 全${a.total}件 / 確認済み${a.confirmed} / 提出済み${a.submitted} / 差し戻し${a.needsFix} / 未着手${a.notStarted} / 対応不要${a.waived}`,
       a.overdueTitles.length ? `期限超過: ${a.overdueTitles.join('、')}` : '',
       a.needsFixTitles.length ? `差し戻し中: ${a.needsFixTitles.join('、')}` : '',
       a.nearestDue ? `直近の期限: ${a.nearestDue}` : '',

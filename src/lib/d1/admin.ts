@@ -366,7 +366,7 @@ export async function saveTemplateD1(
     await rebuildPlansForTemplate(db, templateId);
     return { id: templateId };
   } catch (e) {
-    if (isUniqueError(e)) throw conflict('同じ宿題名のテンプレートが既に登録されています');
+    if (isUniqueError(e)) throw conflict('同じやることの名前のテンプレートが既に登録されています');
     throw e;
   }
 }
@@ -453,7 +453,7 @@ export async function savePlanTypeD1(
       .prepare('SELECT id FROM task_templates WHERE id=? AND venue_id=?')
       .bind(a.taskTemplateId, venueId)
       .first();
-    if (!visible) throw conflict('選択できない宿題テンプレートが含まれています');
+    if (!visible) throw conflict('選択できないやることテンプレートが含まれています');
   }
   const dup = await db
     .prepare('SELECT id FROM plan_types WHERE venue_id=? AND name=? AND id<>?')

@@ -90,7 +90,7 @@ export function DraftAssist({
         relatedTaskId: taskId,
         input: {
           text: [
-            `宿題: ${taskTitle}`,
+            `やること: ${taskTitle}`,
             `状況: ${situation}`,
             memo.trim() && `伝えたいこと: ${memo.trim()}`,
             notes.length > 0 && `直していただきたい箇所:\n${listWithinLimit(notes)}`,

@@ -52,7 +52,7 @@ export function RiskSection({ caseId, risk }: { caseId: string; risk: CaseRisk |
   return (
     <section className="card space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="section-head">リスク</h2>
+        <h2 className="section-head">遅れの度合い</h2>
         <button
           type="button"
           className="btn-ghost disabled:opacity-50"

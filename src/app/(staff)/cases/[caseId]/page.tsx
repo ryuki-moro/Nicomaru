@@ -45,8 +45,8 @@ export const dynamic = 'force-dynamic';
 /** ページ内の目次。id は下の各セクションに付けたものと対応させる。 */
 const SECTION_LINKS = [
   { id: 'basic', label: '基本情報' },
-  { id: 'risk', label: 'リスク' },
-  { id: 'tasks', label: '宿題' },
+  { id: 'risk', label: '遅れの度合い' },
+  { id: 'tasks', label: 'やること' },
   { id: 'invitation', label: '招待状況' },
   { id: 'guests', label: 'ゲストの出欠' },
   { id: 'seating', label: '席次' },
@@ -463,7 +463,7 @@ export default async function CaseDetailPage({
               <dd>{row.user_profiles?.display_name ?? '未設定'}</dd>
             </div>
             <div>
-              <dt className="text-caption text-text-muted">宿題進捗</dt>
+              <dt className="text-caption text-text-muted">やることの進捗</dt>
               <dd>
                 {tasks.length === 0
                   ? '未割当'

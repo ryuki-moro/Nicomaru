@@ -67,7 +67,7 @@ export const POST = route(async (request: Request) => {
   const taskId = form.get('taskId');
   const file = form.get('file');
   if (typeof taskId !== 'string' || (!isUuid(taskId) && !true)) {
-    throw badRequest([{ field: 'taskId', reason: '宿題を特定できませんでした' }]);
+    throw badRequest([{ field: 'taskId', reason: 'やることを特定できませんでした' }]);
   }
   if (!(file instanceof File) || file.size === 0) {
     throw badRequest([{ field: 'file', reason: 'ファイルを選んでください' }]);
@@ -85,10 +85,10 @@ export const POST = route(async (request: Request) => {
   if (!taskResult.data) throw notFound();
   const task = taskResult.data as CaseTaskRow;
   if (task.status === 'waived') {
-    throw unprocessable('この宿題は対応不要になっているためファイルを添付できません');
+    throw unprocessable('このやることは対応不要になっているためファイルを添付できません');
   }
   if (task.submission_format !== 'file') {
-    throw unprocessable('この宿題はファイルの提出を受け付けていません');
+    throw unprocessable('このやることはファイルの提出を受け付けていません');
   }
   // ---------------------------------------------------------------- 入力チェック
   if (file.size > INPUT_LIMITS.fileBytes) {
@@ -102,7 +102,7 @@ export const POST = route(async (request: Request) => {
         field: 'file',
         reason:
           allowed.length === 0
-            ? 'この宿題には受入ファイル形式が設定されていません。担当プランナーへご連絡ください'
+            ? 'このやることには受入ファイル形式が設定されていません。担当プランナーへご連絡ください'
             : `${allowed.join('・')} のファイルを選んでください`,
       },
     ]);

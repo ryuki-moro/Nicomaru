@@ -247,7 +247,9 @@ export const planTypeSchema = z
     description: z.string().trim().max(INPUT_LIMITS.templateDescription).optional().nullable(),
     defaultGuestCountMin: z.number().int().min(0).optional().nullable(),
     defaultGuestCountMax: z.number().int().min(0).optional().nullable(),
-    taskTemplateIds: z.array(z.string().uuid()).min(1, '宿題テンプレートを1件以上選択してください'),
+    taskTemplateIds: z
+      .array(z.string().uuid())
+      .min(1, 'やることテンプレートを1件以上選択してください'),
     displayOrder: z.number().int().min(0).default(0),
     active: z.boolean().default(true),
   })
@@ -520,7 +522,7 @@ export const planTypeSaveSchema = z
       .nullable(),
     assignments: z
       .array(planTaskTemplateAssignmentSchema)
-      .min(1, '宿題テンプレートを1件以上選択してください'),
+      .min(1, 'やることテンプレートを1件以上選択してください'),
     displayOrder: z.number().int().min(0, '0以上の整数で入力してください').default(0),
     active: z.boolean().default(true),
   })
@@ -533,7 +535,7 @@ export const planTypeSaveSchema = z
   )
   .refine(
     (v) => new Set(v.assignments.map((a) => a.taskTemplateId)).size === v.assignments.length,
-    { message: '同じ宿題テンプレートが重複しています', path: ['assignments'] },
+    { message: '同じやることテンプレートが重複しています', path: ['assignments'] },
   );
 
 // ------------------------------------------------------- U03 初回設定リンクの再送

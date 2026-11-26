@@ -144,7 +144,7 @@ export async function saveRiskSnapshotD1(
         now,
       ),
   ]);
-  if (!results[1].success) throw new Error('リスク算出結果を保存できませんでした');
+  if (!results[1].success) throw new Error('遅れの度合いの算出結果を保存できませんでした');
   return id;
 }
 
@@ -154,7 +154,7 @@ export async function recalculateCaseRiskD1(db: D1Database, caseId: string): Pro
     .bind(caseId)
     .first<{ archived_at: string | null }>();
   if (!archived) throw notFound('案件が見つかりません');
-  if (archived.archived_at) throw notFound('アーカイブ済みの案件はリスクを算出できません');
+  if (archived.archived_at) throw notFound('アーカイブ済みの案件は遅れの度合いを算出できません');
   const { input, venueId } = await collectRiskInputD1(db, caseId);
   const rules = await loadRiskRulesD1(db, venueId);
   const result = calculateRisk(input, rules);
