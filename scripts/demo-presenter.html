@@ -138,10 +138,6 @@
         width: 100%;
         height: 100%;
         border: 0;
-        visibility: hidden;
-      }
-      #left iframe.active {
-        visibility: visible;
       }
       #right {
         width: 430px;
@@ -220,6 +216,7 @@
       <button id="backup" title="AIが遅い・止まったときに、この場面の画像を出します">
         予備の画像
       </button>
+      <button id="memo" title="第1幕で貼る打ち合わせメモをコピーします">メモをコピー</button>
       <button id="refresh" title="新郎新婦の画面を開き直します">右を更新</button>
       <button id="reset" title="データを初期状態に戻します（AIワーカーはそのまま）">
         やり直す
@@ -233,7 +230,7 @@
     <div id="body">
       <main id="stage">
         <div id="live">
-          <div id="left"></div>
+          <div id="left"><iframe id="planner" title="プランナー"></iframe></div>
           <div id="right">
             <span class="label">新郎新婦のスマホ</span>
             <div id="phone"><iframe id="couple" title="新郎新婦"></iframe></div>
@@ -246,48 +243,21 @@
       <aside id="script" aria-label="台本"></aside>
     </div>
     <script>
-      // 発表台本.md の流れ。slide は docs/発表/AIデモ/画面/ の番号、live は左に出す場面。
+      // 発表台本.md の流れ。左は1画面で、各幕の画面まで本番でたどる。backup は docs/発表/AIデモ/画面/ の番号
       const STEPS = [
-        {
-          label: '導入',
-          section: '導入',
-          caption: 'プランナーの「読む・書く・訳す」をAIが下ごしらえ',
-          slide: '01',
-        },
+        { label: '導入', section: '導入', caption: 'プランナーの「読む・書く」をAIが下ごしらえ' },
         {
           label: '第1幕',
           section: '第1幕',
-          caption: '第1幕　打ち合わせメモ → AIが宿題の案',
-          live: 'meeting',
+          caption: '第1幕　打ち合わせメモ → AIが宿題の案 → 新郎新婦に届く',
           backup: ['02'],
-        },
-        {
-          label: '届いた宿題',
-          section: '第1幕',
-          caption: '新郎新婦のスマホに宿題が届く',
-          slide: '03',
         },
         {
           label: '第2幕',
           section: '第2幕',
-          caption: '第2幕　ゲストリスト → AIの不備チェック → 差し戻し文',
-          live: 'guests',
+          caption: '第2幕　ゲストリスト → AIの不備チェック → 差し戻し文が届く',
           backup: ['04', '05'],
         },
-        {
-          label: '届いた連絡',
-          section: '第2幕',
-          caption: '新郎新婦に差し戻しの連絡が届く',
-          slide: '06',
-        },
-        {
-          label: '第3幕',
-          section: '第3幕',
-          caption: '第3幕　英語のBGMリクエスト → AIが翻訳',
-          live: 'bgm',
-          backup: ['07b'],
-        },
-        { label: '届いた返事', section: '第3幕', caption: '新郎様に英語の返事が届く', slide: '08' },
         { label: '締め', section: '締め', caption: 'AIが下ごしらえして、人が決める', title: true },
       ];
       const port = location.port;
@@ -309,11 +279,8 @@
         $('prev').disabled = current === 0;
         $('next').disabled = current === STEPS.length - 1;
         $('backup').disabled = !step.backup;
-        document
-          .querySelectorAll('#left iframe')
-          .forEach((f) => f.classList.toggle('active', f.dataset.scene === step.live));
         const slide = $('slide');
-        const image = step.slide ?? (backupIndex >= 0 ? step.backup?.[backupIndex] : undefined);
+        const image = backupIndex >= 0 ? step.backup?.[backupIndex] : undefined;
         slide.replaceChildren();
         if (step.title) {
           slide.innerHTML =
@@ -355,8 +322,6 @@
         current = Math.max(0, Math.min(STEPS.length - 1, index));
         backupIndex = -1;
         render();
-        // 届いた様子の画像のあとに戻ってきたとき、右が古いままにならないように
-        if (STEPS[current].live && dirty) refreshCouple();
       }
       async function refreshCouple() {
         const s = await fetch('/__demo/state').then((r) => r.json());
@@ -378,21 +343,9 @@
             return b;
           }),
         );
-        const left = $('left');
-        for (const scene of ['meeting', 'guests', 'bgm']) {
-          const f = document.createElement('iframe');
-          f.title = `プランナー ${scene}`;
-          f.dataset.scene = scene;
-          left.append(f);
-        }
         render();
-        // 同じ人の3画面を順に開く（同時に開くとログインが重なるため）
-        for (const f of left.querySelectorAll('iframe'))
-          await new Promise((done) => {
-            f.onload = done;
-            f.src = loginUrl('planner', s.scenes[f.dataset.scene]);
-          });
-        $('couple').src = loginUrl('couple', '/mypage');
+        $('planner').src = loginUrl('planner', '/dashboard');
+        $('couple').src = loginUrl('couple', s.coupleUrl);
       }
 
       // 経過時間（3分の目安）。最初に「次へ」を押したときから数える
@@ -465,10 +418,14 @@
         render();
       };
       $('refresh').onclick = refreshCouple;
+      $('memo').onclick = async () => {
+        const memo = await fetch('/__demo/memo').then((r) => r.text());
+        await navigator.clipboard.writeText(memo);
+        $('status').textContent = 'メモをコピーしました';
+      };
       // 左を操作したあとマウスが右に入ったら、右を開き直す
       setInterval(() => {
-        if ([...document.querySelectorAll('#left iframe')].includes(document.activeElement))
-          dirty = true;
+        if (document.activeElement === $('planner')) dirty = true;
       }, 300);
       $('right').addEventListener('pointerenter', () => dirty && refreshCouple());
       $('reset').onclick = async () => {

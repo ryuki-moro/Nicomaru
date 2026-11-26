@@ -31,7 +31,7 @@ const workerArgs = process.argv.slice(2).filter((arg) => arg !== '--open');
 const state = {
   phase: 'starting',
   ai: 'starting',
-  coupleUrl: '/mypage',
+  coupleUrl: '/mypage/tasks',
   scenes: null,
   // 予備・説明用の画像（画面/ の 01_… など）
   slides: (await readdir(`${DOCS}/画面`).catch(() => [])).filter((f) => f.endsWith('.png')),
@@ -113,6 +113,7 @@ async function warmUp() {
     scenes.meeting,
     scenes.guests,
     scenes.bgm,
+    '/dashboard',
     '/cases',
     '/submissions',
     '/api/ai/status',
@@ -133,7 +134,7 @@ async function bootApp() {
   await waitReady(app);
   log('画面を準備しています…');
   await warmUp();
-  state.coupleUrl = '/mypage';
+  state.coupleUrl = '/mypage/tasks';
   state.phase = 'ready';
 }
 
@@ -276,6 +277,13 @@ async function handleHome(req, res, url) {
   if (req.method === 'GET' && url.pathname === '/') return html('scripts/demo-presenter.html');
   if (req.method === 'GET' && url.pathname === '/audience')
     return html('scripts/demo-audience.html');
+  if (req.method === 'GET' && url.pathname === '/__demo/memo')
+    return send(
+      res,
+      200,
+      await readFile(`${DOCS}/打ち合わせメモ.txt`, 'utf8'),
+      'text/plain; charset=utf-8',
+    );
   if (req.method === 'GET' && url.pathname === '/__demo/script')
     return send(
       res,
