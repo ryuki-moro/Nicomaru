@@ -129,6 +129,9 @@ export async function middleware(request: NextRequest) {
       /^\/api\/cases\/[^/]+\/(?:seating-layouts(?:\/[^/]+)?|seating-chart(?:\/(?:submit|review))?)$/.test(
         path,
       );
+    const chat = /^\/api\/(?:cases\/[^/]+\/messages(?:\/(?:read|ticket))?|messages\/[^/]+)$/.test(
+      path,
+    );
     const adminPages =
       /^\/(?:templates\/[^/]+|venues\/[^/]+|api\/venues\/[^/]+)$/.test(path) &&
       path !== '/venues/new';
@@ -142,6 +145,7 @@ export async function middleware(request: NextRequest) {
       !guests &&
       !tasks &&
       !seating &&
+      !chat &&
       !path.startsWith('/_next/')
     ) {
       return NextResponse.json(
