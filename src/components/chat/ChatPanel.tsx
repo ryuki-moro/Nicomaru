@@ -24,6 +24,7 @@ export function ChatPanel({ caseId, initialMessages, initialHasOlder, retractWin
     caseId,
     initialMessages,
     initialHasOlder,
+    retractWindowMs,
   });
   const [atBottom, setAtBottom] = useState(true);
   const [pageVisible, setPageVisible] = useState(true);

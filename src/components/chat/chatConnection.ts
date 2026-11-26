@@ -52,6 +52,11 @@ interface Page {
   hasMore: boolean;
 }
 
+/** 取り消しの有効期限と端末の時計のずれを見込んで、この分だけ余分にさかのぼって取り直す。 */
+const CLOCK_SKEW_MS = 60_000;
+/** 最小の uuid。「この時刻より後」を表す cursor を作るのに使う。 */
+const MIN_UUID = '00000000-0000-0000-0000-000000000000';
+
 /** 取りこぼしを埋める取得の上限回数（50件 × 回数）。これを超える分は次の接続で埋める。 */
 const MAX_CATCH_UP_PAGES = 5;
 
@@ -70,12 +75,14 @@ export class ChatConnection {
   private catchUpAgain = false;
   /** サーバーの一覧を途切れなく取り込めた位置。自分の投稿の反映では進めない（相手の発言を飛ばさないため）。 */
   private syncCursor: string | undefined;
+  private readonly retractWindowMs: number;
 
   constructor(
     private readonly caseId: string,
-    initial: { messages: MessageView[]; hasOlder: boolean },
+    initial: { messages: MessageView[]; hasOlder: boolean; retractWindowMs: number },
     private readonly deps: ChatDeps,
   ) {
+    this.retractWindowMs = initial.retractWindowMs;
     this.syncCursor = latestCursor(initial.messages);
     this.state = {
       messages: initial.messages,
@@ -273,11 +280,23 @@ export class ChatConnection {
       }
       void this.catchUp();
     } else if (signal.type === 'retract') {
-      void this.refreshLatest();
+      void this.catchUp();
     }
   }
 
-  /** 手元の最新より後ろを取り込む。実行中に重なった要求は1回にまとめて、終わってからもう一度。 */
+  /**
+   * 取り消しが間に合う期間の始まり。これより古い発言は取り消されないので、取り直さなくてよい。
+   * 切断中や定期取得の間に起きた取り消しも、毎回この期間を取り直して反映する。
+   */
+  private recentFloor(): string {
+    const from = new Date(Date.now() - this.retractWindowMs - CLOCK_SKEW_MS).toISOString();
+    return `${from}_${MIN_UUID}`;
+  }
+
+  /**
+   * 同期位置（または取り消しの期間の始まりの早い方）より後ろを取り込む。
+   * 実行中に重なった要求は1回にまとめて、終わってからもう一度。
+   */
   async catchUp() {
     if (this.catchingUp) {
       this.catchUpAgain = true;
@@ -288,6 +307,10 @@ export class ChatConnection {
       do {
         this.catchUpAgain = false;
         let cursor = this.syncCursor;
+        if (cursor !== undefined) {
+          const floor = this.recentFloor();
+          if (floor < cursor) cursor = floor;
+        }
         for (let page = 0; page < MAX_CATCH_UP_PAGES; page += 1) {
           const query = cursor
             ? `?after=${encodeURIComponent(cursor)}&limit=${PAGE_SIZE}`
@@ -304,16 +327,6 @@ export class ChatConnection {
       // 次の通知・接続・定期取得で取り直す
     } finally {
       this.catchingUp = false;
-    }
-  }
-
-  /** 取り消しの反映。直近50件を取り直し、同じ id は置き換える。 */
-  private async refreshLatest() {
-    try {
-      const { items } = await this.deps.api.get<Page>(this.path(`?limit=${PAGE_SIZE}`));
-      this.set({ messages: mergeMessages(this.state.messages, items) });
-    } catch {
-      // 次の機会に取り直す
     }
   }
 

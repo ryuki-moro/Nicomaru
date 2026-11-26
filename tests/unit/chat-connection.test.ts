@@ -125,6 +125,8 @@ class FakeSocket implements SocketLike {
   }
 }
 
+const RETRACT_WINDOW = 15 * 60 * 1000;
+
 class ApiError extends Error {}
 
 describe('ChatConnection', () => {
@@ -185,7 +187,11 @@ describe('ChatConnection', () => {
 
   const make = (initial: MessageView[] = [], hasOlder = false) => {
     server = [...initial];
-    conn = new ChatConnection(CASE_ID, { messages: initial, hasOlder }, deps());
+    conn = new ChatConnection(
+      CASE_ID,
+      { messages: initial, hasOlder, retractWindowMs: RETRACT_WINDOW },
+      deps(),
+    );
     return conn;
   };
 
@@ -198,6 +204,8 @@ describe('ChatConnection', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    // 既定ではテストの発言はすべて取り消し期間より古い
+    vi.setSystemTime(new Date('2026-11-26T03:00:00.000Z'));
     visible = true;
     sockets = [];
     tickets = 'ok';
@@ -245,6 +253,7 @@ describe('ChatConnection', () => {
   });
 
   it('取り消しの合図で直近を取り直し、同じ id を置き換える', async () => {
+    vi.setSystemTime(new Date('2026-11-26T01:05:00.000Z'));
     make([msg(1), msg(2)]);
     await connectOk();
     server[1] = msg(2, { retracted: true, body: null });
@@ -347,7 +356,11 @@ describe('ChatConnection', () => {
     failing.api.post = async () => {
       throw new ApiError('boom');
     };
-    const c2 = new ChatConnection(CASE_ID, { messages: [], hasOlder: false }, failing);
+    const c2 = new ChatConnection(
+      CASE_ID,
+      { messages: [], hasOlder: false, retractWindowMs: RETRACT_WINDOW },
+      failing,
+    );
     await expect(c2.send('x')).rejects.toThrow('boom');
     expect(c2.getState().messages).toEqual([]);
   });
@@ -359,6 +372,35 @@ describe('ChatConnection', () => {
     await conn.send('自分'); // 自分の発言 B（A より後）
     await conn.catchUp();
     expect(conn.getState().messages.map((m) => m.body)).toEqual(['本文1', '本文2', '自分']);
+  });
+
+  it('切断中の取り消しは、再接続の取りこぼし取得で反映される（期間より古い発言は取り直さない）', async () => {
+    vi.setSystemTime(new Date('2026-11-26T01:05:00.000Z'));
+    const old = msg(1, {
+      createdAt: '2026-11-26T00:00:00.000Z',
+      cursor: `2026-11-26T00:00:00.000Z_${uuid(1)}`,
+    });
+    make([old, msg(2)]);
+    await connectOk();
+    sockets[0].drop();
+    server[1] = msg(2, { retracted: true, body: null }); // 切断中に取り消された
+    calls.length = 0;
+    await vi.advanceTimersByTimeAsync(1100);
+    sockets[1].open();
+    await flush();
+    expect(conn.getState().messages[1].retracted).toBe(true);
+    expect(calls.some((c) => c.includes(encodeURIComponent(old.cursor)))).toBe(false);
+  });
+
+  it('定期取得でも取り消しが反映される', async () => {
+    vi.setSystemTime(new Date('2026-11-26T01:05:00.000Z'));
+    make([msg(1), msg(2)]);
+    tickets = 'unavailable';
+    conn.start();
+    await flush();
+    server[1] = msg(2, { retracted: true, body: null });
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(conn.getState().messages[1].retracted).toBe(true);
   });
 
   it('取り消し成功後に手元の発言を取り消し表示にする', async () => {

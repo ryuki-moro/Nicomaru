@@ -23,12 +23,17 @@ export function useChatConnection(opts: {
   caseId: string;
   initialMessages: MessageView[];
   initialHasOlder: boolean;
+  retractWindowMs: number;
 }) {
-  const { caseId, initialMessages, initialHasOlder } = opts;
+  const { caseId, initialMessages, initialHasOlder, retractWindowMs } = opts;
   // 初期値は最初の1回だけ使う（以後の更新は接続側が持つ）
   const connection = useMemo(
     () =>
-      new ChatConnection(caseId, { messages: initialMessages, hasOlder: initialHasOlder }, deps),
+      new ChatConnection(
+        caseId,
+        { messages: initialMessages, hasOlder: initialHasOlder, retractWindowMs },
+        deps,
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [caseId],
   );
