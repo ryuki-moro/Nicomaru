@@ -4,6 +4,8 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
+  // 別プロセスで動くチャットWorker(npm run dev:d1 が起動)へ dev registry 経由で接続する。
+  "services": [{ "binding": "CHAT", "service": "nicomaru-chat" }],
   "r2_buckets": [{ "binding": "FILES", "bucket_name": "nicomaru-local-files", "remote": false }],
   "d1_databases": [
     {

@@ -9,7 +9,11 @@
   "workers_dev": true,
   "preview_urls": false,
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
-  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "nicomaru" }],
+  // CHAT はチャットWorker(cloudflare/chat)。CHAT_WS_URL・CHAT_TICKET_SECRET はダッシュボードで設定する。
+  "services": [
+    { "binding": "WORKER_SELF_REFERENCE", "service": "nicomaru" },
+    { "binding": "CHAT", "service": "nicomaru-chat" },
+  ],
   // ダッシュボードで設定した APP_BASE_URL・秘密値を配備で消さない。
   "keep_vars": true,
   "vars": {
