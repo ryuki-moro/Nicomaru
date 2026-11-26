@@ -77,10 +77,14 @@ export function ChatComposer({ onSend }: { onSend: (body: string) => Promise<unk
         aria-describedby="chat-body-hint"
       />
       <div className="mt-1 flex items-center justify-between gap-3">
-        <p id="chat-body-hint" className="text-caption text-text-muted">
+        <p id="chat-body-hint" className="min-w-0 flex-1 text-caption text-text-muted">
           {text.length} / {INPUT_LIMITS.textArea}字 ・ Ctrl+Enter でも送信できます
         </p>
-        <button type="submit" className="btn-primary w-auto px-6" disabled={sending || empty}>
+        <button
+          type="submit"
+          className="btn-primary w-auto shrink-0 whitespace-nowrap px-6"
+          disabled={sending || empty}
+        >
           {sending ? '送信中…' : '送信'}
         </button>
       </div>

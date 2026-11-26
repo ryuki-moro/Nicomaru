@@ -136,7 +136,7 @@ export function ChatThread({
         tabIndex={0}
         role="log"
         aria-label="メッセージの履歴"
-        className="card h-[55dvh] min-h-[320px] space-y-3 overflow-y-auto bg-field-filled-bg"
+        className="card h-[calc(100dvh-30rem)] min-h-[240px] space-y-3 overflow-y-auto bg-field-filled-bg"
       >
         {hasOlder && (
           <div className="text-center">
