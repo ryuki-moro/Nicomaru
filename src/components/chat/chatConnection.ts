@@ -346,6 +346,14 @@ export class ChatConnection {
     return message;
   }
 
+  /** やること化した元メッセージに、作ったやることのIDを足す（「やること化済み」の表示用） */
+  markTaskLinked(messageId: string, taskId: string): void {
+    const target = this.state.messages.find((m) => m.id === messageId);
+    if (!target || target.linkedTaskIds.includes(taskId)) return;
+    const linked = { ...target, linkedTaskIds: [...target.linkedTaskIds, taskId] };
+    this.set({ messages: mergeMessages(this.state.messages, [linked]) });
+  }
+
   async retract(id: string): Promise<void> {
     await this.deps.api.del(`/api/messages/${id}`);
     const target = this.state.messages.find((m) => m.id === id);

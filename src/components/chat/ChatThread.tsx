@@ -30,6 +30,8 @@ interface Props {
   onRetract: (id: string) => Promise<void>;
   /** 下端まで読んでいるかが変わったとき（既読の判定に使う） */
   onAtBottomChange?: (atBottom: boolean) => void;
+  /** 渡されたときだけ（スタッフ）、メッセージの「…」メニューに「やることにする」を出す */
+  onCreateTask?: (message: MessageView) => void;
 }
 
 /** システムメッセージ（提出・承認・期限など）。中央寄せの小さい行。取り消しはできない */
@@ -66,6 +68,7 @@ export function ChatThread({
   onLoadOlder,
   onRetract,
   onAtBottomChange,
+  onCreateTask,
 }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const nearBottom = useRef(true);
@@ -244,6 +247,28 @@ export function ChatThread({
                     )}
                     <p className="mt-1 flex items-center gap-2 text-caption text-text-muted">
                       <time dateTime={message.createdAt}>{formatTimeJst(message.createdAt)}</time>
+                      {onCreateTask && !message.retracted && (
+                        <details className="relative">
+                          <summary
+                            className="cursor-pointer list-none px-1 font-bold"
+                            aria-label="メッセージのメニュー"
+                          >
+                            …
+                          </summary>
+                          <div className="absolute left-0 z-10 mt-1 rounded-card border border-border-light bg-surface p-1 shadow">
+                            <button
+                              type="button"
+                              className="whitespace-nowrap px-3 py-1 text-label text-text-primary"
+                              onClick={(event) => {
+                                event.currentTarget.closest('details')?.removeAttribute('open');
+                                onCreateTask(message);
+                              }}
+                            >
+                              やることにする
+                            </button>
+                          </div>
+                        </details>
+                      )}
                       {canRetract(message, retractWindowMs, now) &&
                         (confirmId === message.id ? (
                           <span

@@ -62,6 +62,10 @@ export function useChatConnection(opts: {
   );
   const retract = useCallback((id: string) => connection.retract(id), [connection]);
   const loadOlder = useCallback(() => connection.loadOlder(), [connection]);
+  const markTaskLinked = useCallback(
+    (messageId: string, taskId: string) => connection.markTaskLinked(messageId, taskId),
+    [connection],
+  );
 
-  return { ...state, send, retract, loadOlder };
+  return { ...state, send, retract, loadOlder, markTaskLinked };
 }

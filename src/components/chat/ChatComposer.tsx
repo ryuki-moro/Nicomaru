@@ -38,21 +38,26 @@ function AttachDialog({
 }) {
   const [type, setType] = useState<RefType>('task');
   const [query, setQuery] = useState('');
-  const [items, setItems] = useState<Candidate[] | null>(null);
-  const [failed, setFailed] = useState(false);
+  // 取得結果は検索条件とセットで持ち、条件が変わったら読み込み中として扱う（effect 内で state を戻さない）
+  const [result, setResult] = useState<{
+    type: RefType;
+    query: string;
+    items: Candidate[] | null;
+  } | null>(null);
+  const current = result && result.type === type && result.query === query ? result : null;
+  const items = current?.items ?? null;
+  const failed = current !== null && current.items === null;
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    setItems(null);
-    setFailed(false);
     const timer = setTimeout(() => {
       api
         .get<{ items: Candidate[] }>(
           `/api/cases/${caseId}/chat-refs?type=${type}&q=${encodeURIComponent(query)}`,
         )
-        .then((res) => !cancelled && setItems(res.items))
-        .catch(() => !cancelled && setFailed(true));
+        .then((res) => !cancelled && setResult({ type, query, items: res.items }))
+        .catch(() => !cancelled && setResult({ type, query, items: null }));
     }, 250);
     return () => {
       cancelled = true;
@@ -100,7 +105,7 @@ function AttachDialog({
           候補を読み込めませんでした。時間をおいてお試しください。
         </p>
       )}
-      {items === null && !failed && <p className="text-caption text-text-muted">読み込み中…</p>}
+      {current === null && <p className="text-caption text-text-muted">読み込み中…</p>}
       {items?.length === 0 && (
         <p className="text-caption text-text-muted">該当する項目がありません</p>
       )}

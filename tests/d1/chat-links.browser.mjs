@@ -103,3 +103,75 @@ test(
     }
   },
 );
+
+test(
+  'チャット連携: スタッフがメッセージからやることを作ると、新郎新婦のやること一覧に出る',
+  { timeout: 240_000 },
+  async () => {
+    const contexts = [];
+    const browser = await chromium.launch({
+      headless: true,
+      ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+        ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
+        : {}),
+    });
+    const errors = [];
+    try {
+      const plannerApi = await login('plannerA');
+      const coupleApi = await login('coupleA');
+      contexts.push(plannerApi, coupleApi);
+      const title = `メッセージから ${randomUUID().slice(0, 8)}`;
+      const posted = await coupleApi.post(`/api/cases/${ids.caseA}/messages`, {
+        data: { body: `${title}\n詳しくは電話でお伝えします` },
+      });
+      assert.equal(posted.status(), 201, await posted.text());
+      const messageId = (await posted.json()).id;
+
+      // 新郎新婦はやることにできない（存在を明かさず 404）
+      const denied = await coupleApi.post(`/api/messages/${messageId}/task`, {
+        data: {
+          title,
+          submissionFormat: 'text',
+          dueDate: '2027-05-20',
+          allowedFileTypes: [],
+          options: {},
+        },
+      });
+      assert.equal(denied.status(), 404);
+
+      const context = await browser.newContext({ storageState: await plannerApi.storageState() });
+      const page = await context.newPage();
+      page.setDefaultTimeout(30_000);
+      page.on('pageerror', (e) => errors.push(e.message));
+      await page.goto(`${origin}/cases/${ids.caseA}/chat`);
+      const row = page.locator('div.flex.justify-start', { hasText: title });
+      await row.getByLabel('メッセージのメニュー').click();
+      await row.getByRole('button', { name: 'やることにする' }).click();
+      const dialog = page.getByRole('dialog', { name: 'やることにする' });
+      // 題名は本文の1行目が入っている
+      assert.equal(await dialog.getByLabel('題名').inputValue(), title);
+      await dialog.getByLabel('期限').fill('2027-05-20');
+      const created = page.waitForResponse(
+        (r) => r.request().method() === 'POST' && r.url().endsWith(`/messages/${messageId}/task`),
+      );
+      await dialog.getByRole('button', { name: '作成する' }).click();
+      assert.equal((await created).status(), 201);
+      await row.getByText('やること化済み').waitFor();
+      await page
+        .locator('[data-system-message]', { hasText: `『${title}』を作成しました` })
+        .waitFor();
+
+      // 新郎新婦のやること一覧に出る
+      const couple = await browser.newContext({ storageState: await coupleApi.storageState() });
+      const couplePage = await couple.newPage();
+      couplePage.setDefaultTimeout(30_000);
+      await couplePage.goto(`${origin}/mypage/tasks`);
+      await couplePage.getByText(title).first().waitFor();
+
+      assert.deepEqual(errors, []);
+    } finally {
+      await browser.close();
+      await Promise.all(contexts.map((c) => c.dispose()));
+    }
+  },
+);
