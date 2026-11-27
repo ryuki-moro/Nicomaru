@@ -7,7 +7,7 @@
  * ログインはデモのログイン画面と同じ操作で行う（入力は空欄のまま）。
  *   - 「確認コードを送信」… 新郎新婦（demo-02 の新郎）としてログイン
  *   - 「パスワードでログイン」… プランナーとしてログイン
- *   - 「式場管理者で入る」「システム管理者で入る」… それぞれの管理者としてログイン
+ *   - 「式場管理者としてログイン」「システム管理者としてログイン」… それぞれの管理者としてログイン
  * パスワードやコードはスクリプトにもファイルにも持たない。
  *
  * PC 版（1440px）は長い画面を全体（fullPage）で撮る。スマホ版（iPhone 13 = 390px 幅）は
@@ -55,9 +55,11 @@ async function loginAsPlanner(page: Page) {
   await landOn(page, /^\/(cases|dashboard)/, '/dashboard');
 }
 
-async function loginAsAdmin(page: Page, label: '式場管理者で入る' | 'システム管理者で入る') {
+async function loginAsAdmin(
+  page: Page,
+  label: '式場管理者としてログイン' | 'システム管理者としてログイン',
+) {
   await page.goto(`${BASE}/login`);
-  await page.getByRole('button', { name: 'パスワードでログイン（プランナー・管理者）' }).click();
   const response = page.waitForResponse((r) => r.url().endsWith('/api/auth/demo-login'));
   await page.getByRole('button', { name: label, exact: true }).click();
   if (!(await response).ok()) throw new Error(`${label}でログインできませんでした`);
@@ -300,7 +302,7 @@ async function main() {
     // ================= 管理者（PC） =================
     const adminPc = await browser.newContext({ ...PC, ...COMMON });
     const adminPcPage = await adminPc.newPage();
-    await loginAsAdmin(adminPcPage, '式場管理者で入る');
+    await loginAsAdmin(adminPcPage, '式場管理者としてログイン');
     await shot(adminPcPage, '33-admin-dashboard', { device: 'pc' });
     await adminPcPage.goto(`${BASE}/plan-types`);
     await shot(adminPcPage, '34-admin-plan-setup', { device: 'pc' });
@@ -308,7 +310,7 @@ async function main() {
 
     const systemPc = await browser.newContext({ ...PC, ...COMMON });
     const systemPcPage = await systemPc.newPage();
-    await loginAsAdmin(systemPcPage, 'システム管理者で入る');
+    await loginAsAdmin(systemPcPage, 'システム管理者としてログイン');
     await shot(systemPcPage, '35-system-dashboard', { device: 'pc' });
     await systemPcPage.goto(`${BASE}${await hrefFor(systemPcPage, '/venues/', 'サンプル式場')}`);
     await shot(systemPcPage, '36-system-venue-detail', { device: 'pc' });
