@@ -59,7 +59,7 @@ interface Props {
   }>;
 }
 export default async function CaseListPage({ searchParams }: Props) {
-  const user = await requirePageUser('planner', 'admin', 'system_admin');
+  const user = await requirePageUser('planner', 'admin');
   const params = await searchParams;
   const canSeeArchived = user.role === 'admin' || user.role === 'system_admin';
   // 案件登録（K03）は planner／admin のみ。ボタンと空状態の案内をこの判定でそろえる

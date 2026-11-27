@@ -16,7 +16,7 @@ export const metadata = { title: 'チャット' };
 
 export default async function CaseChatPage({ params }: { params: Promise<{ caseId: string }> }) {
   const { caseId } = await params;
-  const user = await requirePageUser('planner', 'admin', 'system_admin');
+  const user = await requirePageUser('planner', 'admin');
   const db = await localDB();
   let weddingCase: Awaited<ReturnType<typeof caseRow>>;
   try {

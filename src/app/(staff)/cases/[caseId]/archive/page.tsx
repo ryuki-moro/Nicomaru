@@ -52,7 +52,7 @@ export default async function CaseArchivePage({
   searchParams: Promise<{ error?: string }>;
 }) {
   // K05 は admin のみ（4-1 表4-10）
-  const user = await requirePageUser('admin', 'system_admin');
+  const user = await requirePageUser('admin');
 
   const { caseId } = await params;
   const { error: errorFlag } = await searchParams;
