@@ -6,6 +6,7 @@ import { getPlatformProxy } from 'wrangler';
 import { encryptPii } from '../../src/lib/crypto.ts';
 import { seedAppFixtures, ids } from '../../scripts/d1-fixtures.mjs';
 import { createTaskFromMessage } from '../../src/lib/d1/message-tasks.ts';
+import { addTask } from '../../src/lib/d1/tasks.ts';
 import { postSystemMessage } from '../../src/lib/d1/system-messages.ts';
 import { listRefCandidates } from '../../src/lib/d1/chat-refs.ts';
 import { purgeCasesD1 } from '../../src/lib/d1/case-purge.ts';
@@ -281,6 +282,10 @@ test('やること化できるのは担当のスタッフだけで、取り消�
   await retractMessage(db, planner(), source.id);
   await assert.rejects(createTaskFromMessage(db, planner(), source.id, taskInput('x')), {
     status: 409,
+  });
+  // 確認のあとに取り消された元メッセージでは、INSERT 自体が通らない
+  await assert.rejects(addTask(db, planner(), ids.caseA, taskInput('x'), source.id), {
+    status: 404,
   });
   const count = await db.prepare("SELECT count(*) AS n FROM case_tasks WHERE title='x'").first();
   assert.equal(count.n, 0);

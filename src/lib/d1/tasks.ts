@@ -434,7 +434,7 @@ export async function addTask(
   const id = randomUUID();
   const result = await db
     .prepare(
-      `INSERT INTO case_tasks(id,case_id,title,description,submission_format,allowed_file_types,options,is_required,importance,due_date,phase_name,display_order,source_message_id) SELECT ?,?,?,?,?,?,?,?,?,?,?,COALESCE((SELECT MAX(display_order)+1 FROM case_tasks WHERE case_id=?),0),? WHERE EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=? AND c.archived_at IS NULL AND ${scope} AND EXISTS(SELECT 1 FROM user_profiles WHERE id=? AND status='active' AND role IN ('planner','admin','system_admin')))`,
+      `INSERT INTO case_tasks(id,case_id,title,description,submission_format,allowed_file_types,options,is_required,importance,due_date,phase_name,display_order,source_message_id) SELECT ?,?,?,?,?,?,?,?,?,?,?,COALESCE((SELECT MAX(display_order)+1 FROM case_tasks WHERE case_id=?),0),? WHERE EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=? AND c.archived_at IS NULL AND ${scope} AND EXISTS(SELECT 1 FROM user_profiles WHERE id=? AND status='active' AND role IN ('planner','admin','system_admin'))) AND (? IS NULL OR EXISTS(SELECT 1 FROM case_messages m WHERE m.id=? AND m.case_id=? AND m.kind='user' AND m.deleted_at IS NULL))`,
     )
     .bind(
       id,
@@ -453,6 +453,9 @@ export async function addTask(
       caseId,
       user.id,
       user.id,
+      sourceMessageId,
+      sourceMessageId,
+      caseId,
     )
     .run();
   if (!result.meta.changes) throw notFound();

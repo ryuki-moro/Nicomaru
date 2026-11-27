@@ -29,7 +29,15 @@ export async function createTaskFromMessage(
   if (!message) throw notFound();
   if (message.deleted_at) throw conflict('取り消されたメッセージからは、やることを作れません');
   if (message.kind !== 'user') throw conflict('システムメッセージからは、やることを作れません');
-  const created = await addTask(db, user, message.case_id, input, messageId);
+  // 確認のあとに取り消されたときは、addTask の INSERT 条件で弾かれる
+  const created = await addTask(db, user, message.case_id, input, messageId).catch(async (e) => {
+    const now = await db
+      .prepare('SELECT deleted_at FROM case_messages WHERE id=?')
+      .bind(messageId)
+      .first<{ deleted_at: string | null }>();
+    if (now?.deleted_at) throw conflict('取り消されたメッセージからは、やることを作れません');
+    throw e;
+  });
   await announceSystemMessage(
     db,
     message.case_id,
