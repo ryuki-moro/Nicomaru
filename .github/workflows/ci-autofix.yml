@@ -154,11 +154,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh run view "$RUN_ID" --log-failed | tail -c 80000 > "$RUNNER_TEMP/ci-failure.log"
 
+      # secret を貼り付けたときに混ざった空白・改行を除く（トークンに空白は含まれない）。
+      # 先頭に空白が入った値で認証が通らず、1ターン目で失敗したことがある
+      - name: Prepare credentials
+        shell: bash
+        env:
+          OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          for name in OAUTH_TOKEN API_KEY; do
+            value=$(printf '%s' "${!name}" | tr -d '[:space:]')
+            if [ -n "$value" ]; then
+              echo "::add-mask::$value"
+              echo "CLAUDE_$name=$value" >> "$GITHUB_ENV"
+            fi
+          done
+
       - name: Fix with Claude
         uses: anthropics/claude-code-action@v1
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ env.CLAUDE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ env.CLAUDE_API_KEY }}
           github_token: ${{ github.token }}
           prompt: |
             REPO: ${{ github.repository }}
