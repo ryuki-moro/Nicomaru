@@ -134,6 +134,12 @@ try {
   await platform.dispose();
 }
 const demoLogin = demo ? JSON.parse(await readFile(`${dir}/credentials.json`, 'utf8')) : null;
+if (demoLogin && !(demoLogin.admin && demoLogin.systemAdmin)) {
+  console.error(
+    '既存のデモデータに式場管理者・システム管理者がありません。npm run demo -- --reset で作り直してください。',
+  );
+  process.exit(1);
+}
 if (!demo) console.log('D1ローカル準備完了。検証アカウント: .wrangler/app-local/credentials.json');
 if (setupOnly) process.exit(0);
 const child = spawn(
@@ -156,7 +162,7 @@ const child = spawn(
         DEMO_PLANNER_EMAIL: demoLogin.planner,
         DEMO_COUPLE_EMAIL: demoLogin.couple,
         DEMO_ADMIN_EMAIL: demoLogin.admin,
-        DEMO_SYSTEM_ADMIN_EMAIL: demoLogin.system,
+        DEMO_SYSTEM_ADMIN_EMAIL: demoLogin.systemAdmin,
         DEMO_LOGIN_PASSWORD: demoPassword,
         // 打ち合わせ記録を ?memo=demo で開くと、メモ欄にこの文面が入った状態になる
         DEMO_MEETING_MEMO: await readFile('docs/発表/AIデモ/打ち合わせメモ.txt', 'utf8').catch(
