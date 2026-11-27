@@ -68,7 +68,7 @@ export function ChatPanel({ caseId, initialMessages, initialHasOlder, retractWin
         onRetract={retract}
         onAtBottomChange={setAtBottom}
       />
-      <ChatComposer onSend={send} />
+      <ChatComposer caseId={caseId} onSend={send} />
     </div>
   );
 }

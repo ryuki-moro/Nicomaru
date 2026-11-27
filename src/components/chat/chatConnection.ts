@@ -340,8 +340,8 @@ export class ChatConnection {
     }
   }
 
-  async send(body: string): Promise<MessageView> {
-    const message = await this.deps.api.post<MessageView>(this.path(), { body });
+  async send(body: string, refs: { type: string; id: string }[] = []): Promise<MessageView> {
+    const message = await this.deps.api.post<MessageView>(this.path(), { body, refs });
     this.set({ messages: mergeMessages(this.state.messages, [message]) });
     return message;
   }

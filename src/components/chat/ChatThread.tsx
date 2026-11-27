@@ -6,6 +6,8 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
+import Link from 'next/link';
+
 import { EmptyState } from '@/components/ui/EmptyState';
 
 import {
@@ -16,6 +18,7 @@ import {
   shouldAutoScroll,
 } from './chatLogic';
 import type { MessageView } from './chatLogic';
+import { RefCard } from './RefCard';
 
 const SIDE_LABEL = { staff: '担当者', couple: '新郎新婦' } as const;
 
@@ -27,6 +30,33 @@ interface Props {
   onRetract: (id: string) => Promise<void>;
   /** 下端まで読んでいるかが変わったとき（既読の判定に使う） */
   onAtBottomChange?: (atBottom: boolean) => void;
+}
+
+/** システムメッセージ（提出・承認・期限など）。中央寄せの小さい行。取り消しはできない */
+function SystemRow({ message }: { message: MessageView }) {
+  const href = message.refs.find((r) => r.href)?.href;
+  const text = (
+    <>
+      <span className="sr-only">お知らせ: </span>
+      {message.body}
+      <time className="ml-2" dateTime={message.createdAt}>
+        {formatTimeJst(message.createdAt)}
+      </time>
+    </>
+  );
+  const cls =
+    'inline-block rounded-badge bg-surface px-3 py-1 text-caption text-text-muted ring-1 ring-inset ring-border-light';
+  return (
+    <p className="text-center" data-system-message>
+      {href ? (
+        <Link href={href} className={`${cls} underline-offset-2 hover:underline`}>
+          {text}
+        </Link>
+      ) : (
+        <span className={cls}>{text}</span>
+      )}
+    </p>
+  );
 }
 
 export function ChatThread({
@@ -92,7 +122,9 @@ export function ChatThread({
   const newest = messages.at(-1);
   const announcement =
     newest && newest.id !== initialLastId && !newest.mine && !newest.retracted
-      ? `${newest.senderName}さんから新着メッセージ（${formatTimeJst(newest.createdAt)}）`
+      ? newest.kind === 'system'
+        ? `お知らせ: ${newest.body}`
+        : `${newest.senderName}さんから新着メッセージ（${formatTimeJst(newest.createdAt)}）`
       : '';
 
   async function loadOlder() {
@@ -168,68 +200,88 @@ export function ChatThread({
                   </span>
                 </p>
               )}
-              <div className={`flex ${message.mine ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[85%] ${message.mine ? 'items-end' : 'items-start'} flex flex-col`}
-                >
-                  <p className="mb-1 text-caption text-text-muted">
-                    {message.senderName || '送信者'}
-                    <span className="ml-1">（{SIDE_LABEL[message.senderSide]}）</span>
-                  </p>
-                  {message.retracted ? (
-                    <p className="rounded-card border border-border-light bg-surface px-3 py-2 text-label text-text-muted">
-                      メッセージは取り消されました
+              {message.kind === 'system' ? (
+                <SystemRow message={message} />
+              ) : (
+                <div className={`flex ${message.mine ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[85%] ${message.mine ? 'items-end' : 'items-start'} flex flex-col`}
+                  >
+                    <p className="mb-1 text-caption text-text-muted">
+                      {message.senderName || '送信者'}
+                      <span className="ml-1">（{SIDE_LABEL[message.senderSide]}）</span>
                     </p>
-                  ) : (
-                    <p
-                      className={`whitespace-pre-wrap break-words rounded-card px-3 py-2 text-label ${
-                        message.mine
-                          ? 'bg-primary text-white'
-                          : 'border border-border-light bg-surface text-text-primary'
-                      }`}
-                    >
-                      {message.body}
-                    </p>
-                  )}
-                  <p className="mt-1 flex items-center gap-2 text-caption text-text-muted">
-                    <time dateTime={message.createdAt}>{formatTimeJst(message.createdAt)}</time>
-                    {canRetract(message, retractWindowMs, now) &&
-                      (confirmId === message.id ? (
-                        <span
-                          className="flex items-center gap-2"
-                          role="group"
-                          aria-label="取り消しの確認"
-                        >
-                          <span>取り消しますか？</span>
-                          <button
-                            type="button"
-                            className="font-bold text-danger underline underline-offset-2"
-                            disabled={busyId === message.id}
-                            onClick={() => void retract(message.id)}
+                    {message.retracted ? (
+                      <p className="rounded-card border border-border-light bg-surface px-3 py-2 text-label text-text-muted">
+                        メッセージは取り消されました
+                      </p>
+                    ) : (
+                      <>
+                        {message.body && (
+                          <p
+                            className={`whitespace-pre-wrap break-words rounded-card px-3 py-2 text-label ${
+                              message.mine
+                                ? 'bg-primary text-white'
+                                : 'border border-border-light bg-surface text-text-primary'
+                            }`}
                           >
-                            取り消す
-                          </button>
+                            {message.body}
+                          </p>
+                        )}
+                        {message.refs.length > 0 && (
+                          <ul className="mt-1 w-full space-y-1" aria-label="添付された項目">
+                            {message.refs.map((item) => (
+                              <li key={`${item.type}:${item.id}`}>
+                                <RefCard item={item} />
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {message.linkedTaskIds.length > 0 && (
+                          <p className="mt-1 text-caption text-text-muted">やること化済み</p>
+                        )}
+                      </>
+                    )}
+                    <p className="mt-1 flex items-center gap-2 text-caption text-text-muted">
+                      <time dateTime={message.createdAt}>{formatTimeJst(message.createdAt)}</time>
+                      {canRetract(message, retractWindowMs, now) &&
+                        (confirmId === message.id ? (
+                          <span
+                            className="flex items-center gap-2"
+                            role="group"
+                            aria-label="取り消しの確認"
+                          >
+                            <span>取り消しますか？</span>
+                            <button
+                              type="button"
+                              className="font-bold text-danger underline underline-offset-2"
+                              disabled={busyId === message.id}
+                              onClick={() => void retract(message.id)}
+                            >
+                              取り消す
+                            </button>
+                            <button
+                              type="button"
+                              className="underline underline-offset-2"
+                              disabled={busyId === message.id}
+                              onClick={() => setConfirmId(null)}
+                            >
+                              やめる
+                            </button>
+                          </span>
+                        ) : (
                           <button
                             type="button"
                             className="underline underline-offset-2"
-                            disabled={busyId === message.id}
-                            onClick={() => setConfirmId(null)}
+                            onClick={() => setConfirmId(message.id)}
                           >
-                            やめる
+                            取り消す
                           </button>
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          className="underline underline-offset-2"
-                          onClick={() => setConfirmId(message.id)}
-                        >
-                          取り消す
-                        </button>
-                      ))}
-                  </p>
+                        ))}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           );
         })}
