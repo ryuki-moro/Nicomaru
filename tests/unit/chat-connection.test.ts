@@ -24,6 +24,8 @@ function msg(n: number, patch: Partial<MessageView> = {}): MessageView {
   return {
     id: uuid(n),
     caseId: CASE_ID,
+    kind: 'user',
+    eventType: null,
     senderUserId: 'other',
     senderName: '相手',
     senderSide: 'staff',
@@ -32,6 +34,8 @@ function msg(n: number, patch: Partial<MessageView> = {}): MessageView {
     retracted: false,
     mine: false,
     cursor: `${createdAt}_${uuid(n)}`,
+    refs: [],
+    linkedTaskIds: [],
     ...patch,
   };
 }

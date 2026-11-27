@@ -340,17 +340,25 @@ export class ChatConnection {
     }
   }
 
-  async send(body: string): Promise<MessageView> {
-    const message = await this.deps.api.post<MessageView>(this.path(), { body });
+  async send(body: string, refs: { type: string; id: string }[] = []): Promise<MessageView> {
+    const message = await this.deps.api.post<MessageView>(this.path(), { body, refs });
     this.set({ messages: mergeMessages(this.state.messages, [message]) });
     return message;
+  }
+
+  /** やること化した元メッセージに、作ったやることのIDを足す（「やること化済み」の表示用） */
+  markTaskLinked(messageId: string, taskId: string): void {
+    const target = this.state.messages.find((m) => m.id === messageId);
+    if (!target || target.linkedTaskIds.includes(taskId)) return;
+    const linked = { ...target, linkedTaskIds: [...target.linkedTaskIds, taskId] };
+    this.set({ messages: mergeMessages(this.state.messages, [linked]) });
   }
 
   async retract(id: string): Promise<void> {
     await this.deps.api.del(`/api/messages/${id}`);
     const target = this.state.messages.find((m) => m.id === id);
     if (target) {
-      const done = { ...target, retracted: true, body: null };
+      const done = { ...target, retracted: true, body: null, refs: [] };
       this.set({ messages: mergeMessages(this.state.messages, [done]) });
     }
   }

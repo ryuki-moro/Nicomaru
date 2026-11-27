@@ -16,6 +16,7 @@ import { randomUUID } from 'node:crypto';
 import type { z } from 'zod';
 import { scope } from './cases';
 import { logCommunication } from './follow';
+import { announceSystemMessage } from './system-messages';
 
 type Actor = Pick<AppUser, 'id'>;
 export interface TaskRow {
@@ -265,12 +266,20 @@ export async function submitTask(
       .bind(task.case_id, user.id, body.draft ? 'task_draft' : 'task_submit', ...g.args),
   );
   await commit(db, user, task, true, statements, body.draft ? undefined : 'submitted');
-  if (!body.draft)
+  if (!body.draft) {
     await logCommunication(db, user, task.case_id, {
       channel: 'in_app',
       direction: 'inbound',
       summary: 'やることを提出しました',
     }).catch(() => console.warn('[communication] 記録を保存できませんでした'));
+    await announceSystemMessage(
+      db,
+      task.case_id,
+      'task_submitted',
+      [{ type: 'task', id }],
+      user.id,
+    );
+  }
   return { id: submissionId, reviewStatus: status };
 }
 export async function submissionRow(db: D1Database, user: Actor, id: string) {
@@ -356,6 +365,13 @@ export async function reviewSubmission(
     direction: 'outbound',
     summary: input.decision === 'confirmed' ? '提出物を確認しました' : '提出物の修正を依頼しました',
   }).catch(() => console.warn('[communication] 記録を保存できませんでした'));
+  await announceSystemMessage(
+    db,
+    task.case_id,
+    input.decision === 'confirmed' ? 'task_approved' : 'task_returned',
+    [{ type: 'task', id: task.id }],
+    user.id,
+  );
   return { id, caseId: task.case_id, caseTaskId: task.id, reviewStatus: input.decision };
 }
 /** D02 確認待ち一覧。急ぐものから確認できるよう、宿題の期限が近い順（同じ期限は提出の早い順）に返す。 */
@@ -401,6 +417,8 @@ export async function addTask(
   user: Actor,
   caseId: string,
   input: z.infer<typeof caseTaskCreateSchema>,
+  /** チャットのメッセージから作るときの元メッセージ */
+  sourceMessageId: string | null = null,
 ) {
   await taskRole(db, user, false);
   const c = await db
@@ -413,7 +431,7 @@ export async function addTask(
   const id = randomUUID();
   const result = await db
     .prepare(
-      `INSERT INTO case_tasks(id,case_id,title,description,submission_format,allowed_file_types,options,is_required,importance,due_date,phase_name,display_order) SELECT ?,?,?,?,?,?,?,?,?,?,?,COALESCE((SELECT MAX(display_order)+1 FROM case_tasks WHERE case_id=?),0) WHERE EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=? AND c.archived_at IS NULL AND ${scope} AND EXISTS(SELECT 1 FROM user_profiles WHERE id=? AND status='active' AND role IN ('planner','admin')))`,
+      `INSERT INTO case_tasks(id,case_id,title,description,submission_format,allowed_file_types,options,is_required,importance,due_date,phase_name,display_order,source_message_id) SELECT ?,?,?,?,?,?,?,?,?,?,?,COALESCE((SELECT MAX(display_order)+1 FROM case_tasks WHERE case_id=?),0),? WHERE EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=? AND c.archived_at IS NULL AND ${scope} AND EXISTS(SELECT 1 FROM user_profiles WHERE id=? AND status='active' AND role IN ('planner','admin'))) AND (? IS NULL OR EXISTS(SELECT 1 FROM case_messages m WHERE m.id=? AND m.case_id=? AND m.kind='user' AND m.deleted_at IS NULL))`,
     )
     .bind(
       id,
@@ -428,9 +446,13 @@ export async function addTask(
       input.dueDate,
       phaseNameFor(c.wedding_date, input.dueDate),
       caseId,
+      sourceMessageId,
       caseId,
       user.id,
       user.id,
+      sourceMessageId,
+      sourceMessageId,
+      caseId,
     )
     .run();
   if (!result.meta.changes) throw notFound();

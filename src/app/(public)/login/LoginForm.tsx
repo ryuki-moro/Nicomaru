@@ -3,10 +3,14 @@ import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { api, ApiCallError } from '@/lib/api/client';
 import { navigateAfterSessionChange } from '@/lib/auth/navigate';
-import { OTP } from '@/lib/constants';
+import { OTP, ROLE_LABEL, type Role } from '@/lib/constants';
 import { publicDemoLogin, publicLocalD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+
+/** デモのログインで選べる役割（権限の広い順） */
+const DEMO_ROLES: readonly Role[] = ['system_admin', 'admin', 'planner', 'couple'];
+type DemoRole = Role;
 /**
  * ワンタイムコード入力（design_guide 5.4）。
  *
@@ -175,8 +179,8 @@ export function LoginForm({
       setPending(false);
     }
   };
-  // npm run demo: 入力を確かめず、方式に応じた役割（管理者のボタンはその役割）でログインする
-  const signInDemo = async (role?: 'admin' | 'system_admin') => {
+  // npm run demo: 入力を確かめず、方式に応じた役割でログインする
+  const signInDemo = async (role?: DemoRole) => {
     setPending(true);
     setError(null);
     try {
@@ -315,30 +319,6 @@ export function LoginForm({
         </div>
       )}
 
-      {publicDemoLogin() && mode === 'password' && (
-        <div className="flex flex-col gap-2">
-          <p className="text-caption text-text-muted">管理者の画面を試す</p>
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              className="btn-secondary"
-              disabled={pending}
-              onClick={() => void signInDemo('admin')}
-            >
-              式場管理者で入る
-            </button>
-            <button
-              type="button"
-              className="btn-secondary"
-              disabled={pending}
-              onClick={() => void signInDemo('system_admin')}
-            >
-              システム管理者で入る
-            </button>
-          </div>
-        </div>
-      )}
-
       <>
         <div className="flex items-center gap-2">
           <span className="h-px flex-1 bg-border-light" />
@@ -354,6 +334,25 @@ export function LoginForm({
           <button type="button" className="btn-secondary" onClick={() => switchMode('otp')}>
             メールでログイン（新郎新婦）
           </button>
+        )}
+
+        {publicDemoLogin() && (
+          <div className="flex flex-col gap-2" role="group" aria-label="デモの役割を選んでログイン">
+            <p className="text-caption text-text-muted">
+              デモ用: 役割を選ぶだけでログインできます（ログイン後も画面上部で切り替えられます）。
+            </p>
+            {DEMO_ROLES.map((r) => (
+              <button
+                key={r}
+                type="button"
+                className="btn-secondary"
+                disabled={pending}
+                onClick={() => void signInDemo(r)}
+              >
+                {ROLE_LABEL[r]}としてログイン
+              </button>
+            ))}
+          </div>
         )}
 
         <Link href="/password" className="btn-ghost self-center">

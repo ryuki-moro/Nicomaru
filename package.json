@@ -35,13 +35,14 @@
     "cf:deploy": "opennextjs-cloudflare deploy",
     "db:d1:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "db:d1:bootstrap-admin": "node scripts/d1-bootstrap-admin.mjs",
-    "test:d1:browser": "node --test --test-concurrency=1 tests/d1/browser.mjs tests/d1/onboarding.browser.mjs tests/d1/tasks.browser.mjs tests/d1/issue-186.browser.mjs tests/d1/issue-187.browser.mjs tests/d1/issue-188.browser.mjs tests/d1/issue-189.browser.mjs tests/d1/chat.browser.mjs"
+    "test:d1:browser": "node --test --test-concurrency=1 tests/d1/browser.mjs tests/d1/onboarding.browser.mjs tests/d1/tasks.browser.mjs tests/d1/issue-186.browser.mjs tests/d1/issue-187.browser.mjs tests/d1/issue-188.browser.mjs tests/d1/issue-189.browser.mjs tests/d1/chat.browser.mjs tests/d1/chat-links.browser.mjs"
   },
   "dependencies": {
     "better-auth": "1.7.13",
     "next": "15.5.29",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "worker-mailer": "1.3.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {

@@ -13,8 +13,14 @@ import { localDB } from './runtime';
 export const passwordLink = (mode: 'reset' | 'invite', token: string) =>
   `${process.env.APP_BASE_URL}/password?mode=${mode}#token=${encodeURIComponent(token)}`;
 
+// better-auth は初回の要求で全テーブルの列情報を D1 に問い合わせる。要求ごとに作り直すと
+// その問い合わせが毎回走り、画面1つの描画時間の半分近くを占めていたため、接続ごとに使い回す。
+const authByDB = new WeakMap<D1Database, ReturnType<typeof createD1Auth>>();
 export async function d1Auth() {
-  return createD1Auth(await localDB());
+  const db = await localDB();
+  let auth = authByDB.get(db);
+  if (!auth) authByDB.set(db, (auth = createD1Auth(db)));
+  return auth;
 }
 /** メールアドレス＋パスワードで認証する。成功時の応答は Set-Cookie を持つ。 */
 export async function signInD1WithPassword(email: string, password: string, ip: string) {

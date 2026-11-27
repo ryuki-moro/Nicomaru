@@ -12,8 +12,8 @@ import {
 
 const VENUE_ID = '11111111-1111-4111-8111-111111111111';
 const PLANNER_ID = '41111111-1111-4111-8111-111111111111';
-const ADMIN_ID = '42222222-2222-4222-8222-222222222222';
-const SYSTEM_ADMIN_ID = '43333333-3333-4333-8333-333333333333';
+const ADMIN_ID = '42111111-1111-4111-8111-111111111111';
+const SYSTEM_ADMIN_ID = '43111111-1111-4111-8111-111111111111';
 const DEMO_COUPLE_KEY = 'demo-02';
 
 const TEMPLATES = [
@@ -149,7 +149,7 @@ export async function seedDemoFixtures(db, encode, password, files) {
   const counters = new Map();
   const statements = [];
   const run = (sql, ...args) => statements.push(db.prepare(sql).bind(...args));
-  const addUser = (id, name, email, role) => {
+  const addUser = (id, name, email, role, venueId = VENUE_ID) => {
     run(
       'INSERT INTO "user" (id,name,email,emailVerified,createdAt,updatedAt) VALUES (?,?,?,1,?,?)',
       id,
@@ -170,8 +170,7 @@ export async function seedDemoFixtures(db, encode, password, files) {
     run(
       "INSERT INTO user_profiles(id,venue_id,role,status) VALUES (?,?,?,'active')",
       id,
-      // system_admin は式場に所属しない（user_profiles の CHECK）
-      role === 'system_admin' ? null : VENUE_ID,
+      venueId,
       role,
     );
   };
@@ -184,7 +183,13 @@ export async function seedDemoFixtures(db, encode, password, files) {
   );
   addUser(PLANNER_ID, DEMO_PLANNER.displayName, DEMO_PLANNER.email, 'planner');
   addUser(ADMIN_ID, DEMO_ADMIN.displayName, DEMO_ADMIN.email, 'admin');
-  addUser(SYSTEM_ADMIN_ID, DEMO_SYSTEM_ADMIN.displayName, DEMO_SYSTEM_ADMIN.email, 'system_admin');
+  addUser(
+    SYSTEM_ADMIN_ID,
+    DEMO_SYSTEM_ADMIN.displayName,
+    DEMO_SYSTEM_ADMIN.email,
+    'system_admin',
+    null,
+  );
   // やることとプランの割当は正規化テーブルが正（src/lib/d1/admin.ts）。templates_json は
   // その派生なので、管理画面（プランとやること）にも同じ内容が出るよう両方入れる
   for (const t of TEMPLATES)
@@ -362,9 +367,9 @@ export async function seedDemoFixtures(db, encode, password, files) {
   await db.batch(statements);
   return {
     planner: DEMO_PLANNER.email,
-    admin: DEMO_ADMIN.email,
-    system: DEMO_SYSTEM_ADMIN.email,
     couple: coupleEmail,
+    admin: DEMO_ADMIN.email,
+    systemAdmin: DEMO_SYSTEM_ADMIN.email,
     scenes: {
       meeting: scenes.meeting,
       guests: scenes['ゲストリスト提出'],

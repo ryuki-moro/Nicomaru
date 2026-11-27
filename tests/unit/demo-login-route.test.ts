@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const signIn = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/d1/auth', () => ({ signInD1WithPassword: signIn }));
 
+import { landingPathFor } from '@/lib/auth/session';
 import { POST } from '@/app/api/auth/demo-login/route';
 
 function request(role: string, headers: Record<string, string> = {}) {
@@ -25,7 +26,7 @@ beforeEach(() => {
   vi.stubEnv('DEMO_PLANNER_EMAIL', 'planner@example.test');
   vi.stubEnv('DEMO_COUPLE_EMAIL', 'couple@example.test');
   vi.stubEnv('DEMO_ADMIN_EMAIL', 'admin@example.test');
-  vi.stubEnv('DEMO_SYSTEM_ADMIN_EMAIL', 'system@example.test');
+  vi.stubEnv('DEMO_SYSTEM_ADMIN_EMAIL', 'sysadmin@example.test');
   vi.stubEnv('DEMO_LOGIN_PASSWORD', 'demo-test-password');
   signIn.mockResolvedValue(
     new Response('{}', { status: 200, headers: { 'set-cookie': 'session=demo; HttpOnly' } }),
@@ -37,8 +38,8 @@ describe('POST /api/auth/demo-login', () => {
   it.each([
     ['planner', 'planner@example.test', '/cases'],
     ['couple', 'couple@example.test', '/mypage'],
-    ['admin', 'admin@example.test', '/dashboard'],
-    ['system_admin', 'system@example.test', '/dashboard'],
+    ['admin', 'admin@example.test', landingPathFor('admin')],
+    ['system_admin', 'sysadmin@example.test', landingPathFor('system_admin')],
   ])('%s のデモアカウントで認証しCookieを渡す', async (role, email, landing) => {
     const response = await POST(request(role));
     expect(response.status).toBe(200);
@@ -62,9 +63,19 @@ describe('POST /api/auth/demo-login', () => {
     expect((await POST(request('planner'))).status).toBe(429);
   });
 
+  it('ループバック以外のホストからの要求は役割を問わず拒否する', async () => {
+    for (const role of ['planner', 'couple', 'admin', 'system_admin']) {
+      const response = await POST(
+        request(role, { host: 'demo.example.com', origin: 'http://demo.example.com' }),
+      );
+      expect(response.status).toBe(403);
+    }
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
   it('別オリジンからの要求と未知の役割は拒否する', async () => {
     expect((await POST(request('planner', { origin: 'https://evil.test' }))).status).toBe(403);
-    expect((await POST(request('superuser'))).status).toBe(400);
+    expect((await POST(request('owner'))).status).toBe(400);
     expect(signIn).not.toHaveBeenCalled();
   });
 });

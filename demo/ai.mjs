@@ -127,7 +127,7 @@ export const DRAFT_PURPOSES = {
 export function draftMessage(input = {}) {
   const purpose = Object.hasOwn(DRAFT_PURPOSES, input.purpose) ? input.purpose : 'return';
   const couple = String(input.coupleName ?? '').trim() || 'お二人';
-  const task = String(input.taskTitle ?? '').trim() || '宿題';
+  const task = String(input.taskTitle ?? '').trim() || 'やること';
   const due = String(input.dueDateLabel ?? '').trim();
   const detail = String(input.detail ?? '').trim();
   const cautions = [];
@@ -168,9 +168,9 @@ export function draftMeetingSheet(input = {}) {
   ];
   if (pending.length) {
     lines.push(
-      `・未提出の宿題は ${pending.length} 件です。次回はまず ${pending[0].title}（期限 ${pending[0].dueDateLabel ?? ''}）の状況を確認します。`,
+      `・未提出のやることは ${pending.length} 件です。次回はまず ${pending[0].title}（期限 ${pending[0].dueDateLabel ?? ''}）の状況を確認します。`,
     );
-  } else lines.push('・未提出の宿題はありません。');
+  } else lines.push('・未提出のやることはありません。');
   if (submitted.length) {
     lines.push(
       `・確認待ちの提出は ${submitted.length} 件です（${submitted.map((t) => t.title).join('、')}）。内容を確認し、結果をお伝えします。`,
@@ -183,7 +183,7 @@ export function draftMeetingSheet(input = {}) {
     lines.push(`・メモ: ${notes}`);
   } else cautions.push('打ち合わせメモが空のため、話題の自動分類は行っていません');
   if (pending.some((t) => t.overdue))
-    cautions.push('期限を過ぎた宿題があります。当日は理由と新しい期限を一緒に確認してください');
+    cautions.push('期限を過ぎたやることがあります。当日は理由と新しい期限を一緒に確認してください');
   return { text: lines.join('\n'), cautions };
 }
 

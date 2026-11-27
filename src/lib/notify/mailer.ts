@@ -1,5 +1,5 @@
 /**
- * メール送信（Resend）と、初回パスワード設定リンクの発行・送信。
+ * メール送信（Gmail SMTP／Resend）と、初回パスワード設定リンクの発行・送信。
  *
  * 正本: 基本設計書 Version 1.2 6-2 表6-1（外部連携）／6-3-1（初回パスワード設定リンク）／13-1。
  *
@@ -11,7 +11,13 @@
  * 【なぜ SDK を使わず fetch で叩くか】
  * 使うのは Resend の 1 エンドポイントだけで、依存を増やしても得るものが無い。
  *
- * 【RESEND_API_KEY が無い環境】
+ * 【Gmail SMTP を優先する理由】
+ * Resend は独自ドメインを認証するまで登録者本人にしか届かない。ドメインを持たない間は
+ * GMAIL_USER／GMAIL_APP_PASSWORD（アプリパスワード）が揃っていれば smtp.gmail.com:465 から送る。
+ * worker-mailer は cloudflare:sockets を使い OpenNext の束ねを通らないため、
+ * 本番Workerの入口（cloudflare/app-worker.mjs）が読み込んで globalThis.__workerMailer に置く。
+ *
+ * 【送信設定が無い環境】
  * 13-1 の決定により、Phase 1 の開発段階は「開発者宛送信で検証できる段階」を設ける。
  * キー未設定のときは送信せず、宛先・件名・本文をサーバーログへ出して処理を続行する。
  * 送信できなかった事実は SendResult で呼び出し元へ返し、画面に注意文として表示させる。
@@ -26,6 +32,11 @@
  */
 
 import { INVITE_LINK_TTL_HOURS, PASSWORD_MIN_LENGTH } from '@/lib/constants';
+import type * as WorkerMailerModule from 'worker-mailer';
+
+declare global {
+  var __workerMailer: typeof WorkerMailerModule | undefined;
+}
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
@@ -63,13 +74,57 @@ export function appBaseUrl(): string {
   return process.env.APP_BASE_URL ?? 'http://localhost:3000';
 }
 
+async function sendViaGmail(
+  message: MailMessage,
+  user: string,
+  password: string,
+): Promise<SendResult> {
+  const mailer = globalThis.__workerMailer;
+  if (!mailer) {
+    console.error('[mail] Gmail SMTP は本番Workerの入口でのみ使えます（worker-mailer 未読込）');
+    return { delivered: false, reason: 'provider_error', skippedReason: PROVIDER_ERROR_MESSAGE };
+  }
+  const { WorkerMailer, LogLevel } = mailer;
+  let connection: WorkerMailerModule.WorkerMailer | undefined;
+  try {
+    // 静的な WorkerMailer.send は送信失敗時に close せず接続を残すため、接続を持って閉じる。
+    connection = await WorkerMailer.connect({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      credentials: { username: user, password },
+      authType: 'plain',
+      // 既定の INFO は SMTP の往復（宛先を含む）をログへ出すため止める（9章）。
+      logLevel: LogLevel.NONE,
+      socketTimeoutMs: 10_000,
+      responseTimeoutMs: 10_000,
+    });
+    await connection.send({
+      from: { name: process.env.MAIL_FROM_NAME ?? 'Bellink', email: user },
+      to: message.to,
+      subject: message.subject,
+      text: message.text,
+    });
+    return { delivered: true, providerMessageId: null };
+  } catch (error) {
+    console.error('[mail] Gmail SMTP での送信に失敗しました', error);
+    return { delivered: false, reason: 'provider_error', skippedReason: PROVIDER_ERROR_MESSAGE };
+  } finally {
+    await connection?.close().catch(() => {});
+  }
+}
+
 export async function sendMail(message: MailMessage): Promise<SendResult> {
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPassword = process.env.GMAIL_APP_PASSWORD;
+  if (gmailUser && gmailPassword) return sendViaGmail(message, gmailUser, gmailPassword);
+
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM;
 
   if (!apiKey || !from) {
     console.info(
-      '[mail] RESEND_API_KEY／RESEND_FROM が未設定のため送信をスキップしました（13-1 開発者宛検証段階）\n' +
+      '[mail] GMAIL_USER／GMAIL_APP_PASSWORD と RESEND_API_KEY／RESEND_FROM が未設定のため送信をスキップしました（13-1 開発者宛検証段階）\n' +
         `  to: ${message.to}\n  subject: ${message.subject}\n${message.text}`,
     );
     return { delivered: false, reason: 'not_configured', skippedReason: NOT_CONFIGURED_MESSAGE };

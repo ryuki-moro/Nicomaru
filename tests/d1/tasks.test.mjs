@@ -15,7 +15,9 @@ import {
   taskStatusCounts,
   pendingSubmissions,
   latestSubmission,
+  addTask,
 } from '../../src/lib/d1/tasks.ts';
+import { listMessages } from '../../src/lib/d1/messages.ts';
 
 let platform, db;
 const actor = (id) => ({ id });
@@ -33,6 +35,8 @@ before(async () => {
     '0003_onboarding.sql',
     '0004_tasks.sql',
     '0022_follow.sql',
+    '0028_case_messages.sql',
+    '0029_chat_links.sql',
   ]) {
     const sql = await readFile(`cloudflare/migrations/${file}`, 'utf8');
     await db.batch(
@@ -221,4 +225,70 @@ test('案件の日程変更と提出が競合しても古い期限・状態で�
   );
   assert.equal((await caseRow(db, staff, ids.caseA)).wedding_date, before.wedding_date);
   assert.equal((await taskRow(db, couple, task)).status, 'submitted');
+});
+
+// システムメッセージ（#チャット連携）。専用のやることで、操作ごとに1件だけ流れることを確かめる
+const chatEvents = async (taskId) =>
+  (await listMessages(db, planner, ids.caseA, { limit: 50 })).items
+    .filter((m) => m.kind === 'system' && m.refs.some((r) => r.id === taskId))
+    .map((m) => m.eventType);
+const newTask = async () =>
+  (
+    await addTask(db, planner, ids.caseA, {
+      title: 'チャット連携の確認',
+      submissionFormat: 'text',
+      allowedFileTypes: [],
+      options: {},
+      importance: 'normal',
+      isRequired: true,
+      dueDate: '2027-05-01',
+    })
+  ).id;
+
+test('提出するとシステムメッセージが1件流れ、下書きでは流れない', async () => {
+  const id = await newTask();
+  await submitTask(db, couple, id, { ...answer('下書き'), draft: true });
+  assert.deepEqual(await chatEvents(id), []);
+  await submitTask(db, couple, id, answer('提出'));
+  assert.deepEqual(await chatEvents(id), ['task_submitted']);
+  const message = (await listMessages(db, planner, ids.caseA, { limit: 50 })).items.find((m) =>
+    m.refs.some((r) => r.id === id),
+  );
+  assert.equal(message.body, 'coupleAさんが『チャット連携の確認』を提出しました');
+  assert.equal(message.senderUserId, null);
+});
+
+test('システムメッセージを作れなくても、提出は成功する', async () => {
+  const id = await newTask();
+  await db
+    .prepare(
+      "CREATE TRIGGER fail_chat_message BEFORE INSERT ON case_messages BEGIN SELECT RAISE(ABORT,'test chat'); END",
+    )
+    .run();
+  try {
+    await submitTask(db, couple, id, answer('提出'));
+  } finally {
+    await db.prepare('DROP TRIGGER fail_chat_message').run();
+  }
+  assert.equal((await taskRow(db, couple, id)).status, 'submitted');
+  assert.deepEqual(await chatEvents(id), []);
+});
+
+test('承認と差し戻しもシステムメッセージが1件ずつ流れ、操作者の名前が付く', async () => {
+  const id = await newTask();
+  const first = await submitTask(db, couple, id, answer('1回目'));
+  await reviewSubmission(db, planner, first.id, { decision: 'needs_fix', comment: '直して' });
+  const second = await submitTask(db, couple, id, answer('2回目'));
+  await reviewSubmission(db, planner, second.id, { decision: 'confirmed' });
+  assert.deepEqual(await chatEvents(id), [
+    'task_submitted',
+    'task_returned',
+    'task_submitted',
+    'task_approved',
+  ]);
+  const bodies = (await listMessages(db, couple, ids.caseA, { limit: 50 })).items
+    .filter((m) => m.refs.some((r) => r.id === id))
+    .map((m) => m.body);
+  assert.equal(bodies[1], 'plannerAさんが『チャット連携の確認』の修正を依頼しました');
+  assert.equal(bodies[3], 'plannerAさんが『チャット連携の確認』を承認しました');
 });

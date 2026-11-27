@@ -51,14 +51,14 @@ export const DEMO_PLANNER: DemoPlanner = {
   displayName: '佐藤 花子',
 };
 
-/** 管理者の画面を見せるためのアカウント。式場管理者はプランナーと同じ式場に所属する */
+/** 役割を切り替えて見せるための式場管理者・システム管理者（本番と同じ4役割をそろえる） */
 export const DEMO_ADMIN: DemoPlanner = {
   email: 'admin@nicomaru.test',
-  displayName: '高橋 健一',
+  displayName: '式場管理者（デモ）',
 };
 export const DEMO_SYSTEM_ADMIN: DemoPlanner = {
-  email: 'system@nicomaru.test',
-  displayName: '運営 担当',
+  email: 'sysadmin@nicomaru.test',
+  displayName: 'システム管理者（デモ）',
 };
 
 export interface DemoSubmission {

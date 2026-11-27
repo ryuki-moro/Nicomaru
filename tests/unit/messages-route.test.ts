@@ -96,7 +96,7 @@ describe('POST /messages', () => {
     const r = await POST(post(base, { body: '  こんにちは  ' }), ctx);
     expect(r.status).toBe(201);
     expect(await r.json()).toEqual(message);
-    expect(mocks.postMessage).toHaveBeenCalledWith(db, staff, CASE_ID, 'こんにちは');
+    expect(mocks.postMessage).toHaveBeenCalledWith(db, staff, CASE_ID, 'こんにちは', []);
     expect(mocks.userRateLimit).toHaveBeenCalledWith(db, 'chat_post', staff.id, {
       windowSeconds: 60,
       max: 20,
