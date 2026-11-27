@@ -185,7 +185,23 @@ export async function seedDemoFixtures(db, encode, password, files) {
   addUser(PLANNER_ID, DEMO_PLANNER.displayName, DEMO_PLANNER.email, 'planner');
   addUser(ADMIN_ID, DEMO_ADMIN.displayName, DEMO_ADMIN.email, 'admin');
   addUser(SYSTEM_ADMIN_ID, DEMO_SYSTEM_ADMIN.displayName, DEMO_SYSTEM_ADMIN.email, 'system_admin');
-  for (const [name, id] of Object.entries(DEMO_PLAN_TYPES))
+  // やることとプランの割当は正規化テーブルが正（src/lib/d1/admin.ts）。templates_json は
+  // その派生なので、管理画面（プランとやること）にも同じ内容が出るよう両方入れる
+  for (const t of TEMPLATES)
+    run(
+      'INSERT INTO task_templates(id,venue_id,name,description,submission_format,allowed_file_types,default_options,due_offset_days,importance,is_required) VALUES (?,?,?,?,?,?,?,?,?,?)',
+      t.taskTemplateId,
+      VENUE_ID,
+      t.title,
+      t.description,
+      t.submissionFormat,
+      JSON.stringify(t.allowedFileTypes),
+      JSON.stringify(t.options),
+      t.dueOffsetDays,
+      t.importance,
+      t.isRequired ? 1 : 0,
+    );
+  for (const [name, id] of Object.entries(DEMO_PLAN_TYPES)) {
     run(
       'INSERT INTO plan_types(id,venue_id,name,templates_json,updated_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP)',
       id,
@@ -193,6 +209,16 @@ export async function seedDemoFixtures(db, encode, password, files) {
       name,
       JSON.stringify(templatesFor(name)),
     );
+    for (const t of templatesFor(name))
+      run(
+        'INSERT INTO plan_task_templates(plan_type_id,task_template_id,display_order,due_offset_days_override,is_required) VALUES (?,?,?,?,?)',
+        id,
+        t.taskTemplateId,
+        t.displayOrder,
+        t.dueOffsetDaysOverride,
+        t.isRequired ? 1 : 0,
+      );
+  }
 
   let coupleEmail;
   // npm run demo:all が直接開く場面（打ち合わせ記録・ゲストリスト・BGMリクエストの確認）
