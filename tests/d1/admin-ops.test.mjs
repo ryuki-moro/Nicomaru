@@ -370,3 +370,25 @@ test('admin setup: 自式場の準備の件数を返し、admin 以外は 403', 
   await assert.rejects(adminSetupD1(db, system()), { status: 403 });
   await assert.rejects(adminSetupD1(db, plannerA()), { status: 403 });
 });
+
+test('admin setup: 割当先のやることがすべて停止中のプランも「やることが無い」と数える', async () => {
+  const before = (await adminSetupD1(db, adminA())).emptyPlanCount;
+  await db.batch([
+    db
+      .prepare(
+        "INSERT INTO task_templates(id,venue_id,name,active) VALUES (?,?,'停止中のやること',0)",
+      )
+      .bind('tt-stopped', ids.venueA),
+    db
+      .prepare(
+        "INSERT INTO plan_types(id,venue_id,name,active) VALUES (?,?,'停止中だけのプラン',1)",
+      )
+      .bind('pt-stopped', ids.venueA),
+    db
+      .prepare('INSERT INTO plan_task_templates(plan_type_id,task_template_id) VALUES (?,?)')
+      .bind('pt-stopped', 'tt-stopped'),
+  ]);
+  assert.equal((await adminSetupD1(db, adminA())).emptyPlanCount, before + 1);
+  const venueA = (await venueOverviewD1(db, system())).find((r) => r.id === ids.venueA);
+  assert.ok(venueA.emptyPlanCount >= 1);
+});

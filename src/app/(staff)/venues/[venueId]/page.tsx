@@ -145,9 +145,10 @@ function VenueSummary({ overview }: { overview: VenueOverviewRow }) {
   const notes = [
     overview.adminCount === 0 &&
       '利用中の式場管理者がいません。「式場管理者を追加」から登録してください。',
-    overview.planCount === 0 && 'プランがまだありません。式場管理者が「プランとやること」で登録します。',
+    overview.planCount === 0 &&
+      'プランがまだありません。式場管理者が「プランとやること」で登録します。',
     overview.emptyPlanCount > 0 &&
-      `やることが1件も無いプランが${overview.emptyPlanCount}種類あります。案件を登録してもやることが割り当てられません。`,
+      `利用中のやることが1件も無いプランが${overview.emptyPlanCount}種類あります。案件を登録してもやることが割り当てられません。`,
   ].filter((note): note is string => Boolean(note));
   return (
     <section className="space-y-2">

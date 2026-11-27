@@ -585,7 +585,7 @@ export interface VenueOverviewRow {
   plannerCount: number;
   invitedCount: number;
   planCount: number;
-  /** 利用中のプランのうち、やることが1件も割り当てられていない数 */
+  /** 利用中のプランのうち、利用中のやることが1件も割り当てられていない数（割当先がすべて停止中も含む） */
   emptyPlanCount: number;
 }
 
@@ -603,7 +603,8 @@ export async function venueOverviewD1(db: D1Database, actor: Actor): Promise<Ven
         ${staff("p.role IN ('planner','admin') AND p.status='invited'")} AS invitedCount,
         (SELECT count(*) FROM plan_types pt WHERE pt.venue_id=v.id AND pt.active=1) AS planCount,
         (SELECT count(*) FROM plan_types pt WHERE pt.venue_id=v.id AND pt.active=1
-          AND NOT EXISTS (SELECT 1 FROM plan_task_templates x WHERE x.plan_type_id=pt.id)) AS emptyPlanCount
+          AND NOT EXISTS (SELECT 1 FROM plan_task_templates x JOIN task_templates t ON t.id=x.task_template_id
+            WHERE x.plan_type_id=pt.id AND t.active=1)) AS emptyPlanCount
       FROM venues v ORDER BY v.active DESC,v.code`,
     )
     .all<Omit<VenueOverviewRow, 'active'> & { active: number }>();
@@ -619,7 +620,8 @@ export async function adminSetupD1(db: D1Database, actor: Actor) {
         (SELECT count(*) FROM task_templates t WHERE t.venue_id=?1 AND t.active=1) AS templateCount,
         (SELECT count(*) FROM plan_types pt WHERE pt.venue_id=?1 AND pt.active=1) AS planCount,
         (SELECT count(*) FROM plan_types pt WHERE pt.venue_id=?1 AND pt.active=1
-          AND NOT EXISTS (SELECT 1 FROM plan_task_templates x WHERE x.plan_type_id=pt.id)) AS emptyPlanCount,
+          AND NOT EXISTS (SELECT 1 FROM plan_task_templates x JOIN task_templates t ON t.id=x.task_template_id
+            WHERE x.plan_type_id=pt.id AND t.active=1)) AS emptyPlanCount,
         (SELECT count(*) FROM user_profiles p WHERE p.venue_id=?1 AND p.role='planner' AND p.status='active') AS plannerCount,
         (SELECT count(*) FROM user_profiles p WHERE p.venue_id=?1 AND p.role='planner' AND p.status='invited') AS invitedCount`,
     )

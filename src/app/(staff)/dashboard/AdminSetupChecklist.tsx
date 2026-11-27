@@ -23,7 +23,7 @@ export async function AdminSetupChecklist({ user }: { user: AppUser }) {
     },
     setup.emptyPlanCount > 0 && {
       href: '/plan-types',
-      text: `やることが1件も無いプランが${setup.emptyPlanCount}種類あります`,
+      text: `利用中のやることが1件も無いプランが${setup.emptyPlanCount}種類あります`,
     },
     setup.plannerCount === 0 && {
       href: '/users/new',
