@@ -1,12 +1,19 @@
 # PRのCIが落ちたら、Claude Code が失敗ログを読んで直し、PRブランチへコミットする。
 #
-#   - 対象: このリポジトリ内のPRブランチ（フォーク・main・develop・Dependabot は除外）、下書きでない、
+#   - 対象: このリポジトリ内のPRブランチ（フォーク・Dependabot は除外）、下書きでない、
 #           「自動修正しない」ラベルなし、失敗した実行がPRの最新コミットのもの
+#   - main・develop への push で落ちたときは、ci-autofix/<ブランチ>-<sha> へ修正を積み、PRを作るリンクを Issue に出す
+#     （リポジトリ設定で Actions はPRを作れないため。人が作ったPRは通常どおりCI・自動修正・自動マージの対象になる）。
+#     同じブランチの自動修正 Issue が開いている間は出さない
 #   - 自動修正のコミットは件名に [ci-autofix] を付ける。PR内に3件たまったら止めて人に返す
 #   - 直す箇所がない（一過性の失敗と判断した）ときは、初回だけ失敗ジョブを再実行する
+#   - security ジョブ（依存の脆弱性・秘密情報の検出）の失敗は直さない。鍵の取り替えなど人の判断が要るため、
+#     それだけが落ちたときはPRにコメントして止める
 #   - 認証: リポジトリ secret の CLAUDE_CODE_OAUTH_TOKEN（`claude setup-token` で発行）か ANTHROPIC_API_KEY。
 #           どちらも無ければ何もしない
 #   - 修正・再実行後のCIは follow-ci が見届け、成功なら自動マージ、失敗ならこのワークフローを run_id 指定で起動し直す
+#   - ジョブは3つに分ける。PR由来のコード（npm のライフサイクルスクリプト・git hook 等）が動く fix には読み取り権限だけを渡し、
+#     修正は差分ファイルで受け渡す。書き込み権限を持つ check・apply ではPRのコードを実行しない
 name: CI自動修正
 
 on:
@@ -20,24 +27,34 @@ on:
         description: 失敗したCIの実行ID
         required: true
 
-permissions:
-  contents: write
-  pull-requests: write
-  actions: write
+permissions: {}
 
 concurrency:
   group: ci-autofix-${{ github.event.workflow_run.head_branch || inputs.run_id }}
   cancel-in-progress: true
 
+env:
+  GH_REPO: ${{ github.repository }}
+  RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+
 jobs:
-  fix:
+  check:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+      issues: write
     env:
-      GH_REPO: ${{ github.repository }}
-      RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
       MAX_ATTEMPTS: 3
+    outputs:
+      go: ${{ steps.target.outputs.go }}
+      pr: ${{ steps.target.outputs.pr }}
+      branch: ${{ steps.target.outputs.branch }}
+      head_sha: ${{ steps.target.outputs.head_sha }}
+      run_attempt: ${{ steps.target.outputs.run_attempt }}
     steps:
       - name: Check target
         id: target
@@ -47,72 +64,133 @@ jobs:
           HAS_CREDENTIAL: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' || secrets.ANTHROPIC_API_KEY != '' }}
         run: |
           set -euo pipefail
-          read -r conclusion repo BRANCH HEAD_SHA RUN_ATTEMPT < <(gh api "repos/$GH_REPO/actions/runs/$RUN_ID" --jq '"\(.conclusion) \(.head_repository.full_name) \(.head_branch) \(.head_sha) \(.run_attempt)"')
+          read -r conclusion repo BRANCH HEAD_SHA RUN_ATTEMPT EVENT < <(gh api "repos/$GH_REPO/actions/runs/$RUN_ID" --jq '"\(.conclusion) \(.head_repository.full_name) \(.head_branch) \(.head_sha) \(.run_attempt) \(.event)"')
           if [ "$conclusion" != "failure" ] || [ "$repo" != "$GH_REPO" ]; then echo "対象外の実行（$conclusion / $repo）"; exit 0; fi
-          case "$BRANCH" in main | develop | dependabot/*) echo "$BRANCH は対象外"; exit 0 ;; esac
-          { echo "BRANCH=$BRANCH"; echo "HEAD_SHA=$HEAD_SHA"; echo "RUN_ATTEMPT=$RUN_ATTEMPT"; } >> "$GITHUB_ENV"
-          pr=$(gh pr list --head "$BRANCH" --state open --json number,isDraft,headRefOid,labels,commits --jq '.[0] // empty')
-          if [ -z "$pr" ]; then echo "開いているPRがないため見送り"; exit 0; fi
-          num=$(jq -r .number <<< "$pr")
-          if [ "$(jq -r .isDraft <<< "$pr")" = "true" ]; then echo "#$num は下書きのため見送り"; exit 0; fi
-          if [ "$(jq -r .headRefOid <<< "$pr")" != "$HEAD_SHA" ]; then echo "#$num は新しいコミットがあるため見送り"; exit 0; fi
-          if jq -e '[.labels[].name] | index("自動修正しない")' <<< "$pr" >/dev/null; then echo "#$num は自動修正しないラベル付き"; exit 0; fi
+          case "$BRANCH" in dependabot/*) echo "$BRANCH は対象外"; exit 0 ;; esac
+          { echo "branch=$BRANCH"; echo "head_sha=$HEAD_SHA"; echo "run_attempt=$RUN_ATTEMPT"; } >> "$GITHUB_OUTPUT"
+          run_url="${GITHUB_SERVER_URL}/${GH_REPO}/actions/runs/${RUN_ID}"
+          num=""
+          case "$BRANCH" in
+            main | develop)
+              if [ "$EVENT" != "push" ]; then echo "$BRANCH の $EVENT 実行は対象外"; exit 0; fi
+              if [ "$(gh api "repos/$GH_REPO/branches/$BRANCH" --jq .commit.sha)" != "$HEAD_SHA" ]; then echo "$BRANCH は新しいコミットがあるため見送り"; exit 0; fi
+              if [ -n "$(gh issue list --state open --search "in:title \"[ci-autofix] $BRANCH\"" --json number --jq '.[0].number // empty')" ]; then
+                echo "$BRANCH の自動修正 Issue が開いているため見送り"; exit 0
+              fi
+              ;;
+            *)
+              pr=$(gh pr list --head "$BRANCH" --state open --json number,isDraft,headRefOid,labels --jq '.[0] // empty')
+              if [ -z "$pr" ]; then echo "開いているPRがないため見送り"; exit 0; fi
+              num=$(jq -r .number <<< "$pr")
+              if [ "$(jq -r .isDraft <<< "$pr")" = "true" ]; then echo "#$num は下書きのため見送り"; exit 0; fi
+              if [ "$(jq -r .headRefOid <<< "$pr")" != "$HEAD_SHA" ]; then echo "#$num は新しいコミットがあるため見送り"; exit 0; fi
+              if jq -e '[.labels[].name] | index("自動修正しない")' <<< "$pr" >/dev/null; then echo "#$num は自動修正しないラベル付き"; exit 0; fi
+              ;;
+          esac
+          failed=$(gh api "repos/$GH_REPO/actions/runs/$RUN_ID/jobs?filter=latest&per_page=100" --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(" ")')
+          echo "失敗したジョブ: $failed"
+          if [ "$failed" = "security" ]; then
+            msg="security ジョブ（依存の脆弱性・秘密情報の検出）だけが失敗しました。鍵の取り替えや依存の更新は人の判断が要るため、自動修正しません。失敗した実行: $run_url"
+            if [ -n "$num" ]; then gh pr comment "$num" --body "$msg"; else echo "::warning::$msg"; fi
+            exit 0
+          fi
           if [ "$HAS_CREDENTIAL" != "true" ]; then
             echo "::warning::CLAUDE_CODE_OAUTH_TOKEN / ANTHROPIC_API_KEY が未設定のため自動修正しません"
             exit 0
           fi
-          done_count=$(jq '[.commits[] | select(.messageHeadline | contains("[ci-autofix]"))] | length' <<< "$pr")
+          if [ -z "$num" ]; then echo "go=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          # gh pr list --json commits は先頭100件しか返さないため、PRの全コミットをページ送りで数える
+          done_count=$(gh api graphql --paginate -f owner="${GH_REPO%/*}" -f name="${GH_REPO#*/}" -F num="$num" -f query='
+            query($owner: String!, $name: String!, $num: Int!, $endCursor: String) {
+              repository(owner: $owner, name: $name) {
+                pullRequest(number: $num) {
+                  commits(first: 100, after: $endCursor) {
+                    nodes { commit { messageHeadline } }
+                    pageInfo { hasNextPage endCursor }
+                  }
+                }
+              }
+            }' --jq '.data.repository.pullRequest.commits.nodes[].commit.messageHeadline' | { grep -cF '[ci-autofix]' || true; })
           if [ "$done_count" -ge "$MAX_ATTEMPTS" ]; then
             gh pr edit "$num" --add-label "自動修正しない"
             gh pr comment "$num" --body "CIの自動修正を${MAX_ATTEMPTS}回試しても通らないため止めました。原因を確認してください（再開するときは「自動修正しない」ラベルを外す）。失敗した実行: ${GITHUB_SERVER_URL}/${GH_REPO}/actions/runs/${RUN_ID}"
             exit 0
           fi
-          echo "pr=$num" >> "$GITHUB_OUTPUT"
+          { echo "go=true"; echo "pr=$num"; } >> "$GITHUB_OUTPUT"
 
+  fix:
+    needs: check
+    if: needs.check.outputs.go
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    env:
+      BRANCH: ${{ needs.check.outputs.branch }}
+      HEAD_SHA: ${{ needs.check.outputs.head_sha }}
+      PR: ${{ needs.check.outputs.pr }}
+    steps:
       - uses: actions/checkout@v7
-        if: steps.target.outputs.pr
         with:
-          # 判定に使ったコミットを取る（その後にPRが進んでいたら push が fast-forward にならず止まる）
+          # 判定に使ったコミットを取る（その後にPRが進んでいたら apply の push が fast-forward にならず止まる）
           ref: ${{ env.HEAD_SHA }}
-          # PR由来のコード（npm のライフサイクルスクリプト等）へ書き込みトークンを残さない。push は最後のステップで行う
           persist-credentials: false
 
       - uses: actions/setup-node@v7
-        if: steps.target.outputs.pr
         with:
           node-version: 22
           cache: npm
 
       - name: Install
-        if: steps.target.outputs.pr
         # npm ci 自体の失敗（lock の不整合など）も直す対象のため、止めずに進める
         continue-on-error: true
         run: npm ci --no-audit
 
       - name: Collect failure log
-        if: steps.target.outputs.pr
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh run view "$RUN_ID" --log-failed | tail -c 80000 > "$RUNNER_TEMP/ci-failure.log"
 
+      # secret を貼り付けたときに混ざった空白・改行を除く（トークンに空白は含まれない）。
+      # 先頭に空白が入った値で認証が通らず、1ターン目で失敗したことがある
+      - name: Prepare credentials
+        shell: bash
+        env:
+          OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          for name in OAUTH_TOKEN API_KEY; do
+            value=$(printf '%s' "${!name}" | tr -d '[:space:]')
+            if [ -n "$value" ]; then
+              echo "::add-mask::$value"
+              echo "CLAUDE_$name=$value" >> "$GITHUB_ENV"
+            fi
+          done
+
       - name: Fix with Claude
-        if: steps.target.outputs.pr
         uses: anthropics/claude-code-action@v1
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ env.CLAUDE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ env.CLAUDE_API_KEY }}
           github_token: ${{ github.token }}
+          # 修正後のCIがまた落ちると、follow-ci（github-actions[bot]）がこのワークフローを起動し直すため許可する。
+          # 起動元は workflow_run と workflow_dispatch（書き込み権限が要る）だけなので、外部の bot からは呼べない
+          allowed_bots: github-actions[bot]
           prompt: |
             REPO: ${{ github.repository }}
-            PR NUMBER: ${{ steps.target.outputs.pr }}
+            対象: ${{ env.PR && format('PR #{0}', env.PR) || format('{0} ブランチへの push', env.BRANCH) }}
 
-            このPRのCIが失敗しました。失敗したジョブのログは ${{ runner.temp }}/ci-failure.log にあります。
+            このCIが失敗しました。失敗したジョブのログは ${{ runner.temp }}/ci-failure.log にあります。
             ワークフローの定義は .github/workflows/ci.yml です。
 
             1. ログから失敗の原因を特定する。
             2. コードの不具合なら、PRの意図を変えない最小の修正をする。テストを消す・弱める・skip にする修正はしない。
                直したら該当する npm run lint / format / typecheck / test / test:d1 / build を実行して通ることを確かめる。
+               security ジョブ（npm audit・gitleaks）の失敗は直さない（人が対応する）。
             3. ネットワーク・外部API・タイムアウトなど一過性の失敗で、コードに直す箇所がないなら、ファイルを変更しない。
             4. 最後に ${{ runner.temp }}/autofix-summary.md へ、原因と対応を日本語で3行以内で書く。
 
@@ -123,32 +201,92 @@ jobs:
             --add-dir ${{ runner.temp }}
             --allowedTools "Read,Edit,Write,Glob,Grep,Bash(npm run:*),Bash(npx prettier:*),Bash(git diff:*),Bash(git status:*),Bash(git log:*)"
 
+      - name: Export patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/autofix-out"
+          git add -A
+          git diff --cached --binary > "$RUNNER_TEMP/autofix-out/fix.patch"
+          cp "$RUNNER_TEMP/autofix-summary.md" "$RUNNER_TEMP/autofix-out/summary.md" 2>/dev/null || echo "（要約なし）" > "$RUNNER_TEMP/autofix-out/summary.md"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ci-autofix
+          path: ${{ runner.temp }}/autofix-out/
+          if-no-files-found: error
+          retention-days: 3
+
+  apply:
+    needs: [check, fix]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+      issues: write
+    env:
+      BRANCH: ${{ needs.check.outputs.branch }}
+      HEAD_SHA: ${{ needs.check.outputs.head_sha }}
+      RUN_ATTEMPT: ${{ needs.check.outputs.run_attempt }}
+      PR: ${{ needs.check.outputs.pr }}
+    steps:
+      # npm ci もPRのスクリプトも実行しない（git hook も設定されない）まっさらな取り出しに、fix の差分だけを当てる
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.HEAD_SHA }}
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ci-autofix
+          path: ${{ runner.temp }}/autofix-out
+
       - name: Commit and retry CI
         id: commit
-        if: steps.target.outputs.pr
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ steps.target.outputs.pr }}
         run: |
           set -euo pipefail
-          summary_file="$RUNNER_TEMP/autofix-summary.md"
-          summary=$(cat "$summary_file" 2>/dev/null || echo "（要約なし）")
+          patch="$RUNNER_TEMP/autofix-out/fix.patch"
+          summary=$(cat "$RUNNER_TEMP/autofix-out/summary.md")
           run_url="${GITHUB_SERVER_URL}/${GH_REPO}/actions/runs/${RUN_ID}"
-          if [ -n "$(git status --porcelain)" ]; then
+          # main・develop の失敗はPRが無いため、コメントはジョブの警告に出す
+          notify() { if [ -n "$PR" ]; then gh pr comment "$PR" --body "$1"; else echo "::warning::$1"; fi; }
+          if [ -s "$patch" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
+            git apply --index "$patch"
             git commit -q -m "CIの失敗を自動修正する [ci-autofix]" -m "$summary" -m "失敗した実行: $run_url"
-            git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" "HEAD:$BRANCH"
-            echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-            gh pr comment "$PR" --body "$(printf 'CIの失敗をClaudeが自動修正しました（%s）。\n\n%s\n\n失敗した実行: %s' "$(git rev-parse --short HEAD)" "$summary" "$run_url")"
+            remote="https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git"
+            if [ -n "$PR" ]; then
+              git push "$remote" "HEAD:$BRANCH"
+              gh pr comment "$PR" --body "$(printf 'CIの失敗をClaudeが自動修正しました（%s）。\n\n%s\n\n失敗した実行: %s' "$(git rev-parse --short HEAD)" "$summary" "$run_url")"
+            else
+              fix_branch="ci-autofix/$BRANCH-${HEAD_SHA:0:7}"
+              git push "$remote" "HEAD:refs/heads/$fix_branch"
+              compare="${GITHUB_SERVER_URL}/${GH_REPO}/compare/${BRANCH}...${fix_branch}?expand=1"
+              gh issue create --title "[ci-autofix] $BRANCH のCI失敗を自動修正しました" \
+                --body "$(printf '%s のCIが失敗したため、Claudeが %s に修正を積みました。内容を確認してPRを作ってください: %s\n\n%s\n\n失敗した実行: %s\n\nPRをマージするか不要と判断したら、この Issue を閉じてください（開いている間は次の自動修正を出しません）。' "$BRANCH" "$fix_branch" "$compare" "$summary" "$run_url")"
+            fi
+            if [ -n "$PR" ]; then echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"; fi
           elif [ "$RUN_ATTEMPT" = "1" ]; then
             gh run rerun "$RUN_ID" --failed
-            echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
-            gh pr comment "$PR" --body "$(printf 'CIの失敗を調べましたが、コードに直す箇所はありませんでした。失敗したジョブを1回だけ再実行します。\n\n%s\n\n失敗した実行: %s' "$summary" "$run_url")"
+            notify "$(printf 'CIの失敗を調べましたが、コードに直す箇所はありませんでした。失敗したジョブを1回だけ再実行します。\n\n%s\n\n失敗した実行: %s' "$summary" "$run_url")"
+            if [ -n "$PR" ]; then
+              echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+            else
+              # bot の再実行は workflow_run を起こさず、push の実行は follow-ci も拾わないため、ここで見届ける
+              sleep 10
+              gh run watch "$RUN_ID" --interval 20 >/dev/null || true
+              if [ "$(gh run view "$RUN_ID" --json conclusion --jq .conclusion)" != "success" ]; then
+                gh workflow run ci-autofix.yml -f run_id="$RUN_ID"
+              fi
+            fi
           else
-            gh pr comment "$PR" --body "$(printf 'CIの失敗を調べましたが自動では直せませんでした。確認してください。\n\n%s\n\n失敗した実行: %s' "$summary" "$run_url")"
+            notify "$(printf 'CIの失敗を調べましたが自動では直せませんでした。確認してください。\n\n%s\n\n失敗した実行: %s' "$summary" "$run_url")"
           fi
 
       # コミット後に取り出す（PRブランチの作業ツリーへ混ぜない）。古いPRブランチにも無いため main から取る

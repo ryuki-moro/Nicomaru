@@ -4,7 +4,8 @@
  * 正本: 基本設計書 Version 1.2 表4-10 K02（主な利用者 planner／admin／couple・Phase 1）、
  * 表9 機能2-3「案件詳細表示」（利用者に couple を含む・Phase 1）、4-3 K02。
  *
- *   - 表示するのは「基本情報（案件番号・挙式日・新郎新婦氏名・人数・プラン種別）」と「宿題進捗」だけ。
+ *   - 表示するのは「基本情報（挙式日・新郎新婦氏名・人数・プラン）」と「やることの進捗」だけ。
+ *   - 案件番号はスタッフが案件を照合する内部の識別子として維持し、新郎新婦向け画面には出さない。
  *   - 4-3 K02 が招待状況セクションと宿題一覧セクションを planner／admin に限って
  *     「couple には本セクションの操作を表示しない」と書き分けているのは、
  *     基本情報と宿題進捗は couple にも見せる前提だからである。よって招待の発行・再発行、
@@ -30,7 +31,6 @@ import Link from 'next/link';
 export const metadata = { title: '挙式情報' };
 interface CaseRow {
   id: string;
-  case_code: string;
   wedding_date: string;
   wedding_time: string | null;
   guest_count: number | null;
@@ -95,10 +95,6 @@ function CaseView({
       <section className="card">
         <h2 className="text-label font-bold text-text-primary">基本情報</h2>
         <dl className="mt-3 flex flex-col gap-[10px]">
-          <div>
-            <dt className="text-caption text-text-muted">案件番号</dt>
-            <dd className="text-base text-text-primary">{weddingCase.case_code}</dd>
-          </div>
           <div>
             <dt className="text-caption text-text-muted">挙式日</dt>
             <dd className="text-base text-text-primary">

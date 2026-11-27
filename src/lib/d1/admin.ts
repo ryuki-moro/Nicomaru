@@ -572,3 +572,68 @@ export async function systemSummaryD1(db: D1Database, actor: Actor) {
     alerts,
   };
 }
+
+// ---------------------------------------------------------------- D01 運営ダッシュボード
+
+export interface VenueOverviewRow {
+  id: string;
+  code: string;
+  name: string;
+  active: boolean;
+  activeCaseCount: number;
+  adminCount: number;
+  plannerCount: number;
+  invitedCount: number;
+  planCount: number;
+  /** 利用中のプランのうち、利用中のやることが1件も割り当てられていない数（割当先がすべて停止中も含む） */
+  emptyPlanCount: number;
+}
+
+/** 式場ごとの利用状況。案件の中身や個人情報は読まず、件数だけを返す。 */
+export async function venueOverviewD1(db: D1Database, actor: Actor): Promise<VenueOverviewRow[]> {
+  requireSystemAdmin(actor);
+  const staff = (where: string) =>
+    `(SELECT count(*) FROM user_profiles p WHERE p.venue_id=v.id AND ${where})`;
+  const { results } = await db
+    .prepare(
+      `SELECT v.id,v.code,v.name,v.active,
+        (SELECT count(*) FROM wedding_cases c WHERE c.venue_id=v.id AND c.archived_at IS NULL) AS activeCaseCount,
+        ${staff("p.role='admin' AND p.status='active'")} AS adminCount,
+        ${staff("p.role='planner' AND p.status='active'")} AS plannerCount,
+        ${staff("p.role IN ('planner','admin') AND p.status='invited'")} AS invitedCount,
+        (SELECT count(*) FROM plan_types pt WHERE pt.venue_id=v.id AND pt.active=1) AS planCount,
+        (SELECT count(*) FROM plan_types pt WHERE pt.venue_id=v.id AND pt.active=1
+          AND NOT EXISTS (SELECT 1 FROM plan_task_templates x JOIN task_templates t ON t.id=x.task_template_id
+            WHERE x.plan_type_id=pt.id AND t.active=1)) AS emptyPlanCount
+      FROM venues v ORDER BY v.active DESC,v.code`,
+    )
+    .all<Omit<VenueOverviewRow, 'active'> & { active: number }>();
+  return results.map((r) => ({ ...r, active: Boolean(r.active) }));
+}
+
+/** D01 式場管理者の「準備の残り」。自式場の設定の件数だけを返す。 */
+export async function adminSetupD1(db: D1Database, actor: Actor) {
+  const venueId = requireAdminVenue(actor);
+  const row = await db
+    .prepare(
+      `SELECT
+        (SELECT count(*) FROM task_templates t WHERE t.venue_id=?1 AND t.active=1) AS templateCount,
+        (SELECT count(*) FROM plan_types pt WHERE pt.venue_id=?1 AND pt.active=1) AS planCount,
+        (SELECT count(*) FROM plan_types pt WHERE pt.venue_id=?1 AND pt.active=1
+          AND NOT EXISTS (SELECT 1 FROM plan_task_templates x JOIN task_templates t ON t.id=x.task_template_id
+            WHERE x.plan_type_id=pt.id AND t.active=1)) AS emptyPlanCount,
+        (SELECT count(*) FROM user_profiles p WHERE p.venue_id=?1 AND p.role='planner' AND p.status='active') AS plannerCount,
+        (SELECT count(*) FROM user_profiles p WHERE p.venue_id=?1 AND p.role='planner' AND p.status='invited') AS invitedCount`,
+    )
+    .bind(venueId)
+    .first<{
+      templateCount: number;
+      planCount: number;
+      emptyPlanCount: number;
+      plannerCount: number;
+      invitedCount: number;
+    }>();
+  return (
+    row ?? { templateCount: 0, planCount: 0, emptyPlanCount: 0, plannerCount: 0, invitedCount: 0 }
+  );
+}

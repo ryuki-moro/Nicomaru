@@ -22,8 +22,8 @@ export function TemplateDraftPanel({ existing }: Props) {
   if (draft.templates.length === 0) return null;
   return (
     <section className="card">
-      <AiHeading note="既存テンプレートに無い標準項目の案です。内容を直してから「新規登録」で登録してください（自動登録はしません）。">
-        AIによるテンプレート案（要確認）
+      <AiHeading note="まだ登録していない標準的なやることの案です。内容を直してから「この内容で登録へ」で登録画面に進んでください（自動では登録しません）。">
+        やることの案（要確認）
       </AiHeading>
       <div className="table-wrap mt-2">
         <table className="table">
@@ -37,7 +37,8 @@ export function TemplateDraftPanel({ existing }: Props) {
           </thead>
           <tbody>
             {rows.map((t, i) => (
-              <tr key={t.name}>
+              // 名前は編集で変わるため、キーには使わない（入力中にフォーカスが外れる）
+              <tr key={i}>
                 <td>
                   <input
                     className="field"
@@ -77,8 +78,16 @@ export function TemplateDraftPanel({ existing }: Props) {
                   />
                 </td>
                 <td>
-                  <a className="btn-ghost" href="/templates/new">
-                    新規登録へ
+                  {/* 直した内容を登録画面へ引き継ぐ。ここでは保存しない（7-1） */}
+                  <a
+                    className="btn-ghost whitespace-nowrap"
+                    href={`/templates/new?${new URLSearchParams({
+                      name: t.name,
+                      description: t.description,
+                      dueOffsetDays: String(t.due_offset_days),
+                    })}`}
+                  >
+                    この内容で登録へ
                   </a>
                 </td>
               </tr>

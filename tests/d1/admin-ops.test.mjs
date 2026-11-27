@@ -7,6 +7,7 @@ import { seedAppFixtures, ids } from '../../scripts/d1-fixtures.mjs';
 import { encryptPii } from '../../src/lib/crypto.ts';
 import { reclaimStalledAiJobs } from '../../src/lib/d1/ai.ts';
 import {
+  adminSetupD1,
   createVenueD1,
   getPlanTypeD1,
   getTemplateD1,
@@ -17,6 +18,7 @@ import {
   saveTemplateD1,
   systemSummaryD1,
   updateVenueD1,
+  venueOverviewD1,
 } from '../../src/lib/d1/admin.ts';
 import { purgeCasesD1 } from '../../src/lib/d1/case-purge.ts';
 import { collectUsageD1, monitorSystemD1 } from '../../src/lib/d1/monitoring.ts';
@@ -54,6 +56,7 @@ const MIGRATIONS = [
   '0021_admin.sql',
   '0022_follow.sql',
   '0028_case_messages.sql',
+  '0029_chat_links.sql',
 ];
 
 before(async () => {
@@ -165,6 +168,32 @@ test('notifications-dispatch: 期限N日前の未提出に in_app 通知を作�
   assert.ok(rows.results.every((r) => r.status === 'sent' && r.channel === 'in_app'));
   const second = await dispatchNotificationsD1(db);
   assert.equal(second.created, 0);
+  // チャットへのシステムメッセージも同じ日に二重には流れない
+  const soon = await db
+    .prepare(
+      "SELECT m.actor_user_id FROM case_messages m JOIN case_message_refs r ON r.message_id=m.id WHERE m.event_type='task_due_soon' AND r.ref_id='task-soon'",
+    )
+    .all();
+  assert.equal(soon.results.length, 1);
+  assert.equal(soon.results[0].actor_user_id, null);
+});
+
+test('notifications-dispatch: 期限切れはチャットへ最初の1回だけ流れる', async () => {
+  await db
+    .prepare(
+      "INSERT INTO case_tasks(id,case_id,title,due_date,status,importance) VALUES ('task-late', ?, '期限切れの宿題', '2020-01-01', 'not_started', 'normal')",
+    )
+    .bind(ids.caseA)
+    .run();
+  await dispatchNotificationsD1(db);
+  await dispatchNotificationsD1(db);
+  const late = await db
+    .prepare(
+      "SELECT m.kind FROM case_messages m JOIN case_message_refs r ON r.message_id=m.id WHERE m.event_type='task_overdue' AND r.ref_id='task-late'",
+    )
+    .all();
+  assert.equal(late.results.length, 1);
+  assert.equal(late.results[0].kind, 'system');
 });
 
 test('case-purge: 180日超のアーカイブ案件の個人情報とファイルを消し、AI保持も効く', async () => {
@@ -334,4 +363,59 @@ test('system summary: 件数と監視・集計が D1 から返る', async () => 
   assert.ok(s.usage);
   assert.ok(Array.isArray(s.alerts));
   await assert.rejects(systemSummaryD1(db, adminA()), { status: 403 });
+});
+
+test('venue overview: 式場ごとの件数を返し、system_admin 以外は 403', async () => {
+  const rows = await venueOverviewD1(db, system());
+  const a = rows.find((r) => r.id === ids.venueA);
+  assert.ok(a);
+  assert.equal(typeof a.active, 'boolean');
+  assert.ok(a.adminCount >= 1);
+  assert.ok(a.plannerCount >= 1);
+  assert.ok(a.activeCaseCount >= 1);
+  assert.ok(a.emptyPlanCount <= a.planCount);
+  // 個人情報の列は返さない
+  assert.deepEqual(
+    Object.keys(a).filter((k) => /email|name_kana|phone/.test(k)),
+    [],
+  );
+  await assert.rejects(venueOverviewD1(db, adminA()), { status: 403 });
+});
+
+test('admin setup: 自式場の準備の件数を返し、admin 以外は 403', async () => {
+  const s = await adminSetupD1(db, adminA());
+  for (const key of [
+    'templateCount',
+    'planCount',
+    'emptyPlanCount',
+    'plannerCount',
+    'invitedCount',
+  ])
+    assert.equal(typeof s[key], 'number');
+  assert.ok(s.plannerCount >= 1);
+  assert.ok(s.emptyPlanCount <= s.planCount);
+  await assert.rejects(adminSetupD1(db, system()), { status: 403 });
+  await assert.rejects(adminSetupD1(db, plannerA()), { status: 403 });
+});
+
+test('admin setup: 割当先のやることがすべて停止中のプランも「やることが無い」と数える', async () => {
+  const before = (await adminSetupD1(db, adminA())).emptyPlanCount;
+  await db.batch([
+    db
+      .prepare(
+        "INSERT INTO task_templates(id,venue_id,name,active) VALUES (?,?,'停止中のやること',0)",
+      )
+      .bind('tt-stopped', ids.venueA),
+    db
+      .prepare(
+        "INSERT INTO plan_types(id,venue_id,name,active) VALUES (?,?,'停止中だけのプラン',1)",
+      )
+      .bind('pt-stopped', ids.venueA),
+    db
+      .prepare('INSERT INTO plan_task_templates(plan_type_id,task_template_id) VALUES (?,?)')
+      .bind('pt-stopped', 'tt-stopped'),
+  ]);
+  assert.equal((await adminSetupD1(db, adminA())).emptyPlanCount, before + 1);
+  const venueA = (await venueOverviewD1(db, system())).find((r) => r.id === ids.venueA);
+  assert.ok(venueA.emptyPlanCount >= 1);
 });

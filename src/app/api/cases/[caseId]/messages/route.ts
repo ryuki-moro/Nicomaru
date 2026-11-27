@@ -47,10 +47,10 @@ export const POST = route(
     const user = await requireAppUser();
     const { caseId } = await context.params;
     if (!isUuid(caseId)) throw notFound();
-    const { body } = await parseBody(request, chatMessageSchema);
+    const { body, refs } = await parseBody(request, chatMessageSchema);
     const db = await localDB();
     await userRateLimit(db, 'chat_post', user.id, RATE_LIMITS.chatPost);
-    const message = await postMessage(db, user, caseId, body);
+    const message = await postMessage(db, user, caseId, body, refs);
     await sendChatSignal({
       type: 'message',
       caseId,

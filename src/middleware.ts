@@ -130,9 +130,10 @@ export async function middleware(request: NextRequest) {
       /^\/api\/cases\/[^/]+\/(?:seating-layouts(?:\/[^/]+)?|seating-chart(?:\/(?:submit|review))?)$/.test(
         path,
       );
-    const chat = /^\/api\/(?:cases\/[^/]+\/messages(?:\/(?:read|ticket))?|messages\/[^/]+)$/.test(
-      path,
-    );
+    const chat =
+      /^\/api\/(?:cases\/[^/]+\/(?:messages(?:\/(?:read|ticket))?|chat-refs)|messages\/[^/]+(?:\/task)?)$/.test(
+        path,
+      );
     const adminPages =
       /^\/(?:templates\/[^/]+|venues\/[^/]+|api\/venues\/[^/]+)$/.test(path) &&
       path !== '/venues/new';
