@@ -637,8 +637,27 @@ export const aiJobReviewSchema = z.object({
   output: z.unknown().optional(),
 });
 
-/** POST /api/cases/{caseId}/messages。前後の空白を除いて1文字以上 */
-export const chatMessageSchema = z.object({
-  body: z.string().trim().min(1, '入力してください').max(INPUT_LIMITS.textArea),
+/** POST /api/cases/{caseId}/messages。前後の空白を除いて、本文か添付のどちらかが必要（添付は3件まで） */
+export const chatMessageSchema = z
+  .object({
+    body: z.string().trim().max(INPUT_LIMITS.textArea).default(''),
+    refs: z
+      .array(
+        z.object({
+          type: z.enum(['task', 'guest', 'seating']),
+          id: z.string().min(1).max(100),
+        }),
+      )
+      .max(3, '添付は3件までです')
+      .default([]),
+  })
+  .refine((v) => v.body !== '' || v.refs.length > 0, {
+    path: ['body'],
+    message: '入力してください',
+  });
+/** GET /api/cases/{caseId}/chat-refs。添付する項目の候補検索 */
+export const chatRefQuerySchema = z.object({
+  type: z.enum(['task', 'guest', 'seating']),
+  q: z.string().trim().max(100).default(''),
 });
 export const chatReadSchema = z.object({ cursor: z.string().min(1).max(100) });

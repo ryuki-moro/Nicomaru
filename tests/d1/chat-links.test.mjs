@@ -5,6 +5,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { getPlatformProxy } from 'wrangler';
 import { encryptPii } from '../../src/lib/crypto.ts';
 import { seedAppFixtures, ids } from '../../scripts/d1-fixtures.mjs';
+import { listRefCandidates } from '../../src/lib/d1/chat-refs.ts';
 import { purgeCasesD1 } from '../../src/lib/d1/case-purge.ts';
 import {
   listMessages,
@@ -207,6 +208,25 @@ test('システムメッセージ（発言者なし）は未読に数え、取�
     .run();
   assert.equal(await unread(bride()), brideBefore + 1);
   assert.equal(await unread(planner()), plannerBefore + 2);
+});
+
+test('添付の候補は閲覧者の範囲だけで、検索語で絞れる', async () => {
+  const tasks = await listRefCandidates(db, planner(), ids.caseA, 'task', '');
+  assert.ok(tasks.some((t) => t.id === taskA && t.title === '出席者の確認'));
+  assert.ok(!tasks.some((t) => t.id === 'task-caseB'));
+  assert.deepEqual(await listRefCandidates(db, bride(), ids.caseA, 'task', '存在しない語'), []);
+  const guests = await listRefCandidates(db, bride(), ids.caseA, 'guest', '山田');
+  assert.deepEqual(
+    guests.map((g) => [g.id, g.title]),
+    [[guestA, '山田 太郎']],
+  );
+  assert.deepEqual(
+    (await listRefCandidates(db, planner(), ids.caseA, 'seating', '')).map((c) => c.id),
+    [ids.caseA],
+  );
+  // 別案件の担当者・別式場の新郎新婦は 404
+  for (const u of [actor('planner', ids.plannerA2), actor('couple', ids.coupleB, ids.venueB)])
+    await assert.rejects(listRefCandidates(db, u, ids.caseA, 'task', ''), { status: 404 });
 });
 
 test('取り消すと添付も外れ、案件の削除バッチで参照も消える', async () => {

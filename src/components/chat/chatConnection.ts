@@ -350,7 +350,7 @@ export class ChatConnection {
     await this.deps.api.del(`/api/messages/${id}`);
     const target = this.state.messages.find((m) => m.id === id);
     if (target) {
-      const done = { ...target, retracted: true, body: null };
+      const done = { ...target, retracted: true, body: null, refs: [] };
       this.set({ messages: mergeMessages(this.state.messages, [done]) });
     }
   }
