@@ -30,4 +30,3 @@ export function d1HomeCrumbFor(role: Role): Required<Crumb> | undefined {
 export function homeCrumbFor(role: Role): Crumb {
   return (publicD1() ? d1HomeCrumbFor(role) : undefined) ?? DASHBOARD_CRUMB;
 }
-

@@ -347,6 +347,9 @@ test('venue overview: 式場ごとの件数を返し、system_admin 以外は 40
   assert.ok(a.activeCaseCount >= 1);
   assert.ok(a.emptyPlanCount <= a.planCount);
   // 個人情報の列は返さない
-  assert.deepEqual(Object.keys(a).filter((k) => /email|name_kana|phone/.test(k)), []);
+  assert.deepEqual(
+    Object.keys(a).filter((k) => /email|name_kana|phone/.test(k)),
+    [],
+  );
   await assert.rejects(venueOverviewD1(db, adminA()), { status: 403 });
 });
