@@ -2,10 +2,16 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
+import { verifyPassword } from 'better-auth/crypto';
 import { getPlatformProxy } from 'wrangler';
 import { encryptPii } from '../../src/lib/crypto.ts';
 import { seedDemoFixtures } from '../../scripts/d1-demo-fixtures.mjs';
-import { DEMO_CASES } from '../../scripts/demo/scenario.ts';
+import {
+  DEMO_ADMIN,
+  DEMO_CASES,
+  DEMO_PLANNER,
+  DEMO_SYSTEM_ADMIN,
+} from '../../scripts/demo/scenario.ts';
 import { listMessages, unreadCounts } from '../../src/lib/d1/messages.ts';
 
 const VENUE_ID = '11111111-1111-4111-8111-111111111111';
@@ -68,4 +74,30 @@ test('デモのチャット: 主役の案件に会話が入り、本文は復号
   const couple = actor('couple', items.find((m) => m.senderSide === 'couple').senderUserId);
   assert.equal((await unreadCounts(db, couple, [id]))[id], 1);
   assert.equal((await unreadCounts(db, planner, [id]))[id], 0);
+});
+
+test('デモのアカウント: 4役割が作られ、同じパスワードで認証できる（システム管理者は式場なし）', async () => {
+  const db = platform.env.DB;
+  const rows = [
+    [DEMO_SYSTEM_ADMIN.email, 'system_admin', null],
+    [DEMO_ADMIN.email, 'admin', VENUE_ID],
+    [DEMO_PLANNER.email, 'planner', VENUE_ID],
+  ];
+  const couple = await db
+    .prepare(
+      'SELECT u.email FROM "user" u JOIN user_profiles p ON p.id=u.id WHERE p.role=\'couple\' LIMIT 1',
+    )
+    .first();
+  rows.push([couple.email, 'couple', VENUE_ID]);
+  for (const [email, role, venueId] of rows) {
+    const found = await db
+      .prepare(
+        'SELECT p.role, p.venue_id, a.password FROM "user" u JOIN user_profiles p ON p.id=u.id JOIN account a ON a.userId=u.id WHERE u.email=?',
+      )
+      .bind(email)
+      .first();
+    assert.equal(found.role, role, email);
+    assert.equal(found.venue_id, venueId, email);
+    assert.ok(await verifyPassword({ hash: found.password, password: 'demo-password' }), email);
+  }
 });
