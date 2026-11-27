@@ -44,6 +44,20 @@ export interface CaseEditInitial {
   primaryPlannerId: string;
 }
 
+/** 画面上の並び順。id は各入力欄の id と同じ */
+const FIELD_ORDER: (keyof CaseEditInitial)[] = [
+  'weddingDate',
+  'weddingTime',
+  'groomName',
+  'brideName',
+  'primaryContact',
+  'contactEmail',
+  'contactChannel',
+  'guestCount',
+  'planTypeId',
+  'primaryPlannerId',
+];
+
 interface PlanChangePreview {
   weddingDate: string;
   planChanged: boolean;
@@ -76,20 +90,21 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const updateButtonRef = useRef<HTMLButtonElement>(null);
 
+  // 画面は読み込み中の仮表示から段階的に描かれ、操作できるようになる前に入力されることがある。
+  // その入力は state に入らず、未変更として送られてしまうため、操作可能になった時点の値を取り込む。
   useEffect(() => {
-    const fieldOrder = [
-      'weddingDate',
-      'weddingTime',
-      'groomName',
-      'brideName',
-      'primaryContact',
-      'contactEmail',
-      'contactChannel',
-      'guestCount',
-      'planTypeId',
-      'primaryPlannerId',
-    ];
-    const firstInvalid = fieldOrder.find((field) => fieldErrors[field]);
+    const typed: Partial<CaseEditInitial> = {};
+    for (const field of FIELD_ORDER) {
+      const el = document.getElementById(field) as HTMLInputElement | HTMLSelectElement | null;
+      if (el && el.value !== initial[field]) Object.assign(typed, { [field]: el.value });
+    }
+    // 画面の外(DOM)の値を一度だけ取り込む同期で、派生した状態ではない
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (Object.keys(typed).length) setForm((prev) => ({ ...prev, ...typed }));
+  }, [initial]);
+
+  useEffect(() => {
+    const firstInvalid = FIELD_ORDER.find((field) => fieldErrors[field]);
     if (!firstInvalid) return;
     const input = document.getElementById(firstInvalid);
     input?.focus({ preventScroll: true });
