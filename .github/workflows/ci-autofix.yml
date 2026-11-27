@@ -152,7 +152,14 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh run view "$RUN_ID" --log-failed | tail -c 80000 > "$RUNNER_TEMP/ci-failure.log"
+        run: |
+          set -euo pipefail
+          gh run view "$RUN_ID" --log-failed | tail -c 80000 > "$RUNNER_TEMP/ci-failure.log"
+          # 失敗がPRの意図した仕様変更によるもの（テストの期待値が古い）かを判断できるよう、PRの説明と差分も渡す
+          if [ -n "$PR" ]; then
+            { gh pr view "$PR" --json title,body --jq '.title, .body'; echo; gh pr diff "$PR"; } > "$RUNNER_TEMP/pr-full.diff"
+            head -c 200000 "$RUNNER_TEMP/pr-full.diff" > "$RUNNER_TEMP/pr.diff"
+          fi
 
       # secret を貼り付けたときに混ざった空白・改行を除く（トークンに空白は含まれない）。
       # 先頭に空白が入った値で認証が通らず、1ターン目で失敗したことがある
@@ -187,8 +194,11 @@ jobs:
             このCIが失敗しました。失敗したジョブのログは ${{ runner.temp }}/ci-failure.log にあります。
             ワークフローの定義は .github/workflows/ci.yml です。
 
-            1. ログから失敗の原因を特定する。
+            1. ログから失敗の原因を特定する。PRのときは ${{ runner.temp }}/pr.diff（PRの説明と差分）も読み、
+               失敗がPRの変更とどう関係するかを確かめる。PRが触った箇所に関わる失敗を、一過性と決めつけない。
             2. コードの不具合なら、PRの意図を変えない最小の修正をする。テストを消す・弱める・skip にする修正はしない。
+               ただしPRの目的として仕様を変えたためにテストの期待値が古くなったときは、新しい仕様に合わせて期待値を更新する
+               （検証そのものは残し、何を確かめるテストかを変えない）。
                直したら該当する npm run lint / format / typecheck / test / test:d1 / build を実行して通ることを確かめる。
                security ジョブ（npm audit・gitleaks）の失敗は直さない（人が対応する）。
             3. ネットワーク・外部API・タイムアウトなど一過性の失敗で、コードに直す箇所がないなら、ファイルを変更しない。
