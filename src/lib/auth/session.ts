@@ -8,7 +8,7 @@
  *     API 層はこの状態を 403（FORBIDDEN）として扱い、再ログインを促す（6-3-4）。
  */
 import { d1HomeCrumbFor } from '@/components/layout/breadcrumbItems';
-import { isStaff, type Role } from '@/lib/constants';
+import { CASE_WORK_ROLES, isStaff, type Role } from '@/lib/constants';
 import { forbidden, unauthenticated } from '@/lib/errors';
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
@@ -75,6 +75,8 @@ export async function requireRole(...roles: Role[]): Promise<AppUser> {
   if (!roles.includes(user.role)) throw forbidden();
   return user;
 }
+/** 案件・提出物・通知の API で使う。system_admin は案件を扱わないので 403。 */
+export const requireCaseWorker = (): Promise<AppUser> => requireRole(...CASE_WORK_ROLES);
 /** ログイン後の遷移先（4-2）。 */
 export function landingPathFor(role: Role): string {
   const d1 = d1HomeCrumbFor(role);

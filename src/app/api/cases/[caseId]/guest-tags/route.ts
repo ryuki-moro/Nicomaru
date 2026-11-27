@@ -16,7 +16,7 @@ export const POST = route(
       }>;
     },
   ) => {
-    const user = await requireRole('couple', 'planner', 'admin', 'system_admin');
+    const user = await requireRole('couple', 'planner', 'admin');
     const { caseId } = await context.params;
     const input = await parseBody(request, guestTagSchema);
     {

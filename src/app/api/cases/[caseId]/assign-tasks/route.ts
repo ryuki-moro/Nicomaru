@@ -13,7 +13,7 @@
  * 自動リトライは行わない（二重作成回避）。失敗時はエラーを返し、画面側で再実行を促す。
  */
 import { ok, route } from '@/lib/api/route';
-import { requireRole } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 export const POST = route(
   async (
     _request: Request,
@@ -23,7 +23,7 @@ export const POST = route(
       }>;
     },
   ) => {
-    const actor = await requireRole('planner', 'admin', 'system_admin');
+    const actor = await requireCaseWorker();
     const { caseId } = await context.params;
     {
       const { localDB } = await import('@/lib/d1/runtime');

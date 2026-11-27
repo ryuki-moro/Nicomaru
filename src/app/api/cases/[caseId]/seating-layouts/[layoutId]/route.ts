@@ -6,7 +6,7 @@
  *   DELETE 配置パターンを消す（その卓の割り当ては未配置に戻る）
  */
 import { noContent, ok, parseBody, route } from '@/lib/api/route';
-import { requireRole } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import { seatingLayoutOfferSchema, seatingLayoutSchema } from '@/lib/validation';
 type Context = {
   params: Promise<{
@@ -16,7 +16,7 @@ type Context = {
 };
 const d1Only = () => {};
 export const PUT = route(async (request: Request, context: Context) => {
-  const user = await requireRole('planner', 'admin', 'system_admin');
+  const user = await requireCaseWorker();
   const { caseId, layoutId } = await context.params;
   const input = await parseBody(request, seatingLayoutSchema);
   d1Only();
@@ -27,7 +27,7 @@ export const PUT = route(async (request: Request, context: Context) => {
   return ok({ id, layouts: await loadSeatingLayouts(db, user, caseId) });
 });
 export const PATCH = route(async (request: Request, context: Context) => {
-  const user = await requireRole('planner', 'admin', 'system_admin');
+  const user = await requireCaseWorker();
   const { layoutId } = await context.params;
   const input = await parseBody(request, seatingLayoutOfferSchema);
   d1Only();
@@ -37,7 +37,7 @@ export const PATCH = route(async (request: Request, context: Context) => {
   return noContent();
 });
 export const DELETE = route(async (_request: Request, context: Context) => {
-  const user = await requireRole('planner', 'admin', 'system_admin');
+  const user = await requireCaseWorker();
   const { layoutId } = await context.params;
   d1Only();
   const { localDB } = await import('@/lib/d1/runtime');

@@ -11,7 +11,7 @@
  * AI の出力が業務データへ反映されることはない。
  */
 import { ok, parseBody, route } from '@/lib/api/route';
-import { requireStaff } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import { jobRow, reviewJob } from '@/lib/d1/ai';
 import { localDB } from '@/lib/d1/runtime';
 import { aiJobReviewSchema } from '@/lib/validation';
@@ -25,7 +25,7 @@ export const GET = route(
       }>;
     },
   ) => {
-    const user = await requireStaff();
+    const user = await requireCaseWorker();
     const { jobId } = await context.params;
     return ok(await jobRow(await localDB(), user, jobId));
   },
@@ -39,7 +39,7 @@ export const PATCH = route(
       }>;
     },
   ) => {
-    const user = await requireStaff();
+    const user = await requireCaseWorker();
     const { jobId } = await context.params;
     const input = await parseBody(request, aiJobReviewSchema);
     return ok(await reviewJob(await localDB(), user, jobId, input.decision, input.output));

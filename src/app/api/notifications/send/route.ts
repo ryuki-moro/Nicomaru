@@ -10,11 +10,11 @@
  * 第11章「通知文面レビュー」が求める文面の統制を、送信経路の側で担保するため。
  */
 import { ok, parseBody, route } from '@/lib/api/route';
-import { requireStaff } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import { notificationSendSchema } from '@/lib/validation';
 export const runtime = 'nodejs';
 export const POST = route(async (request: Request) => {
-  const user = await requireStaff();
+  const user = await requireCaseWorker();
   const input = await parseBody(request, notificationSendSchema);
   {
     const { localDB } = await import('@/lib/d1/runtime');

@@ -10,7 +10,7 @@
  * 失効と発行を別々に呼ぶとトークンが2本同時に有効な瞬間が生まれるため、DB側の1関数へ閉じている。
  */
 import { ok, parseBody, route } from '@/lib/api/route';
-import { requireRole } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import {
   COUPLE_PROFILE_COLUMNS,
   type ContactChannel,
@@ -91,7 +91,7 @@ export const GET = route(
       }>;
     },
   ) => {
-    const actor = await requireRole('planner', 'admin', 'system_admin');
+    const actor = await requireCaseWorker();
     const { caseId } = await context.params;
     {
       const { localDB } = await import('@/lib/d1/runtime');
@@ -110,7 +110,7 @@ export const POST = route(
       }>;
     },
   ) => {
-    const actor = await requireRole('planner', 'admin', 'system_admin');
+    const actor = await requireCaseWorker();
     const { caseId } = await context.params;
     {
       const input = await parseBody(request, invitationIssueSchema.strict());

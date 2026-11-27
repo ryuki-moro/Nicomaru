@@ -4,7 +4,7 @@
  * 正本: 基本設計書 Version 1.2 4-3 M05／N01／7-3。
  *
  * 範囲は RLS に委ねる（6-5「認証確認は JWT を検証し、その後の権限範囲は RLS に委譲する」）。
- * notifications_select は「受信者本人／自式場の admin／自担当案件の planner／system_admin」を許す。
+ * 範囲は「受信者本人／自式場の admin／自担当案件の planner」。system_admin は案件の通知を見ない。
  */
 import { ok, route } from '@/lib/api/route';
 import { requireAppUser } from '@/lib/auth/session';

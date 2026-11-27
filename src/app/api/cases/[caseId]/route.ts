@@ -12,7 +12,7 @@
  * （schedule.ts）で1度だけ行い、その結果をそのまま apply_case_update() へ渡す。
  */
 import { ok, parseBody, route } from '@/lib/api/route';
-import { requireStaff } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import { COUPLE_PROFILE_COLUMNS, type TaskStatus } from '@/lib/constants';
 import { casePatchSchema } from '@/lib/validation';
 interface CaseDetailRow {
@@ -58,7 +58,7 @@ export const GET = route(
       }>;
     },
   ) => {
-    const user = await requireStaff();
+    const user = await requireCaseWorker();
     const { caseId } = await context.params;
     {
       const { localDB } = await import('@/lib/d1/runtime');
@@ -87,7 +87,7 @@ export const PATCH = route(
       }>;
     },
   ) => {
-    const actor = await requireStaff();
+    const actor = await requireCaseWorker();
     const { caseId } = await context.params;
     {
       const input = await parseBody(request, casePatchSchema.strict());
