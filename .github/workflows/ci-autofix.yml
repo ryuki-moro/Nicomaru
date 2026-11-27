@@ -68,7 +68,7 @@ jobs:
               fi
               ;;
             *)
-              pr=$(gh pr list --head "$BRANCH" --state open --json number,isDraft,headRefOid,labels,commits --jq '.[0] // empty')
+              pr=$(gh pr list --head "$BRANCH" --state open --json number,isDraft,headRefOid,labels --jq '.[0] // empty')
               if [ -z "$pr" ]; then echo "開いているPRがないため見送り"; exit 0; fi
               num=$(jq -r .number <<< "$pr")
               if [ "$(jq -r .isDraft <<< "$pr")" = "true" ]; then echo "#$num は下書きのため見送り"; exit 0; fi
@@ -88,7 +88,18 @@ jobs:
             exit 0
           fi
           if [ -z "$num" ]; then echo "go=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-          done_count=$(jq '[.commits[] | select(.messageHeadline | contains("[ci-autofix]"))] | length' <<< "$pr")
+          # gh pr list --json commits は先頭100件しか返さないため、PRの全コミットをページ送りで数える
+          done_count=$(gh api graphql --paginate -f owner="${GH_REPO%/*}" -f name="${GH_REPO#*/}" -F num="$num" -f query='
+            query($owner: String!, $name: String!, $num: Int!, $endCursor: String) {
+              repository(owner: $owner, name: $name) {
+                pullRequest(number: $num) {
+                  commits(first: 100, after: $endCursor) {
+                    nodes { commit { messageHeadline } }
+                    pageInfo { hasNextPage endCursor }
+                  }
+                }
+              }
+            }' --jq '.data.repository.pullRequest.commits.nodes[].commit.messageHeadline' | { grep -cF '[ci-autofix]' || true; })
           if [ "$done_count" -ge "$MAX_ATTEMPTS" ]; then
             gh pr edit "$num" --add-label "自動修正しない"
             gh pr comment "$num" --body "CIの自動修正を${MAX_ATTEMPTS}回試しても通らないため止めました。原因を確認してください（再開するときは「自動修正しない」ラベルを外す）。失敗した実行: ${GITHUB_SERVER_URL}/${GH_REPO}/actions/runs/${RUN_ID}"
