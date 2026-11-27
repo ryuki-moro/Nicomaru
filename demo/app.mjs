@@ -125,7 +125,7 @@ function render(focusMain = false) {
       ? navLink('dashboard', 'ダッシュボード', current.page === 'dashboard') +
         navLink('cases', '案件一覧', ['cases', 'case', 'prep'].includes(current.page))
       : navLink(`mypage/${selectedId}`, 'ホーム', current.page === 'mypage') +
-        navLink(`tasks/${selectedId}`, '宿題', current.page === 'tasks') +
+        navLink(`tasks/${selectedId}`, 'やること', current.page === 'tasks') +
         navLink(`timeline/${selectedId}`, 'タイムライン', current.page === 'timeline');
   app.innerHTML = `<header class="app-header"><div class="container header-inner">
     <a class="brand" href="#${role === 'planner' ? 'dashboard' : `mypage/${selectedId}`}" aria-label="Bellink ホーム"><span class="brand-mark" aria-hidden="true">B</span>Bellink</a>
@@ -163,7 +163,7 @@ function dashboard() {
   return `${heading('ダッシュボード', '佐藤 花子さんの担当状況です。', button('案件を登録', 'new-case', '', 'primary'))}
     <section class="summary-grid" aria-label="担当状況">${[
       [state.cases.length, '担当案件数'],
-      [pending, '未提出の宿題'],
+      [pending, '未提出のやること'],
       [high, '要フォローの案件'],
     ]
       .map(
@@ -185,7 +185,7 @@ function dashboard() {
             .join('')
         : '<div class="empty-state">いま気にかけたい案件はありません。</div>'
     }</div></section>
-    <section class="section-gap card"><h2>デモの試し方</h2><ol class="reason-list"><li>「案件一覧」から気になる案件を開きます。</li><li>「新郎新婦の画面で見る」で宿題を提出します。</li><li>「プランナー」に切り替えて、提出内容を確認します。</li><li>提出済の宿題カードと準備シートでは、デモ用AI（分類・下書き・起票案）も試せます。</li></ol><a class="button primary" href="#cases">案件一覧を見る</a></section>
+    <section class="section-gap card"><h2>デモの試し方</h2><ol class="reason-list"><li>「案件一覧」から気になる案件を開きます。</li><li>「新郎新婦の画面で見る」でやることを提出します。</li><li>「プランナー」に切り替えて、提出内容を確認します。</li><li>提出済みのやることカードと準備シートでは、デモ用AI（分類・下書き・起票案）も試せます。</li></ol><a class="button primary" href="#cases">案件一覧を見る</a></section>
     ${
       state.activity.length
         ? `<section class="section-gap card"><h2>最近の操作</h2><ul class="reason-list">${state.activity
@@ -239,7 +239,7 @@ function detailPage(item) {
         .reasons.map((reason) => `<li>${reason}</li>`)
         .join('') || '<li>準備は順調です。</li>'
     }</ul><a class="button primary" href="#mypage/${e(item.id)}">新郎新婦の画面で見る</a><a class="button secondary" href="#prep/${e(item.id)}">打ち合わせ準備シート</a></section></div>
-    <section class="section-gap"><h2>宿題・提出内容</h2><p class="subtitle">提出済の内容を確認して、確認済にするか修正をお願いします。</p><div class="tasks">${item.tasks.map((task) => taskCard(item, task, false)).join('')}</div></section>`;
+    <section class="section-gap"><h2>やること・提出内容</h2><p class="subtitle">提出済の内容を確認して、確認済にするか修正をお願いします。</p><div class="tasks">${item.tasks.map((task) => taskCard(item, task, false)).join('')}</div></section>`;
 }
 
 function aiPanelForTask(item, task) {
@@ -276,15 +276,15 @@ function coupleHome(item) {
   return `${heading('マイページ', `${e(coupleName(item))} さんの結婚式準備です。`)}<section class="hero"><p>${remaining >= 0 ? '結婚式まで' : '結婚式から'}</p><p class="hero-value">${Math.abs(remaining)}<small>日</small></p><p>${dateLabel(item.weddingDate)} / ${e(item.plan)}</p></section>
     <div class="couple-grid section-gap"><section class="card"><h2>次にやること</h2>${
       pending.length
-        ? `<p class="meta">未提出の宿題 ${pending.length}件</p><div class="tasks">${pending
+        ? `<p class="meta">未提出のやること ${pending.length}件</p><div class="tasks">${pending
             .slice(0, 3)
             .map(
               (task) =>
                 `<div class="task-card"><div class="task-header"><h3>${e(task.title)}</h3>${badge(task)}</div><p class="meta">${dateLabel(task.dueDate)}まで</p>${button('回答して提出', 'submit', taskAttrs(item, task), 'primary small')}</div>`,
             )
             .join('')}</div>`
-        : '<p>宿題はすべて提出済です。ご準備ありがとうございます。</p>'
-    }<a class="button secondary section-gap" href="#tasks/${e(item.id)}">すべての宿題を見る</a></section><section class="card stack"><h2>準備の進み具合</h2>${progress(item)}<p>確認済 ${item.tasks.filter((task) => task.status === 'confirmed').length} / ${item.tasks.length}件</p><h3>プランナーからのメモ</h3><p class="task-body">${e(item.notes) || 'メモはありません。'}</p><a class="button secondary" href="#timeline/${e(item.id)}">準備のタイムライン</a></section></div>`;
+        : '<p>やることはすべて提出済です。ご準備ありがとうございます。</p>'
+    }<a class="button secondary section-gap" href="#tasks/${e(item.id)}">すべてのやることを見る</a></section><section class="card stack"><h2>準備の進み具合</h2>${progress(item)}<p>確認済 ${item.tasks.filter((task) => task.status === 'confirmed').length} / ${item.tasks.length}件</p><h3>プランナーからのメモ</h3><p class="task-body">${e(item.notes) || 'メモはありません。'}</p><a class="button secondary" href="#timeline/${e(item.id)}">準備のタイムライン</a></section></div>`;
 }
 
 function coupleTasks(item) {
@@ -297,7 +297,7 @@ function coupleTasks(item) {
           : task.status === filters.task),
     )
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  return `${heading('宿題', '入力した回答はデモ内で共有され、実際の送信は行われません。')}<div class="toolbar"><div><label class="field-label" for="task-filter">提出状況</label><select class="field" id="task-filter">${[
+  return `${heading('やること', '入力した回答はデモ内で共有され、実際の送信は行われません。')}<div class="toolbar"><div><label class="field-label" for="task-filter">提出状況</label><select class="field" id="task-filter">${[
     ['all', 'すべて'],
     ['pending', '未提出'],
     ['submitted', '提出済'],
@@ -310,12 +310,12 @@ function coupleTasks(item) {
     )
     .join(
       '',
-    )}</select></div></div><div class="tasks">${tasks.map((task) => taskCard(item, task, true)).join('') || '<div class="empty-state">この条件の宿題はありません。</div>'}</div>`;
+    )}</select></div></div><div class="tasks">${tasks.map((task) => taskCard(item, task, true)).join('') || '<div class="empty-state">この条件のやることはありません。</div>'}</div>`;
 }
 
 function timelinePage(item) {
   const tasks = [...item.tasks].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  return `${heading('準備のタイムライン', '宿題の期限と挙式日を一覧で確認できます。')}<ol class="timeline">${tasks.map((task) => `<li class="timeline-item card"><p class="meta">${dateLabel(task.dueDate)}</p><div class="task-header"><h2>${e(task.title)}</h2>${badge(task)}</div><p>${e(task.description)}</p><a class="button secondary small" href="#tasks/${e(item.id)}">宿題を見る</a></li>`).join('')}<li class="timeline-item hero"><p class="meta">${dateLabel(item.weddingDate)}</p><h2>結婚式当日</h2><p>${e(coupleName(item))} さん</p></li></ol>`;
+  return `${heading('準備のタイムライン', 'やることの期限と挙式日を一覧で確認できます。')}<ol class="timeline">${tasks.map((task) => `<li class="timeline-item card"><p class="meta">${dateLabel(task.dueDate)}</p><div class="task-header"><h2>${e(task.title)}</h2>${badge(task)}</div><p>${e(task.description)}</p><a class="button secondary small" href="#tasks/${e(item.id)}">やることを見る</a></li>`).join('')}<li class="timeline-item hero"><p class="meta">${dateLabel(item.weddingDate)}</p><h2>結婚式当日</h2><p>${e(coupleName(item))} さん</p></li></ol>`;
 }
 
 function aiPrepPanel(item) {
@@ -325,17 +325,17 @@ function aiPrepPanel(item) {
     : '';
   const proposals = work.proposals
     ? work.proposals.length
-      ? `<div><p class="field-label">宿題の起票案（打ち合わせメモから。追加する案だけ選んでください）</p>${work.proposals.map((p, i) => `<label class="ai-proposal"><input type="checkbox" name="ai-proposal" value="${i}" checked> <strong>${e(p.title)}</strong> <span class="meta">期限の目安: ${e(p.due_hint || 'なし')} → ${dateLabel(p.dueDate)}</span><br><span class="meta">${e(p.description)}</span></label>`).join('')}<div class="task-actions">${button('選んだ案を宿題に追加する', 'ai-proposals-add', caseAttrs(item), 'primary small')}</div></div>`
+      ? `<div><p class="field-label">やることの起票案（打ち合わせメモから。追加する案だけ選んでください）</p>${work.proposals.map((p, i) => `<label class="ai-proposal"><input type="checkbox" name="ai-proposal" value="${i}" checked> <strong>${e(p.title)}</strong> <span class="meta">期限の目安: ${e(p.due_hint || 'なし')} → ${dateLabel(p.dueDate)}</span><br><span class="meta">${e(p.description)}</span></label>`).join('')}<div class="task-actions">${button('選んだ案をやることに追加する', 'ai-proposals-add', caseAttrs(item), 'primary small')}</div></div>`
       : '<p class="meta">打ち合わせメモから起票案を作れませんでした。メモに「〜してください」「○月○日まで」などを書くと案になります。</p>'
     : '';
-  return `<section class="card ai-panel no-print"><h2>デモ用AI補助（準備シート下書き・宿題起票案）</h2>${AI_NOTE}
-    <div class="task-actions">${button('AIで要点の下書きを作る', 'ai-sheet-generate', caseAttrs(item), 'secondary small')}${button('メモから宿題案を作る', 'ai-proposals-generate', caseAttrs(item), 'secondary small')}</div>
+  return `<section class="card ai-panel no-print"><h2>デモ用AI補助（準備シート下書き・やること起票案）</h2>${AI_NOTE}
+    <div class="task-actions">${button('AIで要点の下書きを作る', 'ai-sheet-generate', caseAttrs(item), 'secondary small')}${button('メモからやること案を作る', 'ai-proposals-generate', caseAttrs(item), 'secondary small')}</div>
     ${sheet}${proposals}</section>`;
 }
 
 function prepPage(item) {
   const pending = pendingTasks(item);
-  return `<p class="meta no-print"><a href="#case/${e(item.id)}">案件詳細へ戻る</a></p>${heading('打ち合わせ前準備シート', e(coupleName(item)), button('印刷する', 'print', '', 'secondary no-print'))}${aiPrepPanel(item)}<article class="card stack section-gap">${caseInfo(item)}<h2>今回確認したいこと</h2><ul class="reason-list">${pending.map((task) => `<li>${e(task.title)} / ${STATUS_LABELS[task.status]} / 期限 ${dateLabel(task.dueDate)}</li>`).join('') || '<li>未提出の宿題はありません。</li>'}</ul><h2>確認待ちの提出</h2><ul class="reason-list">${
+  return `<p class="meta no-print"><a href="#case/${e(item.id)}">案件詳細へ戻る</a></p>${heading('打ち合わせ前準備シート', e(coupleName(item)), button('印刷する', 'print', '', 'secondary no-print'))}${aiPrepPanel(item)}<article class="card stack section-gap">${caseInfo(item)}<h2>今回確認したいこと</h2><ul class="reason-list">${pending.map((task) => `<li>${e(task.title)} / ${STATUS_LABELS[task.status]} / 期限 ${dateLabel(task.dueDate)}</li>`).join('') || '<li>未提出のやることはありません。</li>'}</ul><h2>確認待ちの提出</h2><ul class="reason-list">${
     item.tasks
       .filter((task) => task.status === 'submitted')
       .map(
@@ -424,7 +424,7 @@ app.addEventListener('click', (event) => {
     } else if (action === 'ai-analyze') {
       const item = caseFor(caseId);
       const task = item?.tasks.find((entry) => entry.id === taskId);
-      if (!item || !task) throw new Error('宿題が見つかりません。');
+      if (!item || !task) throw new Error('やることが見つかりません。');
       const classified = classifyText(task.answer);
       const isCsv = looksLikeCsv(task.answer);
       const work = aiWorkFor(item.id);
@@ -483,11 +483,11 @@ app.addEventListener('click', (event) => {
       const saved = persist(addTaskProposals(state, caseId, chosen));
       delete aiWork[caseId].proposals;
       render();
-      if (saved) showNotice(`AIの宿題案を${chosen.length}件追加しました。`);
+      if (saved) showNotice(`AIのやること案を${chosen.length}件追加しました。`);
     } else if (action === 'ai-draft') {
       const item = caseFor(modal?.caseId);
       const task = item?.tasks.find((entry) => entry.id === modal?.taskId);
-      if (!item || !task) throw new Error('宿題が見つかりません。');
+      if (!item || !task) throw new Error('やることが見つかりません。');
       const draft = draftMessage({
         purpose: control.dataset.purpose || 'return',
         coupleName: coupleName(item),
@@ -533,7 +533,7 @@ app.addEventListener('submit', (event) => {
       );
       message =
         modal.kind === 'submit'
-          ? 'デモ内で宿題を提出しました。プランナーに切り替えて確認できます。'
+          ? 'デモ内でやることを提出しました。プランナーに切り替えて確認できます。'
           : '修正をお願いしました。新郎新婦の画面に表示されます。';
       modal = null;
     } else return;

@@ -20,6 +20,9 @@ test('initial fictional data and deadlines are valid and follow Japan time', () 
   assert.equal(state.cases[0].weddingDate, '2026-11-03');
   assert.equal(riskFor(state.cases[0], '2026-10-09').level, 'high');
   assert.equal(riskFor(state.cases[3], '2026-10-09').level, 'low');
+  const reasons = riskFor(state.cases[0], '2026-10-09').reasons.join(' ');
+  assert.match(reasons, /やること/);
+  assert.doesNotMatch(reasons, /宿題|リスク/);
 });
 
 test('submit, request correction, resubmit and confirm share state without mutating previous data', () => {
@@ -34,7 +37,10 @@ test('submit, request correction, resubmit and confirm share state without mutat
   );
   assert.equal(initial.cases[0].tasks[0].status, 'not_started');
   assert.equal(submitted.cases[0].tasks[0].status, 'submitted');
-  assert.throws(() => transitionTask(submitted, 'demo-01', 'guests', 'submit', '再提出', now));
+  assert.throws(
+    () => transitionTask(submitted, 'demo-01', 'guests', 'submit', '再提出', now),
+    /このやることはすでに提出されています/,
+  );
   assert.throws(() => transitionTask(submitted, 'demo-01', 'guests', 'return', '  ', now));
   const returned = transitionTask(
     submitted,
