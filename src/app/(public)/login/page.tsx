@@ -61,7 +61,7 @@ export default async function LoginPage({
         <div role="note" className="banner-info">
           <span>
             デモ版です。入力は空欄のままでログインできます。「確認コードを送信」で新郎新婦、
-            「パスワードでログイン」でプランナーとして入ります。
+            「パスワードでログイン」でプランナーとして入ります。管理者の画面はその下のボタンから試せます。
           </span>
         </div>
       )}

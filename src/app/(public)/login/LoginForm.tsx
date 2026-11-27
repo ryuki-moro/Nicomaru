@@ -175,15 +175,15 @@ export function LoginForm({
       setPending(false);
     }
   };
-  // npm run demo: 入力を確かめず、方式に応じた役割でログインする
-  const signInDemo = async () => {
+  // npm run demo: 入力を確かめず、方式に応じた役割（管理者のボタンはその役割）でログインする
+  const signInDemo = async (role?: 'admin' | 'system_admin') => {
     setPending(true);
     setError(null);
     try {
       const result = await api.post<{
         redirectTo: string;
       }>('/api/auth/demo-login', {
-        role: mode === 'password' ? 'planner' : 'couple',
+        role: role ?? (mode === 'password' ? 'planner' : 'couple'),
       });
       goToLanding(result.redirectTo);
     } catch (cause) {
@@ -312,6 +312,30 @@ export function LoginForm({
           >
             メールアドレスを入力し直す
           </button>
+        </div>
+      )}
+
+      {publicDemoLogin() && mode === 'password' && (
+        <div className="flex flex-col gap-2">
+          <p className="text-caption text-text-muted">管理者の画面を試す</p>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={pending}
+              onClick={() => void signInDemo('admin')}
+            >
+              式場管理者で入る
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={pending}
+              onClick={() => void signInDemo('system_admin')}
+            >
+              システム管理者で入る
+            </button>
+          </div>
         </div>
       )}
 

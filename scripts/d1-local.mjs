@@ -155,6 +155,8 @@ const child = spawn(
         NEXT_PUBLIC_NICOMARU_DEMO_LOGIN: 'true',
         DEMO_PLANNER_EMAIL: demoLogin.planner,
         DEMO_COUPLE_EMAIL: demoLogin.couple,
+        DEMO_ADMIN_EMAIL: demoLogin.admin,
+        DEMO_SYSTEM_ADMIN_EMAIL: demoLogin.system,
         DEMO_LOGIN_PASSWORD: demoPassword,
         // 打ち合わせ記録を ?memo=demo で開くと、メモ欄にこの文面が入った状態になる
         DEMO_MEETING_MEMO: await readFile('docs/発表/AIデモ/打ち合わせメモ.txt', 'utf8').catch(

@@ -51,6 +51,16 @@ export const DEMO_PLANNER: DemoPlanner = {
   displayName: '佐藤 花子',
 };
 
+/** 管理者の画面を見せるためのアカウント。式場管理者はプランナーと同じ式場に所属する */
+export const DEMO_ADMIN: DemoPlanner = {
+  email: 'admin@nicomaru.test',
+  displayName: '高橋 健一',
+};
+export const DEMO_SYSTEM_ADMIN: DemoPlanner = {
+  email: 'system@nicomaru.test',
+  displayName: '運営 担当',
+};
+
 export interface DemoSubmission {
   template: DemoTemplateName;
   /** 提出後にプランナーがどう扱うか。submitted は「確認待ち」のまま残す */
@@ -220,5 +230,10 @@ export const DEMO_CASES: readonly DemoCase[] = [
 
 /** すべてのデモ用メールアドレス（作り直しのときに Auth ユーザーを消す対象） */
 export function demoEmails(): string[] {
-  return [DEMO_PLANNER.email, ...DEMO_CASES.flatMap((c) => [c.groom.email, c.bride.email])];
+  return [
+    DEMO_PLANNER.email,
+    DEMO_ADMIN.email,
+    DEMO_SYSTEM_ADMIN.email,
+    ...DEMO_CASES.flatMap((c) => [c.groom.email, c.bride.email]),
+  ];
 }

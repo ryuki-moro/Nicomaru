@@ -24,6 +24,8 @@ beforeEach(() => {
   vi.stubEnv('NICOMARU_DEMO_LOGIN', 'true');
   vi.stubEnv('DEMO_PLANNER_EMAIL', 'planner@example.test');
   vi.stubEnv('DEMO_COUPLE_EMAIL', 'couple@example.test');
+  vi.stubEnv('DEMO_ADMIN_EMAIL', 'admin@example.test');
+  vi.stubEnv('DEMO_SYSTEM_ADMIN_EMAIL', 'system@example.test');
   vi.stubEnv('DEMO_LOGIN_PASSWORD', 'demo-test-password');
   signIn.mockResolvedValue(
     new Response('{}', { status: 200, headers: { 'set-cookie': 'session=demo; HttpOnly' } }),
@@ -35,6 +37,8 @@ describe('POST /api/auth/demo-login', () => {
   it.each([
     ['planner', 'planner@example.test', '/cases'],
     ['couple', 'couple@example.test', '/mypage'],
+    ['admin', 'admin@example.test', '/dashboard'],
+    ['system_admin', 'system@example.test', '/dashboard'],
   ])('%s のデモアカウントで認証しCookieを渡す', async (role, email, landing) => {
     const response = await POST(request(role));
     expect(response.status).toBe(200);
@@ -60,7 +64,7 @@ describe('POST /api/auth/demo-login', () => {
 
   it('別オリジンからの要求と未知の役割は拒否する', async () => {
     expect((await POST(request('planner', { origin: 'https://evil.test' }))).status).toBe(403);
-    expect((await POST(request('admin'))).status).toBe(400);
+    expect((await POST(request('superuser'))).status).toBe(400);
     expect(signIn).not.toHaveBeenCalled();
   });
 });
