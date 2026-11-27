@@ -207,7 +207,7 @@ test('mobile screens and dialog fit narrow viewports, and reset returns to five 
     await noOverflow(page);
     await page.keyboard.press('Escape');
     await page.getByLabel('表示するカップル').selectOption('demo-02');
-    await page.getByRole('heading', { name: '宿題', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'やること', exact: true }).waitFor();
     assert.equal(new URL(page.url()).hash, '#tasks/demo-02');
     await taskCard(page, 'BGMリクエスト').getByText('不備あり', { exact: true }).waitFor();
     await page.setViewportSize({ width: 320, height: 812 });

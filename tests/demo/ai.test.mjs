@@ -81,10 +81,10 @@ test('準備シート下書き: 未提出・確認待ち・メモの分類が文
     submitted: [{ title: 'BGMリクエスト' }],
     notes: '衣装と撮影のイメージを相談しましょう。',
   });
-  assert.match(sheet.text, /未提出の宿題は 1 件/);
+  assert.match(sheet.text, /未提出のやることは 1 件/);
   assert.match(sheet.text, /確認待ちの提出は 1 件/);
   assert.match(sheet.text, /衣装/);
-  assert.ok(sheet.cautions.some((c) => c.includes('期限を過ぎた')));
+  assert.ok(sheet.cautions.some((c) => c.includes('期限を過ぎたやること')));
 });
 
 test('不備チェック: CSV解析は引用とカンマを含む住所を壊さない', () => {
@@ -131,7 +131,7 @@ test('不備チェック: 必須空欄・必須列欠損・形式違反・重複
   assert.equal(looksLikeCsv('ただの文章です'), false);
 });
 
-test('宿題起票案: 文分割と期限表現の抽出、重複の除去', () => {
+test('やること起票案: 文分割と期限表現の抽出、重複の除去', () => {
   assert.equal(extractDueHint('衣装合わせの日程を12月10日までに決めてください'), '12月10日まで');
   assert.equal(extractDueHint('席次は挙式2か月前までに確定しましょう'), '挙式2か月前まで');
   assert.equal(extractDueHint('特に期限の話はない'), '');
