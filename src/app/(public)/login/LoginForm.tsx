@@ -3,10 +3,14 @@ import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { api, ApiCallError } from '@/lib/api/client';
 import { navigateAfterSessionChange } from '@/lib/auth/navigate';
-import { OTP } from '@/lib/constants';
+import { OTP, ROLE_LABEL, type Role } from '@/lib/constants';
 import { publicDemoLogin, publicLocalD1 } from '@/lib/d1/mode';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+
+/** デモのログインで選べる役割（権限の広い順） */
+const DEMO_ROLES: readonly Role[] = ['system_admin', 'admin', 'planner', 'couple'];
+type DemoRole = Role;
 /**
  * ワンタイムコード入力（design_guide 5.4）。
  *
@@ -176,14 +180,14 @@ export function LoginForm({
     }
   };
   // npm run demo: 入力を確かめず、方式に応じた役割でログインする
-  const signInDemo = async () => {
+  const signInDemo = async (role?: DemoRole) => {
     setPending(true);
     setError(null);
     try {
       const result = await api.post<{
         redirectTo: string;
       }>('/api/auth/demo-login', {
-        role: mode === 'password' ? 'planner' : 'couple',
+        role: role ?? (mode === 'password' ? 'planner' : 'couple'),
       });
       goToLanding(result.redirectTo);
     } catch (cause) {
@@ -330,6 +334,25 @@ export function LoginForm({
           <button type="button" className="btn-secondary" onClick={() => switchMode('otp')}>
             メールでログイン（新郎新婦）
           </button>
+        )}
+
+        {publicDemoLogin() && (
+          <div className="flex flex-col gap-2" role="group" aria-label="デモの役割を選んでログイン">
+            <p className="text-caption text-text-muted">
+              デモ用: 役割を選ぶだけでログインできます（ログイン後も画面上部で切り替えられます）。
+            </p>
+            {DEMO_ROLES.map((r) => (
+              <button
+                key={r}
+                type="button"
+                className="btn-secondary"
+                disabled={pending}
+                onClick={() => void signInDemo(r)}
+              >
+                {ROLE_LABEL[r]}としてログイン
+              </button>
+            ))}
+          </div>
         )}
 
         <Link href="/password" className="btn-ghost self-center">
