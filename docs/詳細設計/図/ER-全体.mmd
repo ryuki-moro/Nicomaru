@@ -116,6 +116,15 @@ erDiagram
     text body_enc
     text created_at
     text deleted_at
+    text kind
+    text event_type
+    text actor_user_id FK
+  }
+  case_message_refs {
+    text message_id PK,FK
+    integer position PK
+    text ref_type
+    text ref_id
   }
   case_tasks {
     uuid id PK
@@ -436,7 +445,9 @@ erDiagram
   wedding_cases ||--o{ case_message_reads : "case_id"
   user_profiles ||--o{ case_message_reads : "user_id"
   wedding_cases ||--o{ case_messages : "case_id"
-  user_profiles ||--o{ case_messages : "sender_user_id"
+  user_profiles |o--o{ case_messages : "sender_user_id"
+  user_profiles |o--o{ case_messages : "actor_user_id"
+  case_messages ||--o{ case_message_refs : "message_id"
   wedding_cases ||--o{ case_guests : "case_id"
   user_profiles |o--o{ case_guests : "created_by_user_id"
   venues ||--o{ task_templates : "venue_id"

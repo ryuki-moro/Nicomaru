@@ -45,6 +45,13 @@ export async function purgeCasesD1(db: D1Database, files?: R2Bucket | null): Pro
       )
       .bind(caseId)
       .run();
+    // 参照は case_id を持たないため、メッセージより先にたどって消す
+    await db
+      .prepare(
+        'DELETE FROM case_message_refs WHERE message_id IN (SELECT id FROM case_messages WHERE case_id=?)',
+      )
+      .bind(caseId)
+      .run();
     for (const table of [
       'case_guests',
       'case_guest_forms',

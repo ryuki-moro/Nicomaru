@@ -15,6 +15,7 @@ import { daysBetween } from '@/lib/services/schedule';
 import { forEachActiveCaseD1 } from './batches';
 import { deliverMail } from './mailbox';
 import { getNotificationSettingsD1, recordNotificationLog } from './notifications';
+import { announceSystemMessage } from './system-messages';
 
 interface NotificationRowD1 {
   id: string;
@@ -121,6 +122,19 @@ export async function dispatchNotificationsD1(db: D1Database) {
       if (remaining < 0) type = 'overdue';
       else if (remaining === daysBefore) type = 'due_reminder';
       if (!type) continue;
+
+      // チャットへは通知より1段静かに流す: 期限が近い知らせは1日1回、期限切れは最初の1回だけ
+      await announceSystemMessage(
+        db,
+        caseId,
+        type === 'overdue' ? 'task_overdue' : 'task_due_soon',
+        [{ type: 'task', id: task.id }],
+        null,
+        {
+          dedupeKey:
+            type === 'overdue' ? `overdue:${task.id}:${dueDate}` : `due_soon:${task.id}:${today}`,
+        },
+      );
 
       for (const recipient of recipients) {
         const existing = await db
