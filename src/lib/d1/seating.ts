@@ -696,5 +696,12 @@ export async function reviewSeatingChart(
         ),
     ),
   ]);
+  await announceSystemMessage(
+    db,
+    caseId,
+    approved ? 'seating_approved' : 'seating_returned',
+    [{ type: 'seating', id: caseId }],
+    user.id,
+  );
   return { status: input.decision, version: nextVersion };
 }
