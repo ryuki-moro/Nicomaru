@@ -7,6 +7,7 @@ import { api } from '@/lib/api/client';
 
 import { ChatComposer } from './ChatComposer';
 import { ChatThread } from './ChatThread';
+import { CreateTaskDialog } from './CreateTaskDialog';
 import { latestCursor, shouldMarkRead, type MessageView } from './chatLogic';
 import { useChatConnection } from './useChatConnection';
 
@@ -17,18 +18,28 @@ interface Props {
   initialMessages: MessageView[];
   initialHasOlder: boolean;
   retractWindowMs: number;
+  /** スタッフだけ true。メッセージから やること を作れる */
+  canCreateTask?: boolean;
 }
 
-export function ChatPanel({ caseId, initialMessages, initialHasOlder, retractWindowMs }: Props) {
-  const { messages, degraded, hasOlder, send, retract, loadOlder } = useChatConnection({
-    caseId,
-    initialMessages,
-    initialHasOlder,
-    retractWindowMs,
-  });
+export function ChatPanel({
+  caseId,
+  initialMessages,
+  initialHasOlder,
+  retractWindowMs,
+  canCreateTask = false,
+}: Props) {
+  const { messages, degraded, hasOlder, send, retract, loadOlder, markTaskLinked } =
+    useChatConnection({
+      caseId,
+      initialMessages,
+      initialHasOlder,
+      retractWindowMs,
+    });
   const [atBottom, setAtBottom] = useState(true);
   const [pageVisible, setPageVisible] = useState(true);
   const [lastMarked, setLastMarked] = useState<string | undefined>(undefined);
+  const [taskSource, setTaskSource] = useState<MessageView | null>(null);
 
   useEffect(() => {
     const update = () => setPageVisible(document.visibilityState === 'visible');
@@ -67,8 +78,14 @@ export function ChatPanel({ caseId, initialMessages, initialHasOlder, retractWin
         onLoadOlder={loadOlder}
         onRetract={retract}
         onAtBottomChange={setAtBottom}
+        onCreateTask={canCreateTask ? setTaskSource : undefined}
       />
-      <ChatComposer onSend={send} />
+      <CreateTaskDialog
+        message={taskSource}
+        onClose={() => setTaskSource(null)}
+        onCreated={markTaskLinked}
+      />
+      <ChatComposer caseId={caseId} onSend={send} />
     </div>
   );
 }

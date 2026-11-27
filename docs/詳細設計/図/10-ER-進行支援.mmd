@@ -22,6 +22,15 @@ erDiagram
     text id PK
     text case_id FK
     text sender_user_id FK
+    text kind
+    text event_type
+    text actor_user_id FK
+  }
+  case_message_refs {
+    text message_id PK,FK
+    integer position PK
+    text ref_type
+    text ref_id
   }
   case_message_reads {
     text case_id FK
@@ -53,6 +62,8 @@ erDiagram
   user_profiles ||--o{ meeting_sheets : "generated_by"
   storage_files |o--o{ meeting_sheets : "pdf_file_id"
   wedding_cases ||--o{ case_messages : "case_id"
-  user_profiles ||--o{ case_messages : "sender_user_id"
+  user_profiles |o--o{ case_messages : "sender_user_id"
+  user_profiles |o--o{ case_messages : "actor_user_id"
+  case_messages ||--o{ case_message_refs : "message_id"
   wedding_cases ||--o{ case_message_reads : "case_id"
   user_profiles ||--o{ case_message_reads : "user_id"

@@ -56,9 +56,16 @@ export function useChatConnection(opts: {
     };
   }, [connection]);
 
-  const send = useCallback((body: string) => connection.send(body), [connection]);
+  const send = useCallback(
+    (body: string, refs?: { type: string; id: string }[]) => connection.send(body, refs),
+    [connection],
+  );
   const retract = useCallback((id: string) => connection.retract(id), [connection]);
   const loadOlder = useCallback(() => connection.loadOlder(), [connection]);
+  const markTaskLinked = useCallback(
+    (messageId: string, taskId: string) => connection.markTaskLinked(messageId, taskId),
+    [connection],
+  );
 
-  return { ...state, send, retract, loadOlder };
+  return { ...state, send, retract, loadOlder, markTaskLinked };
 }

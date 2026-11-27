@@ -51,6 +51,7 @@ export default async function CaseChatPage({ params }: { params: Promise<{ caseI
         initialMessages={items}
         initialHasOlder={hasMore}
         retractWindowMs={MESSAGE_RETRACT_WINDOW_MS}
+        canCreateTask
       />
     </div>
   );

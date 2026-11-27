@@ -1,5 +1,5 @@
 {
-  "source": "supabase/migrations/*.sql applied to isolated PGlite; catalog only, no application data ／ case_messages・case_message_reads は cloudflare/migrations/0028_case_messages.sql (D1) から手で追記。列の型はD1のTEXT、policy欄はRLSでなくアプリ層の制御",
+  "source": "supabase/migrations/*.sql applied to isolated PGlite; catalog only, no application data ／ case_messages・case_message_reads・case_message_refs と case_tasks.source_message_id は cloudflare/migrations/0028_case_messages.sql・0029_chat_links.sql (D1) から手で追記。列の型はD1のTEXT、policy欄はRLSでなくアプリ層の制御",
   "tables": [
     {
       "name": "ai_jobs",
@@ -32,6 +32,10 @@
     {
       "name": "case_invitations",
       "rls": true
+    },
+    {
+      "name": "case_message_refs",
+      "rls": false
     },
     {
       "name": "case_message_reads",
@@ -753,6 +757,34 @@
       "column_default": "now()"
     },
     {
+      "table_name": "case_message_refs",
+      "column_name": "message_id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_message_refs",
+      "column_name": "position",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_message_refs",
+      "column_name": "ref_type",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_name": "case_message_refs",
+      "column_name": "ref_id",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
       "table_name": "case_message_reads",
       "column_name": "case_id",
       "data_type": "text",
@@ -805,7 +837,7 @@
       "table_name": "case_messages",
       "column_name": "sender_user_id",
       "data_type": "text",
-      "is_nullable": "NO",
+      "is_nullable": "YES",
       "column_default": null
     },
     {
@@ -825,6 +857,27 @@
     {
       "table_name": "case_messages",
       "column_name": "deleted_at",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_messages",
+      "column_name": "kind",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": "'user'"
+    },
+    {
+      "table_name": "case_messages",
+      "column_name": "event_type",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_name": "case_messages",
+      "column_name": "actor_user_id",
       "data_type": "text",
       "is_nullable": "YES",
       "column_default": null
@@ -961,6 +1014,13 @@
       "data_type": "timestamp with time zone",
       "is_nullable": "NO",
       "column_default": "now()"
+    },
+    {
+      "table_name": "case_tasks",
+      "column_name": "source_message_id",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null
     },
     {
       "table_name": "communication_logs",
@@ -3134,6 +3194,54 @@
       "definition": "NOT NULL use_count"
     },
     {
+      "table_name": "case_message_refs",
+      "name": "case_message_refs_message_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL message_id"
+    },
+    {
+      "table_name": "case_message_refs",
+      "name": "case_message_refs_position_not_null",
+      "type": "n",
+      "definition": "NOT NULL position"
+    },
+    {
+      "table_name": "case_message_refs",
+      "name": "case_message_refs_ref_type_not_null",
+      "type": "n",
+      "definition": "NOT NULL ref_type"
+    },
+    {
+      "table_name": "case_message_refs",
+      "name": "case_message_refs_ref_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL ref_id"
+    },
+    {
+      "table_name": "case_message_refs",
+      "name": "case_message_refs_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (message_id, position)"
+    },
+    {
+      "table_name": "case_message_refs",
+      "name": "case_message_refs_message_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (message_id) REFERENCES case_messages(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "case_message_refs",
+      "name": "case_message_refs_position_check",
+      "type": "c",
+      "definition": "CHECK (position BETWEEN 0 AND 2)"
+    },
+    {
+      "table_name": "case_message_refs",
+      "name": "case_message_refs_ref_type_check",
+      "type": "c",
+      "definition": "CHECK (ref_type IN ('task','guest','seating'))"
+    },
+    {
       "table_name": "case_message_reads",
       "name": "case_message_reads_case_id_not_null",
       "type": "n",
@@ -3201,12 +3309,6 @@
     },
     {
       "table_name": "case_messages",
-      "name": "case_messages_sender_user_id_not_null",
-      "type": "n",
-      "definition": "NOT NULL sender_user_id"
-    },
-    {
-      "table_name": "case_messages",
       "name": "case_messages_pkey",
       "type": "p",
       "definition": "PRIMARY KEY (id)"
@@ -3222,6 +3324,36 @@
       "name": "case_messages_sender_user_id_fkey",
       "type": "f",
       "definition": "FOREIGN KEY (sender_user_id) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "case_messages",
+      "name": "case_messages_kind_not_null",
+      "type": "n",
+      "definition": "NOT NULL kind"
+    },
+    {
+      "table_name": "case_messages",
+      "name": "case_messages_actor_user_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (actor_user_id) REFERENCES user_profiles(id)"
+    },
+    {
+      "table_name": "case_messages",
+      "name": "case_messages_kind_check",
+      "type": "c",
+      "definition": "CHECK (kind IN ('user','system'))"
+    },
+    {
+      "table_name": "case_messages",
+      "name": "case_messages_event_type_check",
+      "type": "c",
+      "definition": "CHECK (event_type IN ('task_submitted','task_approved','task_returned','task_due_soon','task_overdue','seating_submitted','seating_approved','seating_returned','task_created'))"
+    },
+    {
+      "table_name": "case_messages",
+      "name": "case_messages_kind_sender_check",
+      "type": "c",
+      "definition": "CHECK ((kind='user' AND sender_user_id IS NOT NULL AND event_type IS NULL) OR (kind='system' AND sender_user_id IS NULL AND event_type IS NOT NULL))"
     },
     {
       "table_name": "case_tasks",
@@ -3348,6 +3480,12 @@
       "name": "case_tasks_updated_at_not_null",
       "type": "n",
       "definition": "NOT NULL updated_at"
+    },
+    {
+      "table_name": "case_tasks",
+      "name": "case_tasks_source_message_id_fkey",
+      "type": "f",
+      "definition": "FOREIGN KEY (source_message_id) REFERENCES case_messages(id) ON DELETE SET NULL"
     },
     {
       "table_name": "communication_logs",

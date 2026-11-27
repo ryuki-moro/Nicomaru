@@ -21,6 +21,7 @@ import {
   setSeatingLayoutOffered,
   submitSeatingChart,
 } from '../../src/lib/d1/seating.ts';
+import { listMessages } from '../../src/lib/d1/messages.ts';
 import { hashInvitationToken } from '../../src/lib/services/invitations.ts';
 
 let platform, db;
@@ -334,6 +335,18 @@ test('承認で確定し、差し戻すと再び編集でき、どちらも新�
     .bind(ids.coupleA)
     .all();
   assert.equal(okNotices.results.length, 1);
+});
+
+test('席次の提出・差し戻し・確定がシステムメッセージとしてチャットに流れる', async () => {
+  const { items } = await listMessages(db, plannerA, ids.caseA, { limit: 50 });
+  const system = items.filter((m) => m.kind === 'system');
+  assert.deepEqual(
+    system.map((m) => m.eventType),
+    ['seating_submitted', 'seating_returned', 'seating_submitted', 'seating_approved'],
+  );
+  assert.ok(system.every((m) => m.refs[0].type === 'seating' && m.refs[0].title === '席次表'));
+  assert.equal(system[1].body, 'plannerAさんが席次の修正を依頼しました');
+  assert.equal(system[3].body, 'plannerAさんが席次を確定しました');
 });
 
 test('アーカイブ済みの案件は配置も席次も変更できない', async () => {
