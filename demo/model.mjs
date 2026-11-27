@@ -119,8 +119,8 @@ export function riskFor(item, today = todayJst()) {
   const overdue = pending.filter((task) => task.dueDate < today);
   const fixes = pending.filter((task) => task.status === 'needs_fix');
   const reasons = [];
-  if (overdue.length) reasons.push(`期限を過ぎた宿題が${overdue.length}件あります`);
-  if (fixes.length) reasons.push(`修正が必要な宿題が${fixes.length}件あります`);
+  if (overdue.length) reasons.push(`期限を過ぎたやることが${overdue.length}件あります`);
+  if (fixes.length) reasons.push(`修正が必要なやることが${fixes.length}件あります`);
   const level = overdue.some((task) => task.important)
     ? 'high'
     : overdue.length || fixes.length
@@ -136,7 +136,7 @@ export function riskFor(item, today = todayJst()) {
 function findTask(state, caseId, taskId) {
   const item = state.cases.find((entry) => entry.id === caseId);
   const task = item?.tasks.find((entry) => entry.id === taskId);
-  if (!item || !task) throw new Error('宿題が見つかりません。');
+  if (!item || !task) throw new Error('やることが見つかりません。');
   return { item, task };
 }
 
@@ -151,7 +151,7 @@ export function transitionTask(state, caseId, taskId, action, value = '', now = 
   const answer = String(value).trim();
   if (action === 'submit') {
     if (!['not_started', 'needs_fix'].includes(task.status))
-      throw new Error('この宿題はすでに提出されています。');
+      throw new Error('このやることはすでに提出されています。');
     if (!answer || answer.length > 2000) throw new Error('回答を1〜2000文字で入力してください。');
     if (task.type === 'select' && !task.options.includes(answer))
       throw new Error('選択肢からお選びください。');
@@ -160,12 +160,12 @@ export function transitionTask(state, caseId, taskId, action, value = '', now = 
     task.feedback = '';
     record(next, `${item.code}「${task.title}」を提出しました`, now);
   } else if (action === 'confirm') {
-    if (task.status !== 'submitted') throw new Error('確認待ちの宿題だけ確認できます。');
+    if (task.status !== 'submitted') throw new Error('確認待ちの提出だけ確認できます。');
     task.status = 'confirmed';
     task.feedback = '';
     record(next, `${item.code}「${task.title}」を確認しました`, now);
   } else if (action === 'return') {
-    if (task.status !== 'submitted') throw new Error('確認待ちの宿題だけ差し戻せます。');
+    if (task.status !== 'submitted') throw new Error('確認待ちの提出だけ差し戻せます。');
     if (!answer || answer.length > 1000)
       throw new Error('修正してほしい内容を1〜1000文字で入力してください。');
     task.status = 'needs_fix';
@@ -221,7 +221,7 @@ export function saveCase(state, fields, caseId = null, now = new Date()) {
   return { state: next, caseId };
 }
 
-/** デモ用AIの分類結果を、プランナーの「採用」操作でだけ宿題へ保存する。 */
+/** デモ用AIの分類結果を、プランナーの「採用」操作でだけやることへ保存する。 */
 export function adoptAiLabels(state, caseId, taskId, labels, now = new Date()) {
   const next = structuredClone(state);
   const { item, task } = findTask(next, caseId, taskId);
@@ -247,7 +247,7 @@ export function adoptAiSheetDraft(state, caseId, textValue, now = new Date()) {
 }
 
 /**
- * デモ用AIの宿題起票案を、プランナーが選んだものだけ宿題として追加する。
+ * デモ用AIのやること起票案を、プランナーが選んだものだけ追加する。
  * proposals: [{ title, description, dueDate }]（dueDate は画面側で解決済み）
  */
 export function addTaskProposals(state, caseId, proposals, now = new Date()) {
@@ -255,14 +255,14 @@ export function addTaskProposals(state, caseId, proposals, now = new Date()) {
   const item = next.cases.find((entry) => entry.id === caseId);
   if (!item) throw new Error('案件が見つかりません。');
   const list = Array.isArray(proposals) ? proposals : [];
-  if (!list.length) throw new Error('追加する宿題案を選んでください。');
-  if (item.tasks.length + list.length > 32) throw new Error('宿題は32件までです。');
+  if (!list.length) throw new Error('追加するやること案を選んでください。');
+  if (item.tasks.length + list.length > 32) throw new Error('やることは32件までです。');
   for (const proposal of list) {
     const title = String(proposal.title ?? '').trim();
     const description = String(proposal.description ?? '').trim();
-    if (!title || title.length > 120) throw new Error('宿題案の題名が正しくありません。');
-    if (description.length > 1000) throw new Error('宿題案の説明が長すぎます。');
-    if (!isDate(proposal.dueDate)) throw new Error('宿題案の期限が正しくありません。');
+    if (!title || title.length > 120) throw new Error('やること案の題名が正しくありません。');
+    if (description.length > 1000) throw new Error('やること案の説明が長すぎます。');
+    if (!isDate(proposal.dueDate)) throw new Error('やること案の期限が正しくありません。');
     item.tasks.push({
       id: `ai-${crypto.randomUUID()}`,
       title,
@@ -275,7 +275,7 @@ export function addTaskProposals(state, caseId, proposals, now = new Date()) {
       feedback: '',
     });
   }
-  record(next, `${item.code} にAIの宿題案を${list.length}件追加しました`, now);
+  record(next, `${item.code} にAIのやること案を${list.length}件追加しました`, now);
   return next;
 }
 
