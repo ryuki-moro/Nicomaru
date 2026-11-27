@@ -12,6 +12,7 @@ CREATE TABLE case_messages_new (
   kind TEXT NOT NULL DEFAULT 'user' CHECK (kind IN ('user','system')),
   event_type TEXT CHECK (event_type IS NULL OR event_type IN ('task_submitted','task_approved','task_returned','task_due_soon','task_overdue','seating_submitted','seating_approved','seating_returned','task_created')),
   actor_user_id TEXT REFERENCES user_profiles(id),
+  dedupe_key TEXT,
   CHECK ((kind='user' AND sender_user_id IS NOT NULL AND event_type IS NULL) OR (kind='system' AND sender_user_id IS NULL AND event_type IS NOT NULL))
 );
 INSERT INTO case_messages_new(id,case_id,sender_user_id,body_enc,created_at,deleted_at)
@@ -19,6 +20,8 @@ INSERT INTO case_messages_new(id,case_id,sender_user_id,body_enc,created_at,dele
 DROP TABLE case_messages;
 ALTER TABLE case_messages_new RENAME TO case_messages;
 CREATE INDEX idx_case_messages_case ON case_messages(case_id, created_at, id);
+-- 期限の知らせを同時に流しても1件に保つ
+CREATE UNIQUE INDEX idx_case_messages_dedupe ON case_messages(dedupe_key) WHERE dedupe_key IS NOT NULL;
 CREATE TABLE case_message_refs (
   message_id TEXT NOT NULL REFERENCES case_messages(id) ON DELETE CASCADE,
   position INTEGER NOT NULL CHECK (position BETWEEN 0 AND 2),

@@ -6,6 +6,7 @@ import { getPlatformProxy } from 'wrangler';
 import { encryptPii } from '../../src/lib/crypto.ts';
 import { seedAppFixtures, ids } from '../../scripts/d1-fixtures.mjs';
 import { createTaskFromMessage } from '../../src/lib/d1/message-tasks.ts';
+import { postSystemMessage } from '../../src/lib/d1/system-messages.ts';
 import { listRefCandidates } from '../../src/lib/d1/chat-refs.ts';
 import { purgeCasesD1 } from '../../src/lib/d1/case-purge.ts';
 import {
@@ -303,4 +304,21 @@ test('取り消すと添付も外れ、案件の削除バッチで参照も消�
     .bind(ids.caseA)
     .first();
   assert.equal(left.n, 0);
+});
+
+test('同じ重複キーのシステムメッセージは、同時に流しても1件だけ', async () => {
+  const send = async () => {};
+  const key = `due_soon:${taskA}:2026-11-27`;
+  const results = await Promise.all(
+    [0, 1, 2].map(() =>
+      postSystemMessage(db, ids.caseA, 'task_due_soon', [{ type: 'task', id: taskA }], null, {
+        dedupeKey: key,
+        send,
+      }),
+    ),
+  );
+  assert.deepEqual(results.filter(Boolean).length, 1);
+  const rows = await db.prepare('SELECT id FROM case_messages WHERE dedupe_key=?').bind(key).all();
+  assert.equal(rows.results.length, 1);
+  assert.equal((await refsOf(rows.results[0].id)).length, 1);
 });

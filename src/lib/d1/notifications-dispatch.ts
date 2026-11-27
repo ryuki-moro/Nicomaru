@@ -130,7 +130,10 @@ export async function dispatchNotificationsD1(db: D1Database) {
         type === 'overdue' ? 'task_overdue' : 'task_due_soon',
         [{ type: 'task', id: task.id }],
         null,
-        { onceSince: type === 'overdue' ? new Date(0).toISOString() : dayStartUtc },
+        {
+          dedupeKey:
+            type === 'overdue' ? `overdue:${task.id}:${dueDate}` : `due_soon:${task.id}:${today}`,
+        },
       );
 
       for (const recipient of recipients) {
