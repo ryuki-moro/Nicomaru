@@ -184,8 +184,17 @@ jobs:
             if [ -n "$PR" ]; then echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"; fi
           elif [ "$RUN_ATTEMPT" = "1" ]; then
             gh run rerun "$RUN_ID" --failed
-            if [ -n "$PR" ]; then echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"; fi
             notify "$(printf 'CIの失敗を調べましたが、コードに直す箇所はありませんでした。失敗したジョブを1回だけ再実行します。\n\n%s\n\n失敗した実行: %s' "$summary" "$run_url")"
+            if [ -n "$PR" ]; then
+              echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+            else
+              # bot の再実行は workflow_run を起こさず、push の実行は follow-ci も拾わないため、ここで見届ける
+              sleep 10
+              gh run watch "$RUN_ID" --interval 20 >/dev/null || true
+              if [ "$(gh run view "$RUN_ID" --json conclusion --jq .conclusion)" != "success" ]; then
+                gh workflow run ci-autofix.yml -f run_id="$RUN_ID"
+              fi
+            fi
           else
             notify "$(printf 'CIの失敗を調べましたが自動では直せませんでした。確認してください。\n\n%s\n\n失敗した実行: %s' "$summary" "$run_url")"
           fi
