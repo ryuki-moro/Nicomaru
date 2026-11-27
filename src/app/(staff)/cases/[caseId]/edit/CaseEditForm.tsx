@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { Modal } from '@/components/ui/Modal';
 import { api, handleApiError } from '@/lib/api/client';
+import { preferredScrollBehavior } from '@/lib/motion';
 import {
   CONTACT_CHANNEL_LABEL,
   INPUT_LIMITS,
@@ -93,7 +94,7 @@ export function CaseEditForm({ caseId, caseCode, initial, plans, planners }: Pro
     if (!firstInvalid) return;
     const input = document.getElementById(firstInvalid);
     input?.focus({ preventScroll: true });
-    input?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    input?.scrollIntoView({ block: 'center', behavior: preferredScrollBehavior() });
   }, [fieldErrors]);
 
   const fieldA11y = (field: string, helpId?: string) => {

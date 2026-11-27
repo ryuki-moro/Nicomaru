@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 
 import { ErrorSummary, FieldError } from '@/components/ui/ErrorSummary';
 import { ApiCallError, api } from '@/lib/api/client';
+import { preferredScrollBehavior } from '@/lib/motion';
 import {
   CONTACT_CHANNEL_LABEL,
   INPUT_LIMITS,
@@ -86,7 +87,7 @@ export function CaseForm({ plans, today }: Props) {
     if (!firstInvalid) return;
     const input = document.getElementById(firstInvalid);
     input?.focus({ preventScroll: true });
-    input?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    input?.scrollIntoView({ block: 'center', behavior: preferredScrollBehavior() });
   }, [fieldErrors]);
 
   const fieldA11y = (field: string, helpId?: string) => {
