@@ -8,7 +8,7 @@
  * 日次の定期処理は /api/internal/risk-recalculate が venue_id → case_id でループする（6-12）。
  */
 import { ok, route } from '@/lib/api/route';
-import { requireStaff } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import { isUuid } from '@/lib/uuid';
 export const runtime = 'nodejs';
 export const POST = route(
@@ -21,7 +21,7 @@ export const POST = route(
     },
   ) => {
     // リスクは planner／admin 向けの情報。couple には値そのものを見せない（6-3-2／5-1）。
-    await requireStaff();
+    await requireCaseWorker();
     const { caseId } = await context.params;
     if (!isUuid(caseId)) {
       // 形式が違う時点で案件は存在しない。RLS の判定へ渡す前に落とす。
@@ -31,7 +31,7 @@ export const POST = route(
       const { localDB } = await import('@/lib/d1/runtime');
       const { recalculateCaseRiskD1 } = await import('@/lib/d1/risk');
       const { caseRow } = await import('@/lib/d1/cases');
-      const user = await requireStaff();
+      const user = await requireCaseWorker();
       const db = await localDB();
       // スコープ判定は D1 の caseRow (scope 述語) で行い、見えない案件は 404 に倒す。
       await caseRow(db, user, caseId);

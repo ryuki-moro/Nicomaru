@@ -5,7 +5,7 @@
  * 結果はアプリ内通知で新郎新婦へ届く（src/lib/d1/seating.ts の reviewSeatingChart）。
  */
 import { ok, parseBody, route } from '@/lib/api/route';
-import { requireRole } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import { seatingChartReviewSchema } from '@/lib/validation';
 export const POST = route(
   async (
@@ -16,7 +16,7 @@ export const POST = route(
       }>;
     },
   ) => {
-    const user = await requireRole('planner', 'admin', 'system_admin');
+    const user = await requireCaseWorker();
     const { caseId } = await context.params;
     const input = await parseBody(request, seatingChartReviewSchema);
     const { localDB } = await import('@/lib/d1/runtime');

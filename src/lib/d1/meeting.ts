@@ -36,7 +36,7 @@ export async function listNotes(
   await taskRole(db, user, false);
   const rows = await db
     .prepare(
-      `SELECT n.id,n.meeting_date,n.participants,n.body,n.created_at,u.name AS display_name FROM meeting_notes n LEFT JOIN "user" u ON u.id=n.created_by WHERE n.case_id=? AND EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=n.case_id AND ${scope}) AND EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin','system_admin')) ORDER BY n.created_at DESC LIMIT ?`,
+      `SELECT n.id,n.meeting_date,n.participants,n.body,n.created_at,u.name AS display_name FROM meeting_notes n LEFT JOIN "user" u ON u.id=n.created_by WHERE n.case_id=? AND EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=n.case_id AND ${scope}) AND EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin')) ORDER BY n.created_at DESC LIMIT ?`,
     )
     .bind(caseId, user.id, user.id, limit)
     .all<{
@@ -78,7 +78,7 @@ export async function saveNote(
   const now = new Date().toISOString();
   const result = await db
     .prepare(
-      `INSERT INTO meeting_notes(id,case_id,created_by,meeting_date,participants,body,created_at,updated_at) SELECT ?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=? AND c.archived_at IS NULL AND ${scope}) AND EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin','system_admin'))`,
+      `INSERT INTO meeting_notes(id,case_id,created_by,meeting_date,participants,body,created_at,updated_at) SELECT ?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=? AND c.archived_at IS NULL AND ${scope}) AND EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin'))`,
     )
     .bind(
       id,

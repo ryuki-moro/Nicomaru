@@ -17,7 +17,7 @@ import { taskRole } from './tasks';
 
 type Actor = Pick<AppUser, 'id'>;
 
-const sheetAccess = `EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=case_id AND c.archived_at IS NULL AND ${scope}) AND EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin','system_admin'))`;
+const sheetAccess = `EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=case_id AND c.archived_at IS NULL AND ${scope}) AND EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin'))`;
 
 export interface D1Sheet {
   id: string;
@@ -51,7 +51,7 @@ export async function recordSheet(
   const now = new Date().toISOString();
   const result = await db
     .prepare(
-      `INSERT INTO meeting_sheets(id,case_id,generated_by,summary_json,ai_draft_job_id,generated_at,created_at) SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=? AND c.archived_at IS NULL AND ${scope}) AND EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin','system_admin'))`,
+      `INSERT INTO meeting_sheets(id,case_id,generated_by,summary_json,ai_draft_job_id,generated_at,created_at) SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=? AND c.archived_at IS NULL AND ${scope}) AND EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin'))`,
     )
     .bind(
       id,

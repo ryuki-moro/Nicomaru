@@ -10,14 +10,14 @@
  * ここからは RPC を1回だけ呼ぶ。case_code の採番と UNIQUE 違反時の再試行（5-7）も関数内で行う。
  */
 import { ok, parseBody, route } from '@/lib/api/route';
-import { requireRole, requireStaff } from '@/lib/auth/session';
+import { requireCaseWorker, requireRole } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import type { listCases } from '@/lib/d1/cases';
 import { forbidden } from '@/lib/errors';
 import { caseCreateSchema } from '@/lib/validation';
 export const GET = route(async (request: Request) => {
   const started = performance.now();
-  const user = await requireStaff();
+  const user = await requireCaseWorker();
   const authenticated = performance.now();
   const params = new URL(request.url).searchParams;
   const limit = Math.min(Number(params.get('limit')) || LIST_PAGE_SIZE, LIST_PAGE_SIZE);

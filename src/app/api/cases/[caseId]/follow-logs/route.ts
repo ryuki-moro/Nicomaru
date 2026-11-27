@@ -9,7 +9,7 @@
  * 打ち切るだけでは51件目以降のフォロー記録を参照する手段が無くなるため。
  */
 import { ok, parseBody, route } from '@/lib/api/route';
-import { requireStaff } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import { LIST_PAGE_SIZE } from '@/lib/constants';
 import { createFollowLog, listFollowLogs } from '@/lib/d1/follow';
 import { localDB } from '@/lib/d1/runtime';
@@ -47,7 +47,7 @@ function readPaging(request: Request): { offset: number; limit: number } {
 
 export const GET = route(
   async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
-    const user = await requireStaff();
+    const user = await requireCaseWorker();
     const { caseId } = await context.params;
     if (!isUuid(caseId)) throw notFound();
     const { offset, limit } = readPaging(request);
@@ -56,7 +56,7 @@ export const GET = route(
 );
 export const POST = route(
   async (request: Request, context: { params: Promise<{ caseId: string }> }) => {
-    const user = await requireStaff();
+    const user = await requireCaseWorker();
     const { caseId } = await context.params;
     if (!isUuid(caseId)) throw notFound();
     const input = await parseBody(request, followLogSchema);

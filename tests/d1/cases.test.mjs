@@ -76,6 +76,24 @@ test('通知は本人と担当者だけが閲覧でき、既読化は本人だ�
   );
 });
 
+test('system_admin は受信者に入っていても案件の通知を読めず、既読にもできない', async () => {
+  await db
+    .prepare(
+      "INSERT INTO notifications(id,case_id,recipient_user_id,channel,notification_type,title,body,created_at) VALUES ('notice-system',?,?, 'in_app','info','お知らせ','本文','2028-01-02')",
+    )
+    .bind(ids.caseA, ids.system)
+    .run();
+  const system = actor('system_admin', ids.system, null);
+  assert.equal((await listNotifications(db, system, 0)).length, 0);
+  await markNotificationsRead(db, system, ['notice-system']);
+  assert.equal(
+    (await db.prepare("SELECT read_at FROM notifications WHERE id='notice-system'").first())
+      .read_at,
+    null,
+  );
+  await db.prepare("DELETE FROM notifications WHERE id='notice-system'").run();
+});
+
 test('担当者がアプリ内通知を作成でき、担当外と別案件の宿題を拒否する', async () => {
   const input = {
     caseId: ids.caseA,
@@ -141,11 +159,13 @@ test('受信箱への保存が失敗した場合は通知も保存しない', as
 });
 
 test('4ロールの参照範囲と他式場・同僚担当の拒否', async () => {
-  assert.equal((await listCases(db, actor('system_admin', ids.system))).items.length, 3);
+  // system_admin は式場と職員の管理が役目で、案件の中身は一件も見えない
+  assert.equal((await listCases(db, actor('system_admin', ids.system, null))).items.length, 0);
   assert.equal((await listCases(db, actor('admin', ids.adminA))).items.length, 2);
   assert.equal((await listCases(db, actor('planner', ids.plannerA))).items.length, 1);
   assert.equal((await listCases(db, actor('couple', ids.coupleA))).items.length, 1);
   for (const user of [
+    actor('system_admin', ids.system, null),
     actor('admin', ids.adminA),
     actor('planner', ids.plannerA),
     actor('couple', ids.coupleA),
@@ -170,7 +190,11 @@ test('coupleの更新、plannerの担当変更、他式場の更新を拒否し�
   await assert.rejects(patchCase(db, actor('admin', ids.adminA), ids.caseB, { guestCount: 99 }), {
     code: 'NOT_FOUND',
   });
-  assert.equal((await caseRow(db, actor('system_admin', ids.system), ids.caseB)).guest_count, 50);
+  const stored = await db
+    .prepare('SELECT guest_count FROM wedding_cases WHERE id=?')
+    .bind(ids.caseB)
+    .first();
+  assert.equal(stored.guest_count, 50);
 });
 test('本体編集項目を更新し、日程のプレビューは未確定の間書き込まない', async () => {
   const user = actor('planner', ids.plannerA);
@@ -227,7 +251,7 @@ test('氏名・メールを暗号化し、一覧では復号して検索でき�
   );
 });
 
-test('adminはアーカイブ・復元、system_adminは別式場の更新が可能', async () => {
+test('adminはアーカイブ・復元でき、system_adminは案件を更新できない', async () => {
   const admin = actor('admin', ids.adminA);
   await patchCase(db, admin, ids.caseA2, { archived: true });
   await assert.rejects(caseRow(db, actor('planner', ids.plannerA2), ids.caseA2), {
@@ -236,8 +260,14 @@ test('adminはアーカイブ・復元、system_adminは別式場の更新が可
   assert.equal((await listCases(db, admin, { scope: 'archived' })).items.length, 1);
   await patchCase(db, admin, ids.caseA2, { archived: false });
   const system = actor('system_admin', ids.system, null);
-  await patchCase(db, system, ids.caseB, { guestCount: 65 });
-  assert.equal((await caseRow(db, system, ids.caseB)).guest_count, 65);
+  for (const input of [{ guestCount: 65 }, { archived: true }]) {
+    await assert.rejects(patchCase(db, system, ids.caseB, input), { code: 'NOT_FOUND' });
+  }
+  const stored = await db
+    .prepare('SELECT guest_count,archived_at FROM wedding_cases WHERE id=?')
+    .bind(ids.caseB)
+    .first();
+  assert.deepEqual({ ...stored }, { guest_count: 50, archived_at: null });
 });
 
 test('同式場のプラン変更も差分確認後に適用し、宿題の追加・waivedを維持', async () => {

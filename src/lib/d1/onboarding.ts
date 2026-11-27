@@ -18,7 +18,7 @@ import type { z } from 'zod';
 import { caseRow, scope } from './cases';
 import { captureOnly } from './mode';
 
-const staffScope = `${scope} AND c.archived_at IS NULL AND EXISTS (SELECT 1 FROM user_profiles w WHERE w.id=? AND w.status='active' AND w.role IN ('planner','admin','system_admin'))`;
+const staffScope = `${scope} AND c.archived_at IS NULL AND EXISTS (SELECT 1 FROM user_profiles w WHERE w.id=? AND w.status='active' AND w.role IN ('planner','admin'))`;
 const existsCase = `EXISTS (SELECT 1 FROM wedding_cases c WHERE c.id=? AND ${staffScope})`;
 const invitationError = () =>
   unprocessable(

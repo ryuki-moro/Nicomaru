@@ -43,7 +43,7 @@ export async function createNotification(
       `INSERT INTO notifications(id,case_id,recipient_user_id,channel,notification_type,title,body,link_path,status,sent_at,created_at)
     SELECT ?,c.id,?,?,?,?,?,?,?, ?,? FROM wedding_cases c
     WHERE c.id=? AND c.archived_at IS NULL AND ${scope}
-    AND EXISTS (SELECT 1 FROM user_profiles a WHERE a.id=? AND a.status='active' AND a.role IN ('planner','admin','system_admin'))
+    AND EXISTS (SELECT 1 FROM user_profiles a WHERE a.id=? AND a.status='active' AND a.role IN ('planner','admin'))
     AND EXISTS (SELECT 1 FROM couple_profiles cp JOIN user_profiles r ON r.id=cp.user_id WHERE cp.case_id=c.id AND cp.user_id=? AND r.status='active' AND r.role='couple')
     AND (? IS NULL OR EXISTS (SELECT 1 FROM case_tasks t WHERE t.id=? AND t.case_id=c.id)) RETURNING id`,
     )
@@ -138,7 +138,7 @@ export async function listNotifications(db: D1Database, user: AppUser, offset: n
     .prepare(
       `SELECT n.id,n.case_id,n.channel,n.notification_type,n.title,n.body,n.status,n.sent_at,n.read_at,n.created_at,n.link_path
     FROM notifications n JOIN wedding_cases c ON c.id=n.case_id
-    WHERE EXISTS (SELECT 1 FROM user_profiles a WHERE a.id=? AND a.status='active' AND (n.recipient_user_id=a.id OR (a.role<>'couple' AND ${scope})))
+    WHERE EXISTS (SELECT 1 FROM user_profiles a WHERE a.id=? AND a.status='active' AND a.role<>'system_admin' AND (n.recipient_user_id=a.id OR (a.role<>'couple' AND ${scope})))
     ORDER BY n.created_at DESC,n.id DESC LIMIT ? OFFSET ?`,
     )
     .bind(user.id, user.id, LIST_PAGE_SIZE + 1, offset)
@@ -301,7 +301,7 @@ export async function markNotificationsRead(db: D1Database, user: AppUser, ids: 
         .prepare(
           `UPDATE notifications SET read_at=?,status='read'
     WHERE id=? AND recipient_user_id=? AND read_at IS NULL AND EXISTS
-    (SELECT 1 FROM user_profiles WHERE id=? AND status='active')`,
+    (SELECT 1 FROM user_profiles WHERE id=? AND status='active' AND role<>'system_admin')`,
         )
         .bind(new Date().toISOString(), id, user.id, user.id),
     ),

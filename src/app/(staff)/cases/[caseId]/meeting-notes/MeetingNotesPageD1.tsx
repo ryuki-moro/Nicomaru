@@ -9,7 +9,7 @@ import { redirect } from 'next/navigation';
 
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { getAppUser } from '@/lib/auth/session';
-import { INPUT_LIMITS, isStaff } from '@/lib/constants';
+import { CASE_WORK_ROLES, INPUT_LIMITS } from '@/lib/constants';
 import { caseRow } from '@/lib/d1/cases';
 import { extractionState, listNotes, saveNote } from '@/lib/d1/meeting';
 import { localDB } from '@/lib/d1/runtime';
@@ -26,7 +26,8 @@ async function saveMeetingNoteAction(formData: FormData) {
   const participants = String(formData.get('participants') ?? '').trim();
   if (!caseId || body === '') return;
   const actor = await getAppUser();
-  if (!actor || !isStaff(actor.role)) redirect('/login');
+  if (!actor) redirect('/login');
+  if (!CASE_WORK_ROLES.includes(actor.role)) redirect('/error?code=403');
   await saveNote(await localDB(), actor, {
     caseId,
     body,

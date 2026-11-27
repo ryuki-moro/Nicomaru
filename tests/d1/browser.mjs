@@ -36,7 +36,8 @@ test('本体API: 4ロール・他式場・権限昇格・CSRF・失効', { timeo
     contexts.push(anonymous);
     assert.equal((await anonymous.get('/api/cases')).status(), 401);
     const system = await login('system');
-    assert.equal(fixtureCases((await (await system.get('/api/cases')).json()).cases).length, 3);
+    assert.equal((await system.get('/api/cases')).status(), 403);
+    assert.equal((await system.get(`/api/cases/${ids.caseA}`)).status(), 403);
     for (const name of ['adminA', 'plannerA', 'adminB']) {
       const context = await login(name);
       const own = name === 'adminB' ? ids.caseB : ids.caseA;

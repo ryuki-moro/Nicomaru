@@ -17,7 +17,7 @@
  */
 import { csvSchemaOf } from '@/lib/ai/submissionCheck';
 import { ok, route } from '@/lib/api/route';
-import { requireRole } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import { checkStoredCsv, enqueueTaskJob } from '@/lib/d1/ai';
 import { localDB, localFiles } from '@/lib/d1/runtime';
 import { submissionRow } from '@/lib/d1/tasks';
@@ -46,7 +46,7 @@ export const POST = route(
       }>;
     },
   ) => {
-    const user = await requireRole('planner', 'admin', 'system_admin');
+    const user = await requireCaseWorker();
     const { submissionId } = await context.params;
     {
       const db = await localDB();

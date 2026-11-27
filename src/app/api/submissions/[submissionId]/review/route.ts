@@ -3,7 +3,7 @@
  *
  * task_submissions と case_tasks を跨いで更新するため、
  * 「複数テーブル更新はサーバー側APIに集約する」という 6-5 の原則に従い Route Handler にする。
- * 権限は requireStaff() で入口を絞り、実際の範囲制御は RLS に委譲する（6-5）。
+ * 権限は requireCaseWorker() で入口を絞り、実際の範囲制御は RLS に委譲する（6-5）。
  *
  * 【トランザクション境界】2つの更新は review_submission()
  * （20260828002100_submission_transactions.sql）の中で1トランザクションになる。
@@ -21,7 +21,7 @@
  * その失敗で確定済みのレビューを巻き戻さない。
  */
 import { ok, parseBody, route } from '@/lib/api/route';
-import { requireStaff } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import { notFound } from '@/lib/errors';
 import { isUuid } from '@/lib/uuid';
 import { reviewSubmissionSchema } from '@/lib/validation';
@@ -42,7 +42,7 @@ export const POST = route(
     },
   ) => {
     const { submissionId } = await context.params;
-    const user = await requireStaff();
+    const user = await requireCaseWorker();
     if (!isUuid(submissionId)) throw notFound();
     const input = await parseBody(request, reviewSubmissionSchema);
     {

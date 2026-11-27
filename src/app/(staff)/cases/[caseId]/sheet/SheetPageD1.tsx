@@ -10,7 +10,12 @@ import { redirect } from 'next/navigation';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { adoptedOutput } from '@/lib/ai/assist';
 import { getAppUser } from '@/lib/auth/session';
-import { FOLLOW_METHOD_LABEL, INCOMPLETE_TASK_STATUSES, TASK_STATUS_LABEL } from '@/lib/constants';
+import {
+  CASE_WORK_ROLES,
+  FOLLOW_METHOD_LABEL,
+  INCOMPLETE_TASK_STATUSES,
+  TASK_STATUS_LABEL,
+} from '@/lib/constants';
 import { listCommunications, listFollowLogs } from '@/lib/d1/follow';
 import { localDB } from '@/lib/d1/runtime';
 import { recordSheet, requestSheetDraft, sheetData, sheetDraftState } from '@/lib/d1/sheet';
@@ -38,6 +43,7 @@ async function recordSheetAction(formData: FormData) {
   if (!caseId) return;
   const actor = await getAppUser();
   if (!actor) redirect('/login');
+  if (!CASE_WORK_ROLES.includes(actor.role)) redirect('/error?code=403');
   let parsed: unknown = {};
   try {
     parsed = JSON.parse(summary);
@@ -56,6 +62,7 @@ async function requestSheetDraftAction(formData: FormData) {
   if (!caseId) return;
   const actor = await getAppUser();
   if (!actor) redirect('/login');
+  if (!CASE_WORK_ROLES.includes(actor.role)) redirect('/error?code=403');
   await requestSheetDraft(await localDB(), actor, caseId).catch((error: unknown) => {
     console.warn('[sheet] 下書きを依頼できませんでした', error);
   });

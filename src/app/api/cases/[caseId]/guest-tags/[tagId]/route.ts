@@ -12,7 +12,7 @@ type Context = {
   }>;
 };
 export const PATCH = route(async (request: Request, context: Context) => {
-  const user = await requireRole('couple', 'planner', 'admin', 'system_admin');
+  const user = await requireRole('couple', 'planner', 'admin');
   const { caseId, tagId } = await context.params;
   const input = await parseBody(request, guestTagSchema);
   {
@@ -22,7 +22,7 @@ export const PATCH = route(async (request: Request, context: Context) => {
   }
 });
 export const DELETE = route(async (_request: Request, context: Context) => {
-  const user = await requireRole('couple', 'planner', 'admin', 'system_admin');
+  const user = await requireRole('couple', 'planner', 'admin');
   const { caseId, tagId } = await context.params;
   {
     const { localDB } = await import('@/lib/d1/runtime');

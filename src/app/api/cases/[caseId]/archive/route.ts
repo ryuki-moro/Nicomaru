@@ -15,7 +15,7 @@ import { localDB } from '@/lib/d1/runtime';
 export const POST = route(
   async (_request: Request, context: { params: Promise<{ caseId: string }> }) => {
     // K05 は admin のみ（4-1 表4-10）。D1 側 patchCase でもロール・所属・version を再検証する。
-    const user = await requireRole('admin', 'system_admin');
+    const user = await requireRole('admin');
     const { caseId } = await context.params;
     const db = await localDB();
 

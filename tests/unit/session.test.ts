@@ -22,6 +22,7 @@ import {
   landingLabelFor,
   landingPathFor,
   requireAppUser,
+  requireCaseWorker,
   requirePageUser,
   requireRole,
   requireStaff,
@@ -124,6 +125,17 @@ describe('検証済みセッションと有効プロフィールの境界', () =
       expect((await requireRole(role)).role).toBe(role);
     },
   );
+
+  it.each([
+    ['planner', true],
+    ['admin', true],
+    ['system_admin', false],
+    ['couple', false],
+  ] as [Role, boolean][])('案件 API は %s を許可するか: %s', async (role, allowed) => {
+    mocks.d1.mockResolvedValue({ state: 'active', user: { role } });
+    if (allowed) expect((await requireCaseWorker()).role).toBe(role);
+    else await expect(requireCaseWorker()).rejects.toMatchObject({ status: 403 });
+  });
 
   it('couple は staff API を実行できない', async () => {
     mocks.d1.mockResolvedValue({ state: 'active', user: { role: 'couple' } });

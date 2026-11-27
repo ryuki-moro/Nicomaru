@@ -10,7 +10,7 @@
  * 成功時に sent_at を記録する。
  */
 import { ok, parseBody, route } from '@/lib/api/route';
-import { requireRole } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import { type PartnerRole } from '@/lib/constants';
 import { invitationSendSchema } from '@/lib/validation';
 interface PartnerRow {
@@ -29,7 +29,7 @@ export const POST = route(
       }>;
     },
   ) => {
-    const actor = await requireRole('planner', 'admin', 'system_admin');
+    const actor = await requireCaseWorker();
     const { caseId, invitationId } = await context.params;
     {
       const input = await parseBody(request, invitationSendSchema.strict());

@@ -18,7 +18,7 @@ export const POST = route(
       }>;
     },
   ) => {
-    const user = await requireRole('couple', 'planner', 'admin', 'system_admin');
+    const user = await requireRole('couple', 'planner', 'admin');
     const { caseId } = await context.params;
     {
       const { localDB } = await import('@/lib/d1/runtime');

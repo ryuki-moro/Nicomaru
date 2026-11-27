@@ -8,7 +8,7 @@
  * case_tasks と timeline_items の2テーブルへ書くため、DB側の add_case_task() へ集約する。
  */
 import { ok, parseBody, route } from '@/lib/api/route';
-import { requireRole } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import { caseTaskCreateSchema } from '@/lib/validation';
 export const POST = route(
   async (
@@ -19,7 +19,7 @@ export const POST = route(
       }>;
     },
   ) => {
-    const user = await requireRole('planner', 'admin', 'system_admin');
+    const user = await requireCaseWorker();
     const { caseId } = await context.params;
     const input = await parseBody(request, caseTaskCreateSchema);
     {

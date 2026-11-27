@@ -22,7 +22,7 @@ export async function createTaskFromMessage(
     .prepare(
       `SELECT m.case_id,m.kind,m.deleted_at FROM case_messages m JOIN wedding_cases c ON c.id=m.case_id
     WHERE m.id=? AND c.archived_at IS NULL AND ${scope}
-    AND EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin','system_admin'))`,
+    AND EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin'))`,
     )
     .bind(messageId, user.id, user.id)
     .first<{ case_id: string; kind: string; deleted_at: string | null }>();

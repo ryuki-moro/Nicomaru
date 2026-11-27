@@ -9,7 +9,7 @@
  * waived（DB値）は表6-9 により画面上は「対応不要」と表示する。
  */
 import { noContent, parseBody, route } from '@/lib/api/route';
-import { requireRole } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import { caseTaskUpdateSchema } from '@/lib/validation';
 export const PATCH = route(
   async (
@@ -21,7 +21,7 @@ export const PATCH = route(
       }>;
     },
   ) => {
-    const user = await requireRole('planner', 'admin', 'system_admin');
+    const user = await requireCaseWorker();
     const { caseId, taskId } = await context.params;
     const input = await parseBody(request, caseTaskUpdateSchema);
     {

@@ -14,18 +14,18 @@
  * ここは staff 専用で、job_type にも 'faq_answer' を許さない。
  */
 import { ok, parseBody, route } from '@/lib/api/route';
-import { requireStaff } from '@/lib/auth/session';
+import { requireCaseWorker } from '@/lib/auth/session';
 import { enqueueJob, jobList } from '@/lib/d1/ai';
 import { localDB } from '@/lib/d1/runtime';
 import { aiJobCreateSchemaD1 } from '@/lib/validation';
 export const runtime = 'nodejs';
 export const POST = route(async (request: Request) => {
-  const user = await requireStaff();
+  const user = await requireCaseWorker();
   const input = await parseBody(request, aiJobCreateSchemaD1);
   return ok({ id: await enqueueJob(await localDB(), user, input), status: 'queued' }, 201);
 });
 export const GET = route(async (request: Request) => {
-  const user = await requireStaff();
+  const user = await requireCaseWorker();
   const url = new URL(request.url);
   const caseId = url.searchParams.get('caseId');
   const jobType = url.searchParams.get('jobType');
