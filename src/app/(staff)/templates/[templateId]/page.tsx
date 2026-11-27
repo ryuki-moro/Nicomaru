@@ -10,7 +10,12 @@
  */
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { getAppUser } from '@/lib/auth/session';
-import { type AllowedFileType, type Importance, type SubmissionFormat } from '@/lib/constants';
+import {
+  INPUT_LIMITS,
+  type AllowedFileType,
+  type Importance,
+  type SubmissionFormat,
+} from '@/lib/constants';
 import { ApiError, fromPostgresError } from '@/lib/errors';
 import { taskTemplateSchema, toErrorDetails } from '@/lib/validation';
 import { revalidatePath } from 'next/cache';
@@ -81,12 +86,16 @@ async function saveTemplate(templateId: string, values: unknown): Promise<SaveTe
 }
 export default async function TemplateEditPage({
   params,
+  searchParams,
 }: {
   params: Promise<{
     templateId: string;
   }>;
+  /** 一覧の候補（TemplateDraftPanel）から来たときの下書き。新規登録でだけ使う */
+  searchParams: Promise<{ name?: string; description?: string; dueOffsetDays?: string }>;
 }) {
   const { templateId } = await params;
+  const draft = await searchParams;
   const user = await getAppUser();
   if (!user) redirect('/login');
   if (user.role !== 'admin') redirect('/error?code=403');
@@ -114,12 +123,18 @@ export default async function TemplateEditPage({
   }
 
   const initial: TemplateFormInitial = {
-    name: record?.name ?? '',
-    description: record?.description ?? '',
+    // 編集では record が必ずあるので、下書きは新規登録でだけ効く
+    name: record?.name ?? (draft.name ?? '').slice(0, INPUT_LIMITS.shortText),
+    description:
+      record?.description ?? (draft.description ?? '').slice(0, INPUT_LIMITS.templateDescription),
     submissionFormat: record?.submission_format ?? 'text',
     allowedFileTypes: record?.allowed_file_types ?? [],
     choices: record?.default_options?.choices ?? [],
-    dueOffsetDays: record ? String(record.due_offset_days) : '',
+    dueOffsetDays: record
+      ? String(record.due_offset_days)
+      : /^\d{1,4}$/.test(draft.dueOffsetDays ?? '')
+        ? (draft.dueOffsetDays ?? '')
+        : '',
     importance: record?.importance ?? 'normal',
     isRequired: record?.is_required ?? true,
     active: record?.active ?? true,
