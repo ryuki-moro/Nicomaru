@@ -22,6 +22,8 @@ import { requireStaff } from '@/lib/auth/session';
 import { dashboard } from '@/lib/d1/dashboard';
 import { localDB } from '@/lib/d1/runtime';
 import { formatDate } from '@/lib/format';
+import { ChevronRight, NavCard, SummaryCard } from './cards';
+import { SystemDashboard } from './SystemDashboard';
 
 interface CaseIdRow {
   id: string;
@@ -29,6 +31,8 @@ interface CaseIdRow {
 
 export default async function PlannerDashboardPage() {
   const user = await requireStaff();
+  // system_admin は案件を担当しないので、式場と職員の運営状況を出す
+  if (user.role === 'system_admin') return <SystemDashboard user={user} />;
   const {
     caseCount,
     unsubmittedCount,
@@ -135,112 +139,8 @@ export default async function PlannerDashboardPage() {
             title="通知履歴"
             description="送信した通知と送信結果を確認します"
           />
-          {/* S01〜S03 は system_admin 専用（4-3）。他のロールには導線を出さない */}
-          {user.role === 'system_admin' && (
-            <>
-              <NavCard
-                href="/venues"
-                title="式場管理"
-                description="式場と式場管理者を登録・確認します"
-              />
-              <NavCard
-                href="/system"
-                title="利用状況・通知ログ"
-                description="定期処理の実行結果と通知ログを確認します"
-              />
-            </>
-          )}
         </div>
       </section>
     </div>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  unit,
-  note,
-  href,
-  linkLabel,
-}: {
-  label: string;
-  value: number;
-  unit: string;
-  note?: string;
-  /** 件数から移動できる先。指定するとカード全体がリンクになる */
-  href?: string;
-  /** リンクであることを文字でも示す（色や枠だけに頼らない） */
-  linkLabel?: string;
-}) {
-  const body = (
-    <>
-      <p className="text-caption text-text-muted">{label}</p>
-      <p className="mt-[2px]">
-        <span className="text-[28px] font-bold leading-9 text-text-primary">{value}</span>
-        <span className="ml-1 text-label text-text-secondary">{unit}</span>
-      </p>
-      {note && <p className="text-caption text-text-muted">{note}</p>}
-      {href && linkLabel && (
-        <p className="flex items-center gap-1 text-caption font-bold text-link">
-          {linkLabel}
-          <ChevronRight small />
-        </p>
-      )}
-    </>
-  );
-  if (href) {
-    return (
-      <Link
-        href={href}
-        prefetch={false}
-        className="card block py-3 transition-colors hover:bg-field-filled-bg"
-      >
-        {body}
-      </Link>
-    );
-  }
-  return <div className="card py-3">{body}</div>;
-}
-
-/** Tabler Icons の chevron-right（design_guide 6 のアイコンセット）。 */
-function ChevronRight({ small = false }: { small?: boolean }) {
-  const size = small ? 14 : 20;
-  return (
-    <svg
-      aria-hidden
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={small ? 'shrink-0' : 'mt-[2px] shrink-0 text-text-muted'}
-    >
-      <path d="M9 6l6 6l-6 6" />
-    </svg>
-  );
-}
-
-function NavCard({
-  href,
-  title,
-  description,
-}: {
-  href: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      prefetch={false}
-      className="card block transition-colors hover:bg-field-filled-bg"
-    >
-      <p className="text-section font-bold text-text-primary">{title}</p>
-      <p className="mt-1 text-caption text-text-muted">{description}</p>
-    </Link>
   );
 }

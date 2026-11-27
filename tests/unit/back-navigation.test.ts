@@ -63,6 +63,6 @@ describe('プランナー側のパンくずの起点', () => {
   it('ロールの着地点から始める', () => {
     expect(homeCrumbFor('planner')).toEqual({ label: '案件一覧', href: '/cases' });
     expect(homeCrumbFor('admin')).toEqual({ label: 'プランナー管理', href: '/users' });
-    expect(homeCrumbFor('system_admin')).toEqual({ label: '職員管理', href: '/users' });
+    expect(homeCrumbFor('system_admin')).toEqual({ label: 'ダッシュボード', href: '/dashboard' });
   });
 });

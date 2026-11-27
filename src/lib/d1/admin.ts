@@ -572,3 +572,40 @@ export async function systemSummaryD1(db: D1Database, actor: Actor) {
     alerts,
   };
 }
+
+// ---------------------------------------------------------------- D01 運営ダッシュボード
+
+export interface VenueOverviewRow {
+  id: string;
+  code: string;
+  name: string;
+  active: boolean;
+  activeCaseCount: number;
+  adminCount: number;
+  plannerCount: number;
+  invitedCount: number;
+  planCount: number;
+  /** 利用中のプランのうち、やることが1件も割り当てられていない数 */
+  emptyPlanCount: number;
+}
+
+/** 式場ごとの利用状況。案件の中身や個人情報は読まず、件数だけを返す。 */
+export async function venueOverviewD1(db: D1Database, actor: Actor): Promise<VenueOverviewRow[]> {
+  requireSystemAdmin(actor);
+  const staff = (where: string) =>
+    `(SELECT count(*) FROM user_profiles p WHERE p.venue_id=v.id AND ${where})`;
+  const { results } = await db
+    .prepare(
+      `SELECT v.id,v.code,v.name,v.active,
+        (SELECT count(*) FROM wedding_cases c WHERE c.venue_id=v.id AND c.archived_at IS NULL) AS activeCaseCount,
+        ${staff("p.role='admin' AND p.status='active'")} AS adminCount,
+        ${staff("p.role='planner' AND p.status='active'")} AS plannerCount,
+        ${staff("p.role IN ('planner','admin') AND p.status='invited'")} AS invitedCount,
+        (SELECT count(*) FROM plan_types pt WHERE pt.venue_id=v.id AND pt.active=1) AS planCount,
+        (SELECT count(*) FROM plan_types pt WHERE pt.venue_id=v.id AND pt.active=1
+          AND NOT EXISTS (SELECT 1 FROM plan_task_templates x WHERE x.plan_type_id=pt.id)) AS emptyPlanCount
+      FROM venues v ORDER BY v.active DESC,v.code`,
+    )
+    .all<Omit<VenueOverviewRow, 'active'> & { active: number }>();
+  return results.map((r) => ({ ...r, active: Boolean(r.active) }));
+}

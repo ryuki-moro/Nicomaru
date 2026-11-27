@@ -12,24 +12,22 @@ export interface Crumb {
   href?: string;
 }
 
+export const DASHBOARD_CRUMB: Required<Crumb> = { label: 'ダッシュボード', href: '/dashboard' };
+
 /**
  * D1版の着地点。立場の主な仕事の画面から始める。
- * planner は案件一覧、admin・system_admin は管理する職員の一覧（landingPathFor と共有）。
+ * planner は案件一覧、admin は管理する職員の一覧、system_admin は運営ダッシュボード
+ * （landingPathFor と共有）。
  */
 export function d1HomeCrumbFor(role: Role): Required<Crumb> | undefined {
   if (role === 'planner') return { label: '案件一覧', href: '/cases' };
-  if (role === 'admin' || role === 'system_admin')
-    return { label: usersLabelFor(role), href: '/users' };
+  if (role === 'admin') return { label: usersLabelFor(role), href: '/users' };
+  if (role === 'system_admin') return DASHBOARD_CRUMB;
   return undefined;
 }
 
 /** パンくずの起点。ロールの着地点（landingPathFor）と同じ画面にする。 */
 export function homeCrumbFor(role: Role): Crumb {
-  const d1 = publicD1() ? d1HomeCrumbFor(role) : undefined;
-  if (d1) return d1;
-  return role === 'system_admin'
-    ? { label: '利用状況', href: '/system' }
-    : { label: 'ダッシュボード', href: '/dashboard' };
+  return (publicD1() ? d1HomeCrumbFor(role) : undefined) ?? DASHBOARD_CRUMB;
 }
 
-export const DASHBOARD_CRUMB: Crumb = { label: 'ダッシュボード', href: '/dashboard' };

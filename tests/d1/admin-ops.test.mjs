@@ -17,6 +17,7 @@ import {
   saveTemplateD1,
   systemSummaryD1,
   updateVenueD1,
+  venueOverviewD1,
 } from '../../src/lib/d1/admin.ts';
 import { purgeCasesD1 } from '../../src/lib/d1/case-purge.ts';
 import { collectUsageD1, monitorSystemD1 } from '../../src/lib/d1/monitoring.ts';
@@ -334,4 +335,18 @@ test('system summary: 件数と監視・集計が D1 から返る', async () => 
   assert.ok(s.usage);
   assert.ok(Array.isArray(s.alerts));
   await assert.rejects(systemSummaryD1(db, adminA()), { status: 403 });
+});
+
+test('venue overview: 式場ごとの件数を返し、system_admin 以外は 403', async () => {
+  const rows = await venueOverviewD1(db, system());
+  const a = rows.find((r) => r.id === ids.venueA);
+  assert.ok(a);
+  assert.equal(typeof a.active, 'boolean');
+  assert.ok(a.adminCount >= 1);
+  assert.ok(a.plannerCount >= 1);
+  assert.ok(a.activeCaseCount >= 1);
+  assert.ok(a.emptyPlanCount <= a.planCount);
+  // 個人情報の列は返さない
+  assert.deepEqual(Object.keys(a).filter((k) => /email|name_kana|phone/.test(k)), []);
+  await assert.rejects(venueOverviewD1(db, adminA()), { status: 403 });
 });
