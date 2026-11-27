@@ -138,7 +138,7 @@ export async function listNotifications(db: D1Database, user: AppUser, offset: n
     .prepare(
       `SELECT n.id,n.case_id,n.channel,n.notification_type,n.title,n.body,n.status,n.sent_at,n.read_at,n.created_at,n.link_path
     FROM notifications n JOIN wedding_cases c ON c.id=n.case_id
-    WHERE EXISTS (SELECT 1 FROM user_profiles a WHERE a.id=? AND a.status='active' AND (n.recipient_user_id=a.id OR (a.role<>'couple' AND ${scope})))
+    WHERE EXISTS (SELECT 1 FROM user_profiles a WHERE a.id=? AND a.status='active' AND a.role<>'system_admin' AND (n.recipient_user_id=a.id OR (a.role<>'couple' AND ${scope})))
     ORDER BY n.created_at DESC,n.id DESC LIMIT ? OFFSET ?`,
     )
     .bind(user.id, user.id, LIST_PAGE_SIZE + 1, offset)
@@ -301,7 +301,7 @@ export async function markNotificationsRead(db: D1Database, user: AppUser, ids: 
         .prepare(
           `UPDATE notifications SET read_at=?,status='read'
     WHERE id=? AND recipient_user_id=? AND read_at IS NULL AND EXISTS
-    (SELECT 1 FROM user_profiles WHERE id=? AND status='active')`,
+    (SELECT 1 FROM user_profiles WHERE id=? AND status='active' AND role<>'system_admin')`,
         )
         .bind(new Date().toISOString(), id, user.id, user.id),
     ),

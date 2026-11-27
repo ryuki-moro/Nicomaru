@@ -76,6 +76,24 @@ test('通知は本人と担当者だけが閲覧でき、既読化は本人だ�
   );
 });
 
+test('system_admin は受信者に入っていても案件の通知を読めず、既読にもできない', async () => {
+  await db
+    .prepare(
+      "INSERT INTO notifications(id,case_id,recipient_user_id,channel,notification_type,title,body,created_at) VALUES ('notice-system',?,?, 'in_app','info','お知らせ','本文','2028-01-02')",
+    )
+    .bind(ids.caseA, ids.system)
+    .run();
+  const system = actor('system_admin', ids.system, null);
+  assert.equal((await listNotifications(db, system, 0)).length, 0);
+  await markNotificationsRead(db, system, ['notice-system']);
+  assert.equal(
+    (await db.prepare("SELECT read_at FROM notifications WHERE id='notice-system'").first())
+      .read_at,
+    null,
+  );
+  await db.prepare("DELETE FROM notifications WHERE id='notice-system'").run();
+});
+
 test('担当者がアプリ内通知を作成でき、担当外と別案件の宿題を拒否する', async () => {
   const input = {
     caseId: ids.caseA,
@@ -172,7 +190,10 @@ test('coupleの更新、plannerの担当変更、他式場の更新を拒否し�
   await assert.rejects(patchCase(db, actor('admin', ids.adminA), ids.caseB, { guestCount: 99 }), {
     code: 'NOT_FOUND',
   });
-  const stored = await db.prepare('SELECT guest_count FROM wedding_cases WHERE id=?').bind(ids.caseB).first();
+  const stored = await db
+    .prepare('SELECT guest_count FROM wedding_cases WHERE id=?')
+    .bind(ids.caseB)
+    .first();
   assert.equal(stored.guest_count, 50);
 });
 test('本体編集項目を更新し、日程のプレビューは未確定の間書き込まない', async () => {
