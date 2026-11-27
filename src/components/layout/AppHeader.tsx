@@ -6,6 +6,7 @@
  */
 import Link from 'next/link';
 
+import { DemoRoleSwitcher } from '@/components/layout/DemoRoleSwitcher';
 import { LogoutButton } from '@/components/layout/LogoutButton';
 import { StaffNav } from '@/components/layout/StaffNav';
 import { isStaff, ROLE_LABEL, type Role } from '@/lib/constants';
@@ -29,6 +30,7 @@ export function AppHeader({ role, displayName, minimal = false }: Props) {
   const band = minimal ? undefined : ROLE_BAND[role];
   return (
     <header className="no-print border-b border-border-light bg-surface">
+      <DemoRoleSwitcher role={role} minimal={minimal} />
       {band && (
         <p className={`${band.className} text-caption text-white`}>
           <span className="mx-auto block w-full max-w-6xl px-4 py-1">
