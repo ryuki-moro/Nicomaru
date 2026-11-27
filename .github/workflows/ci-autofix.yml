@@ -177,6 +177,9 @@ jobs:
           claude_code_oauth_token: ${{ env.CLAUDE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ env.CLAUDE_API_KEY }}
           github_token: ${{ github.token }}
+          # 修正後のCIがまた落ちると、follow-ci（github-actions[bot]）がこのワークフローを起動し直すため許可する。
+          # 起動元は workflow_run と workflow_dispatch（書き込み権限が要る）だけなので、外部の bot からは呼べない
+          allowed_bots: github-actions[bot]
           prompt: |
             REPO: ${{ github.repository }}
             対象: ${{ env.PR && format('PR #{0}', env.PR) || format('{0} ブランチへの push', env.BRANCH) }}
