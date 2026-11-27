@@ -245,7 +245,7 @@ export function ChatThread({
                         )}
                       </>
                     )}
-                    <p className="mt-1 flex items-center gap-2 text-caption text-text-muted">
+                    <div className="mt-1 flex items-center gap-2 text-caption text-text-muted">
                       <time dateTime={message.createdAt}>{formatTimeJst(message.createdAt)}</time>
                       {onCreateTask && !message.retracted && (
                         <details className="relative">
@@ -303,7 +303,7 @@ export function ChatThread({
                             取り消す
                           </button>
                         ))}
-                    </p>
+                    </div>
                   </div>
                 </div>
               )}
