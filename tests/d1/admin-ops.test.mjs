@@ -56,6 +56,7 @@ const MIGRATIONS = [
   '0021_admin.sql',
   '0022_follow.sql',
   '0028_case_messages.sql',
+  '0029_chat_links.sql',
 ];
 
 before(async () => {
@@ -167,6 +168,32 @@ test('notifications-dispatch: 期限N日前の未提出に in_app 通知を作�
   assert.ok(rows.results.every((r) => r.status === 'sent' && r.channel === 'in_app'));
   const second = await dispatchNotificationsD1(db);
   assert.equal(second.created, 0);
+  // チャットへのシステムメッセージも同じ日に二重には流れない
+  const soon = await db
+    .prepare(
+      "SELECT m.actor_user_id FROM case_messages m JOIN case_message_refs r ON r.message_id=m.id WHERE m.event_type='task_due_soon' AND r.ref_id='task-soon'",
+    )
+    .all();
+  assert.equal(soon.results.length, 1);
+  assert.equal(soon.results[0].actor_user_id, null);
+});
+
+test('notifications-dispatch: 期限切れはチャットへ最初の1回だけ流れる', async () => {
+  await db
+    .prepare(
+      "INSERT INTO case_tasks(id,case_id,title,due_date,status,importance) VALUES ('task-late', ?, '期限切れの宿題', '2020-01-01', 'not_started', 'normal')",
+    )
+    .bind(ids.caseA)
+    .run();
+  await dispatchNotificationsD1(db);
+  await dispatchNotificationsD1(db);
+  const late = await db
+    .prepare(
+      "SELECT m.kind FROM case_messages m JOIN case_message_refs r ON r.message_id=m.id WHERE m.event_type='task_overdue' AND r.ref_id='task-late'",
+    )
+    .all();
+  assert.equal(late.results.length, 1);
+  assert.equal(late.results[0].kind, 'system');
 });
 
 test('case-purge: 180日超のアーカイブ案件の個人情報とファイルを消し、AI保持も効く', async () => {
