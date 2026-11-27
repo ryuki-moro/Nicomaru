@@ -7,6 +7,8 @@
 import { Breadcrumbs, homeCrumbFor } from '@/components/layout/Breadcrumbs';
 import { getAppUser } from '@/lib/auth/session';
 import type { VenueOverviewRow } from '@/lib/d1/admin';
+import { LIST_PAGE_SIZE } from '@/lib/constants';
+import { resolvePage } from '@/lib/pagination';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { z } from 'zod';
@@ -22,10 +24,12 @@ interface VenueRow {
 }
 export default async function VenueEditPage({
   params,
+  searchParams,
 }: {
   params: Promise<{
     venueId: string;
   }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }) {
   const user = await getAppUser();
   if (!user) redirect('/login');
@@ -35,6 +39,9 @@ export default async function VenueEditPage({
   let venue: VenueRow | null = null;
   let overview: VenueOverviewRow | undefined;
   let staff: UserListRow[] = [];
+  let hasNext = false;
+  // 職員一覧のページ（50人ごと）
+  const page = resolvePage((await searchParams).page);
   let loadFailed = false;
   try {
     const db = await (await import('@/lib/d1/runtime')).localDB();
@@ -43,7 +50,7 @@ export default async function VenueEditPage({
     const [found, overviews, staffList] = await Promise.all([
       getVenueD1(db, user, venueId),
       venueOverviewD1(db, user),
-      listStaff(db, user, { venueId }),
+      listStaff(db, user, { venueId, page }),
     ]);
     venue = found
       ? {
@@ -55,6 +62,7 @@ export default async function VenueEditPage({
         }
       : null;
     overview = overviews.find((row) => row.id === venueId);
+    hasNext = staffList.hasNext;
     staff = staffList.rows.map((row) => ({
       id: row.id,
       displayName: row.display_name,
@@ -114,6 +122,22 @@ export default async function VenueEditPage({
                 プランナーの登録は、この式場の式場管理者が行います。
               </p>
               <UserTable rows={staff} showVenue={false} currentUserId={user.id} />
+              {(page > 1 || hasNext) && (
+                <nav aria-label="職員のページ送り" className="flex items-center justify-between">
+                  {page > 1 ? (
+                    <Link href={`/venues/${venue.id}?page=${page - 1}`} className="btn-ghost">
+                      前の{LIST_PAGE_SIZE}人
+                    </Link>
+                  ) : (
+                    <span />
+                  )}
+                  {hasNext && (
+                    <Link href={`/venues/${venue.id}?page=${page + 1}`} className="btn-ghost">
+                      次の{LIST_PAGE_SIZE}人
+                    </Link>
+                  )}
+                </nav>
+              )}
             </section>
 
             <section className="space-y-2">
