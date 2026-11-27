@@ -137,7 +137,7 @@ export default async function CaseDetailPage({
     caseId: string;
   }>;
 }) {
-  const user = await requirePageUser('planner', 'admin', 'system_admin');
+  const user = await requirePageUser('planner', 'admin');
   const { caseId } = await params;
   const d1 = true;
   let row: CaseRow;

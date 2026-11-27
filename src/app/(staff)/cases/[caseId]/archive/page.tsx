@@ -30,8 +30,8 @@ async function archiveCase(formData: FormData) {
   if (!caseId) return;
 
   const actor = await getAppUser();
-  if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin'))
-    redirect('/error?code=403');
+  // Server Action は layout の判定を通らないため、ここでも admin に限る
+  if (!actor || actor.role !== 'admin') redirect('/error?code=403');
 
   const db = await localDB();
   try {
@@ -52,7 +52,7 @@ export default async function CaseArchivePage({
   searchParams: Promise<{ error?: string }>;
 }) {
   // K05 は admin のみ（4-1 表4-10）
-  const user = await requirePageUser('admin', 'system_admin');
+  const user = await requirePageUser('admin');
 
   const { caseId } = await params;
   const { error: errorFlag } = await searchParams;

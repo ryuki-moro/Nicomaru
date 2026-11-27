@@ -19,6 +19,8 @@ export const ROLE_LABEL: Record<Role, string> = {
 /** planner／admin／system_admin をまとめて指す。RLS の staff 条件と対応する。 */
 export const STAFF_ROLES: readonly Role[] = ['planner', 'admin', 'system_admin'];
 export const isStaff = (role: Role): boolean => STAFF_ROLES.includes(role);
+/** 案件・提出物・通知を扱う立場。system_admin は式場と職員の管理が役目なので含めない。 */
+export const CASE_WORK_ROLES: readonly Role[] = ['planner', 'admin'];
 
 // ------------------------------------------------------------ 利用者の状態
 export const USER_STATUSES = ['active', 'invited', 'suspended', 'deleted'] as const;

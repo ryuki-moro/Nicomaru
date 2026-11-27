@@ -11,6 +11,7 @@
  * 打ち切るだけでは51件目以降のプラン種別を編集・停止できなくなるため、
  * K01／M02 と同じく1件多く取って前後リンクを出す（?page=）。
  */
+import { PlanSetupTabs } from '@/components/layout/PlanSetupTabs';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser, requirePageUser } from '@/lib/auth/session';
@@ -231,28 +232,22 @@ export default async function PlanTypesPage({
   };
   return (
     <div className="space-y-4">
-      <Breadcrumbs items={[DASHBOARD_CRUMB, { label: 'プラン種別管理' }]} />
+      <Breadcrumbs items={[DASHBOARD_CRUMB, { label: 'プランとやること' }]} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="section-head">プラン種別管理</h1>
-        <div className="flex items-center gap-3">
-          <Link href="/templates" className="btn-ghost">
-            やることテンプレート
-          </Link>
-          <Link href={hrefFor({ edit: 'new', page })} className="btn-primary w-auto">
-            新規登録
-          </Link>
-        </div>
+      <PlanSetupTabs current="/plan-types" />
+
+      <div className="flex justify-end">
+        <Link href={hrefFor({ edit: 'new', page })} className="btn-primary w-auto">
+          プランを登録
+        </Link>
       </div>
-
-      {false}
 
       {planTypes.length === 0 && !planTypesResult.error ? (
         <EmptyState
           message={
             page > 1
               ? 'これ以上のプラン種別はありません。'
-              : 'まだプラン種別がありません。「新規登録」から追加してください。'
+              : 'まだプランがありません。「プランを登録」から追加してください。'
           }
         />
       ) : (
@@ -260,9 +255,9 @@ export default async function PlanTypesPage({
           <table className="table">
             <thead>
               <tr>
-                <th scope="col">プラン種別名</th>
+                <th scope="col">プラン名</th>
                 <th scope="col">想定人数</th>
-                <th scope="col">割当テンプレート</th>
+                <th scope="col">やること</th>
                 <th scope="col">表示順</th>
                 <th scope="col">状態</th>
               </tr>
@@ -271,12 +266,19 @@ export default async function PlanTypesPage({
               {planTypes.map((planType) => (
                 <tr key={planType.id}>
                   <td>
-                    <Link href={hrefFor({ edit: planType.id, page })} className="btn-ghost">
+                    <Link href={hrefFor({ edit: planType.id, page })} className="table-link">
                       {planType.name}
                     </Link>
                   </td>
                   <td>{guestRange(planType)}</td>
-                  <td>{assignedCount.get(planType.id) ?? 0}件</td>
+                  <td>
+                    {/* 0件のプランで案件を登録すると、やることが何も割り当てられない */}
+                    {(assignedCount.get(planType.id) ?? 0) === 0 ? (
+                      <span className="badge-warning">未設定</span>
+                    ) : (
+                      `${assignedCount.get(planType.id)}件`
+                    )}
+                  </td>
                   <td>{planType.display_order}</td>
                   <td>
                     <span className={planType.active ? 'badge-success' : 'badge-neutral'}>
@@ -310,9 +312,7 @@ export default async function PlanTypesPage({
       {editing && (
         <section className="space-y-3">
           <h2 className="section-head">
-            {editing === 'new'
-              ? 'プラン種別の新規登録'
-              : `プラン種別の編集：${editingRow?.name ?? ''}`}
+            {editing === 'new' ? 'プランの新規登録' : `プランの編集：${editingRow?.name ?? ''}`}
           </h2>
           <PlanTypeForm
             /* 編集対象が変わったらフォームの内部状態を作り直す */

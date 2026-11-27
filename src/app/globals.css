@@ -126,6 +126,10 @@
     @apply flex gap-2 rounded-banner bg-danger-bg px-[14px] py-3 text-label text-danger;
   }
 
+  .banner-warning {
+    @apply flex gap-2 rounded-banner bg-warning-bg px-[14px] py-3 text-label text-warning-text;
+  }
+
   /* ---- セクション見出し ---- */
   .section-head {
     @apply text-section font-bold text-text-primary;

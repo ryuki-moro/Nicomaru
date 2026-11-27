@@ -11,12 +11,11 @@
  * 容量は内部バッチが採取した日次スナップショットを表示する。
  * 未取得・上限未設定・集計の期限切れは0%や正常として表示しない。
  */
-import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser } from '@/lib/auth/session';
 import { formatDateTime } from '@/lib/format';
 import { NOTIFICATION_TYPE_LABEL, type NotificationType } from '@/lib/notify/templates';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
   MonitoringSummary,
@@ -29,13 +28,13 @@ export const dynamic = 'force-dynamic';
 /** 6-12 表6-12 の処理名。batch_runs.job_type と対応する。 */
 const JOB_LABEL: Record<string, string> = {
   risk_recalculate: '遅れの度合いの再計算',
-  notifications_dispatch: '通知ディスパッチ',
-  ai_job_reclaim: 'AIジョブの滞留回収',
+  notifications_dispatch: '通知の送信',
+  ai_job_reclaim: '止まったAI処理のやり直し',
   case_purge: '案件終了後の自動削除',
-  health_check: '死活監視',
+  health_check: 'サーバーの応答確認',
   usage_rollup: '容量・利用状況の集計',
   backup: 'バックアップ',
-  rate_limit_cleanup: 'レート制限の掃除',
+  rate_limit_cleanup: 'ログイン試行回数の記録の整理',
   audit_log_purge: '監査ログの保持期限処理',
   monitoring: '障害条件の監視',
 };
@@ -110,17 +109,17 @@ function SystemView(props: {
   const { batchRows, logRows } = props;
   return (
     <div className="space-y-6">
-      <Breadcrumbs items={[{ label: '利用状況・通知ログ' }]} />
+      <Breadcrumbs items={[DASHBOARD_CRUMB, { label: '利用状況' }]} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="section-head">利用状況・通知ログ</h1>
-        <Link href="/venues" className="btn-secondary w-auto px-5 text-center">
-          式場一覧
-        </Link>
+      <div>
+        <h1 className="section-head">利用状況</h1>
+        <p className="mt-1 text-caption text-text-muted">
+          システム全体の件数・容量と、自動で動く処理が正常かどうか、送った通知の記録を確認します。
+        </p>
       </div>
 
       <section>
-        <h2 className="section-head">利用状況</h2>
+        <h2 className="section-head">件数と容量</h2>
         <div className="mt-2 grid gap-3 sm:grid-cols-3">
           <Summary label="式場数" value={props.venueCount} />
           <Summary label="案件数" value={props.caseCount} />
@@ -136,9 +135,10 @@ function SystemView(props: {
       <MonitoringSummary alerts={props.alerts} failed={props.alertsFailed} />
 
       <section>
-        <h2 className="section-head">定期処理の直近の実行結果</h2>
+        <h2 className="section-head">自動処理の実行結果</h2>
         <p className="mt-1 text-caption text-text-muted">
-          pg_net は結果を待たずに送るため、失敗はこの記録でしか分かりません。
+          毎日の集計や通知の送信など、自動で動く処理が最後に動いた時刻と結果です。
+          失敗が続く場合は開発担当に連絡してください。
         </p>
         {props.batchesFailed ? (
           <p className="mt-2" role="alert">
@@ -183,7 +183,7 @@ function SystemView(props: {
       </section>
 
       <section>
-        <h2 className="section-head">通知ログ</h2>
+        <h2 className="section-head">送った通知の記録</h2>
         <NotificationLogExportForm />
         {props.logsFailed ? (
           <p className="mt-2" role="alert">
@@ -191,7 +191,7 @@ function SystemView(props: {
           </p>
         ) : logRows.length === 0 ? (
           <div className="mt-2">
-            <EmptyState message="通知ログはまだありません。" />
+            <EmptyState message="送った通知はまだありません。" />
           </div>
         ) : (
           <div className="table-wrap mt-2">

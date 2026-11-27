@@ -10,6 +10,7 @@
  *
  * 参照は task_templates_select（自式場のみ）が、更新は task_templates_write（admin のみ）が守る。
  */
+import { PlanSetupTabs } from '@/components/layout/PlanSetupTabs';
 import { Breadcrumbs, DASHBOARD_CRUMB } from '@/components/layout/Breadcrumbs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAppUser } from '@/lib/auth/session';
@@ -117,28 +118,24 @@ export default async function TemplateListPage({
   const loadFailed = false;
   return (
     <div className="space-y-4">
-      <Breadcrumbs items={[DASHBOARD_CRUMB, { label: 'やることテンプレート' }]} />
+      <Breadcrumbs
+        items={[
+          DASHBOARD_CRUMB,
+          { label: 'プランとやること', href: '/plan-types' },
+          { label: 'やることの一覧' },
+        ]}
+      />
+
+      <PlanSetupTabs current="/templates" />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="section-head">やることテンプレート</h1>
-        <div className="flex items-center gap-3">
-          <Link href="/plan-types" className="btn-ghost">
-            プラン種別管理
-          </Link>
-          <Link href="/templates/new" className="btn-primary w-auto">
-            新規登録
-          </Link>
-        </div>
+        <p className="text-caption text-text-muted">
+          「利用中」をオフにしても、すでに割り当て済みの案件のやることはそのまま残ります。
+        </p>
+        <Link href="/templates/new" className="btn-primary w-auto">
+          やることを登録
+        </Link>
       </div>
-
-      <p className="banner-info">
-        ここで登録したやることは、案件登録時にプラン種別ごとのセットとして割り当てられます。
-        「利用中」をオフにしても、すでに割り当て済みの案件のやることはそのまま残ります。
-      </p>
-
-      <TemplateDraftPanel
-        existing={templates.map((t) => ({ name: t.name, due_offset_days: t.due_offset_days }))}
-      />
 
       {loadFailed && (
         <p role="alert" className="banner-error">
@@ -151,7 +148,7 @@ export default async function TemplateListPage({
           message={
             page > 1
               ? 'これ以上のテンプレートはありません。'
-              : 'まだやることテンプレートがありません。「新規登録」から追加してください。'
+              : 'まだやることがありません。「やることを登録」か、下の候補から追加してください。'
           }
         />
       ) : (
@@ -160,7 +157,7 @@ export default async function TemplateListPage({
             <thead>
               <tr>
                 <th scope="col">やることの名前</th>
-                <th scope="col">対象プラン種別</th>
+                <th scope="col">使っているプラン</th>
                 <th scope="col">逆算日数</th>
                 <th scope="col">提出フォーマット</th>
                 <th scope="col">重要度</th>
@@ -213,6 +210,18 @@ export default async function TemplateListPage({
           )}
         </nav>
       )}
+
+      {/* 既存の一覧を先に見せ、候補は必要なときだけ開く。無いときは最初から開いておく */}
+      <details open={templates.length === 0} className="card">
+        <summary className="cursor-pointer text-label font-bold text-text-primary">
+          よく使うやることの候補（AI）
+        </summary>
+        <div className="mt-3">
+          <TemplateDraftPanel
+            existing={templates.map((t) => ({ name: t.name, due_offset_days: t.due_offset_days }))}
+          />
+        </div>
+      </details>
     </div>
   );
 }

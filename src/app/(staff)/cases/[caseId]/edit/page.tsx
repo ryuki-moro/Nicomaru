@@ -37,7 +37,7 @@ export default async function CaseEditPage({
     caseId: string;
   }>;
 }) {
-  const user = await requirePageUser('planner', 'admin', 'system_admin');
+  const user = await requirePageUser('planner', 'admin');
   const { caseId } = await params;
   let row: CaseRow;
   let plans: {
