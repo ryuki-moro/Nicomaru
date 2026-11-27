@@ -62,10 +62,7 @@ export async function taskRole(db: D1Database, user: Actor, couple: boolean) {
     .prepare("SELECT role FROM user_profiles WHERE id=? AND status='active'")
     .bind(user.id)
     .first<{ role: string }>();
-  if (
-    !row ||
-    (couple ? row.role !== 'couple' : !['planner', 'admin'].includes(row.role))
-  )
+  if (!row || (couple ? row.role !== 'couple' : !['planner', 'admin'].includes(row.role)))
     throw forbidden();
 }
 const staffRole = `EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin'))`;
