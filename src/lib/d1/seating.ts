@@ -32,6 +32,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { randomUUID } from 'node:crypto';
 import type { z } from 'zod';
 import { scope } from './cases';
+import { announceSystemMessage } from './system-messages';
 
 type Actor = Pick<AppUser, 'id'>;
 
@@ -633,6 +634,13 @@ export async function submitSeatingChart(
       )
       .bind(randomUUID(), caseId, head.primary_planner_id, `/cases/${caseId}`, now, now),
   ]);
+  await announceSystemMessage(
+    db,
+    caseId,
+    'seating_submitted',
+    [{ type: 'seating', id: caseId }],
+    user.id,
+  );
   return nextVersion;
 }
 
