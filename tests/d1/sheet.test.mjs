@@ -29,6 +29,8 @@ before(async () => {
     '0010_ai.sql',
     '0014_sheet.sql',
     '0015_meeting.sql',
+    '0028_case_messages.sql',
+    '0029_chat_links.sql',
   ]) {
     const sql = await readFile(`cloudflare/migrations/${file}`, 'utf8');
     await db.batch(
