@@ -62,8 +62,7 @@ export function UsageSummary({
 }) {
   if (failed)
     return <p role="alert">容量集計を読み込めませんでした。時間をおいて再度ご確認ください。</p>;
-  if (!snapshot)
-    return <p>容量の集計記録はまだありません。日次集計の設定・実行状況をご確認ください。</p>;
+  if (!snapshot) return <p>容量はまだ集計されていません。毎日の自動集計が動くと表示されます。</p>;
   const stale = checkedAt - Date.parse(snapshot.measured_at) > 2 * 86_400_000;
   return (
     <div className="mt-3 space-y-2">
@@ -78,7 +77,7 @@ export function UsageSummary({
           limit={snapshot.database_limit_bytes}
         />
         <Capacity
-          label="Storage"
+          label="ファイル保存領域"
           used={snapshot.storage_bytes}
           limit={snapshot.storage_limit_bytes}
         />
@@ -89,22 +88,22 @@ export function UsageSummary({
       </p>
       <p className="text-caption text-text-muted">
         使用率は設定した容量上限との比較です。契約プランの上限変更時は設定を更新してください。
-        Storageはプロジェクト内のオブジェクトの合計、データベースは物理サイズです。
+        ファイル保存領域はアップロードされたファイルの合計、データベースは保存データの大きさです。
       </p>
     </div>
   );
 }
 
 function alertLabel(key: string): string {
-  if (key.startsWith('batch_failed:')) return '定期処理が失敗しました';
-  if (key.startsWith('batch_missing:')) return '定期処理が想定間隔の2倍を超えて未実行です';
+  if (key.startsWith('batch_failed:')) return '自動処理が失敗しました';
+  if (key.startsWith('batch_missing:')) return '自動処理が予定の2倍以上の時間、動いていません';
   const labels: Record<string, string> = {
-    health_failed: '死活監視が連続で失敗しました',
-    ai_failed: 'AIジョブに失敗があります',
-    ai_stalled: 'AIジョブの処理が30分を超えています',
+    health_failed: 'サーバーの応答確認が続けて失敗しました',
+    ai_failed: 'AIの処理に失敗したものがあります',
+    ai_stalled: 'AIの処理が30分を超えて止まっています',
     notification_failures: '当日の通知送信失敗が5件以上あります',
     capacity_database: 'データベース使用量が設定上限の70%を超えています',
-    capacity_storage: 'Storage使用量が設定上限の70%を超えています',
+    capacity_storage: 'ファイル保存領域の使用量が設定上限の70%を超えています',
     capacity_unavailable: '容量集計の未取得・期限切れ・上限未設定を確認してください',
     auth_failures: '同一アカウントへの認証失敗が1時間に10回以上発生しました',
   };
@@ -116,17 +115,20 @@ export function MonitoringSummary({ alerts, failed }: { alerts: SystemAlert[]; f
     <section>
       <h2 className="section-head">システムの確認事項</h2>
       <p className="mt-1 text-caption text-text-muted">
-        システム管理者の共通通知です。継続する同じ問題の再通知は1時間ごとにまとめ、回復時に解消と表示します。
-        外部のメール・LINEには送信しません。サーバーに接続できない障害はGitHub
-        ActionsのKeepaliveで確認してください。
+        システムが自動で見つけた問題です。同じ問題が続く間は1時間ごとにまとめ、直ると「解消済み」になります。
       </p>
+      <details className="mt-1 text-caption text-text-muted">
+        <summary className="cursor-pointer">技術担当の方へ</summary>
+        この通知は画面内だけで、外部のメール・LINEには送りません。サーバー自体に接続できない障害は
+        GitHub Actions の Keepalive で確認してください。
+      </details>
       {failed ? (
         <p className="mt-2" role="alert">
           監視結果を読み込めませんでした。
         </p>
       ) : alerts.length === 0 ? (
         <p className="mt-2">
-          通知記録はまだありません。下の定期処理一覧で監視が実行されていることをご確認ください。
+          確認が必要な問題はありません。下の「自動処理の実行結果」で、監視が動いていることも確認できます。
         </p>
       ) : (
         <ul className="mt-3 space-y-2">

@@ -8,8 +8,8 @@ import type { Role } from '@/lib/constants';
  *   - 利用者管理は admin／system_admin
  *   - 式場管理・利用状況（S01〜S03）は system_admin のみ
  *   - 案件・提出物・通知は planner／admin だけ。system_admin は式場と職員の管理に絞る
- * 「式場一覧」「利用状況・通知ログ」は各画面のパンくず・見出しと同じ名前になるため、
- * ナビ側は「式場管理」「利用状況」と短くして、リンク名が重ならないようにする。
+ * 「式場一覧」は画面のパンくず・見出しと同じ名前になるため、ナビ側は「式場管理」と短くして、
+ * リンク名が重ならないようにする。
  */
 export interface NavItem {
   href: string;
