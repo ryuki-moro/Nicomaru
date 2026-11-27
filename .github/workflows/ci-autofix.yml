@@ -4,6 +4,8 @@
 #           「自動修正しない」ラベルなし、失敗した実行がPRの最新コミットのもの
 #   - 自動修正のコミットは件名に [ci-autofix] を付ける。PR内に3件たまったら止めて人に返す
 #   - 直す箇所がない（一過性の失敗と判断した）ときは、初回だけ失敗ジョブを再実行する
+#   - security ジョブ（依存の脆弱性・秘密情報の検出）の失敗は直さない。鍵の取り替えなど人の判断が要るため、
+#     それだけが落ちたときはPRにコメントして止める
 #   - 認証: リポジトリ secret の CLAUDE_CODE_OAUTH_TOKEN（`claude setup-token` で発行）か ANTHROPIC_API_KEY。
 #           どちらも無ければ何もしない
 #   - 修正・再実行後のCIは follow-ci が見届け、成功なら自動マージ、失敗ならこのワークフローを run_id 指定で起動し直す
@@ -57,6 +59,12 @@ jobs:
           if [ "$(jq -r .isDraft <<< "$pr")" = "true" ]; then echo "#$num は下書きのため見送り"; exit 0; fi
           if [ "$(jq -r .headRefOid <<< "$pr")" != "$HEAD_SHA" ]; then echo "#$num は新しいコミットがあるため見送り"; exit 0; fi
           if jq -e '[.labels[].name] | index("自動修正しない")' <<< "$pr" >/dev/null; then echo "#$num は自動修正しないラベル付き"; exit 0; fi
+          failed=$(gh api "repos/$GH_REPO/actions/runs/$RUN_ID/jobs?filter=latest&per_page=100" --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(" ")')
+          echo "失敗したジョブ: $failed"
+          if [ "$failed" = "security" ]; then
+            gh pr comment "$num" --body "security ジョブ（依存の脆弱性・秘密情報の検出）だけが失敗しました。鍵の取り替えや依存の更新は人の判断が要るため、自動修正しません。失敗した実行: ${GITHUB_SERVER_URL}/${GH_REPO}/actions/runs/${RUN_ID}"
+            exit 0
+          fi
           if [ "$HAS_CREDENTIAL" != "true" ]; then
             echo "::warning::CLAUDE_CODE_OAUTH_TOKEN / ANTHROPIC_API_KEY が未設定のため自動修正しません"
             exit 0
@@ -113,6 +121,7 @@ jobs:
             1. ログから失敗の原因を特定する。
             2. コードの不具合なら、PRの意図を変えない最小の修正をする。テストを消す・弱める・skip にする修正はしない。
                直したら該当する npm run lint / format / typecheck / test / test:d1 / build を実行して通ることを確かめる。
+               security ジョブ（npm audit・gitleaks）の失敗は直さない（人が対応する）。
             3. ネットワーク・外部API・タイムアウトなど一過性の失敗で、コードに直す箇所がないなら、ファイルを変更しない。
             4. 最後に ${{ runner.temp }}/autofix-summary.md へ、原因と対応を日本語で3行以内で書く。
 
