@@ -37,7 +37,8 @@ export function TemplateDraftPanel({ existing }: Props) {
           </thead>
           <tbody>
             {rows.map((t, i) => (
-              <tr key={t.name}>
+              // 名前は編集で変わるため、キーには使わない（入力中にフォーカスが外れる）
+              <tr key={i}>
                 <td>
                   <input
                     className="field"
