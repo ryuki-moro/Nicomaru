@@ -160,11 +160,15 @@ test(
         await page.getByLabel('メールアドレス', { exact: true }).fill(users[name].email);
         await page.getByLabel('パスワード', { exact: true }).fill(users[name].password);
         await page.getByRole('button', { name: 'パスワードでログイン', exact: true }).click();
-        const landing = { adminA: 'users', plannerA: 'cases', system: 'users', coupleA: 'mypage' };
+        const landing = {
+          adminA: 'dashboard',
+          plannerA: 'cases',
+          system: 'dashboard',
+          coupleA: 'mypage',
+        };
         await page.waitForURL(`**/${landing[name]}`);
-        if (landing[name] === 'users') {
-          const label = name === 'system' ? '職員管理' : 'プランナー管理';
-          await page.getByRole('heading', { name: label, exact: true }).waitFor();
+        if (landing[name] === 'dashboard') {
+          await page.getByRole('heading', { name: 'ダッシュボード', exact: true }).waitFor();
           await page.goto(origin + '/cases');
         }
         if (name === 'coupleA') {
@@ -172,10 +176,15 @@ test(
           assert.equal((await page.locator('body').innerText()).includes('内部メモ'), false);
           await page.goto(origin + `/cases/${ids.caseA}/edit`);
           await page.waitForURL('**/mypage');
+        } else if (name === 'system') {
+          // system_admin は案件業務の画面を開けない（P04 へ送られる）
+          await page.waitForURL('**/error?code=403');
+          assert.equal((await page.locator('body').innerText()).includes('A-001'), false);
+          await page.goto(origin + '/dashboard');
+          await page.getByRole('heading', { name: 'ダッシュボード', exact: true }).waitFor();
         } else {
           await page.getByRole('heading', { name: '案件一覧', exact: true }).waitFor();
-          if (name !== 'system')
-            assert.equal((await page.locator('main').innerText()).includes('B-001'), false);
+          assert.equal((await page.locator('main').innerText()).includes('B-001'), false);
           if (name === 'plannerA') {
             await page.goto(origin + `/cases/${ids.caseA}/edit`);
             await page.getByLabel('人数（任意）').fill('72');
