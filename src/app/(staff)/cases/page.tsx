@@ -35,8 +35,8 @@ async function restoreCase(formData: FormData) {
   const caseId = String(formData.get('caseId') ?? '');
   if (!caseId) return;
   const actor = await getAppUser();
-  if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin'))
-    redirect('/error?code=403');
+  // Server Action は layout の判定を通らないため、ここでも admin に限る
+  if (!actor || actor.role !== 'admin') redirect('/error?code=403');
   try {
     {
       const { localDB } = await import('@/lib/d1/runtime');

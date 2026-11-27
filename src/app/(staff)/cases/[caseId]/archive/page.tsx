@@ -30,8 +30,8 @@ async function archiveCase(formData: FormData) {
   if (!caseId) return;
 
   const actor = await getAppUser();
-  if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin'))
-    redirect('/error?code=403');
+  // Server Action は layout の判定を通らないため、ここでも admin に限る
+  if (!actor || actor.role !== 'admin') redirect('/error?code=403');
 
   const db = await localDB();
   try {
