@@ -4,7 +4,7 @@ import type { Role } from '@/lib/constants';
  * planner／admin／system_admin 側の全画面に常設するグローバルナビ（ヘッダー内の横並び）。
  *
  * 出す項目は各画面のロール判定と揃える。開けない画面への導線は出さない（4-3）。
- *   - 宿題テンプレート・プラン種別は admin のみ
+ *   - プランとやること（T01〜T03）は admin のみ。2画面を1項目にまとめ、画面内のタブで切り替える
  *   - 利用者管理は admin／system_admin
  *   - 式場管理・利用状況（S01〜S03）は system_admin のみ
  *   - 案件・提出物・通知は planner／admin だけ。system_admin は式場と職員の管理に絞る
@@ -15,6 +15,8 @@ export interface NavItem {
   href: string;
   label: string;
   roles: readonly Role[];
+  /** href 以外に、この項目を現在地として扱う画面 */
+  match?: readonly string[];
 }
 
 const ITEMS: readonly NavItem[] = [
@@ -22,8 +24,7 @@ const ITEMS: readonly NavItem[] = [
   { href: '/cases', label: '案件一覧', roles: ['planner', 'admin'] },
   { href: '/submissions', label: '提出物確認', roles: ['planner', 'admin'] },
   { href: '/notifications', label: '通知履歴', roles: ['planner', 'admin'] },
-  { href: '/templates', label: 'やることテンプレート', roles: ['admin'] },
-  { href: '/plan-types', label: 'プラン種別', roles: ['admin'] },
+  { href: '/plan-types', label: 'プランとやること', roles: ['admin'], match: ['/templates'] },
   { href: '/venues', label: '式場管理', roles: ['system_admin'] },
   // 名前は立場で変わる（usersLabelFor）。同じ画面でも管理する相手が違うため。
   { href: '/users', label: '利用者管理', roles: ['admin', 'system_admin'] },

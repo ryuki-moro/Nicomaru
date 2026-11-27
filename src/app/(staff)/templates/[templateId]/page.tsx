@@ -129,15 +129,14 @@ export default async function TemplateEditPage({
       <Breadcrumbs
         items={[
           DASHBOARD_CRUMB,
-          { label: 'やることテンプレート', href: '/templates' },
+          { label: 'プランとやること', href: '/plan-types' },
+          { label: 'やることの一覧', href: '/templates' },
           { label: isNew ? '新規登録' : '編集' },
         ]}
       />
 
       <h1 className="section-head">
-        {isNew
-          ? 'やることテンプレートの新規登録'
-          : `やることテンプレートの編集：${record?.name ?? ''}`}
+        {isNew ? 'やることの新規登録' : `やることの編集：${record?.name ?? ''}`}
       </h1>
 
       <TemplateForm

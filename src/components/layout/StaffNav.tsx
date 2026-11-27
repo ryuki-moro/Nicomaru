@@ -12,7 +12,9 @@ export function StaffNav({ role }: { role: Role }) {
       {/* スマホ幅でも全項目が見えるよう、横スクロールではなく折り返す */}
       <ul className="flex flex-wrap gap-x-1">
         {items.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active = [item.href, ...(item.match ?? [])].some(
+            (href) => pathname === href || pathname.startsWith(`${href}/`),
+          );
           return (
             <li key={item.href}>
               {/* 現在地は色だけでなく太字と下線（バー）でも示す */}
