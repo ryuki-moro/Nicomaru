@@ -1,6 +1,8 @@
 import { PerformanceReporter } from '@/components/PerformanceReporter';
 import { PwaRegistration } from '@/components/PwaRegistration';
+import { NavigationProgress } from '@/components/layout/NavigationProgress';
 import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
 import './globals.css';
 export const metadata: Metadata = {
   title: {
@@ -25,6 +27,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ja">
       <body>
+        {/* useSearchParams を使うため、静的に描く画面でも全体を動的にしないよう Suspense で囲む */}
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         {children}
         {!true && <PwaRegistration />}
         <PerformanceReporter />
