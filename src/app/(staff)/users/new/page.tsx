@@ -14,7 +14,11 @@ import { getAppUser } from '@/lib/auth/session';
 import { ROLE_LABEL } from '@/lib/constants';
 import { redirect } from 'next/navigation';
 import { UserForm } from './UserForm';
-export default async function UserCreatePage() {
+export default async function UserCreatePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ venueId?: string }>;
+}) {
   const user = await getAppUser();
   if (!user) redirect('/login');
   if (user.role !== 'admin' && user.role !== 'system_admin') redirect('/error?code=403');
@@ -32,12 +36,20 @@ export default async function UserCreatePage() {
       fixedVenueName = (await staff.venueName(db, user.venueId)) ?? '所属式場';
     else venueOptions = await staff.listVenues(db);
   }
+  const { venueId } = await searchParams;
+  // 式場詳細から来たときは、パンくずもその式場へ戻れるようにする
+  const fromVenue = venueOptions.find((venue) => venue.id === venueId);
   return (
     <div className="space-y-4">
       <Breadcrumbs
         items={[
           homeCrumbFor(user.role),
-          { label: usersLabelFor(user.role), href: '/users' },
+          ...(fromVenue
+            ? [
+                { label: '式場一覧', href: '/venues' },
+                { label: fromVenue.name, href: `/venues/${fromVenue.id}` },
+              ]
+            : [{ label: usersLabelFor(user.role), href: '/users' }]),
           { label: `${createdRoleLabelFor(user.role)}の登録` },
         ]}
       />
@@ -48,6 +60,7 @@ export default async function UserCreatePage() {
         roleLabel={ROLE_LABEL[createdRole]}
         fixedVenueName={fixedVenueName}
         venueOptions={venueOptions}
+        initialVenueId={fromVenue?.id}
       />
     </div>
   );

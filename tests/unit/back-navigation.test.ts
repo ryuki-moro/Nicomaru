@@ -6,7 +6,7 @@ import {
   taskDetailHref,
 } from '@/app/(couple)/mypage/tasks/taskLinks';
 import { isCoupleNavActive } from '@/components/couple/coupleNavActive';
-import { homeCrumbFor } from '@/components/layout/breadcrumbItems';
+import { DASHBOARD_CRUMB, homeCrumbFor, visibleCrumbs } from '@/components/layout/breadcrumbItems';
 
 const TASK_ID = '00000000-0000-4000-8000-000000000001';
 
@@ -62,7 +62,30 @@ describe('新郎新婦の下部ナビの現在地', () => {
 describe('プランナー側のパンくずの起点', () => {
   it('ロールの着地点から始める', () => {
     expect(homeCrumbFor('planner')).toEqual({ label: '案件一覧', href: '/cases' });
-    expect(homeCrumbFor('admin')).toEqual({ label: 'プランナー管理', href: '/users' });
-    expect(homeCrumbFor('system_admin')).toEqual({ label: '職員管理', href: '/users' });
+    expect(homeCrumbFor('admin')).toEqual({ label: 'ダッシュボード', href: '/dashboard' });
+    expect(homeCrumbFor('system_admin')).toEqual({ label: 'ダッシュボード', href: '/dashboard' });
+  });
+});
+
+describe('パンくずに表示する項目', () => {
+  it('ダッシュボードから始まる階層はそのまま出す', () => {
+    const items = [DASHBOARD_CRUMB, { label: '式場一覧', href: '/venues' }, { label: '式場A' }];
+    expect(visibleCrumbs(items)).toEqual(items);
+  });
+
+  it('起点と次が同じ画面名なら起点を省く', () => {
+    const items = [
+      { label: '案件一覧', href: '/cases' },
+      { label: '案件一覧', href: '/cases' },
+      { label: 'A-001' },
+    ];
+    expect(visibleCrumbs(items)).toEqual(items.slice(1));
+  });
+
+  it('現在地だけになるなら見出しと重なるので出さない', () => {
+    expect(visibleCrumbs([{ label: '案件一覧', href: '/cases' }, { label: '案件一覧' }])).toEqual(
+      [],
+    );
+    expect(visibleCrumbs([{ label: 'ダッシュボード' }])).toEqual([]);
   });
 });

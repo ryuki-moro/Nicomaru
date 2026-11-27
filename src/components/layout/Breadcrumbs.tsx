@@ -6,13 +6,12 @@
  * 並べる項目だけを画面が決め、見た目と現在地の示し方はここに寄せる。
  *
  * 起点のきまり（docs/ui-review/p2/back-navigation.md）:
- *   - 起点はそのロールの着地点（landingPathFor）にする。planner・admin はダッシュボード、
- *     system_admin 専用の画面（式場管理・利用者管理）は利用状況から始める
+ *   - 起点はそのロールの着地点（landingPathFor）にする。planner は案件一覧、
+ *     admin・system_admin はダッシュボード
  *   - 最後の項目が現在地。href を渡さず、aria-current="page" で示す
- *   - 起点と次の項目が同じ画面名なら起点を省く（D1版では着地点が一覧画面そのもののため）
- *   - D1版ではダッシュボード・利用状況への項目を出さない（画面がない）
+ *   - 起点と次の項目が同じ画面名なら起点を省き、現在地だけになったら出さない（visibleCrumbs）
  */
-import type { Crumb } from '@/components/layout/breadcrumbItems';
+import { visibleCrumbs, type Crumb } from '@/components/layout/breadcrumbItems';
 import Link from 'next/link';
 export { DASHBOARD_CRUMB, homeCrumbFor, type Crumb } from '@/components/layout/breadcrumbItems';
 export function Breadcrumbs({
@@ -22,9 +21,8 @@ export function Breadcrumbs({
   items: readonly Crumb[];
   className?: string;
 }) {
-  // D1版にはダッシュボード・利用状況がないため、その起点は省く。
-  const shown = given.filter((crumb) => crumb.href !== '/dashboard' && crumb.href !== '/system');
-  const items = shown.length > 1 && shown[0].label === shown[1].label ? shown.slice(1) : shown;
+  const items = visibleCrumbs(given);
+  if (items.length === 0) return null;
   return (
     <nav aria-label="パンくず" className={className}>
       <ol className="flex flex-wrap items-center gap-1 text-caption text-text-muted">

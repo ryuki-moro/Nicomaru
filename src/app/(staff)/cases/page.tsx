@@ -35,8 +35,8 @@ async function restoreCase(formData: FormData) {
   const caseId = String(formData.get('caseId') ?? '');
   if (!caseId) return;
   const actor = await getAppUser();
-  if (!actor || (actor.role !== 'admin' && actor.role !== 'system_admin'))
-    redirect('/error?code=403');
+  // Server Action は layout の判定を通らないため、ここでも admin に限る
+  if (!actor || actor.role !== 'admin') redirect('/error?code=403');
   try {
     {
       const { localDB } = await import('@/lib/d1/runtime');
@@ -59,7 +59,7 @@ interface Props {
   }>;
 }
 export default async function CaseListPage({ searchParams }: Props) {
-  const user = await requirePageUser('planner', 'admin', 'system_admin');
+  const user = await requirePageUser('planner', 'admin');
   const params = await searchParams;
   const canSeeArchived = user.role === 'admin' || user.role === 'system_admin';
   // 案件登録（K03）は planner／admin のみ。ボタンと空状態の案内をこの判定でそろえる

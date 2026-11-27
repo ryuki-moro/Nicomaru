@@ -29,7 +29,7 @@ export default async function MeetingNotesPage({
   searchParams: Promise<{ memo?: string }>;
 }) {
   // couple には打ち合わせ記録そのものを見せない（付録A meeting_notes_all は staff 限定）
-  const pageUser = await requirePageUser('planner', 'admin', 'system_admin');
+  const pageUser = await requirePageUser('planner', 'admin');
   const { caseId } = await params;
   // npm run demo だけ: ?memo=demo で、発表用の打ち合わせメモを入力済みにして開く
   const memo =
