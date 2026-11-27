@@ -5,6 +5,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { getPlatformProxy } from 'wrangler';
 import { encryptPii } from '../../src/lib/crypto.ts';
 import { seedAppFixtures, ids } from '../../scripts/d1-fixtures.mjs';
+import { createTaskFromMessage } from '../../src/lib/d1/message-tasks.ts';
 import { listRefCandidates } from '../../src/lib/d1/chat-refs.ts';
 import { purgeCasesD1 } from '../../src/lib/d1/case-purge.ts';
 import {
@@ -227,6 +228,61 @@ test('添付の候補は閲覧者の範囲だけで、検索語で絞れる', as
   // 別案件の担当者・別式場の新郎新婦は 404
   for (const u of [actor('planner', ids.plannerA2), actor('couple', ids.coupleB, ids.venueB)])
     await assert.rejects(listRefCandidates(db, u, ids.caseA, 'task', ''), { status: 404 });
+});
+
+const taskInput = (title) => ({
+  title,
+  submissionFormat: 'text',
+  allowedFileTypes: [],
+  options: {},
+  importance: 'normal',
+  isRequired: true,
+  dueDate: '2027-05-20',
+});
+
+test('スタッフはメッセージからやることを作れ、元メッセージにひも付いてシステムメッセージが流れる', async () => {
+  const source = await postMessage(db, bride(), ids.caseA, '招待状の宛名を確認したいです');
+  const created = await createTaskFromMessage(db, planner(), source.id, taskInput('宛名の確認'));
+  const row = await db
+    .prepare('SELECT source_message_id,case_id FROM case_tasks WHERE id=?')
+    .bind(created.id)
+    .first();
+  assert.equal(row.source_message_id, source.id);
+  assert.equal(row.case_id, ids.caseA);
+  const items = await list(bride());
+  assert.deepEqual(items.find((m) => m.id === source.id).linkedTaskIds, [created.id]);
+  const system = items.find((m) => m.eventType === 'task_created');
+  assert.equal(system.body, 'plannerAさんが『宛名の確認』を作成しました');
+  assert.equal(system.refs[0].href, `/mypage/tasks/${created.id}`);
+  // 新郎新婦のやること一覧に出る
+  const candidates = await listRefCandidates(db, bride(), ids.caseA, 'task', '宛名');
+  assert.deepEqual(
+    candidates.map((c) => c.id),
+    [created.id],
+  );
+});
+
+test('やること化できるのは担当のスタッフだけで、取り消し済み・システムメッセージは 409', async () => {
+  const source = await postMessage(db, planner(), ids.caseA, '作れない確認');
+  for (const u of [
+    bride(),
+    actor('planner', ids.plannerA2),
+    actor('admin', ids.adminB, ids.venueB),
+  ])
+    await assert.rejects(createTaskFromMessage(db, u, source.id, taskInput('x')), { status: 404 });
+  await assert.rejects(createTaskFromMessage(db, planner(), crypto.randomUUID(), taskInput('x')), {
+    status: 404,
+  });
+  const system = (await list(planner())).find((m) => m.kind === 'system');
+  await assert.rejects(createTaskFromMessage(db, planner(), system.id, taskInput('x')), {
+    status: 409,
+  });
+  await retractMessage(db, planner(), source.id);
+  await assert.rejects(createTaskFromMessage(db, planner(), source.id, taskInput('x')), {
+    status: 409,
+  });
+  const count = await db.prepare("SELECT count(*) AS n FROM case_tasks WHERE title='x'").first();
+  assert.equal(count.n, 0);
 });
 
 test('取り消すと添付も外れ、案件の削除バッチで参照も消える', async () => {
