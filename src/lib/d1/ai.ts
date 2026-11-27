@@ -63,7 +63,7 @@ function view(row: StoredJob): AiJobRow & { model_name: string | null; started_a
   };
 }
 
-const staffCase = `EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=j.case_id AND c.archived_at IS NULL AND ${scope}) AND EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin','system_admin'))`;
+const staffCase = `EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=j.case_id AND c.archived_at IS NULL AND ${scope}) AND EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin'))`;
 
 export async function aiAssistStatus(db: D1Database): Promise<AiAssistStatus> {
   const row = await db

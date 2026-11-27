@@ -64,11 +64,11 @@ export async function taskRole(db: D1Database, user: Actor, couple: boolean) {
     .first<{ role: string }>();
   if (
     !row ||
-    (couple ? row.role !== 'couple' : !['planner', 'admin', 'system_admin'].includes(row.role))
+    (couple ? row.role !== 'couple' : !['planner', 'admin'].includes(row.role))
   )
     throw forbidden();
 }
-const staffRole = `EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin','system_admin'))`;
+const staffRole = `EXISTS(SELECT 1 FROM user_profiles r WHERE r.id=? AND r.status='active' AND r.role IN ('planner','admin'))`;
 const access = `EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=case_id AND c.archived_at IS NULL AND ${scope})`;
 export async function taskRow(db: D1Database, user: Actor, id: string) {
   const row = await db
@@ -128,7 +128,7 @@ export async function latestSubmission(db: D1Database, user: Actor, id: string) 
 // 全文の書込みを同じtask.versionとDB現在値で囲み、最後のversion更新までbatchで原子的に行う。
 function guard(task: TaskRow, user: Actor, couple: boolean) {
   return {
-    sql: `EXISTS(SELECT 1 FROM case_tasks t JOIN wedding_cases c ON c.id=t.case_id JOIN user_profiles actor ON actor.id=? WHERE t.id=? AND t.version=? AND c.archived_at IS NULL AND actor.status='active' AND ${couple ? "actor.role='couple'" : "actor.role IN ('planner','admin','system_admin')"} AND ${scope})`,
+    sql: `EXISTS(SELECT 1 FROM case_tasks t JOIN wedding_cases c ON c.id=t.case_id JOIN user_profiles actor ON actor.id=? WHERE t.id=? AND t.version=? AND c.archived_at IS NULL AND actor.status='active' AND ${couple ? "actor.role='couple'" : "actor.role IN ('planner','admin')"} AND ${scope})`,
     args: [user.id, task.id, task.version, user.id],
   };
 }
@@ -416,7 +416,7 @@ export async function addTask(
   const id = randomUUID();
   const result = await db
     .prepare(
-      `INSERT INTO case_tasks(id,case_id,title,description,submission_format,allowed_file_types,options,is_required,importance,due_date,phase_name,display_order) SELECT ?,?,?,?,?,?,?,?,?,?,?,COALESCE((SELECT MAX(display_order)+1 FROM case_tasks WHERE case_id=?),0) WHERE EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=? AND c.archived_at IS NULL AND ${scope} AND EXISTS(SELECT 1 FROM user_profiles WHERE id=? AND status='active' AND role IN ('planner','admin','system_admin')))`,
+      `INSERT INTO case_tasks(id,case_id,title,description,submission_format,allowed_file_types,options,is_required,importance,due_date,phase_name,display_order) SELECT ?,?,?,?,?,?,?,?,?,?,?,COALESCE((SELECT MAX(display_order)+1 FROM case_tasks WHERE case_id=?),0) WHERE EXISTS(SELECT 1 FROM wedding_cases c WHERE c.id=? AND c.archived_at IS NULL AND ${scope} AND EXISTS(SELECT 1 FROM user_profiles WHERE id=? AND status='active' AND role IN ('planner','admin')))`,
     )
     .bind(
       id,

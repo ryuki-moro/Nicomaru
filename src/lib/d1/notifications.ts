@@ -43,7 +43,7 @@ export async function createNotification(
       `INSERT INTO notifications(id,case_id,recipient_user_id,channel,notification_type,title,body,link_path,status,sent_at,created_at)
     SELECT ?,c.id,?,?,?,?,?,?,?, ?,? FROM wedding_cases c
     WHERE c.id=? AND c.archived_at IS NULL AND ${scope}
-    AND EXISTS (SELECT 1 FROM user_profiles a WHERE a.id=? AND a.status='active' AND a.role IN ('planner','admin','system_admin'))
+    AND EXISTS (SELECT 1 FROM user_profiles a WHERE a.id=? AND a.status='active' AND a.role IN ('planner','admin'))
     AND EXISTS (SELECT 1 FROM couple_profiles cp JOIN user_profiles r ON r.id=cp.user_id WHERE cp.case_id=c.id AND cp.user_id=? AND r.status='active' AND r.role='couple')
     AND (? IS NULL OR EXISTS (SELECT 1 FROM case_tasks t WHERE t.id=? AND t.case_id=c.id)) RETURNING id`,
     )

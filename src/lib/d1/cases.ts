@@ -25,11 +25,12 @@ import type { z } from 'zod';
 import { getCurrentRiskD1, type RiskSnapshotView } from './risk';
 
 // 全ての参照・更新で同じ条件を使い、ロール・所属・停止状態はDBの現在値を読む。
+// system_admin は式場と職員の管理が役目なので、案件の中身には届かせない（件数は admin.ts が数える）。
 export const scope = `EXISTS (SELECT 1 FROM user_profiles a WHERE a.id=? AND a.status='active' AND (
-  a.role='system_admin' OR (a.venue_id=c.venue_id AND (
+  a.venue_id=c.venue_id AND (
     a.role='admin' OR (a.role='planner' AND c.primary_planner_id=a.id AND c.archived_at IS NULL)
     OR (a.role='couple' AND c.archived_at IS NULL AND EXISTS (SELECT 1 FROM couple_profiles cp WHERE cp.case_id=c.id AND cp.user_id=a.id))
-  ))) )`;
+  )) )`;
 interface Profile {
   partner_role: PartnerRole;
   full_name: string;
@@ -262,7 +263,7 @@ export async function patchCase(
   const row = await caseRow(db, user, id);
   if (input.weddingTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.weddingTime))
     throw badRequest([{ field: 'weddingTime', reason: '有効な時刻を指定してください' }]);
-  const admin = user.role === 'admin' || user.role === 'system_admin';
+  const admin = user.role === 'admin';
   if ((input.primaryPlannerId !== undefined || input.archived !== undefined) && !admin)
     throw forbidden();
   if (
@@ -328,8 +329,8 @@ export async function patchCase(
     };
   const writeRoles =
     input.primaryPlannerId !== undefined || input.archived !== undefined
-      ? "'admin','system_admin'"
-      : "'planner','admin','system_admin'";
+      ? "'admin'"
+      : "'planner','admin'";
   const args = [id, row.version, user.id, user.id];
   let references = '';
   if (input.primaryPlannerId !== undefined) {

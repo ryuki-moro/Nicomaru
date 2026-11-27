@@ -89,7 +89,8 @@ test('他式場・同式場の別担当・ロール偽装・停止・アーカ�
   for (const id of [ids.plannerB, ids.plannerA2, ids.coupleB]) {
     await assert.rejects(taskRow(db, { id, role: 'system_admin' }, task), { code: 'NOT_FOUND' });
   }
-  assert.equal((await taskRow(db, actor(ids.system), task)).id, task);
+  // system_admin は案件を扱わない。宿題も見えない
+  await assert.rejects(taskRow(db, actor(ids.system), task), { code: 'NOT_FOUND' });
   assert.equal((await taskRow(db, actor(ids.adminA), task)).id, task);
   await assert.rejects(submitTask(db, planner, task, answer()), { code: 'FORBIDDEN' });
   await assert.rejects(submitTask(db, actor(ids.coupleB), task, answer()), { code: 'NOT_FOUND' });

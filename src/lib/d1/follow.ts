@@ -42,7 +42,7 @@ export async function createFollowLog(
     .prepare(
       `INSERT INTO follow_logs(id,case_id,planner_id,method,note,followed_at)
     SELECT ?,c.id,?,?,?,? FROM wedding_cases c WHERE c.id=? AND c.archived_at IS NULL AND ${scope}
-    AND EXISTS (SELECT 1 FROM user_profiles a WHERE a.id=? AND a.status='active' AND a.role IN ('planner','admin','system_admin')) RETURNING *`,
+    AND EXISTS (SELECT 1 FROM user_profiles a WHERE a.id=? AND a.status='active' AND a.role IN ('planner','admin')) RETURNING *`,
     )
     .bind(id, user.id, input.method, input.note ?? null, input.followedAt, caseId, user.id, user.id)
     .first<FollowLog>();

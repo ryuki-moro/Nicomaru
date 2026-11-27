@@ -85,18 +85,15 @@ async function actorRole(db: D1Database, user: Actor) {
   return row;
 }
 
-const isStaffRole = (role: string) =>
-  role === 'planner' || role === 'admin' || role === 'system_admin';
+const isStaffRole = (role: string) => role === 'planner' || role === 'admin';
 
 async function assertStaffEditable(db: D1Database, user: Actor, caseId: string, what: string) {
   const head = await assertVisible(db, user, caseId);
   if (head.archived_at) throw unprocessable(`アーカイブ済みの案件の${what}は変更できません`);
   const actor = await actorRole(db, user);
   const staff =
-    actor.role === 'system_admin' ||
-    (actor.venue_id === head.venue_id &&
-      (actor.role === 'admin' ||
-        (actor.role === 'planner' && head.primary_planner_id === user.id)));
+    actor.venue_id === head.venue_id &&
+    (actor.role === 'admin' || (actor.role === 'planner' && head.primary_planner_id === user.id));
   if (!staff) throw forbidden();
   return head;
 }

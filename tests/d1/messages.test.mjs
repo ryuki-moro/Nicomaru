@@ -85,13 +85,13 @@ const clearMessages = async () => {
 
 test('案件の参加者は一覧と投稿ができ、送信者名と側が付く', async () => {
   await clearMessages();
-  for (const u of [planner(), admin(), actor('system_admin', ids.system, null), bride(), groom()]) {
+  for (const u of [planner(), admin(), bride(), groom()]) {
     const sent = await postMessage(db, u, ids.caseA, `こんにちは ${u.id}`);
     assert.equal(sent.mine, true);
     assert.equal(sent.body, `こんにちは ${u.id}`);
   }
   const { items, hasMore } = await listMessages(db, planner(), ids.caseA, { limit: 50 });
-  assert.equal(items.length, 5);
+  assert.equal(items.length, 4);
   assert.equal(hasMore, false);
   const byId = Object.fromEntries(items.map((m) => [m.senderUserId, m]));
   assert.equal(byId[ids.plannerA].senderSide, 'staff');
@@ -100,11 +100,12 @@ test('案件の参加者は一覧と投稿ができ、送信者名と側が付�
   assert.equal(byId[ids.coupleA].senderSide, 'couple');
   assert.equal(byId[groomId].senderName, '新郎');
   assert.equal(byId[ids.coupleA].mine, false);
-  assert.equal((await listMessages(db, groom(), ids.caseA, { limit: 50 })).items.length, 5);
+  assert.equal((await listMessages(db, groom(), ids.caseA, { limit: 50 })).items.length, 4);
 });
 
-test('参加者以外・停止ユーザー・別式場の管理者は 404', async () => {
+test('参加者以外・停止ユーザー・別式場の管理者・system_admin は 404', async () => {
   const outsiders = [
+    actor('system_admin', ids.system, null),
     actor('planner', ids.plannerA2),
     actor('couple', ids.coupleB, ids.venueB),
     actor('admin', ids.adminB, ids.venueB),
