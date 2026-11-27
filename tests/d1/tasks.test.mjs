@@ -272,3 +272,22 @@ test('システムメッセージを作れなくても、提出は成功する',
   assert.equal((await taskRow(db, couple, id)).status, 'submitted');
   assert.deepEqual(await chatEvents(id), []);
 });
+
+test('承認と差し戻しもシステムメッセージが1件ずつ流れ、操作者の名前が付く', async () => {
+  const id = await newTask();
+  const first = await submitTask(db, couple, id, answer('1回目'));
+  await reviewSubmission(db, planner, first.id, { decision: 'needs_fix', comment: '直して' });
+  const second = await submitTask(db, couple, id, answer('2回目'));
+  await reviewSubmission(db, planner, second.id, { decision: 'confirmed' });
+  assert.deepEqual(await chatEvents(id), [
+    'task_submitted',
+    'task_returned',
+    'task_submitted',
+    'task_approved',
+  ]);
+  const bodies = (await listMessages(db, couple, ids.caseA, { limit: 50 })).items
+    .filter((m) => m.refs.some((r) => r.id === id))
+    .map((m) => m.body);
+  assert.equal(bodies[1], 'plannerAさんが『チャット連携の確認』の修正を依頼しました');
+  assert.equal(bodies[3], 'plannerAさんが『チャット連携の確認』を承認しました');
+});

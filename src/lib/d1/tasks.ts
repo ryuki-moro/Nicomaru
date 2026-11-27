@@ -368,6 +368,13 @@ export async function reviewSubmission(
     direction: 'outbound',
     summary: input.decision === 'confirmed' ? '提出物を確認しました' : '提出物の修正を依頼しました',
   }).catch(() => console.warn('[communication] 記録を保存できませんでした'));
+  await announceSystemMessage(
+    db,
+    task.case_id,
+    input.decision === 'confirmed' ? 'task_approved' : 'task_returned',
+    [{ type: 'task', id: task.id }],
+    user.id,
+  );
   return { id, caseId: task.case_id, caseTaskId: task.id, reviewStatus: input.decision };
 }
 /** D02 確認待ち一覧。急ぐものから確認できるよう、宿題の期限が近い順（同じ期限は提出の早い順）に返す。 */
