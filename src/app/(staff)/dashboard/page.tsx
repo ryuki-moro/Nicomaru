@@ -23,6 +23,7 @@ import { dashboard } from '@/lib/d1/dashboard';
 import { localDB } from '@/lib/d1/runtime';
 import { formatDate } from '@/lib/format';
 import { ChevronRight, NavCard, SummaryCard } from './cards';
+import { AdminSetupChecklist } from './AdminSetupChecklist';
 import { SystemDashboard } from './SystemDashboard';
 
 interface CaseIdRow {
@@ -72,6 +73,8 @@ export default async function PlannerDashboardPage() {
           note="直近の算出結果です"
         />
       </div>
+
+      {user.role === 'admin' && <AdminSetupChecklist user={user} />}
 
       <section className="mt-5">
         <h2 className="section-head">今日フォローすべきカップル</h2>

@@ -609,3 +609,29 @@ export async function venueOverviewD1(db: D1Database, actor: Actor): Promise<Ven
     .all<Omit<VenueOverviewRow, 'active'> & { active: number }>();
   return results.map((r) => ({ ...r, active: Boolean(r.active) }));
 }
+
+/** D01 式場管理者の「準備の残り」。自式場の設定の件数だけを返す。 */
+export async function adminSetupD1(db: D1Database, actor: Actor) {
+  const venueId = requireAdminVenue(actor);
+  const row = await db
+    .prepare(
+      `SELECT
+        (SELECT count(*) FROM task_templates t WHERE t.venue_id=?1 AND t.active=1) AS templateCount,
+        (SELECT count(*) FROM plan_types pt WHERE pt.venue_id=?1 AND pt.active=1) AS planCount,
+        (SELECT count(*) FROM plan_types pt WHERE pt.venue_id=?1 AND pt.active=1
+          AND NOT EXISTS (SELECT 1 FROM plan_task_templates x WHERE x.plan_type_id=pt.id)) AS emptyPlanCount,
+        (SELECT count(*) FROM user_profiles p WHERE p.venue_id=?1 AND p.role='planner' AND p.status='active') AS plannerCount,
+        (SELECT count(*) FROM user_profiles p WHERE p.venue_id=?1 AND p.role='planner' AND p.status='invited') AS invitedCount`,
+    )
+    .bind(venueId)
+    .first<{
+      templateCount: number;
+      planCount: number;
+      emptyPlanCount: number;
+      plannerCount: number;
+      invitedCount: number;
+    }>();
+  return (
+    row ?? { templateCount: 0, planCount: 0, emptyPlanCount: 0, plannerCount: 0, invitedCount: 0 }
+  );
+}

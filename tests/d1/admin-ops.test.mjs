@@ -7,6 +7,7 @@ import { seedAppFixtures, ids } from '../../scripts/d1-fixtures.mjs';
 import { encryptPii } from '../../src/lib/crypto.ts';
 import { reclaimStalledAiJobs } from '../../src/lib/d1/ai.ts';
 import {
+  adminSetupD1,
   createVenueD1,
   getPlanTypeD1,
   getTemplateD1,
@@ -352,4 +353,20 @@ test('venue overview: 式場ごとの件数を返し、system_admin 以外は 40
     [],
   );
   await assert.rejects(venueOverviewD1(db, adminA()), { status: 403 });
+});
+
+test('admin setup: 自式場の準備の件数を返し、admin 以外は 403', async () => {
+  const s = await adminSetupD1(db, adminA());
+  for (const key of [
+    'templateCount',
+    'planCount',
+    'emptyPlanCount',
+    'plannerCount',
+    'invitedCount',
+  ])
+    assert.equal(typeof s[key], 'number');
+  assert.ok(s.plannerCount >= 1);
+  assert.ok(s.emptyPlanCount <= s.planCount);
+  await assert.rejects(adminSetupD1(db, system()), { status: 403 });
+  await assert.rejects(adminSetupD1(db, plannerA()), { status: 403 });
 });

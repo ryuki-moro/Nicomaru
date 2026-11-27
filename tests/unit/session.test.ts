@@ -140,7 +140,7 @@ describe('検証済みセッションと有効プロフィールの境界', () =
   it.each([
     ['couple', '/mypage'],
     ['planner', '/cases'],
-    ['admin', '/users'],
+    ['admin', '/dashboard'],
     ['system_admin', '/dashboard'],
   ] as const)('%s の初期遷移先は %s', (role, path) => {
     expect(landingPathFor(role)).toBe(path);
@@ -149,7 +149,7 @@ describe('検証済みセッションと有効プロフィールの境界', () =
   it.each([
     ['couple', '/mypage', 'マイページ'],
     ['planner', '/cases', '案件一覧'],
-    ['admin', '/users', 'プランナー管理'],
+    ['admin', '/dashboard', 'ダッシュボード'],
     ['system_admin', '/dashboard', 'ダッシュボード'],
   ] as const)('D1版の %s は %s（%s）から始める', (role, path, label) => {
     vi.stubEnv('NICOMARU_DB', 'd1');
@@ -163,7 +163,7 @@ describe('検証済みセッションと有効プロフィールの境界', () =
   it.each([
     ['couple', 'マイページ'],
     ['planner', '案件一覧'],
-    ['admin', 'プランナー管理'],
+    ['admin', 'ダッシュボード'],
     ['system_admin', 'ダッシュボード'],
   ] as const)('%s の着地点の画面名は %s', (role, label) => {
     expect(landingLabelFor(role)).toBe(label);
