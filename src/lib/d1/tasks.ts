@@ -16,6 +16,7 @@ import { randomUUID } from 'node:crypto';
 import type { z } from 'zod';
 import { scope } from './cases';
 import { logCommunication } from './follow';
+import { announceSystemMessage } from './system-messages';
 
 type Actor = Pick<AppUser, 'id'>;
 export interface TaskRow {
@@ -268,12 +269,20 @@ export async function submitTask(
       .bind(task.case_id, user.id, body.draft ? 'task_draft' : 'task_submit', ...g.args),
   );
   await commit(db, user, task, true, statements, body.draft ? undefined : 'submitted');
-  if (!body.draft)
+  if (!body.draft) {
     await logCommunication(db, user, task.case_id, {
       channel: 'in_app',
       direction: 'inbound',
       summary: 'やることを提出しました',
     }).catch(() => console.warn('[communication] 記録を保存できませんでした'));
+    await announceSystemMessage(
+      db,
+      task.case_id,
+      'task_submitted',
+      [{ type: 'task', id }],
+      user.id,
+    );
+  }
   return { id: submissionId, reviewStatus: status };
 }
 export async function submissionRow(db: D1Database, user: Actor, id: string) {
