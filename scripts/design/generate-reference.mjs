@@ -207,7 +207,7 @@ save(
       schema.columns.length +
       '件、RLS policy ' +
       schema.policies.length +
-      '件。Issue50起票時の31件にusage_snapshots/system_alertsが追加された。venue_knowledgeは未実装の条件付き候補。',
+      '件。Issue50起票時の31件にusage_snapshots/system_alertsが追加された。案件チャットのcase_messages/case_message_reads(D1、RLSなし・アプリ層で制御)はmigration 0028から手で追記している。venue_knowledgeは未実装の条件付き候補。',
     '',
     '## ロール',
     '',

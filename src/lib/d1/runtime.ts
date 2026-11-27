@@ -1,5 +1,5 @@
 import { ApiError } from '@/lib/errors';
-import type { D1Database, R2Bucket } from '@cloudflare/workers-types';
+import type { D1Database, Fetcher, R2Bucket } from '@cloudflare/workers-types';
 
 import { isLocalD1Origin } from './mode';
 export { localD1, usingD1 } from './mode';
@@ -8,6 +8,8 @@ interface Bindings {
   DB: D1Database;
   // R2を有効化するまで本番は束縛なしで配備する。
   FILES?: R2Bucket;
+  // チャットWorkerへのservice binding。秘密値(CHAT_TICKET_SECRET)と接続先(CHAT_WS_URL)は process.env から読む。
+  CHAT?: Fetcher;
 }
 const local = globalThis as typeof globalThis & { nicomaruD1?: Promise<{ env: Bindings }> };
 
@@ -45,4 +47,9 @@ export async function localFiles(): Promise<R2Bucket> {
   const files = (await bindings()).FILES;
   if (!files) throw new ApiError('SERVICE_UNAVAILABLE', '添付ファイルは現在準備中です');
   return files;
+}
+
+/** チャットWorkerへの通知口。未配備・未設定の環境では undefined（通知は何もしない）。 */
+export async function chatService(): Promise<Fetcher | undefined> {
+  return (await bindings()).CHAT;
 }

@@ -335,6 +335,8 @@ export const RATE_LIMITS = {
   password_login: { windowSeconds: 3600, max: 20 },
   /** ゲストの出欠回答。同じ回線から家族分を続けて送れるよう、認証系より緩める */
   guest_rsvp: { windowSeconds: 3600, max: 30 },
+  /** 案件チャットの投稿。利用者単位 */
+  chatPost: { windowSeconds: 60, max: 20 },
 } as const;
 
 /** 一覧画面の既定表示件数（4-3 一覧画面共通）。 */

@@ -62,6 +62,26 @@ describe('Cloudflare本番のD1（NICOMARU_DB=d1）', () => {
     }
   });
 
+  it('チャットの画面とAPIは遮断しない', async () => {
+    const id = '00000000-0000-4000-8000-000000000000';
+    const paths = [
+      `/cases/${id}/chat`,
+      '/mypage/chat',
+      `/api/cases/${id}/messages`,
+      `/api/cases/${id}/messages/read`,
+      `/api/cases/${id}/messages/ticket`,
+      `/api/messages/${id}`,
+    ];
+    for (const path of paths) {
+      const response = await middleware(new NextRequest(`https://nicomaru.example.test${path}`));
+      expect(response.status, path).toBe(200);
+    }
+    const other = await middleware(
+      new NextRequest(`https://nicomaru.example.test/cases/${id}/chatx`),
+    );
+    expect(other.status).toBe(503);
+  });
+
   it('APP_BASE_URL未設定では処理しない', async () => {
     vi.stubEnv('APP_BASE_URL', undefined);
     const response = await middleware(new NextRequest('https://nicomaru.example.test/cases'));

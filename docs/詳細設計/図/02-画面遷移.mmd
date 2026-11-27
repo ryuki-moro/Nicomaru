@@ -18,6 +18,8 @@ flowchart TD
   D04["D04 フォロー記録"]
   D05["D05 打ち合わせ/起票"]
   N01["N01 staff通知履歴"]
+  CHAT_K["K02 案件チャット /cases/{id}/chat"]
+  CHAT_M["M01 チャット /mypage/chat"]
   ROLE -->|"planner / staff"| D01
   T01["T01 テンプレート一覧"]
   T02["T02 テンプレート編集/新規"]
@@ -45,6 +47,9 @@ flowchart TD
   K02 --> D03
   K02 --> D04
   K02 --> D05
+  K02 --> CHAT_K
+  M01 --> CHAT_M
+  M05 --> CHAT_M
   T01 --> T02
   U01 --> U02
   U01 --> U03

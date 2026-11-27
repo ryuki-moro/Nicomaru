@@ -38,6 +38,7 @@ import { seatGuestsFromBook } from '@/lib/seating/guests';
 import { needsFrom } from '@/lib/seating/layout';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { UnreadBadge } from '@/components/chat/UnreadBadge';
 import { InvitationSection } from './InvitationSection';
 import { RiskSection, type CaseRisk } from './RiskSection';
 import { TaskSection, type CaseTaskRow } from './TaskSection';
@@ -155,6 +156,17 @@ export default async function CaseDetailPage({
       )
         redirect('/error?code=404');
       throw error;
+    }
+  }
+  // チャットの未読件数。補助表示なので、取れなくても案件詳細は出す
+  let chatUnread = 0;
+  if (!row.archived_at) {
+    try {
+      const { localDB } = await import('@/lib/d1/runtime');
+      const { unreadCounts } = await import('@/lib/d1/messages');
+      chatUnread = (await unreadCounts(await localDB(), user, [row.id]))[row.id] ?? 0;
+    } catch {
+      chatUnread = 0;
     }
   }
   // 6-8: 現在値を読むだけ。表示のたびに再計算はしない。
@@ -364,6 +376,10 @@ export default async function CaseDetailPage({
             className="btn-secondary w-auto px-5 text-center"
           >
             打ち合わせ記録
+          </Link>
+          <Link href={`/cases/${row.id}/chat`} className="btn-secondary w-auto px-5 text-center">
+            チャット
+            <UnreadBadge count={chatUnread} />
           </Link>
           <Link href={`/cases/${row.id}/follow`} className="btn-ghost">
             フォロー記録

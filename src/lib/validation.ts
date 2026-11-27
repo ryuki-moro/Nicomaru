@@ -636,3 +636,9 @@ export const aiJobReviewSchema = z.object({
   decision: z.enum(['confirmed', 'discarded']),
   output: z.unknown().optional(),
 });
+
+/** POST /api/cases/{caseId}/messages。前後の空白を除いて1文字以上 */
+export const chatMessageSchema = z.object({
+  body: z.string().trim().min(1, '入力してください').max(INPUT_LIMITS.textArea),
+});
+export const chatReadSchema = z.object({ cursor: z.string().min(1).max(100) });

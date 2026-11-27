@@ -2,7 +2,7 @@
  * 案件終了後の自動削除・匿名化の D1 版 (6-11 / 6-12)。
  * archived_at から180日を超えた案件の個人情報・提出ファイルを消し、
  * 案件行そのものは実績として残す。ファイル実体は R2 から消す。
- * D1 に無いテーブル (meeting_notes / meeting_sheets / follow_logs / communication_logs) は
+ * D1 に無いテーブル (meeting_notes / meeting_sheets) は
  * それらの D1 移行 (別 Wave) が入った時点で削除対象へ足す。
  */
 import type { D1Database, R2Bucket } from '@cloudflare/workers-types';
@@ -52,6 +52,8 @@ export async function purgeCasesD1(db: D1Database, files?: R2Bucket | null): Pro
       'ai_jobs',
       'follow_logs',
       'communication_logs',
+      'case_messages',
+      'case_message_reads',
       'notifications',
     ]) {
       await db.prepare(`DELETE FROM ${table} WHERE case_id=?`).bind(caseId).run();

@@ -22,7 +22,8 @@ export const NOTIFICATION_TYPES = [
   'needs_fix',
   'info',
 ] as const;
-export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+/** チャットの新着通知は担当者の投稿から自動で作るため、手動送信用の NOTIFICATION_TYPES には含めない。 */
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number] | 'chat_message';
 
 export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
   due_reminder: '期限のご案内',
@@ -30,6 +31,7 @@ export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
   submission_request: 'ご提出のご案内',
   needs_fix: 'ご確認のお願い',
   info: 'お知らせ',
+  chat_message: 'メッセージ',
 };
 
 /** 付録D の「想定文字数」。LINE はさらに短い上限を持つ。 */
@@ -39,6 +41,7 @@ export const BODY_LIMIT: Record<NotificationType, { default: number; line: numbe
   submission_request: { default: 100, line: 100 },
   needs_fix: { default: 140, line: 140 },
   info: { default: 200, line: 200 },
+  chat_message: { default: 60, line: 60 },
 };
 
 export interface TemplateVars {
@@ -110,6 +113,13 @@ export function renderNotification(
           `${to} ご提出いただいた${task}について、` +
           `${vars.reviewComment ?? '内容'}をご確認いただけますでしょうか。` +
           `お手数ですがマイページからご修正をお願いいたします。`,
+      };
+
+    case 'chat_message':
+      // 本文は通知に載せない（個人情報を通知経路へ広げない）
+      return {
+        title: '新しいメッセージ',
+        body: `${to} 担当${planner}から新しいメッセージが届きました。`,
       };
 
     case 'info':

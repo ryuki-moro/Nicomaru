@@ -72,6 +72,13 @@ export interface DemoPartner {
   registered: boolean;
 }
 
+/** 案件チャットの1通。minutesAgo は投入した時刻からの経過分（現在に近いほど小さい） */
+export interface DemoMessage {
+  from: 'planner' | 'couple';
+  body: string;
+  minutesAgo: number;
+}
+
 export interface DemoCase {
   key: string;
   /** 画面で何を見せるための案件か（README と発表台本で使う） */
@@ -83,6 +90,8 @@ export interface DemoCase {
   groom: DemoPartner;
   bride: DemoPartner;
   submissions: DemoSubmission[];
+  /** 案件チャット。最後の担当者の発言は新郎新婦が未読のまま残す */
+  messages?: DemoMessage[];
 }
 
 /**
@@ -138,6 +147,29 @@ export const DEMO_CASES: readonly DemoCase[] = [
       },
       { template: '料理コースの選択', result: 'submitted', selected: 'グレードアップ' },
       { template: '引き出物の選択', result: 'confirmed', selected: 'カタログギフトA' },
+    ],
+    messages: [
+      {
+        from: 'planner',
+        body: 'ゲストリストをお預かりしました。住所に不足がある方が数名いらっしゃるので、後ほど一覧でお送りしますね。',
+        minutesAgo: 2880,
+      },
+      {
+        from: 'couple',
+        body: 'ありがとうございます！確認して、今週中に追記します。',
+        minutesAgo: 2700,
+      },
+      {
+        from: 'planner',
+        body: 'BGMのご希望も拝見しました。乾杯のときにオーストラリアの曲をご希望とのこと、曲名が決まりましたらお知らせください。',
+        minutesAgo: 1440,
+      },
+      { from: 'couple', body: '祖父母と相談して、明日までにお送りします。', minutesAgo: 1380 },
+      {
+        from: 'planner',
+        body: '承知しました。お急ぎではないので、ゆっくりご相談ください。',
+        minutesAgo: 30,
+      },
     ],
   },
   {

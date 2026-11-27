@@ -32,5 +32,5 @@
     ".next-d1/types/**/*.ts",
     ".next-demo/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "Nicomaru", "Nicomaru-1", "spikes"]
+  "exclude": ["node_modules", "Nicomaru", "Nicomaru-1", "spikes", "cloudflare/chat"]
 }

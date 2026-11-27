@@ -26,6 +26,7 @@ const ERROR_CODES = new Set<ErrorCode>([
   'RATE_LIMITED',
   'INTERNAL_ERROR',
   'SERVICE_UNAVAILABLE',
+  'CHAT_UNAVAILABLE',
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {

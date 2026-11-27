@@ -18,6 +18,15 @@ erDiagram
     uuid case_id FK
     uuid planner_id FK
   }
+  case_messages {
+    text id PK
+    text case_id FK
+    text sender_user_id FK
+  }
+  case_message_reads {
+    text case_id FK
+    text user_id FK
+  }
   meeting_notes {
     uuid id PK
     uuid case_id FK
@@ -43,3 +52,7 @@ erDiagram
   wedding_cases ||--o{ meeting_sheets : "case_id"
   user_profiles ||--o{ meeting_sheets : "generated_by"
   storage_files |o--o{ meeting_sheets : "pdf_file_id"
+  wedding_cases ||--o{ case_messages : "case_id"
+  user_profiles ||--o{ case_messages : "sender_user_id"
+  wedding_cases ||--o{ case_message_reads : "case_id"
+  user_profiles ||--o{ case_message_reads : "user_id"

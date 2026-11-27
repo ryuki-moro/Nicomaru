@@ -9,7 +9,11 @@
   "workers_dev": true,
   "preview_urls": false,
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
-  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "nicomaru" }],
+  // CHAT はチャットWorker(cloudflare/chat)。CHAT_WS_URL・CHAT_TICKET_SECRET はダッシュボードで設定する。
+  "services": [
+    { "binding": "WORKER_SELF_REFERENCE", "service": "nicomaru" },
+    { "binding": "CHAT", "service": "nicomaru-chat" },
+  ],
   // ダッシュボードで設定した APP_BASE_URL・秘密値を配備で消さない。
   "keep_vars": true,
   "vars": {
@@ -18,6 +22,8 @@
     "RESEND_FROM": "Bellink <onboarding@resend.dev>",
     // デモ中だけ有効。確認コード等を外部送信せず system_admin の受信箱へ保存する。実利用前に外す。
     "DEMO_MAILBOX": "on",
+    // チャットの WebSocket 接続先（nicomaru-chat Worker）
+    "CHAT_WS_URL": "wss://nicomaru-chat.nicomaru-app.workers.dev/ws",
   },
   "d1_databases": [
     {

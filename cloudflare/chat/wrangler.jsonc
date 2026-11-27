@@ -1,0 +1,20 @@
+// チャットの新着通知用 WebSocket Worker。本体とは別に配備する。
+// CHAT_TICKET_SECRET は秘密値（wrangler secret put）で、本体と同じ値を設定する。
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "nicomaru-chat",
+  "main": "worker.ts",
+  "compatibility_date": "2026-07-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  "keep_vars": true,
+  "vars": {
+    // 本体のオリジン（末尾スラッシュなし）。接続時の Origin 検証に使う。
+    "APP_BASE_URL": "https://nicomaru.nicomaru-app.workers.dev",
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "CHAT_ROOM", "class_name": "ChatRoom" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatRoom"] }],
+  "observability": { "enabled": true },
+}

@@ -21,6 +21,8 @@ export const ERROR_CODES = {
   RATE_LIMITED: 429,
   INTERNAL_ERROR: 500,
   SERVICE_UNAVAILABLE: 503,
+  /** チャットの即時更新が未構成。クライアントは定期取得へ切り替える */
+  CHAT_UNAVAILABLE: 503,
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;
@@ -52,6 +54,7 @@ const DEFAULT_MESSAGE: Record<ErrorCode, string> = {
   RATE_LIMITED: '試行回数の上限に達しました。しばらく時間をおいてからお試しください',
   INTERNAL_ERROR: 'サーバー側で問題が発生しました',
   SERVICE_UNAVAILABLE: '現在、認証サービスに接続できません。少し待ってからもう一度お試しください',
+  CHAT_UNAVAILABLE: 'チャットの即時更新は現在ご利用いただけません',
 };
 
 /** API 層で throw し、ルートハンドラの共通ラッパーがレスポンスへ変換する。 */

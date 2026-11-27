@@ -51,6 +51,16 @@ const ITEMS: readonly CoupleNavItem[] = [
     icon: ['M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572'],
   },
   {
+    href: '/mypage/chat',
+    label: 'チャット',
+    icon: [
+      'M3 20l1.3 -3.9a9 8 0 1 1 3.4 2.9l-4.7 1',
+      'M12 12l0 .01',
+      'M8 12l0 .01',
+      'M16 12l0 .01',
+    ],
+  },
+  {
     href: '/mypage/account',
     label: 'アカウント',
     icon: ['M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0', 'M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2'],

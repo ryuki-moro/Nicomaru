@@ -102,6 +102,21 @@ erDiagram
     timestamp_with_time_zone created_at
     timestamp_with_time_zone updated_at
   }
+  case_message_reads {
+    text case_id PK,FK
+    text user_id PK,FK
+    text last_read_at
+    text last_read_id
+    text updated_at
+  }
+  case_messages {
+    text id PK
+    text case_id FK
+    text sender_user_id FK
+    text body_enc
+    text created_at
+    text deleted_at
+  }
   case_tasks {
     uuid id PK
     uuid case_id FK
@@ -418,6 +433,10 @@ erDiagram
   user_profiles |o--o| couple_profiles : "user_profile_id"
   wedding_cases ||--o{ case_invitations : "case_id"
   user_profiles ||--o{ case_invitations : "invited_by"
+  wedding_cases ||--o{ case_message_reads : "case_id"
+  user_profiles ||--o{ case_message_reads : "user_id"
+  wedding_cases ||--o{ case_messages : "case_id"
+  user_profiles ||--o{ case_messages : "sender_user_id"
   wedding_cases ||--o{ case_guests : "case_id"
   user_profiles |o--o{ case_guests : "created_by_user_id"
   venues ||--o{ task_templates : "venue_id"

@@ -10,6 +10,7 @@
  * 本画面では case_id の絞り込みを自前で書かず RLS に委ねる。
  */
 import { taskDetailHref } from '@/app/(couple)/mypage/tasks/taskLinks';
+import { UnreadBadge } from '@/components/chat/UnreadBadge';
 import { InstallGuide } from '@/components/InstallGuide';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { TaskStatusBadge } from '@/components/ui/StatusBadge';
@@ -60,6 +61,15 @@ export default async function MyPage() {
     return (
       <EmptyState message="担当プランナーが準備を進めています。案件の情報が届くまでお待ちください。" />
     );
+  }
+  // チャットの未読件数。補助表示なので、取れなくても画面は出す
+  let chatUnread = 0;
+  try {
+    const { localDB } = await import('@/lib/d1/runtime');
+    const { unreadCounts } = await import('@/lib/d1/messages');
+    chatUnread = (await unreadCounts(await localDB(), user, [weddingCase.id]))[weddingCase.id] ?? 0;
+  } catch {
+    chatUnread = 0;
   }
   const weddingDate = weddingCase.wedding_date as IsoDate;
   // 「次にやること」と「これから提出する宿題」は同じ母集合から作る。
@@ -175,6 +185,10 @@ export default async function MyPage() {
               準備の流れを見る
             </Link>
             {/* 4-3 M01「通知一覧（M05）は Phase 2 で追加する」 */}
+            <Link href="/mypage/chat" prefetch={false} className="btn-ghost">
+              プランナーとチャット
+              <UnreadBadge count={chatUnread} />
+            </Link>
             <Link href="/mypage/notifications" prefetch={false} className="btn-ghost">
               お知らせを見る
             </Link>

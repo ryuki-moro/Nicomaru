@@ -257,7 +257,7 @@ tablemap = {t["name"]:t for t in schema["tables"]}
 groups = [
     ("08-ER-案件と利用者","案件と利用者",["venues","user_profiles","plan_types","wedding_cases","couple_profiles","case_invitations","case_guests"]),
     ("09-ER-宿題と提出","宿題と提出",["task_templates","plan_task_templates","case_tasks","task_submissions","storage_files","timeline_items"]),
-    ("10-ER-進行支援","進行支援",["risk_rules","risk_score_snapshots","communication_logs","follow_logs","meeting_notes","meeting_sheets"]),
+    ("10-ER-進行支援","進行支援",["risk_rules","risk_score_snapshots","communication_logs","follow_logs","meeting_notes","meeting_sheets","case_messages","case_message_reads"]),
     ("11-ER-通知とLINE","通知とLINE",["notifications","notification_logs","notification_settings","notification_quota_counters","line_link_nonces","line_webhook_events"]),
     ("12-ER-AIと運用","AIと運用",["ai_jobs","ai_prompt_templates","ai_worker_heartbeats","audit_logs","auth_rate_limits","batch_runs","usage_snapshots","system_alerts"]),
 ]
@@ -279,7 +279,7 @@ for t in schema["tables"]:
     all_mermaid.append("  }")
 
 for slug, name, tables in groups:
-    d = Diagram(slug, slug[:2]+"  ER / "+name, "public全33テーブルの分冊。PKとFK参照・多重度を示す。全列/制約/RLSはデータ辞書。")
+    d = Diagram(slug, slug[:2]+"  ER / "+name, "public全35テーブルの分冊。PKとFK参照・多重度を示す。全列/制約/RLSはデータ辞書。")
     group_mmd = ["erDiagram"]
     group_edges = []
     for index,t in enumerate(tables):

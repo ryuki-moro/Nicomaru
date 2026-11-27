@@ -64,6 +64,7 @@ export async function middleware(request: NextRequest) {
       '/mypage/timeline',
       '/mypage/case',
       '/mypage/notifications',
+      '/mypage/chat',
       '/mypage/guests',
       '/mypage/seating',
       '/api/notifications',
@@ -109,7 +110,7 @@ export async function middleware(request: NextRequest) {
       '/api/venues',
     ];
     const casePage =
-      /^\/cases\/[^/]+(?:\/edit|\/sheet|\/meeting-notes|\/archive|\/follow)?$/.test(path) &&
+      /^\/cases\/[^/]+(?:\/edit|\/sheet|\/meeting-notes|\/archive|\/follow|\/chat)?$/.test(path) &&
       path !== '/cases/new';
     const caseApi =
       /^\/api\/cases\/[^/]+(?:\/(?:archive|follow-logs|assign-tasks|invitations)(?:\/[^/]+\/send)?|\/risk\/recalculate)?$/.test(
@@ -129,6 +130,9 @@ export async function middleware(request: NextRequest) {
       /^\/api\/cases\/[^/]+\/(?:seating-layouts(?:\/[^/]+)?|seating-chart(?:\/(?:submit|review))?)$/.test(
         path,
       );
+    const chat = /^\/api\/(?:cases\/[^/]+\/messages(?:\/(?:read|ticket))?|messages\/[^/]+)$/.test(
+      path,
+    );
     const adminPages =
       /^\/(?:templates\/[^/]+|venues\/[^/]+|api\/venues\/[^/]+)$/.test(path) &&
       path !== '/venues/new';
@@ -142,6 +146,7 @@ export async function middleware(request: NextRequest) {
       !guests &&
       !tasks &&
       !seating &&
+      !chat &&
       !path.startsWith('/_next/')
     ) {
       return NextResponse.json(

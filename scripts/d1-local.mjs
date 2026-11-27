@@ -1,6 +1,7 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { encryptPii } from '../src/lib/crypto.ts';
 import { randomBytes, hkdfSync } from 'node:crypto';
+import { resolve } from 'node:path';
 import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { getPlatformProxy } from 'wrangler';
 import { seedAppFixtures } from './d1-fixtures.mjs';
@@ -14,6 +15,8 @@ const dir = demo ? '.wrangler/demo' : '.wrangler/app-local';
 const port = demo ? '3105' : '3104';
 const origin = `http://127.0.0.1:${port}`;
 process.env.WRANGLER_SEND_METRICS = 'false';
+// 複数のworktreeで同時起動しても、service binding(nicomaru-chat)が他の起動のWorkerへ向かないよう、registryを起動ごとに分ける
+process.env.WRANGLER_REGISTRY_PATH = resolve(dir, 'registry');
 const secretFile = `${dir}/auth-secret`;
 if (demo && process.argv.includes('--reset')) {
   // 秘密値は残す。AIワーカーのトークンが変わらず、やり直してもワーカーを起動し直さずに済む
@@ -43,6 +46,48 @@ process.env.PII_HMAC_KEY = Buffer.from(
 process.env.AI_WORKER_TOKEN = Buffer.from(
   hkdfSync('sha256', Buffer.from(secret, 'hex'), '', 'nicomaru-local-ai-worker', 32),
 ).toString('base64url');
+// チャットWorker(別プロセス)と本体で共有するチケット署名の秘密値
+const chatSecret = Buffer.from(
+  hkdfSync('sha256', Buffer.from(secret, 'hex'), '', 'nicomaru-local-chat-ticket', 32),
+).toString('base64url');
+const chatPort = demo ? '8795' : '8794';
+const setupOnly = process.argv.includes('--setup-only');
+// Windows では child.kill() が孫プロセス(workerd)を残すため、プロセスツリーごと止める
+const killTree = (c) => {
+  if (!c || c.exitCode !== null) return;
+  if (process.platform === 'win32') {
+    try {
+      execFileSync('taskkill', ['/PID', String(c.pid), '/T', '/F'], { stdio: 'ignore' });
+    } catch {}
+  } else c.kill('SIGTERM');
+};
+// 本体の service binding(CHAT)が解決できるよう、getPlatformProxy より先に起動する
+const chat = setupOnly
+  ? null
+  : spawn(
+      process.execPath,
+      [
+        'node_modules/wrangler/bin/wrangler.js',
+        'dev',
+        '-c',
+        'cloudflare/chat/wrangler.jsonc',
+        '--port',
+        chatPort,
+        '--ip',
+        '127.0.0.1',
+        '--inspector-port',
+        demo ? '9395' : '9394',
+        '--persist-to',
+        `${dir}/chat`,
+        '--var',
+        `APP_BASE_URL:${origin}`,
+        '--var',
+        `CHAT_TICKET_SECRET:${chatSecret}`,
+        '--show-interactive-dev-session=false',
+      ],
+      { stdio: 'inherit', env: { ...process.env, CI: 'true' } },
+    );
+process.on('exit', () => killTree(chat));
 // 番号を付け替える前の名前で適用済みの手元DBを、今の名前に揃えてから流す（Issue #266）
 {
   const before = await getPlatformProxy({
@@ -90,7 +135,7 @@ try {
 }
 const demoLogin = demo ? JSON.parse(await readFile(`${dir}/credentials.json`, 'utf8')) : null;
 if (!demo) console.log('D1ローカル準備完了。検証アカウント: .wrangler/app-local/credentials.json');
-if (process.argv.includes('--setup-only')) process.exit(0);
+if (setupOnly) process.exit(0);
 const child = spawn(
   process.execPath,
   ['node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', port],
@@ -101,6 +146,8 @@ const child = spawn(
       NICOMARU_DB: 'd1-local',
       NEXT_PUBLIC_NICOMARU_DB: 'd1-local',
       APP_BASE_URL: origin,
+      CHAT_WS_URL: `ws://127.0.0.1:${chatPort}/ws`,
+      CHAT_TICKET_SECRET: chatSecret,
       NICOMARU_D1_DIR: dir,
       BETTER_AUTH_SECRET: secret,
       ...(demoLogin && {
