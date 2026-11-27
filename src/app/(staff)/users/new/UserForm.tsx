@@ -33,6 +33,8 @@ interface Props {
    * Phase 1 では登録前に対象式場を選ぶ導線をここに置く（4-3 の Phase 注記）。
    */
   venueOptions: VenueOption[];
+  /** 式場詳細から来たときに選んでおく式場 */
+  initialVenueId?: string;
 }
 
 interface CreatedUser {
@@ -41,14 +43,17 @@ interface CreatedUser {
   mailDelivered: boolean;
 }
 
-export function UserForm({ roleLabel, fixedVenueName, venueOptions }: Props) {
+export function UserForm({ roleLabel, fixedVenueName, venueOptions, initialVenueId }: Props) {
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  // 既定で先頭式場を選んでおくと誤登録に気付けないため、明示的に選ばせる
-  const [venueId, setVenueId] = useState('');
+  // 既定で先頭式場を選んでおくと誤登録に気付けないため、明示的に選ばせる。
+  // 式場詳細の「式場管理者を追加」から来たときだけ、その式場を選んでおく
+  const [venueId, setVenueId] = useState(
+    venueOptions.some((venue) => venue.id === initialVenueId) ? (initialVenueId ?? '') : '',
+  );
 
   const [saving, setSaving] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);

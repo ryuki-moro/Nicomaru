@@ -52,7 +52,7 @@ const select = `SELECT t.id,u.name AS display_name,u.email,t.phone,t.role,t.venu
 export async function listStaff(
   db: D1Database,
   actor: AppUser,
-  options: { keyword?: string | null; page?: number },
+  options: { keyword?: string | null; page?: number; venueId?: string | null },
 ) {
   const keyword = (options.keyword ?? '').trim().slice(0, 100);
   const like = `%${keyword.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
@@ -60,9 +60,18 @@ export async function listStaff(
   const result = await db
     .prepare(
       `${select} WHERE ${visible} AND (?='' OR u.name LIKE ? ESCAPE '\\' OR u.email LIKE ? ESCAPE '\\')
-      ORDER BY t.role,u.name,t.id LIMIT ? OFFSET ?`,
+      AND (? IS NULL OR t.venue_id=?) ORDER BY t.role,u.name,t.id LIMIT ? OFFSET ?`,
     )
-    .bind(actor.id, keyword, like, like, LIST_PAGE_SIZE + 1, (page - 1) * LIST_PAGE_SIZE)
+    .bind(
+      actor.id,
+      keyword,
+      like,
+      like,
+      options.venueId ?? null,
+      options.venueId ?? null,
+      LIST_PAGE_SIZE + 1,
+      (page - 1) * LIST_PAGE_SIZE,
+    )
     .all<Stored>();
   const rows = result.results.map(toRow);
   return { rows: rows.slice(0, LIST_PAGE_SIZE), hasNext: rows.length > LIST_PAGE_SIZE };
